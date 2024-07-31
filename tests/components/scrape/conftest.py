@@ -1,5 +1,4 @@
 """Fixtures for the Scrape integration."""
-
 from __future__ import annotations
 
 from collections.abc import Generator
@@ -35,7 +34,7 @@ from tests.common import MockConfigEntry
 
 
 @pytest.fixture
-def mock_setup_entry() -> Generator[AsyncMock]:
+def mock_setup_entry() -> Generator[AsyncMock, None, None]:
     """Automatically path uuid generator."""
     with patch(
         "homeassistant.components.scrape.async_setup_entry",

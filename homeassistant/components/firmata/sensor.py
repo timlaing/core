@@ -1,5 +1,4 @@
 """Support for Firmata sensor input."""
-
 import logging
 
 from homeassistant.components.sensor import SensorEntity

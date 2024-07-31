@@ -1,5 +1,4 @@
 """Support for Vanderbilt (formerly Siemens) SPC alarm systems."""
-
 import logging
 
 from pyspcwebgw import SpcWebGateway

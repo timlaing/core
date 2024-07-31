@@ -1,5 +1,4 @@
 """The Logitech Harmony Hub integration utils."""
-
 import aioharmony.exceptions as harmony_exceptions
 from aioharmony.harmonyapi import HarmonyAPI
 
@@ -26,7 +25,7 @@ def find_best_name_for_remote(data: dict, harmony: HarmonyAPI):
     return data[CONF_NAME]
 
 
-async def get_harmony_client_if_available(ip_address: str) -> HarmonyAPI | None:
+async def get_harmony_client_if_available(ip_address: str):
     """Connect to a harmony hub and fetch info."""
     harmony = HarmonyAPI(ip_address=ip_address)
 

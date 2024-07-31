@@ -1,5 +1,4 @@
 """Support for LaMetric time services."""
-
 from __future__ import annotations
 
 from demetriek import (

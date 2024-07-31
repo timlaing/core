@@ -1,5 +1,4 @@
 """Constants for the deCONZ component."""
-
 import logging
 
 from pydeconz.models import ResourceType

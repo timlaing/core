@@ -1,5 +1,4 @@
 """Tests for audio ring buffer."""
-
 from homeassistant.components.assist_pipeline.ring_buffer import RingBuffer
 
 

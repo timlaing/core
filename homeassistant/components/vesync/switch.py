@@ -1,5 +1,4 @@
 """Support for VeSync switches."""
-
 import logging
 from typing import Any
 

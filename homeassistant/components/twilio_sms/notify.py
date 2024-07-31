@@ -1,5 +1,4 @@
 """Twilio SMS platform for notify component."""
-
 from __future__ import annotations
 
 import logging
@@ -9,7 +8,7 @@ import voluptuous as vol
 from homeassistant.components.notify import (
     ATTR_DATA,
     ATTR_TARGET,
-    PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     BaseNotificationService,
 )
 from homeassistant.components.twilio import DATA_TWILIO
@@ -22,7 +21,7 @@ _LOGGER = logging.getLogger(__name__)
 CONF_FROM_NUMBER = "from_number"
 ATTR_MEDIAURL = "media_url"
 
-PLATFORM_SCHEMA = NOTIFY_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_FROM_NUMBER): vol.All(
             cv.string,

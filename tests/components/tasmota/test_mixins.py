@@ -1,5 +1,4 @@
 """The tests for the Tasmota mixins."""
-
 import copy
 import json
 from unittest.mock import call

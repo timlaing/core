@@ -1,5 +1,4 @@
 """Support for the for Danfoss Air HRV binary sensors."""
-
 from __future__ import annotations
 
 from pydanfossair.commands import ReadCommand
@@ -33,13 +32,12 @@ def setup_platform(
         ["Danfoss Air Away Mode Active", ReadCommand.away_mode, None],
     ]
 
-    add_entities(
-        (
-            DanfossAirBinarySensor(data, sensor[0], sensor[1], sensor[2])
-            for sensor in sensors
-        ),
-        True,
-    )
+    dev = []
+
+    for sensor in sensors:
+        dev.append(DanfossAirBinarySensor(data, sensor[0], sensor[1], sensor[2]))
+
+    add_entities(dev, True)
 
 
 class DanfossAirBinarySensor(BinarySensorEntity):

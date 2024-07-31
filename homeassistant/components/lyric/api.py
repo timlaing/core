@@ -1,5 +1,4 @@
 """API for Honeywell Lyric bound to Home Assistant OAuth."""
-
 from typing import cast
 
 from aiohttp import BasicAuth, ClientSession

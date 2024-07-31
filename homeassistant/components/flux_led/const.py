@@ -1,5 +1,6 @@
 """Constants of the FluxLed/MagicHome Integration."""
 
+import asyncio
 import socket
 from typing import Final
 
@@ -37,7 +38,7 @@ DEFAULT_EFFECT_SPEED: Final = 50
 FLUX_LED_DISCOVERY: Final = "flux_led_discovery"
 
 FLUX_LED_EXCEPTIONS: Final = (
-    TimeoutError,
+    asyncio.TimeoutError,
     socket.error,
     RuntimeError,
     BrokenPipeError,
@@ -64,6 +65,7 @@ TRANSITION_STROBE: Final = "strobe"
 CONF_COLORS: Final = "colors"
 CONF_SPEED_PCT: Final = "speed_pct"
 CONF_TRANSITION: Final = "transition"
+CONF_EFFECT: Final = "effect"
 
 
 EFFECT_SPEED_SUPPORT_MODES: Final = {ColorMode.RGB, ColorMode.RGBW, ColorMode.RGBWW}

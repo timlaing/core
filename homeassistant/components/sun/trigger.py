@@ -1,5 +1,4 @@
 """Offer sun based automation rules."""
-
 from datetime import timedelta
 
 import voluptuous as vol

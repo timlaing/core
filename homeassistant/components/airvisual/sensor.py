@@ -1,5 +1,4 @@
 """Support for AirVisual air quality sensors."""
-
 from __future__ import annotations
 
 from homeassistant.components.sensor import (
@@ -16,7 +15,6 @@ from homeassistant.const import (
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     CONCENTRATION_PARTS_PER_BILLION,
     CONCENTRATION_PARTS_PER_MILLION,
-    CONF_COUNTRY,
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_SHOW_ON_MAP,
@@ -27,7 +25,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from . import AirVisualEntity
-from .const import CONF_CITY, DOMAIN
+from .const import CONF_CITY, CONF_COUNTRY, DOMAIN
 
 ATTR_CITY = "city"
 ATTR_COUNTRY = "country"
@@ -43,6 +41,7 @@ GEOGRAPHY_SENSOR_DESCRIPTIONS = (
     SensorEntityDescription(
         key=SENSOR_KIND_LEVEL,
         name="Air pollution level",
+        icon="mdi:gauge",
         device_class=SensorDeviceClass.ENUM,
         options=[
             "good",
@@ -63,6 +62,7 @@ GEOGRAPHY_SENSOR_DESCRIPTIONS = (
     SensorEntityDescription(
         key=SENSOR_KIND_POLLUTANT,
         name="Main pollutant",
+        icon="mdi:chemical-weapon",
         device_class=SensorDeviceClass.ENUM,
         options=["co", "n2", "o3", "p1", "p2", "s2"],
         translation_key="pollutant_label",

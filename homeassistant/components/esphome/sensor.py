@@ -1,8 +1,7 @@
 """Support for esphome sensors."""
-
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import datetime
 import math
 
 from aioesphomeapi import (
@@ -52,15 +51,15 @@ async def async_setup_entry(
     )
 
 
-_STATE_CLASSES: EsphomeEnumMapper[EsphomeSensorStateClass, SensorStateClass | None] = (
-    EsphomeEnumMapper(
-        {
-            EsphomeSensorStateClass.NONE: None,
-            EsphomeSensorStateClass.MEASUREMENT: SensorStateClass.MEASUREMENT,
-            EsphomeSensorStateClass.TOTAL_INCREASING: SensorStateClass.TOTAL_INCREASING,
-            EsphomeSensorStateClass.TOTAL: SensorStateClass.TOTAL,
-        }
-    )
+_STATE_CLASSES: EsphomeEnumMapper[
+    EsphomeSensorStateClass, SensorStateClass | None
+] = EsphomeEnumMapper(
+    {
+        EsphomeSensorStateClass.NONE: None,
+        EsphomeSensorStateClass.MEASUREMENT: SensorStateClass.MEASUREMENT,
+        EsphomeSensorStateClass.TOTAL_INCREASING: SensorStateClass.TOTAL_INCREASING,
+        EsphomeSensorStateClass.TOTAL: SensorStateClass.TOTAL,
+    }
 )
 
 
@@ -99,7 +98,7 @@ class EsphomeSensor(EsphomeEntity[SensorInfo, SensorState], SensorEntity):
         state = self._state
         if state.missing_state or not math.isfinite(state.state):
             return None
-        if self._attr_device_class is SensorDeviceClass.TIMESTAMP:
+        if self._attr_device_class == SensorDeviceClass.TIMESTAMP:
             return dt_util.utc_from_timestamp(state.state)
         return f"{state.state:.{self._static_info.accuracy_decimals}f}"
 
@@ -107,27 +106,9 @@ class EsphomeSensor(EsphomeEntity[SensorInfo, SensorState], SensorEntity):
 class EsphomeTextSensor(EsphomeEntity[TextSensorInfo, TextSensorState], SensorEntity):
     """A text sensor implementation for ESPHome."""
 
-    @callback
-    def _on_static_info_update(self, static_info: EntityInfo) -> None:
-        """Set attrs from static info."""
-        super()._on_static_info_update(static_info)
-        static_info = self._static_info
-        self._attr_device_class = try_parse_enum(
-            SensorDeviceClass, static_info.device_class
-        )
-
     @property
     @esphome_state_property
-    def native_value(self) -> str | datetime | date | None:
+    def native_value(self) -> str | None:
         """Return the state of the entity."""
         state = self._state
-        if state.missing_state:
-            return None
-        if self._attr_device_class is SensorDeviceClass.TIMESTAMP:
-            return dt_util.parse_datetime(state.state)
-        if (
-            self._attr_device_class is SensorDeviceClass.DATE
-            and (value := dt_util.parse_datetime(state.state)) is not None
-        ):
-            return value.date()
-        return state.state
+        return None if state.missing_state else state.state

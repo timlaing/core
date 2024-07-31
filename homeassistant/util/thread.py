@@ -1,5 +1,4 @@
 """Threading util helpers."""
-
 import ctypes
 import inspect
 import logging
@@ -31,7 +30,7 @@ def deadlock_safe_shutdown() -> None:
     for thread in remaining_threads:
         try:
             thread.join(timeout_per_thread)
-        except Exception as err:  # noqa: BLE001
+        except Exception as err:  # pylint: disable=broad-except
             _LOGGER.warning("Failed to join thread: %s", err)
 
 

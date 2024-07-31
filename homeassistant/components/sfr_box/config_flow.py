@@ -1,5 +1,4 @@
 """SFR Box config flow."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -9,8 +8,9 @@ from sfrbox_api.bridge import SFRBox
 from sfrbox_api.exceptions import SFRBoxAuthenticationError, SFRBoxError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import ConfigEntry, ConfigFlow
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 from homeassistant.helpers.httpx_client import get_async_client
 
@@ -41,7 +41,7 @@ class SFRBoxFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, str] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow initialized by the user."""
         errors = {}
         if user_input is not None:
@@ -65,7 +65,7 @@ class SFRBoxFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_choose_auth(
         self, user_input: dict[str, str] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow initialized by the user."""
         return self.async_show_menu(
             step_id="choose_auth",
@@ -74,7 +74,7 @@ class SFRBoxFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_auth(
         self, user_input: dict[str, str] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Check authentication."""
         errors = {}
         if user_input is not None:
@@ -107,13 +107,11 @@ class SFRBoxFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_skip_auth(
         self, user_input: dict[str, str] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Skip authentication."""
         return self.async_create_entry(title="SFR Box", data=self._config)
 
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Handle failed credentials."""
         self._reauth_entry = self.hass.config_entries.async_get_entry(
             self.context["entry_id"]

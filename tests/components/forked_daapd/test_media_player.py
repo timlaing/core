@@ -1,7 +1,5 @@
 """The media player tests for the forked_daapd media player platform."""
-
-from typing import Any
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -64,9 +62,9 @@ from homeassistant.const import (
     STATE_PAUSED,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant, ServiceResponse
+from homeassistant.core import HomeAssistant
 
-from tests.common import MockConfigEntry, async_mock_signal
+from tests.common import async_mock_signal
 
 TEST_MASTER_ENTITY_NAME = "media_player.owntone_server"
 TEST_ZONE_ENTITY_NAMES = [
@@ -289,7 +287,7 @@ SAMPLE_PLAYLISTS = [{"id": 7, "name": "test_playlist", "uri": "library:playlist:
 
 
 @pytest.fixture(name="get_request_return_values")
-async def get_request_return_values_fixture() -> dict[str, Any]:
+async def get_request_return_values_fixture():
     """Get request return values we can change later."""
     return {
         "config": SAMPLE_CONFIG,
@@ -300,11 +298,7 @@ async def get_request_return_values_fixture() -> dict[str, Any]:
 
 
 @pytest.fixture(name="mock_api_object")
-async def mock_api_object_fixture(
-    hass: HomeAssistant,
-    config_entry: MockConfigEntry,
-    get_request_return_values: dict[str, Any],
-) -> Mock:
+async def mock_api_object_fixture(hass, config_entry, get_request_return_values):
     """Create mock api fixture."""
 
     async def get_request_side_effect(update_type):
@@ -346,20 +340,18 @@ async def mock_api_object_fixture(
     return mock_api.return_value
 
 
-@pytest.mark.usefixtures("mock_api_object")
 async def test_unload_config_entry(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    hass: HomeAssistant, config_entry, mock_api_object
 ) -> None:
     """Test the player is set unavailable when the config entry is unloaded."""
     assert hass.states.get(TEST_MASTER_ENTITY_NAME)
     assert hass.states.get(TEST_ZONE_ENTITY_NAMES[0])
-    await hass.config_entries.async_unload(config_entry.entry_id)
+    await config_entry.async_unload(hass)
     assert hass.states.get(TEST_MASTER_ENTITY_NAME).state == STATE_UNAVAILABLE
     assert hass.states.get(TEST_ZONE_ENTITY_NAMES[0]).state == STATE_UNAVAILABLE
 
 
-@pytest.mark.usefixtures("mock_api_object")
-def test_master_state(hass: HomeAssistant) -> None:
+def test_master_state(hass: HomeAssistant, mock_api_object) -> None:
     """Test master state attributes."""
     state = hass.states.get(TEST_MASTER_ENTITY_NAME)
     assert state.state == STATE_PAUSED
@@ -380,7 +372,7 @@ def test_master_state(hass: HomeAssistant) -> None:
 
 
 async def test_no_update_when_get_request_returns_none(
-    hass: HomeAssistant, config_entry: MockConfigEntry, mock_api_object: Mock
+    hass: HomeAssistant, config_entry, mock_api_object
 ) -> None:
     """Test when get request returns None."""
 
@@ -406,12 +398,8 @@ async def test_no_update_when_get_request_returns_none(
 
 
 async def _service_call(
-    hass: HomeAssistant,
-    entity_name: str,
-    service: str,
-    additional_service_data: dict[str, Any] | None = None,
-    blocking: bool = True,
-) -> ServiceResponse:
+    hass, entity_name, service, additional_service_data=None, blocking=True
+):
     if additional_service_data is None:
         additional_service_data = {}
     return await hass.services.async_call(
@@ -422,7 +410,7 @@ async def _service_call(
     )
 
 
-async def test_zone(hass: HomeAssistant, mock_api_object: Mock) -> None:
+async def test_zone(hass: HomeAssistant, mock_api_object) -> None:
     """Test zone attributes and methods."""
     zone_entity_name = TEST_ZONE_ENTITY_NAMES[0]
     state = hass.states.get(zone_entity_name)
@@ -461,7 +449,7 @@ async def test_zone(hass: HomeAssistant, mock_api_object: Mock) -> None:
     mock_api_object.change_output.assert_any_call(output_id, selected=True)
 
 
-async def test_last_outputs_master(hass: HomeAssistant, mock_api_object: Mock) -> None:
+async def test_last_outputs_master(hass: HomeAssistant, mock_api_object) -> None:
     """Test restoration of _last_outputs."""
     # Test turning on sends API call
     await _service_call(hass, TEST_MASTER_ENTITY_NAME, SERVICE_TURN_ON)
@@ -478,9 +466,7 @@ async def test_last_outputs_master(hass: HomeAssistant, mock_api_object: Mock) -
 
 
 async def test_bunch_of_stuff_master(
-    hass: HomeAssistant,
-    get_request_return_values: dict[str, Any],
-    mock_api_object: Mock,
+    hass: HomeAssistant, get_request_return_values, mock_api_object
 ) -> None:
     """Run bunch of stuff."""
     await _service_call(hass, TEST_MASTER_ENTITY_NAME, SERVICE_TURN_ON)
@@ -564,8 +550,9 @@ async def test_bunch_of_stuff_master(
     mock_api_object.clear_queue.assert_called_once()
 
 
-@pytest.mark.usefixtures("mock_api_object")
-async def test_async_play_media_from_paused(hass: HomeAssistant) -> None:
+async def test_async_play_media_from_paused(
+    hass: HomeAssistant, mock_api_object
+) -> None:
     """Test async play media from paused."""
     initial_state = hass.states.get(TEST_MASTER_ENTITY_NAME)
     await _service_call(
@@ -583,9 +570,7 @@ async def test_async_play_media_from_paused(hass: HomeAssistant) -> None:
 
 
 async def test_async_play_media_announcement_from_stopped(
-    hass: HomeAssistant,
-    get_request_return_values: dict[str, Any],
-    mock_api_object: Mock,
+    hass: HomeAssistant, get_request_return_values, mock_api_object
 ) -> None:
     """Test async play media announcement (from stopped)."""
     updater_update = mock_api_object.start_websocket_handler.call_args[0][2]
@@ -611,8 +596,9 @@ async def test_async_play_media_announcement_from_stopped(
     assert state.last_updated > initial_state.last_updated
 
 
-@pytest.mark.usefixtures("mock_api_object")
-async def test_async_play_media_unsupported(hass: HomeAssistant) -> None:
+async def test_async_play_media_unsupported(
+    hass: HomeAssistant, mock_api_object
+) -> None:
     """Test async play media on unsupported media type."""
     initial_state = hass.states.get(TEST_MASTER_ENTITY_NAME)
     await _service_call(
@@ -629,7 +615,7 @@ async def test_async_play_media_unsupported(hass: HomeAssistant) -> None:
 
 
 async def test_async_play_media_announcement_tts_timeout(
-    hass: HomeAssistant, mock_api_object: Mock
+    hass: HomeAssistant, mock_api_object
 ) -> None:
     """Test async play media announcement with TTS timeout."""
     mock_api_object.add_to_queue.side_effect = None
@@ -651,7 +637,7 @@ async def test_async_play_media_announcement_tts_timeout(
 
 
 async def test_use_pipe_control_with_no_api(
-    hass: HomeAssistant, mock_api_object: Mock
+    hass: HomeAssistant, mock_api_object
 ) -> None:
     """Test using pipe control with no api set."""
     await _service_call(
@@ -664,8 +650,7 @@ async def test_use_pipe_control_with_no_api(
     assert mock_api_object.start_playback.call_count == 0
 
 
-@pytest.mark.usefixtures("mock_api_object")
-async def test_clear_source(hass: HomeAssistant) -> None:
+async def test_clear_source(hass: HomeAssistant, mock_api_object) -> None:
     """Test changing source to clear."""
     await _service_call(
         hass,
@@ -679,11 +664,8 @@ async def test_clear_source(hass: HomeAssistant) -> None:
 
 @pytest.fixture(name="pipe_control_api_object")
 async def pipe_control_api_object_fixture(
-    hass: HomeAssistant,
-    config_entry: MockConfigEntry,
-    get_request_return_values: dict[str, Any],
-    mock_api_object: Mock,
-) -> Mock:
+    hass, config_entry, get_request_return_values, mock_api_object
+):
     """Fixture for mock librespot_java api."""
     with patch(
         "homeassistant.components.forked_daapd.media_player.LibrespotJavaAPI",
@@ -714,9 +696,9 @@ async def pipe_control_api_object_fixture(
 
 async def test_librespot_java_stuff(
     hass: HomeAssistant,
-    get_request_return_values: dict[str, Any],
-    mock_api_object: Mock,
-    pipe_control_api_object: Mock,
+    get_request_return_values,
+    mock_api_object,
+    pipe_control_api_object,
 ) -> None:
     """Test options update and librespot-java stuff."""
     state = hass.states.get(TEST_MASTER_ENTITY_NAME)
@@ -751,8 +733,9 @@ async def test_librespot_java_stuff(
     assert state.attributes[ATTR_MEDIA_ALBUM_NAME] == "some album"
 
 
-@pytest.mark.usefixtures("pipe_control_api_object")
-async def test_librespot_java_play_announcement(hass: HomeAssistant) -> None:
+async def test_librespot_java_play_announcement(
+    hass: HomeAssistant, pipe_control_api_object
+) -> None:
     """Test play announcement with librespot-java pipe."""
     initial_state = hass.states.get(TEST_MASTER_ENTITY_NAME)
     await _service_call(
@@ -771,7 +754,7 @@ async def test_librespot_java_play_announcement(hass: HomeAssistant) -> None:
 
 
 async def test_librespot_java_play_media_pause_timeout(
-    hass: HomeAssistant, pipe_control_api_object: Mock
+    hass: HomeAssistant, pipe_control_api_object
 ) -> None:
     """Test play media with librespot-java pipe."""
     # test media play with pause timeout
@@ -794,7 +777,7 @@ async def test_librespot_java_play_media_pause_timeout(
         assert state.last_updated > initial_state.last_updated
 
 
-async def test_unsupported_update(hass: HomeAssistant, mock_api_object: Mock) -> None:
+async def test_unsupported_update(hass: HomeAssistant, mock_api_object) -> None:
     """Test unsupported update type."""
     last_updated = hass.states.get(TEST_MASTER_ENTITY_NAME).last_updated
     updater_update = mock_api_object.start_websocket_handler.call_args[0][2]
@@ -803,9 +786,7 @@ async def test_unsupported_update(hass: HomeAssistant, mock_api_object: Mock) ->
     assert hass.states.get(TEST_MASTER_ENTITY_NAME).last_updated == last_updated
 
 
-async def test_invalid_websocket_port(
-    hass: HomeAssistant, config_entry: MockConfigEntry
-) -> None:
+async def test_invalid_websocket_port(hass: HomeAssistant, config_entry) -> None:
     """Test invalid websocket port on async_init."""
     with patch(
         "homeassistant.components.forked_daapd.media_player.ForkedDaapdAPI",
@@ -818,7 +799,7 @@ async def test_invalid_websocket_port(
         assert hass.states.get(TEST_MASTER_ENTITY_NAME).state == STATE_UNAVAILABLE
 
 
-async def test_websocket_disconnect(hass: HomeAssistant, mock_api_object: Mock) -> None:
+async def test_websocket_disconnect(hass: HomeAssistant, mock_api_object) -> None:
     """Test websocket disconnection."""
     assert hass.states.get(TEST_MASTER_ENTITY_NAME).state != STATE_UNAVAILABLE
     assert hass.states.get(TEST_ZONE_ENTITY_NAMES[0]).state != STATE_UNAVAILABLE
@@ -829,9 +810,7 @@ async def test_websocket_disconnect(hass: HomeAssistant, mock_api_object: Mock) 
     assert hass.states.get(TEST_ZONE_ENTITY_NAMES[0]).state == STATE_UNAVAILABLE
 
 
-async def test_async_play_media_enqueue(
-    hass: HomeAssistant, mock_api_object: Mock
-) -> None:
+async def test_async_play_media_enqueue(hass: HomeAssistant, mock_api_object) -> None:
     """Test async play media with different enqueue options."""
     initial_state = hass.states.get(TEST_MASTER_ENTITY_NAME)
     await _service_call(
@@ -907,7 +886,7 @@ async def test_async_play_media_enqueue(
     )
 
 
-async def test_play_owntone_media(hass: HomeAssistant, mock_api_object: Mock) -> None:
+async def test_play_owntone_media(hass: HomeAssistant, mock_api_object) -> None:
     """Test async play media with an owntone source."""
     initial_state = hass.states.get(TEST_MASTER_ENTITY_NAME)
     await _service_call(
@@ -933,7 +912,7 @@ async def test_play_owntone_media(hass: HomeAssistant, mock_api_object: Mock) ->
     )
 
 
-async def test_play_spotify_media(hass: HomeAssistant, mock_api_object: Mock) -> None:
+async def test_play_spotify_media(hass: HomeAssistant, mock_api_object) -> None:
     """Test async play media with a spotify source."""
     initial_state = hass.states.get(TEST_MASTER_ENTITY_NAME)
     await _service_call(
@@ -957,7 +936,7 @@ async def test_play_spotify_media(hass: HomeAssistant, mock_api_object: Mock) ->
     )
 
 
-async def test_play_media_source(hass: HomeAssistant, mock_api_object: Mock) -> None:
+async def test_play_media_source(hass: HomeAssistant, mock_api_object) -> None:
     """Test async play media with a spotify source."""
     initial_state = hass.states.get(TEST_MASTER_ENTITY_NAME)
     with patch(

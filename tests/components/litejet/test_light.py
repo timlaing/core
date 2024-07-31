@@ -1,5 +1,4 @@
 """The tests for the litejet component."""
-
 from homeassistant.components import light
 from homeassistant.components.light import ATTR_BRIGHTNESS, ATTR_TRANSITION
 from homeassistant.components.litejet.const import CONF_DEFAULT_TRANSITION

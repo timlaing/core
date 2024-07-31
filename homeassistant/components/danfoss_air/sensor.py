@@ -1,5 +1,4 @@
 """Support for the for Danfoss Air HRV sensors."""
-
 from __future__ import annotations
 
 import logging
@@ -97,13 +96,14 @@ def setup_platform(
         ],
     ]
 
-    add_entities(
-        (
+    dev = []
+
+    for sensor in sensors:
+        dev.append(
             DanfossAir(data, sensor[0], sensor[1], sensor[2], sensor[3], sensor[4])
-            for sensor in sensors
-        ),
-        True,
-    )
+        )
+
+    add_entities(dev, True)
 
 
 class DanfossAir(SensorEntity):

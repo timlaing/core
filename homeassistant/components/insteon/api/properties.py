@@ -74,7 +74,7 @@ def _read_only_schema(name, value):
 
 
 def get_schema(prop, name, groups):
-    """Return the correct schema type."""
+    """Return the correct shema type."""
     if prop.is_read_only:
         return _read_only_schema(name, prop.value)
     if name == RAMP_RATE_IN_SEC:
@@ -85,11 +85,11 @@ def get_schema(prop, name, groups):
     if name == LOAD_BUTTON:
         button_list = {group: groups[group].name for group in groups}
         return _list_schema(name, button_list)
-    if prop.value_type is bool:
+    if prop.value_type == bool:
         return _bool_schema(name)
-    if prop.value_type is int:
+    if prop.value_type == int:
         return _byte_schema(name)
-    if prop.value_type is float:
+    if prop.value_type == float:
         return _float_schema(name)
     if prop.value_type == ToggleMode:
         return _list_schema(name, TOGGLE_MODES)
@@ -139,7 +139,8 @@ def property_to_dict(prop):
     modified = value == prop.new_value
     if prop.value_type in [ToggleMode, RelayMode] or prop.name == RAMP_RATE_IN_SEC:
         value = str(value).lower()
-    return {"name": prop.name, "value": value, "modified": modified}
+    prop_dict = {"name": prop.name, "value": value, "modified": modified}
+    return prop_dict
 
 
 def update_property(device, prop_name, value):

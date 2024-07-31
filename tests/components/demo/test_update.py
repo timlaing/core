@@ -1,5 +1,4 @@
 """The tests for the demo update platform."""
-
 from unittest.mock import patch
 
 import pytest
@@ -134,7 +133,6 @@ async def test_update_with_progress(hass: HomeAssistant) -> None:
     async_track_state_change_event(
         hass,
         "update.demo_update_with_progress",
-        # pylint: disable-next=unnecessary-lambda
         callback(lambda event: events.append(event)),
     )
 
@@ -172,17 +170,13 @@ async def test_update_with_progress_raising(hass: HomeAssistant) -> None:
     async_track_state_change_event(
         hass,
         "update.demo_update_with_progress",
-        # pylint: disable-next=unnecessary-lambda
         callback(lambda event: events.append(event)),
     )
 
-    with (
-        patch(
-            "homeassistant.components.demo.update._fake_install",
-            side_effect=[None, None, None, None, RuntimeError],
-        ) as fake_sleep,
-        pytest.raises(RuntimeError),
-    ):
+    with patch(
+        "homeassistant.components.demo.update._fake_install",
+        side_effect=[None, None, None, None, RuntimeError],
+    ) as fake_sleep, pytest.raises(RuntimeError):
         await hass.services.async_call(
             DOMAIN,
             SERVICE_INSTALL,

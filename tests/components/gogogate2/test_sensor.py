@@ -1,5 +1,4 @@
 """Tests for the GogoGate2 component."""
-
 from datetime import timedelta
 from unittest.mock import MagicMock, patch
 

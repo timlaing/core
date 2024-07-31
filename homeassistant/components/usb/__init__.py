@@ -1,5 +1,4 @@
 """The USB Discovery integration."""
-
 from __future__ import annotations
 
 from collections.abc import Coroutine
@@ -35,7 +34,7 @@ from .models import USBDevice
 from .utils import usb_device_from_port
 
 if TYPE_CHECKING:
-    from pyudev import Device, MonitorObserver
+    from pyudev import Device
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -214,11 +213,10 @@ class USBDiscovery:
         """Start USB Discovery and run a manual scan."""
         await self._async_scan_serial()
 
-    @hass_callback
-    def async_stop(self, event: Event) -> None:
+    async def async_stop(self, event: Event) -> None:
         """Stop USB Discovery."""
         if self._request_debouncer:
-            self._request_debouncer.async_shutdown()
+            await self._request_debouncer.async_shutdown()
 
     async def _async_start_monitor(self) -> None:
         """Start monitoring hardware with pyudev."""
@@ -228,25 +226,6 @@ class USBDiscovery:
         if info.get("docker"):
             return
 
-        if not (
-            observer := await self.hass.async_add_executor_job(
-                self._get_monitor_observer
-            )
-        ):
-            return
-
-        def _stop_observer(event: Event) -> None:
-            observer.stop()
-
-        self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _stop_observer)
-        self.observer_active = True
-
-    def _get_monitor_observer(self) -> MonitorObserver | None:
-        """Get the monitor observer.
-
-        This runs in the executor because the import
-        does blocking I/O.
-        """
         from pyudev import (  # pylint: disable=import-outside-toplevel
             Context,
             Monitor,
@@ -256,7 +235,7 @@ class USBDiscovery:
         try:
             context = Context()
         except (ImportError, OSError):
-            return None
+            return
 
         monitor = Monitor.from_netlink(context)
         try:
@@ -265,14 +244,17 @@ class USBDiscovery:
             _LOGGER.debug(
                 "Unable to setup pyudev filtering; This is expected on WSL: %s", ex
             )
-            return None
-
+            return
         observer = MonitorObserver(
             monitor, callback=self._device_discovered, name="usb-observer"
         )
-
         observer.start()
-        return observer
+
+        def _stop_observer(event: Event) -> None:
+            observer.stop()
+
+        self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _stop_observer)
+        self.observer_active = True
 
     def _device_discovered(self, device: Device) -> None:
         """Call when the observer discovers a new usb tty device."""
@@ -362,33 +344,10 @@ class USBDiscovery:
 
     async def _async_process_ports(self, ports: list[ListPortInfo]) -> None:
         """Process each discovered port."""
-        usb_devices = [
-            usb_device_from_port(port)
-            for port in ports
-            if port.vid is not None or port.pid is not None
-        ]
-
-        # CP2102N chips create *two* serial ports on macOS: `/dev/cu.usbserial-` and
-        # `/dev/cu.SLAB_USBtoUART*`. The former does not work and we should ignore them.
-        if sys.platform == "darwin":
-            silabs_serials = {
-                dev.serial_number
-                for dev in usb_devices
-                if dev.device.startswith("/dev/cu.SLAB_USBtoUART")
-            }
-
-            usb_devices = [
-                dev
-                for dev in usb_devices
-                if dev.serial_number not in silabs_serials
-                or (
-                    dev.serial_number in silabs_serials
-                    and dev.device.startswith("/dev/cu.SLAB_USBtoUART")
-                )
-            ]
-
-        for usb_device in usb_devices:
-            await self._async_process_discovered_usb_device(usb_device)
+        for port in ports:
+            if port.vid is None and port.pid is None:
+                continue
+            await self._async_process_discovered_usb_device(usb_device_from_port(port))
 
     async def _async_scan_serial(self) -> None:
         """Scan serial ports."""
@@ -417,7 +376,6 @@ class USBDiscovery:
                 cooldown=REQUEST_SCAN_COOLDOWN,
                 immediate=True,
                 function=self._async_scan,
-                background=True,
             )
         await self._request_debouncer.async_call()
 

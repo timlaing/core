@@ -1,5 +1,4 @@
 """Support for Big Ass Fans switch."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -8,22 +7,30 @@ from typing import Any, cast
 
 from aiobafi6 import Device
 
+from homeassistant import config_entries
 from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import BAFConfigEntry
-from .entity import BAFDescriptionEntity
+from .const import DOMAIN
+from .entity import BAFEntity
+from .models import BAFData
 
 
-@dataclass(frozen=True, kw_only=True)
-class BAFSwitchDescription(
-    SwitchEntityDescription,
-):
-    """Class describing BAF switch entities."""
+@dataclass
+class BAFSwitchDescriptionMixin:
+    """Required values for BAF sensors."""
 
     value_fn: Callable[[Device], bool | None]
+
+
+@dataclass
+class BAFSwitchDescription(
+    SwitchEntityDescription,
+    BAFSwitchDescriptionMixin,
+):
+    """Class describing BAF switch entities."""
 
 
 BASE_SWITCHES = [
@@ -102,11 +109,12 @@ LIGHT_SWITCHES = [
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: BAFConfigEntry,
+    entry: config_entries.ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up BAF fan switches."""
-    device = entry.runtime_data
+    data: BAFData = hass.data[DOMAIN][entry.entry_id]
+    device = data.device
     descriptions: list[BAFSwitchDescription] = []
     descriptions.extend(BASE_SWITCHES)
     if device.has_fan:
@@ -118,10 +126,16 @@ async def async_setup_entry(
     async_add_entities(BAFSwitch(device, description) for description in descriptions)
 
 
-class BAFSwitch(BAFDescriptionEntity, SwitchEntity):
+class BAFSwitch(BAFEntity, SwitchEntity):
     """BAF switch component."""
 
     entity_description: BAFSwitchDescription
+
+    def __init__(self, device: Device, description: BAFSwitchDescription) -> None:
+        """Initialize the entity."""
+        self.entity_description = description
+        super().__init__(device)
+        self._attr_unique_id = f"{self._device.mac_address}-{description.key}"
 
     @callback
     def _async_update_attrs(self) -> None:

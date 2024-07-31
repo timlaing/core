@@ -1,23 +1,16 @@
 """Camera platform that receives images through HTTP POST."""
-
 from __future__ import annotations
 
 import asyncio
 from collections import deque
 from datetime import timedelta
 import logging
-from typing import cast
 
-from aiohttp import web
+import aiohttp
 import voluptuous as vol
 
 from homeassistant.components import webhook
-from homeassistant.components.camera import (
-    DOMAIN,
-    PLATFORM_SCHEMA as CAMERA_PLATFORM_SCHEMA,
-    STATE_IDLE,
-    Camera,
-)
+from homeassistant.components.camera import DOMAIN, PLATFORM_SCHEMA, STATE_IDLE, Camera
 from homeassistant.const import CONF_NAME, CONF_TIMEOUT, CONF_WEBHOOK_ID
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv
@@ -38,7 +31,7 @@ ATTR_LAST_TRIP = "last_trip"
 
 PUSH_CAMERA_DATA = "push_camera"
 
-PLATFORM_SCHEMA = CAMERA_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
         vol.Optional(CONF_BUFFER_SIZE, default=1): cv.positive_int,
@@ -77,14 +70,12 @@ async def async_setup_platform(
     async_add_entities(cameras)
 
 
-async def handle_webhook(
-    hass: HomeAssistant, webhook_id: str, request: web.Request
-) -> None:
+async def handle_webhook(hass, webhook_id, request):
     """Handle incoming webhook POST with image files."""
     try:
         async with asyncio.timeout(5):
             data = dict(await request.post())
-    except (TimeoutError, web.HTTPException) as error:
+    except (asyncio.TimeoutError, aiohttp.web.HTTPException) as error:
         _LOGGER.error("Could not get information from POST <%s>", error)
         return
 
@@ -94,8 +85,9 @@ async def handle_webhook(
         _LOGGER.warning("Webhook call without POST parameter <%s>", camera.image_field)
         return
 
-    image_data = cast(web.FileField, data[camera.image_field])
-    await camera.update_image(image_data.file.read(), image_data.filename)
+    await camera.update_image(
+        data[camera.image_field].file.read(), data[camera.image_field].filename
+    )
 
 
 class PushCamera(Camera):

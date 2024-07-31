@@ -1,5 +1,4 @@
 """HTML5 Push Messaging notification service."""
-
 from __future__ import annotations
 
 from contextlib import suppress
@@ -20,13 +19,13 @@ import voluptuous as vol
 from voluptuous.humanize import humanize_error
 
 from homeassistant.components import websocket_api
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
+from homeassistant.components.http import HomeAssistantView
 from homeassistant.components.notify import (
     ATTR_DATA,
     ATTR_TARGET,
     ATTR_TITLE,
     ATTR_TITLE_DEFAULT,
-    PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     BaseNotificationService,
 )
 from homeassistant.const import ATTR_NAME, URL_ROOT
@@ -61,7 +60,7 @@ def gcm_api_deprecated(value):
     return value
 
 
-PLATFORM_SCHEMA = NOTIFY_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Optional("gcm_sender_id"): vol.All(cv.string, gcm_api_deprecated),
         vol.Optional("gcm_api_key"): cv.string,
@@ -165,7 +164,7 @@ HTML5_SHOWNOTIFICATION_PARAMETERS = (
 )
 
 
-async def async_get_service(
+def get_service(
     hass: HomeAssistant,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
@@ -173,7 +172,7 @@ async def async_get_service(
     """Get the HTML5 push notification service."""
     json_path = hass.config.path(REGISTRATIONS_FILE)
 
-    registrations = await hass.async_add_executor_job(_load_config, json_path)
+    registrations = _load_config(json_path)
 
     vapid_pub_key = config[ATTR_VAPID_PUB_KEY]
     vapid_prv_key = config[ATTR_VAPID_PRV_KEY]
@@ -232,7 +231,7 @@ class HTML5PushRegistrationView(HomeAssistantView):
         self.registrations[name] = data
 
         try:
-            hass = request.app[KEY_HASS]
+            hass = request.app["hass"]
 
             await hass.async_add_executor_job(
                 save_json, self.json_path, self.registrations
@@ -280,7 +279,7 @@ class HTML5PushRegistrationView(HomeAssistantView):
         reg = self.registrations.pop(found)
 
         try:
-            hass = request.app[KEY_HASS]
+            hass = request.app["hass"]
 
             await hass.async_add_executor_job(
                 save_json, self.json_path, self.registrations
@@ -389,7 +388,7 @@ class HTML5PushCallbackView(HomeAssistantView):
             )
 
         event_name = f"{NOTIFY_CALLBACK_EVENT}.{event_payload[ATTR_TYPE]}"
-        request.app[KEY_HASS].bus.fire(event_name, event_payload)
+        request.app["hass"].bus.fire(event_name, event_payload)
         return self.json({"status": "ok", "event": event_payload[ATTR_TYPE]})
 
 
@@ -426,7 +425,10 @@ class HTML5NotificationService(BaseNotificationService):
     @property
     def targets(self):
         """Return a dictionary of registered targets."""
-        return {registration: registration for registration in self.registrations}
+        targets = {}
+        for registration in self.registrations:
+            targets[registration] = registration
+        return targets
 
     def dismiss(self, **kwargs):
         """Dismisses a notification."""

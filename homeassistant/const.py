@@ -1,34 +1,17 @@
 """Constants used by Home Assistant components."""
-
 from __future__ import annotations
 
 from enum import StrEnum
-from functools import partial
-from typing import TYPE_CHECKING, Final
-
-from .helpers.deprecation import (
-    DeprecatedConstant,
-    DeprecatedConstantEnum,
-    all_with_deprecated_constants,
-    check_if_deprecated_constant,
-    dir_with_deprecated_constants,
-)
-from .util.event_type import EventType
-from .util.hass_dict import HassKey
-from .util.signal_type import SignalType
-
-if TYPE_CHECKING:
-    from .core import EventStateChangedData, EventStateReportedData
-    from .helpers.typing import NoEventData
+from typing import Final
 
 APPLICATION_NAME: Final = "HomeAssistant"
-MAJOR_VERSION: Final = 2024
-MINOR_VERSION: Final = 8
+MAJOR_VERSION: Final = 2023
+MINOR_VERSION: Final = 11
 PATCH_VERSION: Final = "0.dev0"
 __short_version__: Final = f"{MAJOR_VERSION}.{MINOR_VERSION}"
 __version__: Final = f"{__short_version__}.{PATCH_VERSION}"
-REQUIRED_PYTHON_VER: Final[tuple[int, int, int]] = (3, 12, 0)
-REQUIRED_NEXT_PYTHON_VER: Final[tuple[int, int, int]] = (3, 12, 0)
+REQUIRED_PYTHON_VER: Final[tuple[int, int, int]] = (3, 11, 0)
+REQUIRED_NEXT_PYTHON_VER: Final[tuple[int, int, int]] = (3, 11, 0)
 # Truthy date string triggers showing related deprecation warning messages.
 REQUIRED_NEXT_PYTHON_HA_RELEASE: Final = ""
 
@@ -46,7 +29,6 @@ class Platform(StrEnum):
     CALENDAR = "calendar"
     CAMERA = "camera"
     CLIMATE = "climate"
-    CONVERSATION = "conversation"
     COVER = "cover"
     DATE = "date"
     DATETIME = "datetime"
@@ -73,17 +55,12 @@ class Platform(StrEnum):
     SWITCH = "switch"
     TEXT = "text"
     TIME = "time"
-    TODO = "todo"
     TTS = "tts"
     VACUUM = "vacuum"
-    VALVE = "valve"
     UPDATE = "update"
     WAKE_WORD = "wake_word"
     WATER_HEATER = "water_heater"
     WEATHER = "weather"
-
-
-BASE_PLATFORMS: Final = {platform.value for platform in Platform}
 
 
 # Can be used to specify a catch all when registering state or event listeners.
@@ -113,11 +90,9 @@ SUN_EVENT_SUNRISE: Final = "sunrise"
 # #### CONFIG ####
 CONF_ABOVE: Final = "above"
 CONF_ACCESS_TOKEN: Final = "access_token"
-CONF_ACTION: Final = "action"
 CONF_ADDRESS: Final = "address"
 CONF_AFTER: Final = "after"
 CONF_ALIAS: Final = "alias"
-CONF_LLM_HASS_API = "llm_hass_api"
 CONF_ALLOWLIST_EXTERNAL_URLS: Final = "allowlist_external_urls"
 CONF_API_KEY: Final = "api_key"
 CONF_API_TOKEN: Final = "api_token"
@@ -153,7 +128,6 @@ CONF_CONTINUE_ON_ERROR: Final = "continue_on_error"
 CONF_CONTINUE_ON_TIMEOUT: Final = "continue_on_timeout"
 CONF_COUNT: Final = "count"
 CONF_COUNTRY: Final = "country"
-CONF_COUNTRY_CODE: Final = "country_code"
 CONF_COVERS: Final = "covers"
 CONF_CURRENCY: Final = "currency"
 CONF_CUSTOMIZE: Final = "customize"
@@ -265,7 +239,6 @@ CONF_SERVICE: Final = "service"
 CONF_SERVICE_DATA: Final = "data"
 CONF_SERVICE_DATA_TEMPLATE: Final = "data_template"
 CONF_SERVICE_TEMPLATE: Final = "service_template"
-CONF_SET_CONVERSATION_RESPONSE: Final = "set_conversation_response"
 CONF_SHOW_ON_MAP: Final = "show_on_map"
 CONF_SLAVE: Final = "slave"
 CONF_SOURCE: Final = "source"
@@ -302,7 +275,6 @@ CONF_WHILE: Final = "while"
 CONF_WHITELIST: Final = "whitelist"
 CONF_ALLOWLIST_EXTERNAL_DIRS: Final = "allowlist_external_dirs"
 LEGACY_CONF_WHITELIST_EXTERNAL_DIRS: Final = "whitelist_external_dirs"
-CONF_DEBUG: Final = "debug"
 CONF_XY: Final = "xy"
 CONF_ZONE: Final = "zone"
 
@@ -310,19 +282,16 @@ CONF_ZONE: Final = "zone"
 EVENT_CALL_SERVICE: Final = "call_service"
 EVENT_COMPONENT_LOADED: Final = "component_loaded"
 EVENT_CORE_CONFIG_UPDATE: Final = "core_config_updated"
-EVENT_HOMEASSISTANT_CLOSE: EventType[NoEventData] = EventType("homeassistant_close")
-EVENT_HOMEASSISTANT_START: EventType[NoEventData] = EventType("homeassistant_start")
-EVENT_HOMEASSISTANT_STARTED: EventType[NoEventData] = EventType("homeassistant_started")
-EVENT_HOMEASSISTANT_STOP: EventType[NoEventData] = EventType("homeassistant_stop")
-EVENT_HOMEASSISTANT_FINAL_WRITE: EventType[NoEventData] = EventType(
-    "homeassistant_final_write"
-)
+EVENT_HOMEASSISTANT_CLOSE: Final = "homeassistant_close"
+EVENT_HOMEASSISTANT_START: Final = "homeassistant_start"
+EVENT_HOMEASSISTANT_STARTED: Final = "homeassistant_started"
+EVENT_HOMEASSISTANT_STOP: Final = "homeassistant_stop"
+EVENT_HOMEASSISTANT_FINAL_WRITE: Final = "homeassistant_final_write"
 EVENT_LOGBOOK_ENTRY: Final = "logbook_entry"
 EVENT_LOGGING_CHANGED: Final = "logging_changed"
 EVENT_SERVICE_REGISTERED: Final = "service_registered"
 EVENT_SERVICE_REMOVED: Final = "service_removed"
-EVENT_STATE_CHANGED: EventType[EventStateChangedData] = EventType("state_changed")
-EVENT_STATE_REPORTED: EventType[EventStateReportedData] = EventType("state_reported")
+EVENT_STATE_CHANGED: Final = "state_changed"
 EVENT_THEMES_UPDATED: Final = "themes_updated"
 EVENT_PANELS_UPDATED: Final = "panels_updated"
 EVENT_LOVELACE_UPDATED: Final = "lovelace_updated"
@@ -335,130 +304,34 @@ EVENT_SHOPPING_LIST_UPDATED: Final = "shopping_list_updated"
 # #### DEVICE CLASSES ####
 # DEVICE_CLASS_* below are deprecated as of 2021.12
 # use the SensorDeviceClass enum instead.
-_DEPRECATED_DEVICE_CLASS_AQI: Final = DeprecatedConstant(
-    "aqi", "SensorDeviceClass.AQI", "2025.1"
-)
-_DEPRECATED_DEVICE_CLASS_BATTERY: Final = DeprecatedConstant(
-    "battery",
-    "SensorDeviceClass.BATTERY",
-    "2025.1",
-)
-_DEPRECATED_DEVICE_CLASS_CO: Final = DeprecatedConstant(
-    "carbon_monoxide",
-    "SensorDeviceClass.CO",
-    "2025.1",
-)
-_DEPRECATED_DEVICE_CLASS_CO2: Final = DeprecatedConstant(
-    "carbon_dioxide",
-    "SensorDeviceClass.CO2",
-    "2025.1",
-)
-_DEPRECATED_DEVICE_CLASS_CURRENT: Final = DeprecatedConstant(
-    "current",
-    "SensorDeviceClass.CURRENT",
-    "2025.1",
-)
-_DEPRECATED_DEVICE_CLASS_DATE: Final = DeprecatedConstant(
-    "date", "SensorDeviceClass.DATE", "2025.1"
-)
-_DEPRECATED_DEVICE_CLASS_ENERGY: Final = DeprecatedConstant(
-    "energy",
-    "SensorDeviceClass.ENERGY",
-    "2025.1",
-)
-_DEPRECATED_DEVICE_CLASS_FREQUENCY: Final = DeprecatedConstant(
-    "frequency",
-    "SensorDeviceClass.FREQUENCY",
-    "2025.1",
-)
-_DEPRECATED_DEVICE_CLASS_GAS: Final = DeprecatedConstant(
-    "gas", "SensorDeviceClass.GAS", "2025.1"
-)
-_DEPRECATED_DEVICE_CLASS_HUMIDITY: Final = DeprecatedConstant(
-    "humidity",
-    "SensorDeviceClass.HUMIDITY",
-    "2025.1",
-)
-_DEPRECATED_DEVICE_CLASS_ILLUMINANCE: Final = DeprecatedConstant(
-    "illuminance",
-    "SensorDeviceClass.ILLUMINANCE",
-    "2025.1",
-)
-_DEPRECATED_DEVICE_CLASS_MONETARY: Final = DeprecatedConstant(
-    "monetary",
-    "SensorDeviceClass.MONETARY",
-    "2025.1",
-)
-_DEPRECATED_DEVICE_CLASS_NITROGEN_DIOXIDE: Final = DeprecatedConstant(
-    "nitrogen_dioxide",
-    "SensorDeviceClass.NITROGEN_DIOXIDE",
-    "2025.1",
-)
-_DEPRECATED_DEVICE_CLASS_NITROGEN_MONOXIDE: Final = DeprecatedConstant(
-    "nitrogen_monoxide",
-    "SensorDeviceClass.NITROGEN_MONOXIDE",
-    "2025.1",
-)
-_DEPRECATED_DEVICE_CLASS_NITROUS_OXIDE: Final = DeprecatedConstant(
-    "nitrous_oxide",
-    "SensorDeviceClass.NITROUS_OXIDE",
-    "2025.1",
-)
-_DEPRECATED_DEVICE_CLASS_OZONE: Final = DeprecatedConstant(
-    "ozone", "SensorDeviceClass.OZONE", "2025.1"
-)
-_DEPRECATED_DEVICE_CLASS_PM1: Final = DeprecatedConstant(
-    "pm1", "SensorDeviceClass.PM1", "2025.1"
-)
-_DEPRECATED_DEVICE_CLASS_PM10: Final = DeprecatedConstant(
-    "pm10", "SensorDeviceClass.PM10", "2025.1"
-)
-_DEPRECATED_DEVICE_CLASS_PM25: Final = DeprecatedConstant(
-    "pm25", "SensorDeviceClass.PM25", "2025.1"
-)
-_DEPRECATED_DEVICE_CLASS_POWER_FACTOR: Final = DeprecatedConstant(
-    "power_factor",
-    "SensorDeviceClass.POWER_FACTOR",
-    "2025.1",
-)
-_DEPRECATED_DEVICE_CLASS_POWER: Final = DeprecatedConstant(
-    "power", "SensorDeviceClass.POWER", "2025.1"
-)
-_DEPRECATED_DEVICE_CLASS_PRESSURE: Final = DeprecatedConstant(
-    "pressure",
-    "SensorDeviceClass.PRESSURE",
-    "2025.1",
-)
-_DEPRECATED_DEVICE_CLASS_SIGNAL_STRENGTH: Final = DeprecatedConstant(
-    "signal_strength",
-    "SensorDeviceClass.SIGNAL_STRENGTH",
-    "2025.1",
-)
-_DEPRECATED_DEVICE_CLASS_SULPHUR_DIOXIDE: Final = DeprecatedConstant(
-    "sulphur_dioxide",
-    "SensorDeviceClass.SULPHUR_DIOXIDE",
-    "2025.1",
-)
-_DEPRECATED_DEVICE_CLASS_TEMPERATURE: Final = DeprecatedConstant(
-    "temperature",
-    "SensorDeviceClass.TEMPERATURE",
-    "2025.1",
-)
-_DEPRECATED_DEVICE_CLASS_TIMESTAMP: Final = DeprecatedConstant(
-    "timestamp",
-    "SensorDeviceClass.TIMESTAMP",
-    "2025.1",
-)
-_DEPRECATED_DEVICE_CLASS_VOLATILE_ORGANIC_COMPOUNDS: Final = DeprecatedConstant(
-    "volatile_organic_compounds",
-    "SensorDeviceClass.VOLATILE_ORGANIC_COMPOUNDS",
-    "2025.1",
-)
-_DEPRECATED_DEVICE_CLASS_VOLTAGE: Final = DeprecatedConstant(
-    "voltage",
-    "SensorDeviceClass.VOLTAGE",
-    "2025.1",
-)
+DEVICE_CLASS_AQI: Final = "aqi"
+DEVICE_CLASS_BATTERY: Final = "battery"
+DEVICE_CLASS_CO: Final = "carbon_monoxide"
+DEVICE_CLASS_CO2: Final = "carbon_dioxide"
+DEVICE_CLASS_CURRENT: Final = "current"
+DEVICE_CLASS_DATE: Final = "date"
+DEVICE_CLASS_ENERGY: Final = "energy"
+DEVICE_CLASS_FREQUENCY: Final = "frequency"
+DEVICE_CLASS_GAS: Final = "gas"
+DEVICE_CLASS_HUMIDITY: Final = "humidity"
+DEVICE_CLASS_ILLUMINANCE: Final = "illuminance"
+DEVICE_CLASS_MONETARY: Final = "monetary"
+DEVICE_CLASS_NITROGEN_DIOXIDE = "nitrogen_dioxide"
+DEVICE_CLASS_NITROGEN_MONOXIDE = "nitrogen_monoxide"
+DEVICE_CLASS_NITROUS_OXIDE = "nitrous_oxide"
+DEVICE_CLASS_OZONE: Final = "ozone"
+DEVICE_CLASS_PM1: Final = "pm1"
+DEVICE_CLASS_PM10: Final = "pm10"
+DEVICE_CLASS_PM25: Final = "pm25"
+DEVICE_CLASS_POWER_FACTOR: Final = "power_factor"
+DEVICE_CLASS_POWER: Final = "power"
+DEVICE_CLASS_PRESSURE: Final = "pressure"
+DEVICE_CLASS_SIGNAL_STRENGTH: Final = "signal_strength"
+DEVICE_CLASS_SULPHUR_DIOXIDE = "sulphur_dioxide"
+DEVICE_CLASS_TEMPERATURE: Final = "temperature"
+DEVICE_CLASS_TIMESTAMP: Final = "timestamp"
+DEVICE_CLASS_VOLATILE_ORGANIC_COMPOUNDS = "volatile_organic_compounds"
+DEVICE_CLASS_VOLTAGE: Final = "voltage"
 
 # #### STATES ####
 STATE_ON: Final = "on"
@@ -527,12 +400,6 @@ ATTR_AREA_ID: Final = "area_id"
 # Contains one string, the device ID
 ATTR_DEVICE_ID: Final = "device_id"
 
-# Contains one string or a list of strings, each being an floor id
-ATTR_FLOOR_ID: Final = "floor_id"
-
-# Contains one string or a list of strings, each being an label id
-ATTR_LABEL_ID: Final = "label_id"
-
 # String with a friendly name for the entity
 ATTR_FRIENDLY_NAME: Final = "friendly_name"
 
@@ -565,7 +432,6 @@ ATTR_CONNECTIONS: Final = "connections"
 ATTR_DEFAULT_NAME: Final = "default_name"
 ATTR_MANUFACTURER: Final = "manufacturer"
 ATTR_MODEL: Final = "model"
-ATTR_SERIAL_NUMBER: Final = "serial_number"
 ATTR_SUGGESTED_AREA: Final = "suggested_area"
 ATTR_SW_VERSION: Final = "sw_version"
 ATTR_HW_VERSION: Final = "hw_version"
@@ -639,10 +505,7 @@ class UnitOfApparentPower(StrEnum):
     VOLT_AMPERE = "VA"
 
 
-_DEPRECATED_POWER_VOLT_AMPERE: Final = DeprecatedConstantEnum(
-    UnitOfApparentPower.VOLT_AMPERE,
-    "2025.1",
-)
+POWER_VOLT_AMPERE: Final = "VA"
 """Deprecated: please use UnitOfApparentPower.VOLT_AMPERE."""
 
 
@@ -655,20 +518,11 @@ class UnitOfPower(StrEnum):
     BTU_PER_HOUR = "BTU/h"
 
 
-_DEPRECATED_POWER_WATT: Final = DeprecatedConstantEnum(
-    UnitOfPower.WATT,
-    "2025.1",
-)
+POWER_WATT: Final = "W"
 """Deprecated: please use UnitOfPower.WATT."""
-_DEPRECATED_POWER_KILO_WATT: Final = DeprecatedConstantEnum(
-    UnitOfPower.KILO_WATT,
-    "2025.1",
-)
+POWER_KILO_WATT: Final = "kW"
 """Deprecated: please use UnitOfPower.KILO_WATT."""
-_DEPRECATED_POWER_BTU_PER_HOUR: Final = DeprecatedConstantEnum(
-    UnitOfPower.BTU_PER_HOUR,
-    "2025.1",
-)
+POWER_BTU_PER_HOUR: Final = "BTU/h"
 """Deprecated: please use UnitOfPower.BTU_PER_HOUR."""
 
 # Reactive power units
@@ -686,20 +540,11 @@ class UnitOfEnergy(StrEnum):
     WATT_HOUR = "Wh"
 
 
-_DEPRECATED_ENERGY_KILO_WATT_HOUR: Final = DeprecatedConstantEnum(
-    UnitOfEnergy.KILO_WATT_HOUR,
-    "2025.1",
-)
+ENERGY_KILO_WATT_HOUR: Final = "kWh"
 """Deprecated: please use UnitOfEnergy.KILO_WATT_HOUR."""
-_DEPRECATED_ENERGY_MEGA_WATT_HOUR: Final = DeprecatedConstantEnum(
-    UnitOfEnergy.MEGA_WATT_HOUR,
-    "2025.1",
-)
+ENERGY_MEGA_WATT_HOUR: Final = "MWh"
 """Deprecated: please use UnitOfEnergy.MEGA_WATT_HOUR."""
-_DEPRECATED_ENERGY_WATT_HOUR: Final = DeprecatedConstantEnum(
-    UnitOfEnergy.WATT_HOUR,
-    "2025.1",
-)
+ENERGY_WATT_HOUR: Final = "Wh"
 """Deprecated: please use UnitOfEnergy.WATT_HOUR."""
 
 
@@ -711,15 +556,9 @@ class UnitOfElectricCurrent(StrEnum):
     AMPERE = "A"
 
 
-_DEPRECATED_ELECTRIC_CURRENT_MILLIAMPERE: Final = DeprecatedConstantEnum(
-    UnitOfElectricCurrent.MILLIAMPERE,
-    "2025.1",
-)
+ELECTRIC_CURRENT_MILLIAMPERE: Final = "mA"
 """Deprecated: please use UnitOfElectricCurrent.MILLIAMPERE."""
-_DEPRECATED_ELECTRIC_CURRENT_AMPERE: Final = DeprecatedConstantEnum(
-    UnitOfElectricCurrent.AMPERE,
-    "2025.1",
-)
+ELECTRIC_CURRENT_AMPERE: Final = "A"
 """Deprecated: please use UnitOfElectricCurrent.AMPERE."""
 
 
@@ -731,15 +570,9 @@ class UnitOfElectricPotential(StrEnum):
     VOLT = "V"
 
 
-_DEPRECATED_ELECTRIC_POTENTIAL_MILLIVOLT: Final = DeprecatedConstantEnum(
-    UnitOfElectricPotential.MILLIVOLT,
-    "2025.1",
-)
+ELECTRIC_POTENTIAL_MILLIVOLT: Final = "mV"
 """Deprecated: please use UnitOfElectricPotential.MILLIVOLT."""
-_DEPRECATED_ELECTRIC_POTENTIAL_VOLT: Final = DeprecatedConstantEnum(
-    UnitOfElectricPotential.VOLT,
-    "2025.1",
-)
+ELECTRIC_POTENTIAL_VOLT: Final = "V"
 """Deprecated: please use UnitOfElectricPotential.VOLT."""
 
 # Degree units
@@ -760,20 +593,11 @@ class UnitOfTemperature(StrEnum):
     KELVIN = "K"
 
 
-_DEPRECATED_TEMP_CELSIUS: Final = DeprecatedConstantEnum(
-    UnitOfTemperature.CELSIUS,
-    "2025.1",
-)
+TEMP_CELSIUS: Final = "°C"
 """Deprecated: please use UnitOfTemperature.CELSIUS"""
-_DEPRECATED_TEMP_FAHRENHEIT: Final = DeprecatedConstantEnum(
-    UnitOfTemperature.FAHRENHEIT,
-    "2025.1",
-)
+TEMP_FAHRENHEIT: Final = "°F"
 """Deprecated: please use UnitOfTemperature.FAHRENHEIT"""
-_DEPRECATED_TEMP_KELVIN: Final = DeprecatedConstantEnum(
-    UnitOfTemperature.KELVIN,
-    "2025.1",
-)
+TEMP_KELVIN: Final = "K"
 """Deprecated: please use UnitOfTemperature.KELVIN"""
 
 
@@ -792,50 +616,23 @@ class UnitOfTime(StrEnum):
     YEARS = "y"
 
 
-_DEPRECATED_TIME_MICROSECONDS: Final = DeprecatedConstantEnum(
-    UnitOfTime.MICROSECONDS,
-    "2025.1",
-)
+TIME_MICROSECONDS: Final = "μs"
 """Deprecated: please use UnitOfTime.MICROSECONDS."""
-_DEPRECATED_TIME_MILLISECONDS: Final = DeprecatedConstantEnum(
-    UnitOfTime.MILLISECONDS,
-    "2025.1",
-)
+TIME_MILLISECONDS: Final = "ms"
 """Deprecated: please use UnitOfTime.MILLISECONDS."""
-_DEPRECATED_TIME_SECONDS: Final = DeprecatedConstantEnum(
-    UnitOfTime.SECONDS,
-    "2025.1",
-)
+TIME_SECONDS: Final = "s"
 """Deprecated: please use UnitOfTime.SECONDS."""
-_DEPRECATED_TIME_MINUTES: Final = DeprecatedConstantEnum(
-    UnitOfTime.MINUTES,
-    "2025.1",
-)
+TIME_MINUTES: Final = "min"
 """Deprecated: please use UnitOfTime.MINUTES."""
-_DEPRECATED_TIME_HOURS: Final = DeprecatedConstantEnum(
-    UnitOfTime.HOURS,
-    "2025.1",
-)
+TIME_HOURS: Final = "h"
 """Deprecated: please use UnitOfTime.HOURS."""
-_DEPRECATED_TIME_DAYS: Final = DeprecatedConstantEnum(
-    UnitOfTime.DAYS,
-    "2025.1",
-)
+TIME_DAYS: Final = "d"
 """Deprecated: please use UnitOfTime.DAYS."""
-_DEPRECATED_TIME_WEEKS: Final = DeprecatedConstantEnum(
-    UnitOfTime.WEEKS,
-    "2025.1",
-)
+TIME_WEEKS: Final = "w"
 """Deprecated: please use UnitOfTime.WEEKS."""
-_DEPRECATED_TIME_MONTHS: Final = DeprecatedConstantEnum(
-    UnitOfTime.MONTHS,
-    "2025.1",
-)
+TIME_MONTHS: Final = "m"
 """Deprecated: please use UnitOfTime.MONTHS."""
-_DEPRECATED_TIME_YEARS: Final = DeprecatedConstantEnum(
-    UnitOfTime.YEARS,
-    "2025.1",
-)
+TIME_YEARS: Final = "y"
 """Deprecated: please use UnitOfTime.YEARS."""
 
 
@@ -853,45 +650,21 @@ class UnitOfLength(StrEnum):
     MILES = "mi"
 
 
-_DEPRECATED_LENGTH_MILLIMETERS: Final = DeprecatedConstantEnum(
-    UnitOfLength.MILLIMETERS,
-    "2025.1",
-)
+LENGTH_MILLIMETERS: Final = "mm"
 """Deprecated: please use UnitOfLength.MILLIMETERS."""
-_DEPRECATED_LENGTH_CENTIMETERS: Final = DeprecatedConstantEnum(
-    UnitOfLength.CENTIMETERS,
-    "2025.1",
-)
+LENGTH_CENTIMETERS: Final = "cm"
 """Deprecated: please use UnitOfLength.CENTIMETERS."""
-_DEPRECATED_LENGTH_METERS: Final = DeprecatedConstantEnum(
-    UnitOfLength.METERS,
-    "2025.1",
-)
+LENGTH_METERS: Final = "m"
 """Deprecated: please use UnitOfLength.METERS."""
-_DEPRECATED_LENGTH_KILOMETERS: Final = DeprecatedConstantEnum(
-    UnitOfLength.KILOMETERS,
-    "2025.1",
-)
+LENGTH_KILOMETERS: Final = "km"
 """Deprecated: please use UnitOfLength.KILOMETERS."""
-_DEPRECATED_LENGTH_INCHES: Final = DeprecatedConstantEnum(
-    UnitOfLength.INCHES,
-    "2025.1",
-)
+LENGTH_INCHES: Final = "in"
 """Deprecated: please use UnitOfLength.INCHES."""
-_DEPRECATED_LENGTH_FEET: Final = DeprecatedConstantEnum(
-    UnitOfLength.FEET,
-    "2025.1",
-)
+LENGTH_FEET: Final = "ft"
 """Deprecated: please use UnitOfLength.FEET."""
-_DEPRECATED_LENGTH_YARD: Final = DeprecatedConstantEnum(
-    UnitOfLength.YARDS,
-    "2025.1",
-)
+LENGTH_YARD: Final = "yd"
 """Deprecated: please use UnitOfLength.YARDS."""
-_DEPRECATED_LENGTH_MILES: Final = DeprecatedConstantEnum(
-    UnitOfLength.MILES,
-    "2025.1",
-)
+LENGTH_MILES: Final = "mi"
 """Deprecated: please use UnitOfLength.MILES."""
 
 
@@ -905,25 +678,13 @@ class UnitOfFrequency(StrEnum):
     GIGAHERTZ = "GHz"
 
 
-_DEPRECATED_FREQUENCY_HERTZ: Final = DeprecatedConstantEnum(
-    UnitOfFrequency.HERTZ,
-    "2025.1",
-)
+FREQUENCY_HERTZ: Final = "Hz"
 """Deprecated: please use UnitOfFrequency.HERTZ"""
-_DEPRECATED_FREQUENCY_KILOHERTZ: Final = DeprecatedConstantEnum(
-    UnitOfFrequency.KILOHERTZ,
-    "2025.1",
-)
+FREQUENCY_KILOHERTZ: Final = "kHz"
 """Deprecated: please use UnitOfFrequency.KILOHERTZ"""
-_DEPRECATED_FREQUENCY_MEGAHERTZ: Final = DeprecatedConstantEnum(
-    UnitOfFrequency.MEGAHERTZ,
-    "2025.1",
-)
+FREQUENCY_MEGAHERTZ: Final = "MHz"
 """Deprecated: please use UnitOfFrequency.MEGAHERTZ"""
-_DEPRECATED_FREQUENCY_GIGAHERTZ: Final = DeprecatedConstantEnum(
-    UnitOfFrequency.GIGAHERTZ,
-    "2025.1",
-)
+FREQUENCY_GIGAHERTZ: Final = "GHz"
 """Deprecated: please use UnitOfFrequency.GIGAHERTZ"""
 
 
@@ -942,50 +703,23 @@ class UnitOfPressure(StrEnum):
     PSI = "psi"
 
 
-_DEPRECATED_PRESSURE_PA: Final = DeprecatedConstantEnum(
-    UnitOfPressure.PA,
-    "2025.1",
-)
+PRESSURE_PA: Final = "Pa"
 """Deprecated: please use UnitOfPressure.PA"""
-_DEPRECATED_PRESSURE_HPA: Final = DeprecatedConstantEnum(
-    UnitOfPressure.HPA,
-    "2025.1",
-)
+PRESSURE_HPA: Final = "hPa"
 """Deprecated: please use UnitOfPressure.HPA"""
-_DEPRECATED_PRESSURE_KPA: Final = DeprecatedConstantEnum(
-    UnitOfPressure.KPA,
-    "2025.1",
-)
+PRESSURE_KPA: Final = "kPa"
 """Deprecated: please use UnitOfPressure.KPA"""
-_DEPRECATED_PRESSURE_BAR: Final = DeprecatedConstantEnum(
-    UnitOfPressure.BAR,
-    "2025.1",
-)
+PRESSURE_BAR: Final = "bar"
 """Deprecated: please use UnitOfPressure.BAR"""
-_DEPRECATED_PRESSURE_CBAR: Final = DeprecatedConstantEnum(
-    UnitOfPressure.CBAR,
-    "2025.1",
-)
+PRESSURE_CBAR: Final = "cbar"
 """Deprecated: please use UnitOfPressure.CBAR"""
-_DEPRECATED_PRESSURE_MBAR: Final = DeprecatedConstantEnum(
-    UnitOfPressure.MBAR,
-    "2025.1",
-)
+PRESSURE_MBAR: Final = "mbar"
 """Deprecated: please use UnitOfPressure.MBAR"""
-_DEPRECATED_PRESSURE_MMHG: Final = DeprecatedConstantEnum(
-    UnitOfPressure.MMHG,
-    "2025.1",
-)
+PRESSURE_MMHG: Final = "mmHg"
 """Deprecated: please use UnitOfPressure.MMHG"""
-_DEPRECATED_PRESSURE_INHG: Final = DeprecatedConstantEnum(
-    UnitOfPressure.INHG,
-    "2025.1",
-)
+PRESSURE_INHG: Final = "inHg"
 """Deprecated: please use UnitOfPressure.INHG"""
-_DEPRECATED_PRESSURE_PSI: Final = DeprecatedConstantEnum(
-    UnitOfPressure.PSI,
-    "2025.1",
-)
+PRESSURE_PSI: Final = "psi"
 """Deprecated: please use UnitOfPressure.PSI"""
 
 
@@ -997,15 +731,9 @@ class UnitOfSoundPressure(StrEnum):
     WEIGHTED_DECIBEL_A = "dBA"
 
 
-_DEPRECATED_SOUND_PRESSURE_DB: Final = DeprecatedConstantEnum(
-    UnitOfSoundPressure.DECIBEL,
-    "2025.1",
-)
+SOUND_PRESSURE_DB: Final = "dB"
 """Deprecated: please use UnitOfSoundPressure.DECIBEL"""
-_DEPRECATED_SOUND_PRESSURE_WEIGHTED_DBA: Final = DeprecatedConstantEnum(
-    UnitOfSoundPressure.WEIGHTED_DECIBEL_A,
-    "2025.1",
-)
+SOUND_PRESSURE_WEIGHTED_DBA: Final = "dBa"
 """Deprecated: please use UnitOfSoundPressure.WEIGHTED_DECIBEL_A"""
 
 
@@ -1028,36 +756,18 @@ class UnitOfVolume(StrEnum):
     British/Imperial fluid ounces are not yet supported"""
 
 
-_DEPRECATED_VOLUME_LITERS: Final = DeprecatedConstantEnum(
-    UnitOfVolume.LITERS,
-    "2025.1",
-)
+VOLUME_LITERS: Final = "L"
 """Deprecated: please use UnitOfVolume.LITERS"""
-_DEPRECATED_VOLUME_MILLILITERS: Final = DeprecatedConstantEnum(
-    UnitOfVolume.MILLILITERS,
-    "2025.1",
-)
+VOLUME_MILLILITERS: Final = "mL"
 """Deprecated: please use UnitOfVolume.MILLILITERS"""
-_DEPRECATED_VOLUME_CUBIC_METERS: Final = DeprecatedConstantEnum(
-    UnitOfVolume.CUBIC_METERS,
-    "2025.1",
-)
+VOLUME_CUBIC_METERS: Final = "m³"
 """Deprecated: please use UnitOfVolume.CUBIC_METERS"""
-_DEPRECATED_VOLUME_CUBIC_FEET: Final = DeprecatedConstantEnum(
-    UnitOfVolume.CUBIC_FEET,
-    "2025.1",
-)
+VOLUME_CUBIC_FEET: Final = "ft³"
 """Deprecated: please use UnitOfVolume.CUBIC_FEET"""
 
-_DEPRECATED_VOLUME_GALLONS: Final = DeprecatedConstantEnum(
-    UnitOfVolume.GALLONS,
-    "2025.1",
-)
+VOLUME_GALLONS: Final = "gal"
 """Deprecated: please use UnitOfVolume.GALLONS"""
-_DEPRECATED_VOLUME_FLUID_OUNCE: Final = DeprecatedConstantEnum(
-    UnitOfVolume.FLUID_OUNCES,
-    "2025.1",
-)
+VOLUME_FLUID_OUNCE: Final = "fl. oz."
 """Deprecated: please use UnitOfVolume.FLUID_OUNCES"""
 
 
@@ -1066,20 +776,12 @@ class UnitOfVolumeFlowRate(StrEnum):
     """Volume flow rate units."""
 
     CUBIC_METERS_PER_HOUR = "m³/h"
-    CUBIC_FEET_PER_MINUTE = "ft³/min"
-    LITERS_PER_MINUTE = "L/min"
-    GALLONS_PER_MINUTE = "gal/min"
+    CUBIC_FEET_PER_MINUTE = "ft³/m"
 
 
-_DEPRECATED_VOLUME_FLOW_RATE_CUBIC_METERS_PER_HOUR: Final = DeprecatedConstantEnum(
-    UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR,
-    "2025.1",
-)
+VOLUME_FLOW_RATE_CUBIC_METERS_PER_HOUR: Final = "m³/h"
 """Deprecated: please use UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR"""
-_DEPRECATED_VOLUME_FLOW_RATE_CUBIC_FEET_PER_MINUTE: Final = DeprecatedConstantEnum(
-    UnitOfVolumeFlowRate.CUBIC_FEET_PER_MINUTE,
-    "2025.1",
-)
+VOLUME_FLOW_RATE_CUBIC_FEET_PER_MINUTE: Final = "ft³/m"
 """Deprecated: please use UnitOfVolumeFlowRate.CUBIC_FEET_PER_MINUTE"""
 
 # Area units
@@ -1099,52 +801,21 @@ class UnitOfMass(StrEnum):
     STONES = "st"
 
 
-_DEPRECATED_MASS_GRAMS: Final = DeprecatedConstantEnum(
-    UnitOfMass.GRAMS,
-    "2025.1",
-)
+MASS_GRAMS: Final = "g"
 """Deprecated: please use UnitOfMass.GRAMS"""
-_DEPRECATED_MASS_KILOGRAMS: Final = DeprecatedConstantEnum(
-    UnitOfMass.KILOGRAMS,
-    "2025.1",
-)
+MASS_KILOGRAMS: Final = "kg"
 """Deprecated: please use UnitOfMass.KILOGRAMS"""
-_DEPRECATED_MASS_MILLIGRAMS: Final = DeprecatedConstantEnum(
-    UnitOfMass.MILLIGRAMS,
-    "2025.1",
-)
+MASS_MILLIGRAMS: Final = "mg"
 """Deprecated: please use UnitOfMass.MILLIGRAMS"""
-_DEPRECATED_MASS_MICROGRAMS: Final = DeprecatedConstantEnum(
-    UnitOfMass.MICROGRAMS,
-    "2025.1",
-)
+MASS_MICROGRAMS: Final = "µg"
 """Deprecated: please use UnitOfMass.MICROGRAMS"""
-_DEPRECATED_MASS_OUNCES: Final = DeprecatedConstantEnum(
-    UnitOfMass.OUNCES,
-    "2025.1",
-)
+MASS_OUNCES: Final = "oz"
 """Deprecated: please use UnitOfMass.OUNCES"""
-_DEPRECATED_MASS_POUNDS: Final = DeprecatedConstantEnum(
-    UnitOfMass.POUNDS,
-    "2025.1",
-)
+MASS_POUNDS: Final = "lb"
 """Deprecated: please use UnitOfMass.POUNDS"""
 
-
 # Conductivity units
-class UnitOfConductivity(StrEnum):
-    """Conductivity units."""
-
-    SIEMENS = "S/cm"
-    MICROSIEMENS = "µS/cm"
-    MILLISIEMENS = "mS/cm"
-
-
-_DEPRECATED_CONDUCTIVITY: Final = DeprecatedConstantEnum(
-    UnitOfConductivity.MICROSIEMENS,
-    "2025.6",
-)
-"""Deprecated: please use UnitOfConductivity.MICROSIEMENS"""
+CONDUCTIVITY: Final = "µS/cm"
 
 # Light units
 LIGHT_LUX: Final = "lx"
@@ -1168,15 +839,9 @@ class UnitOfIrradiance(StrEnum):
 
 
 # Irradiation units
-_DEPRECATED_IRRADIATION_WATTS_PER_SQUARE_METER: Final = DeprecatedConstantEnum(
-    UnitOfIrradiance.WATTS_PER_SQUARE_METER,
-    "2025.1",
-)
+IRRADIATION_WATTS_PER_SQUARE_METER: Final = "W/m²"
 """Deprecated: please use UnitOfIrradiance.WATTS_PER_SQUARE_METER"""
-_DEPRECATED_IRRADIATION_BTUS_PER_HOUR_SQUARE_FOOT: Final = DeprecatedConstantEnum(
-    UnitOfIrradiance.BTUS_PER_HOUR_SQUARE_FOOT,
-    "2025.1",
-)
+IRRADIATION_BTUS_PER_HOUR_SQUARE_FOOT: Final = "BTU/(h×ft²)"
 """Deprecated: please use UnitOfIrradiance.BTUS_PER_HOUR_SQUARE_FOOT"""
 
 
@@ -1218,24 +883,13 @@ class UnitOfPrecipitationDepth(StrEnum):
 
 
 # Precipitation units
-_DEPRECATED_PRECIPITATION_INCHES: Final = DeprecatedConstantEnum(
-    UnitOfPrecipitationDepth.INCHES, "2025.1"
-)
+PRECIPITATION_INCHES: Final = "in"
 """Deprecated: please use UnitOfPrecipitationDepth.INCHES"""
-_DEPRECATED_PRECIPITATION_MILLIMETERS: Final = DeprecatedConstantEnum(
-    UnitOfPrecipitationDepth.MILLIMETERS,
-    "2025.1",
-)
+PRECIPITATION_MILLIMETERS: Final = "mm"
 """Deprecated: please use UnitOfPrecipitationDepth.MILLIMETERS"""
-_DEPRECATED_PRECIPITATION_MILLIMETERS_PER_HOUR: Final = DeprecatedConstantEnum(
-    UnitOfVolumetricFlux.MILLIMETERS_PER_HOUR,
-    "2025.1",
-)
+PRECIPITATION_MILLIMETERS_PER_HOUR: Final = "mm/h"
 """Deprecated: please use UnitOfVolumetricFlux.MILLIMETERS_PER_HOUR"""
-_DEPRECATED_PRECIPITATION_INCHES_PER_HOUR: Final = DeprecatedConstantEnum(
-    UnitOfVolumetricFlux.INCHES_PER_HOUR,
-    "2025.1",
-)
+PRECIPITATION_INCHES_PER_HOUR: Final = "in/h"
 """Deprecated: please use UnitOfVolumetricFlux.INCHES_PER_HOUR"""
 
 # Concentration units
@@ -1251,7 +905,6 @@ CONCENTRATION_PARTS_PER_BILLION: Final = "ppb"
 class UnitOfSpeed(StrEnum):
     """Speed units."""
 
-    BEAUFORT = "Beaufort"
     FEET_PER_SECOND = "ft/s"
     METERS_PER_SECOND = "m/s"
     KILOMETERS_PER_HOUR = "km/h"
@@ -1259,42 +912,24 @@ class UnitOfSpeed(StrEnum):
     MILES_PER_HOUR = "mph"
 
 
-_DEPRECATED_SPEED_FEET_PER_SECOND: Final = DeprecatedConstantEnum(
-    UnitOfSpeed.FEET_PER_SECOND, "2025.1"
-)
+SPEED_FEET_PER_SECOND: Final = "ft/s"
 """Deprecated: please use UnitOfSpeed.FEET_PER_SECOND"""
-_DEPRECATED_SPEED_METERS_PER_SECOND: Final = DeprecatedConstantEnum(
-    UnitOfSpeed.METERS_PER_SECOND, "2025.1"
-)
+SPEED_METERS_PER_SECOND: Final = "m/s"
 """Deprecated: please use UnitOfSpeed.METERS_PER_SECOND"""
-_DEPRECATED_SPEED_KILOMETERS_PER_HOUR: Final = DeprecatedConstantEnum(
-    UnitOfSpeed.KILOMETERS_PER_HOUR,
-    "2025.1",
-)
+SPEED_KILOMETERS_PER_HOUR: Final = "km/h"
 """Deprecated: please use UnitOfSpeed.KILOMETERS_PER_HOUR"""
-_DEPRECATED_SPEED_KNOTS: Final = DeprecatedConstantEnum(UnitOfSpeed.KNOTS, "2025.1")
+SPEED_KNOTS: Final = "kn"
 """Deprecated: please use UnitOfSpeed.KNOTS"""
-_DEPRECATED_SPEED_MILES_PER_HOUR: Final = DeprecatedConstantEnum(
-    UnitOfSpeed.MILES_PER_HOUR, "2025.1"
-)
+SPEED_MILES_PER_HOUR: Final = "mph"
 """Deprecated: please use UnitOfSpeed.MILES_PER_HOUR"""
 
-_DEPRECATED_SPEED_MILLIMETERS_PER_DAY: Final = DeprecatedConstantEnum(
-    UnitOfVolumetricFlux.MILLIMETERS_PER_DAY,
-    "2025.1",
-)
+SPEED_MILLIMETERS_PER_DAY: Final = "mm/d"
 """Deprecated: please use UnitOfVolumetricFlux.MILLIMETERS_PER_DAY"""
 
-_DEPRECATED_SPEED_INCHES_PER_DAY: Final = DeprecatedConstantEnum(
-    UnitOfVolumetricFlux.INCHES_PER_DAY,
-    "2025.1",
-)
+SPEED_INCHES_PER_DAY: Final = "in/d"
 """Deprecated: please use UnitOfVolumetricFlux.INCHES_PER_DAY"""
 
-_DEPRECATED_SPEED_INCHES_PER_HOUR: Final = DeprecatedConstantEnum(
-    UnitOfVolumetricFlux.INCHES_PER_HOUR,
-    "2025.1",
-)
+SPEED_INCHES_PER_HOUR: Final = "in/h"
 """Deprecated: please use UnitOfVolumetricFlux.INCHES_PER_HOUR"""
 
 
@@ -1330,87 +965,47 @@ class UnitOfInformation(StrEnum):
     YOBIBYTES = "YiB"
 
 
-_DEPRECATED_DATA_BITS: Final = DeprecatedConstantEnum(UnitOfInformation.BITS, "2025.1")
+DATA_BITS: Final = "bit"
 """Deprecated: please use UnitOfInformation.BITS"""
-_DEPRECATED_DATA_KILOBITS: Final = DeprecatedConstantEnum(
-    UnitOfInformation.KILOBITS, "2025.1"
-)
+DATA_KILOBITS: Final = "kbit"
 """Deprecated: please use UnitOfInformation.KILOBITS"""
-_DEPRECATED_DATA_MEGABITS: Final = DeprecatedConstantEnum(
-    UnitOfInformation.MEGABITS, "2025.1"
-)
+DATA_MEGABITS: Final = "Mbit"
 """Deprecated: please use UnitOfInformation.MEGABITS"""
-_DEPRECATED_DATA_GIGABITS: Final = DeprecatedConstantEnum(
-    UnitOfInformation.GIGABITS, "2025.1"
-)
+DATA_GIGABITS: Final = "Gbit"
 """Deprecated: please use UnitOfInformation.GIGABITS"""
-_DEPRECATED_DATA_BYTES: Final = DeprecatedConstantEnum(
-    UnitOfInformation.BYTES, "2025.1"
-)
+DATA_BYTES: Final = "B"
 """Deprecated: please use UnitOfInformation.BYTES"""
-_DEPRECATED_DATA_KILOBYTES: Final = DeprecatedConstantEnum(
-    UnitOfInformation.KILOBYTES, "2025.1"
-)
+DATA_KILOBYTES: Final = "kB"
 """Deprecated: please use UnitOfInformation.KILOBYTES"""
-_DEPRECATED_DATA_MEGABYTES: Final = DeprecatedConstantEnum(
-    UnitOfInformation.MEGABYTES, "2025.1"
-)
+DATA_MEGABYTES: Final = "MB"
 """Deprecated: please use UnitOfInformation.MEGABYTES"""
-_DEPRECATED_DATA_GIGABYTES: Final = DeprecatedConstantEnum(
-    UnitOfInformation.GIGABYTES, "2025.1"
-)
+DATA_GIGABYTES: Final = "GB"
 """Deprecated: please use UnitOfInformation.GIGABYTES"""
-_DEPRECATED_DATA_TERABYTES: Final = DeprecatedConstantEnum(
-    UnitOfInformation.TERABYTES, "2025.1"
-)
+DATA_TERABYTES: Final = "TB"
 """Deprecated: please use UnitOfInformation.TERABYTES"""
-_DEPRECATED_DATA_PETABYTES: Final = DeprecatedConstantEnum(
-    UnitOfInformation.PETABYTES, "2025.1"
-)
+DATA_PETABYTES: Final = "PB"
 """Deprecated: please use UnitOfInformation.PETABYTES"""
-_DEPRECATED_DATA_EXABYTES: Final = DeprecatedConstantEnum(
-    UnitOfInformation.EXABYTES, "2025.1"
-)
+DATA_EXABYTES: Final = "EB"
 """Deprecated: please use UnitOfInformation.EXABYTES"""
-_DEPRECATED_DATA_ZETTABYTES: Final = DeprecatedConstantEnum(
-    UnitOfInformation.ZETTABYTES, "2025.1"
-)
+DATA_ZETTABYTES: Final = "ZB"
 """Deprecated: please use UnitOfInformation.ZETTABYTES"""
-_DEPRECATED_DATA_YOTTABYTES: Final = DeprecatedConstantEnum(
-    UnitOfInformation.YOTTABYTES, "2025.1"
-)
+DATA_YOTTABYTES: Final = "YB"
 """Deprecated: please use UnitOfInformation.YOTTABYTES"""
-_DEPRECATED_DATA_KIBIBYTES: Final = DeprecatedConstantEnum(
-    UnitOfInformation.KIBIBYTES, "2025.1"
-)
+DATA_KIBIBYTES: Final = "KiB"
 """Deprecated: please use UnitOfInformation.KIBIBYTES"""
-_DEPRECATED_DATA_MEBIBYTES: Final = DeprecatedConstantEnum(
-    UnitOfInformation.MEBIBYTES, "2025.1"
-)
+DATA_MEBIBYTES: Final = "MiB"
 """Deprecated: please use UnitOfInformation.MEBIBYTES"""
-_DEPRECATED_DATA_GIBIBYTES: Final = DeprecatedConstantEnum(
-    UnitOfInformation.GIBIBYTES, "2025.1"
-)
+DATA_GIBIBYTES: Final = "GiB"
 """Deprecated: please use UnitOfInformation.GIBIBYTES"""
-_DEPRECATED_DATA_TEBIBYTES: Final = DeprecatedConstantEnum(
-    UnitOfInformation.TEBIBYTES, "2025.1"
-)
+DATA_TEBIBYTES: Final = "TiB"
 """Deprecated: please use UnitOfInformation.TEBIBYTES"""
-_DEPRECATED_DATA_PEBIBYTES: Final = DeprecatedConstantEnum(
-    UnitOfInformation.PEBIBYTES, "2025.1"
-)
+DATA_PEBIBYTES: Final = "PiB"
 """Deprecated: please use UnitOfInformation.PEBIBYTES"""
-_DEPRECATED_DATA_EXBIBYTES: Final = DeprecatedConstantEnum(
-    UnitOfInformation.EXBIBYTES, "2025.1"
-)
+DATA_EXBIBYTES: Final = "EiB"
 """Deprecated: please use UnitOfInformation.EXBIBYTES"""
-_DEPRECATED_DATA_ZEBIBYTES: Final = DeprecatedConstantEnum(
-    UnitOfInformation.ZEBIBYTES, "2025.1"
-)
+DATA_ZEBIBYTES: Final = "ZiB"
 """Deprecated: please use UnitOfInformation.ZEBIBYTES"""
-_DEPRECATED_DATA_YOBIBYTES: Final = DeprecatedConstantEnum(
-    UnitOfInformation.YOBIBYTES, "2025.1"
-)
+DATA_YOBIBYTES: Final = "YiB"
 """Deprecated: please use UnitOfInformation.YOBIBYTES"""
 
 
@@ -1431,71 +1026,41 @@ class UnitOfDataRate(StrEnum):
     GIBIBYTES_PER_SECOND = "GiB/s"
 
 
-_DEPRECATED_DATA_RATE_BITS_PER_SECOND: Final = DeprecatedConstantEnum(
-    UnitOfDataRate.BITS_PER_SECOND,
-    "2025.1",
-)
+DATA_RATE_BITS_PER_SECOND: Final = "bit/s"
 """Deprecated: please use UnitOfDataRate.BITS_PER_SECOND"""
-_DEPRECATED_DATA_RATE_KILOBITS_PER_SECOND: Final = DeprecatedConstantEnum(
-    UnitOfDataRate.KILOBITS_PER_SECOND,
-    "2025.1",
-)
+DATA_RATE_KILOBITS_PER_SECOND: Final = "kbit/s"
 """Deprecated: please use UnitOfDataRate.KILOBITS_PER_SECOND"""
-_DEPRECATED_DATA_RATE_MEGABITS_PER_SECOND: Final = DeprecatedConstantEnum(
-    UnitOfDataRate.MEGABITS_PER_SECOND,
-    "2025.1",
-)
+DATA_RATE_MEGABITS_PER_SECOND: Final = "Mbit/s"
 """Deprecated: please use UnitOfDataRate.MEGABITS_PER_SECOND"""
-_DEPRECATED_DATA_RATE_GIGABITS_PER_SECOND: Final = DeprecatedConstantEnum(
-    UnitOfDataRate.GIGABITS_PER_SECOND,
-    "2025.1",
-)
+DATA_RATE_GIGABITS_PER_SECOND: Final = "Gbit/s"
 """Deprecated: please use UnitOfDataRate.GIGABITS_PER_SECOND"""
-_DEPRECATED_DATA_RATE_BYTES_PER_SECOND: Final = DeprecatedConstantEnum(
-    UnitOfDataRate.BYTES_PER_SECOND,
-    "2025.1",
-)
+DATA_RATE_BYTES_PER_SECOND: Final = "B/s"
 """Deprecated: please use UnitOfDataRate.BYTES_PER_SECOND"""
-_DEPRECATED_DATA_RATE_KILOBYTES_PER_SECOND: Final = DeprecatedConstantEnum(
-    UnitOfDataRate.KILOBYTES_PER_SECOND,
-    "2025.1",
-)
+DATA_RATE_KILOBYTES_PER_SECOND: Final = "kB/s"
 """Deprecated: please use UnitOfDataRate.KILOBYTES_PER_SECOND"""
-_DEPRECATED_DATA_RATE_MEGABYTES_PER_SECOND: Final = DeprecatedConstantEnum(
-    UnitOfDataRate.MEGABYTES_PER_SECOND,
-    "2025.1",
-)
+DATA_RATE_MEGABYTES_PER_SECOND: Final = "MB/s"
 """Deprecated: please use UnitOfDataRate.MEGABYTES_PER_SECOND"""
-_DEPRECATED_DATA_RATE_GIGABYTES_PER_SECOND: Final = DeprecatedConstantEnum(
-    UnitOfDataRate.GIGABYTES_PER_SECOND,
-    "2025.1",
-)
+DATA_RATE_GIGABYTES_PER_SECOND: Final = "GB/s"
 """Deprecated: please use UnitOfDataRate.GIGABYTES_PER_SECOND"""
-_DEPRECATED_DATA_RATE_KIBIBYTES_PER_SECOND: Final = DeprecatedConstantEnum(
-    UnitOfDataRate.KIBIBYTES_PER_SECOND,
-    "2025.1",
-)
+DATA_RATE_KIBIBYTES_PER_SECOND: Final = "KiB/s"
 """Deprecated: please use UnitOfDataRate.KIBIBYTES_PER_SECOND"""
-_DEPRECATED_DATA_RATE_MEBIBYTES_PER_SECOND: Final = DeprecatedConstantEnum(
-    UnitOfDataRate.MEBIBYTES_PER_SECOND,
-    "2025.1",
-)
+DATA_RATE_MEBIBYTES_PER_SECOND: Final = "MiB/s"
 """Deprecated: please use UnitOfDataRate.MEBIBYTES_PER_SECOND"""
-_DEPRECATED_DATA_RATE_GIBIBYTES_PER_SECOND: Final = DeprecatedConstantEnum(
-    UnitOfDataRate.GIBIBYTES_PER_SECOND,
-    "2025.1",
-)
+DATA_RATE_GIBIBYTES_PER_SECOND: Final = "GiB/s"
 """Deprecated: please use UnitOfDataRate.GIBIBYTES_PER_SECOND"""
 
 
 # States
-COMPRESSED_STATE_STATE: Final = "s"
-COMPRESSED_STATE_ATTRIBUTES: Final = "a"
-COMPRESSED_STATE_CONTEXT: Final = "c"
-COMPRESSED_STATE_LAST_CHANGED: Final = "lc"
-COMPRESSED_STATE_LAST_UPDATED: Final = "lu"
+COMPRESSED_STATE_STATE = "s"
+COMPRESSED_STATE_ATTRIBUTES = "a"
+COMPRESSED_STATE_CONTEXT = "c"
+COMPRESSED_STATE_LAST_CHANGED = "lc"
+COMPRESSED_STATE_LAST_UPDATED = "lu"
 
 # #### SERVICES ####
+SERVICE_HOMEASSISTANT_STOP: Final = "stop"
+SERVICE_HOMEASSISTANT_RESTART: Final = "restart"
+
 SERVICE_TURN_ON: Final = "turn_on"
 SERVICE_TURN_OFF: Final = "turn_off"
 SERVICE_TOGGLE: Final = "toggle"
@@ -1540,11 +1105,6 @@ SERVICE_SET_COVER_TILT_POSITION: Final = "set_cover_tilt_position"
 SERVICE_STOP_COVER: Final = "stop_cover"
 SERVICE_STOP_COVER_TILT: Final = "stop_cover_tilt"
 SERVICE_TOGGLE_COVER_TILT: Final = "toggle_cover_tilt"
-
-SERVICE_CLOSE_VALVE: Final = "close_valve"
-SERVICE_OPEN_VALVE: Final = "open_valve"
-SERVICE_SET_VALVE_POSITION: Final = "set_valve_position"
-SERVICE_STOP_VALVE: Final = "stop_valve"
 
 SERVICE_SELECT_OPTION: Final = "select_option"
 
@@ -1603,6 +1163,30 @@ PRECISION_TENTHS: Final = 0.1
 # cloud, alexa, or google_home components
 CLOUD_NEVER_EXPOSED_ENTITIES: Final[list[str]] = ["group.all_locks"]
 
+# ENTITY_CATEGOR* below are deprecated as of 2021.12
+# use the EntityCategory enum instead.
+ENTITY_CATEGORY_CONFIG: Final = "config"
+ENTITY_CATEGORY_DIAGNOSTIC: Final = "diagnostic"
+ENTITY_CATEGORIES: Final[list[str]] = [
+    ENTITY_CATEGORY_CONFIG,
+    ENTITY_CATEGORY_DIAGNOSTIC,
+]
+
+# The ID of the Home Assistant Media Player Cast App
+CAST_APP_ID_HOMEASSISTANT_MEDIA: Final = "B45F4572"
+# The ID of the Home Assistant Lovelace Cast App
+CAST_APP_ID_HOMEASSISTANT_LOVELACE: Final = "A078F6B0"
+
+# User used by Supervisor
+HASSIO_USER_NAME = "Supervisor"
+
+SIGNAL_BOOTSTRAP_INTEGRATIONS = "bootstrap_integrations"
+
+# Date/Time formats
+FORMAT_DATE: Final = "%Y-%m-%d"
+FORMAT_TIME: Final = "%H:%M:%S"
+FORMAT_DATETIME: Final = f"{FORMAT_DATE} {FORMAT_TIME}"
+
 
 class EntityCategory(StrEnum):
     """Category of an entity.
@@ -1618,49 +1202,3 @@ class EntityCategory(StrEnum):
     # Diagnostic: An entity exposing some configuration parameter,
     # or diagnostics of a device.
     DIAGNOSTIC = "diagnostic"
-
-
-# ENTITY_CATEGOR* below are deprecated as of 2021.12
-# use the EntityCategory enum instead.
-_DEPRECATED_ENTITY_CATEGORY_CONFIG: Final = DeprecatedConstantEnum(
-    EntityCategory.CONFIG, "2025.1"
-)
-_DEPRECATED_ENTITY_CATEGORY_DIAGNOSTIC: Final = DeprecatedConstantEnum(
-    EntityCategory.DIAGNOSTIC, "2025.1"
-)
-ENTITY_CATEGORIES: Final[list[str]] = [cls.value for cls in EntityCategory]
-
-# The ID of the Home Assistant Media Player Cast App
-CAST_APP_ID_HOMEASSISTANT_MEDIA: Final = "B45F4572"
-# The ID of the Home Assistant Lovelace Cast App
-CAST_APP_ID_HOMEASSISTANT_LOVELACE: Final = "A078F6B0"
-
-# User used by Supervisor
-HASSIO_USER_NAME = "Supervisor"
-
-SIGNAL_BOOTSTRAP_INTEGRATIONS: SignalType[dict[str, float]] = SignalType(
-    "bootstrap_integrations"
-)
-
-
-# hass.data key for logging information.
-KEY_DATA_LOGGING: HassKey[str] = HassKey("logging")
-
-
-# Date/Time formats
-FORMAT_DATE: Final = "%Y-%m-%d"
-FORMAT_TIME: Final = "%H:%M:%S"
-FORMAT_DATETIME: Final = f"{FORMAT_DATE} {FORMAT_TIME}"
-
-
-# Maximum entities expected in the state machine
-# This is not a hard limit, but caches and other
-# data structures will be pre-allocated to this size
-MAX_EXPECTED_ENTITY_IDS: Final = 16384
-
-# These can be removed if no deprecated constant are in this module anymore
-__getattr__ = partial(check_if_deprecated_constant, module_globals=globals())
-__dir__ = partial(
-    dir_with_deprecated_constants, module_globals_keys=[*globals().keys()]
-)
-__all__ = all_with_deprecated_constants(globals())

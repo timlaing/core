@@ -1,5 +1,4 @@
 """Representation of a doorlock."""
-
 from __future__ import annotations
 
 from typing import Any

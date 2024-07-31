@@ -1,8 +1,7 @@
 """API for persistent storage for the frontend."""
-
 from __future__ import annotations
 
-from collections.abc import Callable, Coroutine
+from collections.abc import Callable
 from functools import wraps
 from typing import Any
 
@@ -51,19 +50,12 @@ async def async_user_store(
     return store, data[user_id]
 
 
-def with_store(
-    orig_func: Callable[
-        [HomeAssistant, ActiveConnection, dict[str, Any], Store, dict[str, Any]],
-        Coroutine[Any, Any, None],
-    ],
-) -> Callable[
-    [HomeAssistant, ActiveConnection, dict[str, Any]], Coroutine[Any, Any, None]
-]:
+def with_store(orig_func: Callable) -> Callable:
     """Decorate function to provide data."""
 
     @wraps(orig_func)
     async def with_store_func(
-        hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+        hass: HomeAssistant, connection: ActiveConnection, msg: dict
     ) -> None:
         """Provide user specific data and store to function."""
         user_id = connection.user.id

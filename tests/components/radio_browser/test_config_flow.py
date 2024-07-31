@@ -1,5 +1,4 @@
 """Test the Radio Browser config flow."""
-
 from unittest.mock import AsyncMock
 
 from homeassistant.components.radio_browser.const import DOMAIN
@@ -15,7 +14,7 @@ async def test_full_user_flow(hass: HomeAssistant, mock_setup_entry: AsyncMock) 
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
-    assert result.get("type") is FlowResultType.FORM
+    assert result.get("type") == FlowResultType.FORM
     assert result.get("errors") is None
 
     result2 = await hass.config_entries.flow.async_configure(
@@ -23,7 +22,7 @@ async def test_full_user_flow(hass: HomeAssistant, mock_setup_entry: AsyncMock) 
         user_input={},
     )
 
-    assert result2.get("type") is FlowResultType.CREATE_ENTRY
+    assert result2.get("type") == FlowResultType.CREATE_ENTRY
     assert result2.get("title") == "Radio Browser"
     assert result2.get("data") == {}
 
@@ -42,7 +41,7 @@ async def test_already_configured(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
-    assert result.get("type") is FlowResultType.ABORT
+    assert result.get("type") == FlowResultType.ABORT
     assert result.get("reason") == "single_instance_allowed"
 
 
@@ -54,7 +53,7 @@ async def test_onboarding_flow(
         DOMAIN, context={"source": "onboarding"}
     )
 
-    assert result.get("type") is FlowResultType.CREATE_ENTRY
+    assert result.get("type") == FlowResultType.CREATE_ENTRY
     assert result.get("title") == "Radio Browser"
     assert result.get("data") == {}
 

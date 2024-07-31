@@ -1,5 +1,4 @@
 """Test the Kegtron sensors."""
-
 from homeassistant.components.kegtron.const import DOMAIN
 from homeassistant.components.sensor import ATTR_STATE_CLASS
 from homeassistant.const import ATTR_FRIENDLY_NAME, ATTR_UNIT_OF_MEASUREMENT

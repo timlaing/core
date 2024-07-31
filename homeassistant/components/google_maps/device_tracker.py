@@ -1,5 +1,4 @@
 """Support for Google Maps location sharing."""
-
 from __future__ import annotations
 
 from datetime import timedelta
@@ -10,7 +9,7 @@ from locationsharinglib.locationsharinglibexceptions import InvalidCookies
 import voluptuous as vol
 
 from homeassistant.components.device_tracker import (
-    PLATFORM_SCHEMA as DEVICE_TRACKER_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA as PLATFORM_SCHEMA_BASE,
     SeeCallback,
     SourceType,
 )
@@ -40,7 +39,7 @@ CREDENTIALS_FILE = ".google_maps_location_sharing.cookies"
 
 # the parent "device_tracker" have marked the schemas as legacy, so this
 # need to be refactored as part of a bigger rewrite.
-PLATFORM_SCHEMA = DEVICE_TRACKER_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA_BASE.extend(
     {
         vol.Required(CONF_USERNAME): cv.string,
         vol.Optional(CONF_MAX_GPS_ACCURACY, default=100000): vol.Coerce(float),

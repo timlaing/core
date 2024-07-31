@@ -1,5 +1,4 @@
 """Support for voltage, power & energy sensors for VeSync outlets."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -36,18 +35,25 @@ from .const import DEV_TYPE_TO_HA, DOMAIN, SKU_TO_BASE_DEVICE, VS_DISCOVERY, VS_
 _LOGGER = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True, kw_only=True)
-class VeSyncSensorEntityDescription(SensorEntityDescription):
-    """Describe VeSync sensor entity."""
+@dataclass
+class VeSyncSensorEntityDescriptionMixin:
+    """Mixin for required keys."""
 
     value_fn: Callable[[VeSyncAirBypass | VeSyncOutlet | VeSyncSwitch], StateType]
 
-    exists_fn: Callable[[VeSyncAirBypass | VeSyncOutlet | VeSyncSwitch], bool] = (
-        lambda _: True
-    )
-    update_fn: Callable[[VeSyncAirBypass | VeSyncOutlet | VeSyncSwitch], None] = (
-        lambda _: None
-    )
+
+@dataclass
+class VeSyncSensorEntityDescription(
+    SensorEntityDescription, VeSyncSensorEntityDescriptionMixin
+):
+    """Describe VeSync sensor entity."""
+
+    exists_fn: Callable[
+        [VeSyncAirBypass | VeSyncOutlet | VeSyncSwitch], bool
+    ] = lambda _: True
+    update_fn: Callable[
+        [VeSyncAirBypass | VeSyncOutlet | VeSyncSwitch], None
+    ] = lambda _: None
 
 
 def update_energy(device):
@@ -66,24 +72,9 @@ def ha_dev_type(device):
     return DEV_TYPE_TO_HA.get(device.device_type)
 
 
-FILTER_LIFE_SUPPORTED = [
-    "LV-PUR131S",
-    "Core200S",
-    "Core300S",
-    "Core400S",
-    "Core600S",
-    "Vital100S",
-    "Vital200S",
-]
-AIR_QUALITY_SUPPORTED = [
-    "LV-PUR131S",
-    "Core300S",
-    "Core400S",
-    "Core600S",
-    "Vital100S",
-    "Vital200S",
-]
-PM25_SUPPORTED = ["Core300S", "Core400S", "Core600S", "Vital100S", "Vital200S"]
+FILTER_LIFE_SUPPORTED = ["LV-PUR131S", "Core200S", "Core300S", "Core400S", "Core600S"]
+AIR_QUALITY_SUPPORTED = ["LV-PUR131S", "Core300S", "Core400S", "Core600S"]
+PM25_SUPPORTED = ["Core300S", "Core400S", "Core600S"]
 
 SENSORS: tuple[VeSyncSensorEntityDescription, ...] = (
     VeSyncSensorEntityDescription(
@@ -194,15 +185,12 @@ async def async_setup_entry(
 @callback
 def _setup_entities(devices, async_add_entities):
     """Check if device is online and add entity."""
-    async_add_entities(
-        (
-            VeSyncSensorEntity(dev, description)
-            for dev in devices
-            for description in SENSORS
-            if description.exists_fn(dev)
-        ),
-        update_before_add=True,
-    )
+    entities = []
+    for dev in devices:
+        for description in SENSORS:
+            if description.exists_fn(dev):
+                entities.append(VeSyncSensorEntity(dev, description))
+    async_add_entities(entities, update_before_add=True)
 
 
 class VeSyncSensorEntity(VeSyncBaseEntity, SensorEntity):

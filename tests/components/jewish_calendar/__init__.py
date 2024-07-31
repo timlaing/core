@@ -1,5 +1,4 @@
 """Tests for the jewish_calendar component."""
-
 from collections import namedtuple
 from datetime import datetime
 
@@ -27,7 +26,7 @@ def make_nyc_test_params(dtime, results, havdalah_offset=0):
         }
     return (
         dtime,
-        jewish_calendar.DEFAULT_CANDLE_LIGHT,
+        jewish_calendar.CANDLE_LIGHT_DEFAULT,
         havdalah_offset,
         True,
         "America/New_York",
@@ -49,7 +48,7 @@ def make_jerusalem_test_params(dtime, results, havdalah_offset=0):
         }
     return (
         dtime,
-        jewish_calendar.DEFAULT_CANDLE_LIGHT,
+        jewish_calendar.CANDLE_LIGHT_DEFAULT,
         havdalah_offset,
         False,
         "Asia/Jerusalem",

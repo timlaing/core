@@ -1,5 +1,4 @@
 """Support for media browsing."""
-
 import logging
 
 from afsapi import AFSAPI, FSApiException, OutOfRangeException, Preset
@@ -94,7 +93,7 @@ async def browse_top_level(current_mode, afsapi: AFSAPI):
         for top_level_media_content_id, name in TOP_LEVEL_DIRECTORIES.items()
     ]
 
-    return BrowseMedia(
+    library_info = BrowseMedia(
         media_class=MediaClass.DIRECTORY,
         media_content_id="library",
         media_content_type=MediaType.CHANNELS,
@@ -104,6 +103,8 @@ async def browse_top_level(current_mode, afsapi: AFSAPI):
         children=children,
         children_media_class=MediaClass.DIRECTORY,
     )
+
+    return library_info
 
 
 async def browse_node(

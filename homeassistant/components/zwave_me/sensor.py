@@ -1,5 +1,4 @@
 """Representation of a sensorMultilevel."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -32,7 +31,7 @@ from . import ZWaveMeController, ZWaveMeEntity
 from .const import DOMAIN, ZWaveMePlatform
 
 
-@dataclass(frozen=True)
+@dataclass
 class ZWaveMeSensorEntityDescription(SensorEntityDescription):
     """Class describing ZWaveMeSensor sensor entities."""
 

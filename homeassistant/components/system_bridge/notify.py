@@ -1,11 +1,10 @@
 """Support for System Bridge notification service."""
-
 from __future__ import annotations
 
 import logging
 from typing import Any
 
-from systembridgemodels.notification import Notification
+from systembridgeconnector.models.notification import Notification
 
 from homeassistant.components.notify import (
     ATTR_DATA,
@@ -72,6 +71,6 @@ class SystemBridgeNotificationService(BaseNotificationService):
             title=kwargs.get(ATTR_TITLE, data.get(ATTR_TITLE, ATTR_TITLE_DEFAULT)),
         )
 
-        _LOGGER.debug("Sending notification: %s", notification)
+        _LOGGER.debug("Sending notification: %s", notification.json())
 
         await self._coordinator.websocket_client.send_notification(notification)

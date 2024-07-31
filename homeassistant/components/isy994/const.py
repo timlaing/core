@@ -1,5 +1,4 @@
 """Constants for the ISY Platform."""
-
 import logging
 
 from pyisy.constants import PROP_ON_LEVEL, PROP_RAMP_RATE
@@ -214,21 +213,19 @@ NODE_FILTERS: dict[Platform, dict[str, list[str]]] = {
             "7.13.",
             TYPE_CATEGORY_SAFETY,
         ],  # Does a startswith() match; include the dot
-        FILTER_ZWAVE_CAT: (["104", "112", "138", *map(str, range(148, 180))]),
+        FILTER_ZWAVE_CAT: (["104", "112", "138"] + list(map(str, range(148, 180)))),
     },
     Platform.SENSOR: {
         # This is just a more-readable way of including MOST uoms between 1-100
         # (Remember that range() is non-inclusive of the stop value)
         FILTER_UOM: (
-            [
-                "1",
-                *map(str, range(3, 11)),
-                *map(str, range(12, 51)),
-                *map(str, range(52, 66)),
-                *map(str, range(69, 78)),
-                "79",
-                *map(str, range(82, 97)),
-            ]
+            ["1"]
+            + list(map(str, range(3, 11)))
+            + list(map(str, range(12, 51)))
+            + list(map(str, range(52, 66)))
+            + list(map(str, range(69, 78)))
+            + ["79"]
+            + list(map(str, range(82, 97)))
         ),
         FILTER_STATES: [],
         FILTER_NODE_DEF_ID: [
@@ -240,7 +237,7 @@ NODE_FILTERS: dict[Platform, dict[str, list[str]]] = {
             "RemoteLinc2_ADV",
         ],
         FILTER_INSTEON_TYPE: ["0.16.", "0.17.", "0.18.", "9.0.", "9.7."],
-        FILTER_ZWAVE_CAT: (["118", "143", *map(str, range(180, 186))]),
+        FILTER_ZWAVE_CAT: (["118", "143"] + list(map(str, range(180, 186)))),
     },
     Platform.LOCK: {
         FILTER_UOM: ["11"],
@@ -596,12 +593,14 @@ UOM_TO_STATES = {
         4: "highly polluted",
     },
     UOM_BARRIER: {  # Barrier Status
-        0: STATE_CLOSED,
-        100: STATE_OPEN,
-        101: STATE_UNKNOWN,
-        102: "stopped",
-        103: STATE_CLOSING,
-        104: STATE_OPENING,
+        **{
+            0: STATE_CLOSED,
+            100: STATE_OPEN,
+            101: STATE_UNKNOWN,
+            102: "stopped",
+            103: STATE_CLOSING,
+            104: STATE_OPENING,
+        },
         **{
             b: f"{b} %" for a, b in enumerate(list(range(1, 100)))
         },  # 1-99 are percentage open

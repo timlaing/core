@@ -1,5 +1,4 @@
 """Support for openexchangerates.org exchange rates service."""
-
 from __future__ import annotations
 
 from homeassistant.components.sensor import SensorEntity
@@ -65,4 +64,4 @@ class OpenexchangeratesSensor(
     @property
     def native_value(self) -> float:
         """Return the state of the sensor."""
-        return self.coordinator.data.rates[self._quote]
+        return round(self.coordinator.data.rates[self._quote], 4)

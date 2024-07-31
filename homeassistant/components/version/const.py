@@ -1,5 +1,4 @@
 """Constants for the Version integration."""
-
 from __future__ import annotations
 
 from datetime import timedelta
@@ -67,12 +66,10 @@ BOARD_MAP: Final[dict[str, str]] = {
     "RaspberryPi 3 64bit": "rpi3-64",
     "RaspberryPi 4": "rpi4",
     "RaspberryPi 4 64bit": "rpi4-64",
-    "RaspberryPi 5": "rpi5-64",
     "ASUS Tinkerboard": "tinker",
     "ODROID C2": "odroid-c2",
     "ODROID C4": "odroid-c4",
     "ODROID M1": "odroid-m1",
-    "ODROID M1S": "odroid-m1s",
     "ODROID N2": "odroid-n2",
     "ODROID XU4": "odroid-xu4",
     "Generic AArch64": "generic-aarch64",
@@ -92,8 +89,7 @@ VERSION_SOURCE_MAP: Final[dict[str, str]] = {
     VERSION_SOURCE_PYPI: "pypi",
 }
 
-VALID_SOURCES: Final[list[str]] = [
-    *HA_VERSION_SOURCES,
+VALID_SOURCES: Final[list[str]] = HA_VERSION_SOURCES + [
     "hassio",  # Kept to not break existing configurations
     "docker",  # Kept to not break existing configurations
 ]
@@ -116,7 +112,6 @@ VALID_IMAGES: Final = [
     "raspberrypi3",
     "raspberrypi4-64",
     "raspberrypi4",
-    "raspberrypi5-64",
     "tinker",
 ]
 

@@ -1,24 +1,15 @@
 """The tests for the rss_feed_api component."""
-
-from asyncio import AbstractEventLoop
 from http import HTTPStatus
 
-from aiohttp.test_utils import TestClient
 from defusedxml import ElementTree
 import pytest
 
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 
-from tests.typing import ClientSessionGenerator
-
 
 @pytest.fixture
-def mock_http_client(
-    event_loop: AbstractEventLoop,
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-) -> TestClient:
+def mock_http_client(event_loop, hass, hass_client):
     """Set up test fixture."""
     loop = event_loop
     config = {

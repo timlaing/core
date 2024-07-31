@@ -1,5 +1,4 @@
 """Support for the DOODS service."""
-
 from __future__ import annotations
 
 import io
@@ -13,7 +12,7 @@ import voluptuous as vol
 
 from homeassistant.components.image_processing import (
     CONF_CONFIDENCE,
-    PLATFORM_SCHEMA as IMAGE_PROCESSING_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     ImageProcessingEntity,
 )
 from homeassistant.const import (
@@ -66,7 +65,7 @@ LABEL_SCHEMA = vol.Schema(
     }
 )
 
-PLATFORM_SCHEMA = IMAGE_PROCESSING_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_URL): cv.string,
         vol.Required(CONF_DETECTOR): cv.string,
@@ -112,17 +111,19 @@ def setup_platform(
         )
         return
 
-    add_entities(
-        Doods(
-            hass,
-            camera[CONF_ENTITY_ID],
-            camera.get(CONF_NAME),
-            doods,
-            detector,
-            config,
+    entities = []
+    for camera in config[CONF_SOURCE]:
+        entities.append(
+            Doods(
+                hass,
+                camera[CONF_ENTITY_ID],
+                camera.get(CONF_NAME),
+                doods,
+                detector,
+                config,
+            )
         )
-        for camera in config[CONF_SOURCE]
-    )
+    add_entities(entities)
 
 
 class Doods(ImageProcessingEntity):

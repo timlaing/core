@@ -1,5 +1,4 @@
 """Base class for Rituals Perfume Genie diffuser entity."""
-
 from __future__ import annotations
 
 from homeassistant.helpers.device_registry import DeviceInfo

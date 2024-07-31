@@ -1,5 +1,4 @@
 """Support to select an option from a list."""
-
 from __future__ import annotations
 
 import logging
@@ -33,7 +32,7 @@ from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.helpers.restore_state import RestoreEntity
 import homeassistant.helpers.service
 from homeassistant.helpers.storage import Store
-from homeassistant.helpers.typing import ConfigType, VolDictType
+from homeassistant.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -55,7 +54,7 @@ def _unique(options: Any) -> Any:
         raise HomeAssistantError("Duplicate options are not allowed") from exc
 
 
-STORAGE_FIELDS: VolDictType = {
+STORAGE_FIELDS = {
     vol.Required(CONF_NAME): vol.All(str, vol.Length(min=1)),
     vol.Required(CONF_OPTIONS): vol.All(
         cv.ensure_list, vol.Length(min=1), _unique, [cv.string]
@@ -250,7 +249,7 @@ class InputSelect(collection.CollectionEntity, SelectEntity, RestoreEntity):
     """Representation of a select input."""
 
     _entity_component_unrecorded_attributes = (
-        SelectEntity._entity_component_unrecorded_attributes - {ATTR_OPTIONS}  # noqa: SLF001
+        SelectEntity._entity_component_unrecorded_attributes - {ATTR_OPTIONS}
     )
     _unrecorded_attributes = frozenset({ATTR_EDITABLE})
 

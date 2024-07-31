@@ -1,5 +1,4 @@
 """Support for Met Éireann weather service."""
-
 import logging
 from types import MappingProxyType
 from typing import Any, cast
@@ -53,15 +52,17 @@ async def async_setup_entry(
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
     entity_registry = er.async_get(hass)
 
-    # Remove hourly entity from legacy config entries
-    if entity_id := entity_registry.async_get_entity_id(
+    entities = [MetEireannWeather(coordinator, config_entry.data, False)]
+
+    # Add hourly entity to legacy config entries
+    if entity_registry.async_get_entity_id(
         WEATHER_DOMAIN,
         DOMAIN,
         _calculate_unique_id(config_entry.data, True),
     ):
-        entity_registry.async_remove(entity_id)
+        entities.append(MetEireannWeather(coordinator, config_entry.data, True))
 
-    async_add_entities([MetEireannWeather(coordinator, config_entry.data)])
+    async_add_entities(entities)
 
 
 def _calculate_unique_id(config: MappingProxyType[str, Any], hourly: bool) -> str:
@@ -87,57 +88,56 @@ class MetEireannWeather(
         WeatherEntityFeature.FORECAST_DAILY | WeatherEntityFeature.FORECAST_HOURLY
     )
 
-    def __init__(
-        self,
-        coordinator: DataUpdateCoordinator[MetEireannWeatherData],
-        config: MappingProxyType[str, Any],
-    ) -> None:
+    def __init__(self, coordinator, config, hourly):
         """Initialise the platform with a data instance and site."""
         super().__init__(coordinator)
-        self._attr_unique_id = _calculate_unique_id(config, False)
+        self._attr_unique_id = _calculate_unique_id(config, hourly)
         self._config = config
+        self._hourly = hourly
+        name_appendix = " Hourly" if hourly else ""
         if (name := self._config.get(CONF_NAME)) is not None:
-            self._attr_name = name
+            self._attr_name = f"{name}{name_appendix}"
         else:
-            self._attr_name = DEFAULT_NAME
+            self._attr_name = f"{DEFAULT_NAME}{name_appendix}"
+        self._attr_entity_registry_enabled_default = not hourly
         self._attr_device_info = DeviceInfo(
             name="Forecast",
             entry_type=DeviceEntryType.SERVICE,
-            identifiers={(DOMAIN,)},  # type: ignore[arg-type]
+            identifiers={(DOMAIN,)},
             manufacturer="Met Éireann",
             model="Forecast",
             configuration_url="https://www.met.ie",
         )
 
     @property
-    def condition(self) -> str | None:
+    def condition(self):
         """Return the current condition."""
         return format_condition(
             self.coordinator.data.current_weather_data.get("condition")
         )
 
     @property
-    def native_temperature(self) -> float | None:
+    def native_temperature(self):
         """Return the temperature."""
         return self.coordinator.data.current_weather_data.get("temperature")
 
     @property
-    def native_pressure(self) -> float | None:
+    def native_pressure(self):
         """Return the pressure."""
         return self.coordinator.data.current_weather_data.get("pressure")
 
     @property
-    def humidity(self) -> float | None:
+    def humidity(self):
         """Return the humidity."""
         return self.coordinator.data.current_weather_data.get("humidity")
 
     @property
-    def native_wind_speed(self) -> float | None:
+    def native_wind_speed(self):
         """Return the wind speed."""
         return self.coordinator.data.current_weather_data.get("wind_speed")
 
     @property
-    def wind_bearing(self) -> float | None:
+    def wind_bearing(self):
         """Return the wind direction."""
         return self.coordinator.data.current_weather_data.get("wind_bearing")
 
@@ -172,6 +172,11 @@ class MetEireannWeather(
                 ).isoformat()
             ha_forecast.append(ha_item)
         return ha_forecast
+
+    @property
+    def forecast(self) -> list[Forecast]:
+        """Return the forecast array."""
+        return self._forecast(self._hourly)
 
     @callback
     def _async_forecast_daily(self) -> list[Forecast]:

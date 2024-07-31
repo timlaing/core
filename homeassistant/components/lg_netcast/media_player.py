@@ -1,35 +1,29 @@
 """Support for LG TV running on NetCast 3 or 4."""
-
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from pylgnetcast import LG_COMMAND, LgNetCastClient, LgNetCastError
 from requests import RequestException
 import voluptuous as vol
 
 from homeassistant.components.media_player import (
-    PLATFORM_SCHEMA as MEDIA_PLAYER_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     MediaPlayerDeviceClass,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
     MediaType,
 )
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_MODEL, CONF_NAME
+from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_NAME
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.exceptions import PlatformNotReady
 import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.trigger import PluggableAction
+from homeassistant.helpers.script import Script
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from .const import ATTR_MANUFACTURER, DOMAIN
-from .triggers.turn_on import async_get_turn_on_trigger
+from .const import DOMAIN
 
 DEFAULT_NAME = "LG TV Remote"
 
@@ -49,7 +43,7 @@ SUPPORT_LGTV = (
     | MediaPlayerEntityFeature.STOP
 )
 
-PLATFORM_SCHEMA = MEDIA_PLAYER_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Optional(CONF_ON_ACTION): cv.SCRIPT_SCHEMA,
         vol.Required(CONF_HOST): cv.string,
@@ -59,45 +53,23 @@ PLATFORM_SCHEMA = MEDIA_PLAYER_PLATFORM_SCHEMA.extend(
 )
 
 
-async def async_setup_entry(
-    hass: HomeAssistant,
-    config_entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
-) -> None:
-    """Set up a LG Netcast Media Player from a config_entry."""
-
-    host = config_entry.data[CONF_HOST]
-    access_token = config_entry.data[CONF_ACCESS_TOKEN]
-    unique_id = config_entry.unique_id
-    name = config_entry.data.get(CONF_NAME, DEFAULT_NAME)
-    model = config_entry.data[CONF_MODEL]
-
-    client = LgNetCastClient(host, access_token)
-
-    hass.data[DOMAIN][config_entry.entry_id] = client
-
-    async_add_entities([LgTVDevice(client, name, model, unique_id=unique_id)])
-
-
-async def async_setup_platform(
+def setup_platform(
     hass: HomeAssistant,
     config: ConfigType,
-    async_add_entities: AddEntitiesCallback,
+    add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the LG TV platform."""
 
     host = config.get(CONF_HOST)
+    access_token = config.get(CONF_ACCESS_TOKEN)
+    name = config[CONF_NAME]
+    on_action = config.get(CONF_ON_ACTION)
 
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": SOURCE_IMPORT}, data=config
-    )
+    client = LgNetCastClient(host, access_token)
+    on_action_script = Script(hass, on_action, name, DOMAIN) if on_action else None
 
-    if (
-        result.get("type") == FlowResultType.ABORT
-        and result.get("reason") == "cannot_connect"
-    ):
-        raise PlatformNotReady(f"Connection error while connecting to {host}")
+    add_entities([LgTVDevice(client, name, on_action_script)], True)
 
 
 class LgTVDevice(MediaPlayerEntity):
@@ -106,42 +78,19 @@ class LgTVDevice(MediaPlayerEntity):
     _attr_assumed_state = True
     _attr_device_class = MediaPlayerDeviceClass.TV
     _attr_media_content_type = MediaType.CHANNEL
-    _attr_has_entity_name = True
-    _attr_name = None
 
-    def __init__(self, client, name, model, unique_id):
+    def __init__(self, client, name, on_action_script):
         """Initialize the LG TV device."""
         self._client = client
+        self._name = name
         self._muted = False
-        self._turn_on = PluggableAction(self.async_write_ha_state)
+        self._on_action_script = on_action_script
         self._volume = 0
         self._channel_id = None
         self._channel_name = ""
         self._program_name = ""
         self._sources = {}
         self._source_names = []
-        self._attr_unique_id = unique_id
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, unique_id)},
-            manufacturer=ATTR_MANUFACTURER,
-            name=name,
-            model=model,
-        )
-
-    async def async_added_to_hass(self) -> None:
-        """Connect and subscribe to dispatcher signals and state updates."""
-        await super().async_added_to_hass()
-
-        entry = self.registry_entry
-
-        if TYPE_CHECKING:
-            assert entry is not None and entry.device_id is not None
-
-        self.async_on_remove(
-            self._turn_on.async_register(
-                self.hass, async_get_turn_on_trigger(entry.device_id)
-            )
-        )
 
     def send_command(self, command):
         """Send remote control commands to the TV."""
@@ -181,7 +130,7 @@ class LgTVDevice(MediaPlayerEntity):
                         channel_name = channel.find("chname")
                         if channel_name is not None:
                             channel_names.append(str(channel_name.text))
-                    self._sources = dict(zip(channel_names, channel_list, strict=False))
+                    self._sources = dict(zip(channel_names, channel_list))
                     # sort source names by the major channel number
                     source_tuples = [
                         (k, source.find("major").text)
@@ -200,6 +149,11 @@ class LgTVDevice(MediaPlayerEntity):
             (volume, muted) = volume_info
             self._volume = volume
             self._muted = muted
+
+    @property
+    def name(self):
+        """Return the name of the device."""
+        return self._name
 
     @property
     def is_volume_muted(self):
@@ -239,7 +193,7 @@ class LgTVDevice(MediaPlayerEntity):
     @property
     def supported_features(self) -> MediaPlayerEntityFeature:
         """Flag media player features that are supported."""
-        if self._turn_on:
+        if self._on_action_script:
             return SUPPORT_LGTV | MediaPlayerEntityFeature.TURN_ON
         return SUPPORT_LGTV
 
@@ -254,9 +208,10 @@ class LgTVDevice(MediaPlayerEntity):
         """Turn off media player."""
         self.send_command(LG_COMMAND.POWER)
 
-    async def async_turn_on(self) -> None:
+    def turn_on(self) -> None:
         """Turn on the media player."""
-        await self._turn_on.async_run(self.hass, self._context)
+        if self._on_action_script:
+            self._on_action_script.run(context=self._context)
 
     def volume_up(self) -> None:
         """Volume up the media player."""

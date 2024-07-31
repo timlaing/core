@@ -8,7 +8,6 @@ can't change the hash without causing breakages for HA users.
 
 This module generates and stores them in a HA storage.
 """
-
 from __future__ import annotations
 
 from collections.abc import Generator
@@ -39,7 +38,7 @@ def get_system_unique_id(entity: er.RegistryEntry, entity_unique_id: str) -> str
     return f"{entity.platform}.{entity.domain}.{entity_unique_id}"
 
 
-def _generate_aids(unique_id: str | None, entity_id: str) -> Generator[int]:
+def _generate_aids(unique_id: str | None, entity_id: str) -> Generator[int, None, None]:
     """Generate accessory aid."""
 
     if unique_id:

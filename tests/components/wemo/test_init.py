@@ -1,5 +1,4 @@
 """Tests for the wemo component."""
-
 import asyncio
 from datetime import timedelta
 from unittest.mock import create_autospec, patch
@@ -42,7 +41,7 @@ async def test_config_no_static(hass: HomeAssistant) -> None:
 
 
 async def test_static_duplicate_static_entry(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, pywemo_device
+    hass: HomeAssistant, pywemo_device
 ) -> None:
     """Duplicate static entries are merged into a single entity."""
     static_config_entry = f"{MOCK_HOST}:{MOCK_PORT}"
@@ -60,13 +59,12 @@ async def test_static_duplicate_static_entry(
         },
     )
     await hass.async_block_till_done()
-    entity_entries = list(entity_registry.entities.values())
+    entity_reg = er.async_get(hass)
+    entity_entries = list(entity_reg.entities.values())
     assert len(entity_entries) == 1
 
 
-async def test_static_config_with_port(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, pywemo_device
-) -> None:
+async def test_static_config_with_port(hass: HomeAssistant, pywemo_device) -> None:
     """Static device with host and port is added and removed."""
     assert await async_setup_component(
         hass,
@@ -79,13 +77,12 @@ async def test_static_config_with_port(
         },
     )
     await hass.async_block_till_done()
-    entity_entries = list(entity_registry.entities.values())
+    entity_reg = er.async_get(hass)
+    entity_entries = list(entity_reg.entities.values())
     assert len(entity_entries) == 1
 
 
-async def test_static_config_without_port(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, pywemo_device
-) -> None:
+async def test_static_config_without_port(hass: HomeAssistant, pywemo_device) -> None:
     """Static device with host and no port is added and removed."""
     assert await async_setup_component(
         hass,
@@ -98,13 +95,13 @@ async def test_static_config_without_port(
         },
     )
     await hass.async_block_till_done()
-    entity_entries = list(entity_registry.entities.values())
+    entity_reg = er.async_get(hass)
+    entity_entries = list(entity_reg.entities.values())
     assert len(entity_entries) == 1
 
 
 async def test_reload_config_entry(
     hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
     pywemo_device: pywemo.WeMoDevice,
     pywemo_registry: pywemo.SubscriptionRegistry,
 ) -> None:
@@ -129,6 +126,7 @@ async def test_reload_config_entry(
         pywemo_registry.register.assert_called_once_with(pywemo_device)
         pywemo_registry.register.reset_mock()
 
+        entity_registry = er.async_get(hass)
         entity_entries = list(entity_registry.entities.values())
         assert len(entity_entries) == 1
         await entity_test_helpers.test_turn_off_state(
@@ -166,9 +164,7 @@ async def test_static_config_with_invalid_host(hass: HomeAssistant) -> None:
 
 
 async def test_static_with_upnp_failure(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-    pywemo_device: pywemo.WeMoDevice,
+    hass: HomeAssistant, pywemo_device: pywemo.WeMoDevice
 ) -> None:
     """Device that fails to get state is not added."""
     pywemo_device.get_state.side_effect = pywemo.exceptions.ActionException("Failed")
@@ -183,14 +179,13 @@ async def test_static_with_upnp_failure(
         },
     )
     await hass.async_block_till_done()
-    entity_entries = list(entity_registry.entities.values())
+    entity_reg = er.async_get(hass)
+    entity_entries = list(entity_reg.entities.values())
     assert len(entity_entries) == 0
     pywemo_device.get_state.assert_called_once()
 
 
-async def test_discovery(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, pywemo_registry
-) -> None:
+async def test_discovery(hass: HomeAssistant, pywemo_registry) -> None:
     """Verify that discovery dispatches devices to the platform for setup."""
 
     def create_device(counter):
@@ -215,15 +210,13 @@ async def test_discovery(
 
     pywemo_devices = [create_device(0), create_device(1)]
     # Setup the component and start discovery.
-    with (
-        patch("pywemo.discover_devices", return_value=pywemo_devices) as mock_discovery,
-        patch(
-            "homeassistant.components.wemo.WemoDiscovery.discover_statics"
-        ) as mock_discover_statics,
-        patch(
-            "homeassistant.components.wemo.binary_sensor.async_wemo_dispatcher_connect",
-            side_effect=async_connect,
-        ),
+    with patch(
+        "pywemo.discover_devices", return_value=pywemo_devices
+    ) as mock_discovery, patch(
+        "homeassistant.components.wemo.WemoDiscovery.discover_statics"
+    ) as mock_discover_statics, patch(
+        "homeassistant.components.wemo.binary_sensor.async_wemo_dispatcher_connect",
+        side_effect=async_connect,
     ):
         assert await async_setup_component(
             hass, DOMAIN, {DOMAIN: {CONF_DISCOVERY: True}}
@@ -244,7 +237,8 @@ async def test_discovery(
         assert mock_discover_statics.call_count == 3
 
     # Verify that the expected number of devices were setup.
-    entity_entries = list(entity_registry.entities.values())
+    entity_reg = er.async_get(hass)
+    entity_entries = list(entity_reg.entities.values())
     assert len(entity_entries) == 3
 
     # Verify that hass stops cleanly.

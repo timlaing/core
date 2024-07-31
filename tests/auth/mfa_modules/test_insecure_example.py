@@ -1,5 +1,4 @@
 """Test the example module auth module."""
-
 from homeassistant import auth, data_entry_flow
 from homeassistant.auth.mfa_modules import auth_mfa_module_from_config
 from homeassistant.auth.models import Credentials
@@ -121,7 +120,7 @@ async def test_login(hass: HomeAssistant) -> None:
     )
     assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["step_id"] == "mfa"
-    assert result["data_schema"].schema.get("pin") is str
+    assert result["data_schema"].schema.get("pin") == str
 
     result = await hass.auth.login_flow.async_configure(
         result["flow_id"], {"pin": "invalid-code"}

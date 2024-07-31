@@ -1,5 +1,4 @@
 """Demo platform that offers fake meteorological data."""
-
 from __future__ import annotations
 
 from datetime import timedelta
@@ -62,6 +61,29 @@ async def async_setup_entry(
     async_add_entities(
         [
             DemoWeather(
+                "Legacy weather",
+                "Sunshine",
+                21.6414,
+                92,
+                1099,
+                0.5,
+                UnitOfTemperature.CELSIUS,
+                UnitOfPressure.HPA,
+                UnitOfSpeed.METERS_PER_SECOND,
+                [
+                    [ATTR_CONDITION_RAINY, 1, 22, 15, 60],
+                    [ATTR_CONDITION_RAINY, 5, 19, 8, 30],
+                    [ATTR_CONDITION_CLOUDY, 0, 15, 9, 10],
+                    [ATTR_CONDITION_SUNNY, 0, 12, 6, 0],
+                    [ATTR_CONDITION_PARTLYCLOUDY, 2, 14, 7, 20],
+                    [ATTR_CONDITION_RAINY, 15, 18, 7, 0],
+                    [ATTR_CONDITION_FOG, 0.2, 21, 12, 100],
+                ],
+                None,
+                None,
+                None,
+            ),
+            DemoWeather(
                 "Legacy + daily weather",
                 "Sunshine",
                 21.6414,
@@ -71,6 +93,15 @@ async def async_setup_entry(
                 UnitOfTemperature.CELSIUS,
                 UnitOfPressure.HPA,
                 UnitOfSpeed.METERS_PER_SECOND,
+                [
+                    [ATTR_CONDITION_RAINY, 1, 22, 15, 60],
+                    [ATTR_CONDITION_RAINY, 5, 19, 8, 30],
+                    [ATTR_CONDITION_CLOUDY, 0, 15, 9, 10],
+                    [ATTR_CONDITION_SUNNY, 0, 12, 6, 0],
+                    [ATTR_CONDITION_PARTLYCLOUDY, 2, 14, 7, 20],
+                    [ATTR_CONDITION_RAINY, 15, 18, 7, 0],
+                    [ATTR_CONDITION_FOG, 0.2, 21, 12, 100],
+                ],
                 [
                     [ATTR_CONDITION_RAINY, 1, 22, 15, 60],
                     [ATTR_CONDITION_RAINY, 5, 19, 8, 30],
@@ -93,6 +124,7 @@ async def async_setup_entry(
                 UnitOfTemperature.FAHRENHEIT,
                 UnitOfPressure.INHG,
                 UnitOfSpeed.MILES_PER_HOUR,
+                None,
                 [
                     [ATTR_CONDITION_SNOWY, 2, -10, -15, 60],
                     [ATTR_CONDITION_PARTLYCLOUDY, 1, -13, -14, 25],
@@ -123,6 +155,7 @@ async def async_setup_entry(
                 UnitOfTemperature.CELSIUS,
                 UnitOfPressure.HPA,
                 UnitOfSpeed.METERS_PER_SECOND,
+                None,
                 [
                     [ATTR_CONDITION_RAINY, 1, 22, 15, 60],
                     [ATTR_CONDITION_RAINY, 5, 19, 8, 30],
@@ -162,6 +195,7 @@ async def async_setup_entry(
                 UnitOfPressure.HPA,
                 UnitOfSpeed.METERS_PER_SECOND,
                 None,
+                None,
                 [
                     [ATTR_CONDITION_CLOUDY, 1, 22, 15, 60],
                     [ATTR_CONDITION_CLOUDY, 5, 19, 8, 30],
@@ -191,6 +225,7 @@ async def async_setup_entry(
                 UnitOfTemperature.CELSIUS,
                 UnitOfPressure.HPA,
                 UnitOfSpeed.METERS_PER_SECOND,
+                None,
                 [
                     [ATTR_CONDITION_RAINY, 1, 22, 15, 60],
                     [ATTR_CONDITION_RAINY, 5, 19, 8, 30],
@@ -232,6 +267,7 @@ class DemoWeather(WeatherEntity):
         temperature_unit: str,
         pressure_unit: str,
         wind_speed_unit: str,
+        forecast: list[list] | None,
         forecast_daily: list[list] | None,
         forecast_hourly: list[list] | None,
         forecast_twice_daily: list[list] | None,
@@ -247,6 +283,7 @@ class DemoWeather(WeatherEntity):
         self._native_pressure_unit = pressure_unit
         self._native_wind_speed = wind_speed
         self._native_wind_speed_unit = wind_speed_unit
+        self._forecast = forecast
         self._forecast_daily = forecast_daily
         self._forecast_hourly = forecast_hourly
         self._forecast_twice_daily = forecast_twice_daily
@@ -321,6 +358,28 @@ class DemoWeather(WeatherEntity):
     def condition(self) -> str:
         """Return the weather condition."""
         return CONDITION_MAP[self._condition.lower()]
+
+    @property
+    def forecast(self) -> list[Forecast]:
+        """Return legacy forecast."""
+        if self._forecast is None:
+            return []
+        reftime = dt_util.now().replace(hour=16, minute=00)
+
+        forecast_data = []
+        for entry in self._forecast:
+            data_dict = Forecast(
+                datetime=reftime.isoformat(),
+                condition=entry[0],
+                precipitation=entry[1],
+                temperature=entry[2],
+                templow=entry[3],
+                precipitation_probability=entry[4],
+            )
+            reftime = reftime + timedelta(hours=24)
+            forecast_data.append(data_dict)
+
+        return forecast_data
 
     async def async_forecast_daily(self) -> list[Forecast]:
         """Return the daily forecast."""

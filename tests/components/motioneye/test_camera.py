@@ -1,13 +1,9 @@
 """Test the motionEye camera."""
-
-from asyncio import AbstractEventLoop
-from collections.abc import Callable
 import copy
-from typing import cast
+from typing import Any, cast
 from unittest.mock import AsyncMock, Mock, call
 
 from aiohttp import web
-from aiohttp.test_utils import TestServer
 from aiohttp.web_exceptions import HTTPBadGateway
 from motioneye_client.client import (
     MotionEyeClientError,
@@ -66,11 +62,7 @@ from tests.common import async_fire_time_changed
 
 
 @pytest.fixture
-def aiohttp_server(
-    event_loop: AbstractEventLoop,
-    aiohttp_server: Callable[[], TestServer],
-    socket_enabled: None,
-) -> Callable[[], TestServer]:
+def aiohttp_server(event_loop, aiohttp_server, socket_enabled):
     """Return aiohttp_server and allow opening sockets."""
     return aiohttp_server
 
@@ -143,12 +135,10 @@ async def test_setup_camera_new_data_same(hass: HomeAssistant) -> None:
     assert hass.states.get(TEST_CAMERA_ENTITY_ID)
 
 
-async def test_setup_camera_new_data_camera_removed(
-    hass: HomeAssistant,
-    device_registry: dr.DeviceRegistry,
-    entity_registry: er.EntityRegistry,
-) -> None:
+async def test_setup_camera_new_data_camera_removed(hass: HomeAssistant) -> None:
     """Test a data refresh with a removed camera."""
+    device_registry = dr.async_get(hass)
+    entity_registry = er.async_get(hass)
 
     client = create_mock_motioneye_client()
     config_entry = await setup_mock_motioneye_config_entry(hass, client=client)
@@ -227,7 +217,7 @@ async def test_unload_camera(hass: HomeAssistant) -> None:
 
 
 async def test_get_still_image_from_camera(
-    aiohttp_server: Callable[[], TestServer], hass: HomeAssistant
+    aiohttp_server: Any, hass: HomeAssistant
 ) -> None:
     """Test getting a still image."""
 
@@ -268,9 +258,7 @@ async def test_get_still_image_from_camera(
     assert image_handler.called
 
 
-async def test_get_stream_from_camera(
-    aiohttp_server: Callable[[], TestServer], hass: HomeAssistant
-) -> None:
+async def test_get_stream_from_camera(aiohttp_server: Any, hass: HomeAssistant) -> None:
     """Test getting a stream."""
 
     stream_handler = AsyncMock(return_value="")
@@ -327,15 +315,12 @@ async def test_state_attributes(hass: HomeAssistant) -> None:
     assert not entity_state.attributes.get("motion_detection")
 
 
-async def test_device_info(
-    hass: HomeAssistant,
-    device_registry: dr.DeviceRegistry,
-    entity_registry: er.EntityRegistry,
-) -> None:
+async def test_device_info(hass: HomeAssistant) -> None:
     """Verify device information includes expected details."""
     entry = await setup_mock_motioneye_config_entry(hass)
 
     device_identifier = get_motioneye_device_identifier(entry.entry_id, TEST_CAMERA_ID)
+    device_registry = dr.async_get(hass)
 
     device = device_registry.async_get_device(identifiers={device_identifier})
     assert device
@@ -345,6 +330,7 @@ async def test_device_info(
     assert device.model == MOTIONEYE_MANUFACTURER
     assert device.name == TEST_CAMERA_NAME
 
+    entity_registry = er.async_get(hass)
     entities_from_device = [
         entry.entity_id
         for entry in er.async_entries_for_device(entity_registry, device.id)
@@ -353,7 +339,7 @@ async def test_device_info(
 
 
 async def test_camera_option_stream_url_template(
-    aiohttp_server: Callable[[], TestServer], hass: HomeAssistant
+    aiohttp_server: Any, hass: HomeAssistant
 ) -> None:
     """Verify camera with a stream URL template option."""
     client = create_mock_motioneye_client()
@@ -393,7 +379,7 @@ async def test_camera_option_stream_url_template(
 
 
 async def test_get_stream_from_camera_with_broken_host(
-    aiohttp_server: Callable[[], TestServer], hass: HomeAssistant
+    aiohttp_server: Any, hass: HomeAssistant
 ) -> None:
     """Test getting a stream with a broken URL (no host)."""
 
@@ -432,6 +418,7 @@ async def test_set_text_overlay_bad_entity_identifier(hass: HomeAssistant) -> No
     client.reset_mock()
     with pytest.raises(vol.error.MultipleInvalid):
         await hass.services.async_call(DOMAIN, SERVICE_SET_TEXT_OVERLAY, data)
+        await hass.async_block_till_done()
 
 
 async def test_set_text_overlay_bad_empty(hass: HomeAssistant) -> None:
@@ -440,6 +427,7 @@ async def test_set_text_overlay_bad_empty(hass: HomeAssistant) -> None:
     await setup_mock_motioneye_config_entry(hass, client=client)
     with pytest.raises(vol.error.MultipleInvalid):
         await hass.services.async_call(DOMAIN, SERVICE_SET_TEXT_OVERLAY, {})
+        await hass.async_block_till_done()
 
 
 async def test_set_text_overlay_bad_no_left_or_right(hass: HomeAssistant) -> None:
@@ -450,6 +438,7 @@ async def test_set_text_overlay_bad_no_left_or_right(hass: HomeAssistant) -> Non
     data = {ATTR_ENTITY_ID: TEST_CAMERA_ENTITY_ID}
     with pytest.raises(vol.error.MultipleInvalid):
         await hass.services.async_call(DOMAIN, SERVICE_SET_TEXT_OVERLAY, data)
+        await hass.async_block_till_done()
 
 
 async def test_set_text_overlay_good(hass: HomeAssistant) -> None:

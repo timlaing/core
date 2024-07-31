@@ -1,5 +1,4 @@
 """Tests for the BSBLan integration."""
-
 from unittest.mock import MagicMock
 
 from bsblan import BSBLANConnectionError

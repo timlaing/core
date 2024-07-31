@@ -1,5 +1,4 @@
 """Tests for Plex media_players."""
-
 from unittest.mock import patch
 
 from plexapi.exceptions import NotFound

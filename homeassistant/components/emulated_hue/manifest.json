@@ -6,5 +6,6 @@
   "dependencies": ["network"],
   "documentation": "https://www.home-assistant.io/integrations/emulated_hue",
   "iot_class": "local_push",
-  "quality_scale": "internal"
+  "quality_scale": "internal",
+  "requirements": ["aiohttp_cors==0.7.0"]
 }

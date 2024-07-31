@@ -1,5 +1,4 @@
 """Support for Freedompro switch."""
-
 import json
 from typing import Any
 

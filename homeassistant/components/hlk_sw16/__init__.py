@@ -1,5 +1,4 @@
 """Support for HLK-SW16 relay switches."""
-
 import logging
 
 from hlk_sw16 import create_hlk_sw16_connection

@@ -1,12 +1,11 @@
 """Helpers for LCN component."""
-
 from __future__ import annotations
 
 import asyncio
 from copy import deepcopy
 from itertools import chain
 import re
-from typing import cast
+from typing import TypeAlias, cast
 
 import pypck
 import voluptuous as vol
@@ -25,7 +24,6 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_PASSWORD,
     CONF_PORT,
-    CONF_RESOURCE,
     CONF_SENSORS,
     CONF_SOURCE,
     CONF_SWITCHES,
@@ -44,6 +42,7 @@ from .const import (
     CONF_HARDWARE_SERIAL,
     CONF_HARDWARE_TYPE,
     CONF_OUTPUT,
+    CONF_RESOURCE,
     CONF_SCENES,
     CONF_SK_NUM_TRIES,
     CONF_SOFTWARE_SERIAL,
@@ -60,10 +59,12 @@ from .const import (
 )
 
 # typing
-type AddressType = tuple[int, int, bool]
-type DeviceConnectionType = pypck.module.ModuleConnection | pypck.module.GroupConnection
+AddressType = tuple[int, int, bool]
+DeviceConnectionType: TypeAlias = (
+    pypck.module.ModuleConnection | pypck.module.GroupConnection
+)
 
-type InputType = type[pypck.inputs.Input]
+InputType = type[pypck.inputs.Input]
 
 # Regex for address validation
 PATTERN_ADDRESS = re.compile(
@@ -285,8 +286,7 @@ def purge_device_registry(
 
     # Find all devices that are referenced in the entity registry.
     references_entities = {
-        entry.device_id
-        for entry in entity_registry.entities.get_entries_for_config_entry_id(entry_id)
+        entry.device_id for entry in entity_registry.entities.values()
     }
 
     # Find device that references the host.

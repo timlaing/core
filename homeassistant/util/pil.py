@@ -2,7 +2,6 @@
 
 Can only be used by integrations that have pillow in their requirements.
 """
-
 from __future__ import annotations
 
 from PIL.ImageDraw import ImageDraw

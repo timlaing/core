@@ -1,5 +1,4 @@
 """Package to test the get_accessory method."""
-
 from unittest.mock import Mock, patch
 
 import pytest
@@ -335,10 +334,10 @@ def test_type_sensors(type_name, entity_id, state, attrs) -> None:
         ("SelectSwitch", "select.test", "option1", {}, {}),
         ("Switch", "switch.test", "on", {}, {}),
         ("Switch", "switch.test", "on", {}, {CONF_TYPE: TYPE_SWITCH}),
-        ("ValveSwitch", "switch.test", "on", {}, {CONF_TYPE: TYPE_FAUCET}),
-        ("ValveSwitch", "switch.test", "on", {}, {CONF_TYPE: TYPE_VALVE}),
-        ("ValveSwitch", "switch.test", "on", {}, {CONF_TYPE: TYPE_SHOWER}),
-        ("ValveSwitch", "switch.test", "on", {}, {CONF_TYPE: TYPE_SPRINKLER}),
+        ("Valve", "switch.test", "on", {}, {CONF_TYPE: TYPE_FAUCET}),
+        ("Valve", "switch.test", "on", {}, {CONF_TYPE: TYPE_VALVE}),
+        ("Valve", "switch.test", "on", {}, {CONF_TYPE: TYPE_SHOWER}),
+        ("Valve", "switch.test", "on", {}, {CONF_TYPE: TYPE_SPRINKLER}),
     ],
 )
 def test_type_switches(type_name, entity_id, state, attrs, config) -> None:
@@ -347,21 +346,6 @@ def test_type_switches(type_name, entity_id, state, attrs, config) -> None:
     with patch.dict(TYPES, {type_name: mock_type}):
         entity_state = State(entity_id, state, attrs)
         get_accessory(None, None, entity_state, 2, config)
-    assert mock_type.called
-
-
-@pytest.mark.parametrize(
-    ("type_name", "entity_id", "state", "attrs"),
-    [
-        ("Valve", "valve.test", "on", {}),
-    ],
-)
-def test_type_valve(type_name, entity_id, state, attrs) -> None:
-    """Test if valve types are associated correctly."""
-    mock_type = Mock()
-    with patch.dict(TYPES, {type_name: mock_type}):
-        entity_state = State(entity_id, state, attrs)
-        get_accessory(None, None, entity_state, 2, {})
     assert mock_type.called
 
 

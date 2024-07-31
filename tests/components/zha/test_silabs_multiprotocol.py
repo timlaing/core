@@ -1,5 +1,4 @@
 """Test ZHA Silicon Labs Multiprotocol support."""
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -11,7 +10,7 @@ import zigpy.state
 
 from homeassistant.components import zha
 from homeassistant.components.zha import silabs_multiprotocol
-from homeassistant.components.zha.helpers import get_zha_data
+from homeassistant.components.zha.core.helpers import get_zha_gateway
 from homeassistant.core import HomeAssistant
 
 if TYPE_CHECKING:
@@ -38,7 +37,8 @@ async def test_async_get_channel_missing(
     """Test reading channel with an inactive ZHA installation, no valid channel."""
     await setup_zha()
 
-    await zha.async_unload_entry(hass, get_zha_data(hass).config_entry)
+    gateway = get_zha_gateway(hass)
+    await zha.async_unload_entry(hass, gateway.config_entry)
 
     # Network settings were never loaded for whatever reason
     zigpy_app_controller.state.network_info = zigpy.state.NetworkInfo()

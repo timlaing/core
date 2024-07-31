@@ -1,5 +1,4 @@
 """Config flow for Gardena Bluetooth integration."""
-
 from __future__ import annotations
 
 import logging
@@ -11,13 +10,13 @@ from gardena_bluetooth.exceptions import CharacteristicNotFound, CommunicationFa
 from gardena_bluetooth.parse import ManufacturerData, ProductType
 import voluptuous as vol
 
+from homeassistant import config_entries
 from homeassistant.components.bluetooth import (
     BluetoothServiceInfo,
     async_discovered_service_info,
 )
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_ADDRESS
-from homeassistant.data_entry_flow import AbortFlow
+from homeassistant.data_entry_flow import AbortFlow, FlowResult
 
 from . import get_connection
 from .const import DOMAIN
@@ -56,7 +55,7 @@ def _get_name(discovery_info: BluetoothServiceInfo):
     return PRODUCT_NAMES.get(product_type, "Gardena Device")
 
 
-class GardenaBluetoothConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Gardena Bluetooth."""
 
     VERSION = 1
@@ -83,7 +82,7 @@ class GardenaBluetoothConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_bluetooth(
         self, discovery_info: BluetoothServiceInfo
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the bluetooth discovery step."""
         _LOGGER.debug("Discovered device: %s", discovery_info)
         if not _is_supported(discovery_info):
@@ -97,7 +96,7 @@ class GardenaBluetoothConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Confirm discovery."""
         assert self.address
         title = self.devices[self.address]
@@ -118,7 +117,7 @@ class GardenaBluetoothConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         if user_input is not None:
             self.address = user_input[CONF_ADDRESS]

@@ -1,5 +1,4 @@
 """The tests for the demo siren component."""
-
 from unittest.mock import call, patch
 
 import pytest

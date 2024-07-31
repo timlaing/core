@@ -1,17 +1,17 @@
 """Mixin class for handling harmony callback subscriptions."""
-
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 import logging
 from typing import Any, NamedTuple
 
-from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant, callback
+from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 
 _LOGGER = logging.getLogger(__name__)
 
-type NoParamCallback = HassJob[[], Any] | None
-type ActivityCallback = HassJob[[tuple], Any] | None
+NoParamCallback = Callable[[], Any] | None
+ActivityCallback = Callable[[tuple], Any] | None
 
 
 class HarmonyCallback(NamedTuple):
@@ -34,7 +34,7 @@ class HarmonySubscriberMixin:
         self._subscriptions: list[HarmonyCallback] = []
         self._activity_lock = asyncio.Lock()
 
-    async def async_lock_start_activity(self) -> None:
+    async def async_lock_start_activity(self):
         """Acquire the lock."""
         await self._activity_lock.acquire()
 
@@ -59,17 +59,17 @@ class HarmonySubscriberMixin:
         """Remove a callback subscriber."""
         self._subscriptions.remove(update_callback)
 
-    def _config_updated(self, _: dict | None = None) -> None:
+    def _config_updated(self, _=None) -> None:
         _LOGGER.debug("config_updated")
         self._call_callbacks("config_updated")
 
-    def _connected(self, _: str | None = None) -> None:
+    def _connected(self, _=None) -> None:
         _LOGGER.debug("connected")
         self.async_unlock_start_activity()
         self._available = True
         self._call_callbacks("connected")
 
-    def _disconnected(self, _: str | None = None) -> None:
+    def _disconnected(self, _=None) -> None:
         _LOGGER.debug("disconnected")
         self.async_unlock_start_activity()
         self._available = False
@@ -88,8 +88,9 @@ class HarmonySubscriberMixin:
         self, callback_func_name: str, argument: tuple | None = None
     ) -> None:
         for subscription in self._subscriptions:
-            if current_callback_job := getattr(subscription, callback_func_name):
+            current_callback = getattr(subscription, callback_func_name)
+            if current_callback:
                 if argument:
-                    self._hass.async_run_hass_job(current_callback_job, argument)
+                    self._hass.async_run_job(current_callback, argument)
                 else:
-                    self._hass.async_run_hass_job(current_callback_job)
+                    self._hass.async_run_job(current_callback)

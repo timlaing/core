@@ -1,5 +1,4 @@
 """Constants for versasense."""
-
 KEY_CONSUMER = "consumer"
 KEY_IDENTIFIER = "identifier"
 KEY_MEASUREMENT = "measurement"

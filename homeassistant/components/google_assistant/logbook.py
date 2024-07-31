@@ -1,5 +1,4 @@
 """Describe logbook events."""
-
 from homeassistant.components.logbook import LOGBOOK_ENTRY_MESSAGE, LOGBOOK_ENTRY_NAME
 from homeassistant.core import callback
 

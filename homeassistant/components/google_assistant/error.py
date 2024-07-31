@@ -1,5 +1,4 @@
 """Errors for Google Assistant."""
-
 from .const import ERR_CHALLENGE_NEEDED
 
 

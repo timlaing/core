@@ -1,5 +1,4 @@
 """Errors for the Hue component."""
-
 from homeassistant.exceptions import HomeAssistantError
 
 

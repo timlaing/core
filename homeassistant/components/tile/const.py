@@ -1,5 +1,4 @@
 """Define Tile constants."""
-
 import logging
 
 DOMAIN = "tile"

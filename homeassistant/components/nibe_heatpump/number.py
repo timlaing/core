@@ -1,5 +1,4 @@
 """The Nibe Heat Pump numbers."""
-
 from __future__ import annotations
 
 from nibe.coil import Coil, CoilData
@@ -10,8 +9,7 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
-from .coordinator import CoilEntity, Coordinator
+from . import DOMAIN, CoilEntity, Coordinator
 
 
 async def async_setup_entry(
@@ -52,8 +50,6 @@ class Number(CoilEntity, NumberEntity):
                 self._attr_native_min_value,
                 self._attr_native_max_value,
             ) = _get_numeric_limits(coil.size)
-            self._attr_native_min_value /= coil.factor
-            self._attr_native_max_value /= coil.factor
         else:
             self._attr_native_min_value = float(coil.min)
             self._attr_native_max_value = float(coil.max)
@@ -67,7 +63,7 @@ class Number(CoilEntity, NumberEntity):
             return
 
         try:
-            self._attr_native_value = float(data.value)  # type: ignore[arg-type]
+            self._attr_native_value = float(data.value)
         except ValueError:
             self._attr_native_value = None
 

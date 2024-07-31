@@ -1,5 +1,4 @@
 """Support for Aranet sensors."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -23,7 +22,6 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.const import (
-    ATTR_MANUFACTURER,
     ATTR_NAME,
     ATTR_SW_VERSION,
     CONCENTRATION_PARTS_PER_MILLION,
@@ -38,10 +36,10 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import ARANET_MANUFACTURER_NAME, DOMAIN
+from .const import DOMAIN
 
 
-@dataclass(frozen=True)
+@dataclass
 class AranetSensorEntityDescription(SensorEntityDescription):
     """Class to describe an Aranet sensor entity."""
 
@@ -49,7 +47,6 @@ class AranetSensorEntityDescription(SensorEntityDescription):
     # Restrict the type to satisfy the type checker and catch attempts
     # to use UNDEFINED in the entity descriptions.
     name: str | None = None
-    scale: float | int = 1
 
 
 SENSOR_DESCRIPTIONS = {
@@ -80,24 +77,6 @@ SENSOR_DESCRIPTIONS = {
         device_class=SensorDeviceClass.CO2,
         native_unit_of_measurement=CONCENTRATION_PARTS_PER_MILLION,
         state_class=SensorStateClass.MEASUREMENT,
-    ),
-    "radiation_rate": AranetSensorEntityDescription(
-        key="radiation_rate",
-        translation_key="radiation_rate",
-        name="Radiation Dose Rate",
-        native_unit_of_measurement="μSv/h",
-        state_class=SensorStateClass.MEASUREMENT,
-        suggested_display_precision=2,
-        scale=0.001,
-    ),
-    "radiation_total": AranetSensorEntityDescription(
-        key="radiation_total",
-        translation_key="radiation_total",
-        name="Radiation Total Dose",
-        native_unit_of_measurement="mSv",
-        state_class=SensorStateClass.MEASUREMENT,
-        suggested_display_precision=4,
-        scale=0.000001,
     ),
     "battery": AranetSensorEntityDescription(
         key="battery",
@@ -135,7 +114,6 @@ def _sensor_device_info_to_hass(
     hass_device_info = DeviceInfo({})
     if adv.readings and adv.readings.name:
         hass_device_info[ATTR_NAME] = adv.readings.name
-        hass_device_info[ATTR_MANUFACTURER] = ARANET_MANUFACTURER_NAME
     if adv.manufacturer_data:
         hass_device_info[ATTR_SW_VERSION] = str(adv.manufacturer_data.version)
     return hass_device_info
@@ -143,7 +121,7 @@ def _sensor_device_info_to_hass(
 
 def sensor_update_to_bluetooth_data_update(
     adv: Aranet4Advertisement,
-) -> PassiveBluetoothDataUpdate[Any]:
+) -> PassiveBluetoothDataUpdate:
     """Convert a sensor update to a Bluetooth data update."""
     data: dict[PassiveBluetoothEntityKey, Any] = {}
     names: dict[PassiveBluetoothEntityKey, str | None] = {}
@@ -153,7 +131,6 @@ def sensor_update_to_bluetooth_data_update(
         val = getattr(adv.readings, key)
         if val == -1:
             continue
-        val *= desc.scale
         data[tag] = val
         names[tag] = desc.name
         descs[tag] = desc
@@ -171,9 +148,9 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Aranet sensors."""
-    coordinator: PassiveBluetoothProcessorCoordinator[Aranet4Advertisement] = hass.data[
-        DOMAIN
-    ][entry.entry_id]
+    coordinator: PassiveBluetoothProcessorCoordinator = hass.data[DOMAIN][
+        entry.entry_id
+    ]
     processor = PassiveBluetoothDataProcessor(sensor_update_to_bluetooth_data_update)
     entry.async_on_unload(
         processor.async_add_entities_listener(
@@ -184,9 +161,7 @@ async def async_setup_entry(
 
 
 class Aranet4BluetoothSensorEntity(
-    PassiveBluetoothProcessorEntity[
-        PassiveBluetoothDataProcessor[float | int | None, Aranet4Advertisement],
-    ],
+    PassiveBluetoothProcessorEntity[PassiveBluetoothDataProcessor[float | int | None]],
     SensorEntity,
 ):
     """Representation of an Aranet sensor."""

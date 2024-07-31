@@ -1,5 +1,4 @@
 """Test the my init."""
-
 from unittest import mock
 
 from homeassistant.components.my import URL_PATH

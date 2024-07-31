@@ -1,11 +1,10 @@
 """Support the sensor of a BloomSky weather station."""
-
 from __future__ import annotations
 
 import voluptuous as vol
 
 from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
 )
@@ -63,7 +62,7 @@ SENSOR_DEVICE_CLASS = {
 # Which sensors to format numerically
 FORMAT_NUMBERS = ["Temperature", "Pressure", "Voltage"]
 
-PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Optional(CONF_MONITORED_CONDITIONS, default=SENSOR_TYPES): vol.All(
             cv.ensure_list, [vol.In(SENSOR_TYPES)]
@@ -102,9 +101,13 @@ class BloomSkySensor(SensorEntity):
         self._attr_name = f"{device['DeviceName']} {sensor_name}"
         self._attr_unique_id = f"{self._device_id}-{sensor_name}"
         self._attr_device_class = SENSOR_DEVICE_CLASS.get(sensor_name)
-        self._attr_native_unit_of_measurement = SENSOR_UNITS_IMPERIAL.get(sensor_name)
+        self._attr_native_unit_of_measurement = SENSOR_UNITS_IMPERIAL.get(
+            sensor_name, None
+        )
         if self._bloomsky.is_metric:
-            self._attr_native_unit_of_measurement = SENSOR_UNITS_METRIC.get(sensor_name)
+            self._attr_native_unit_of_measurement = SENSOR_UNITS_METRIC.get(
+                sensor_name, None
+            )
 
     def update(self) -> None:
         """Request an update from the BloomSky API."""

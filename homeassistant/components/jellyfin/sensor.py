@@ -1,25 +1,33 @@
 """Support for Jellyfin sensors."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
 
 from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 
-from . import JellyfinConfigEntry
+from .const import DOMAIN
 from .coordinator import JellyfinDataT
 from .entity import JellyfinEntity
+from .models import JellyfinData
 
 
-@dataclass(frozen=True, kw_only=True)
-class JellyfinSensorEntityDescription(SensorEntityDescription):
-    """Describes Jellyfin sensor entity."""
+@dataclass
+class JellyfinSensorEntityDescriptionMixin:
+    """Mixin for required keys."""
 
     value_fn: Callable[[JellyfinDataT], StateType]
+
+
+@dataclass
+class JellyfinSensorEntityDescription(
+    SensorEntityDescription, JellyfinSensorEntityDescriptionMixin
+):
+    """Describes Jellyfin sensor entity."""
 
 
 def _count_now_playing(data: JellyfinDataT) -> int:
@@ -34,8 +42,8 @@ def _count_now_playing(data: JellyfinDataT) -> int:
 SENSOR_TYPES: dict[str, JellyfinSensorEntityDescription] = {
     "sessions": JellyfinSensorEntityDescription(
         key="watching",
-        translation_key="watching",
         name=None,
+        icon="mdi:television-play",
         native_unit_of_measurement="Watching",
         value_fn=_count_now_playing,
     )
@@ -44,14 +52,14 @@ SENSOR_TYPES: dict[str, JellyfinSensorEntityDescription] = {
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: JellyfinConfigEntry,
+    entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Jellyfin sensor based on a config entry."""
-    data = entry.runtime_data
+    jellyfin_data: JellyfinData = hass.data[DOMAIN][entry.entry_id]
 
     async_add_entities(
-        JellyfinSensor(data.coordinators[coordinator_type], description)
+        JellyfinSensor(jellyfin_data.coordinators[coordinator_type], description)
         for coordinator_type, description in SENSOR_TYPES.items()
     )
 

@@ -1,5 +1,4 @@
 """Config flow for Prosegur Alarm integration."""
-
 from collections.abc import Mapping
 import logging
 from typing import Any, cast
@@ -8,13 +7,13 @@ from pyprosegur.auth import COUNTRY, Auth
 from pyprosegur.installation import Installation
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_COUNTRY, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant import config_entries, core, exceptions
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import aiohttp_client, selector
 
-from .const import CONF_CONTRACT, DOMAIN
+from .const import CONF_CONTRACT, CONF_COUNTRY, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,20 +28,20 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 )
 
 
-async def validate_input(hass: HomeAssistant, data):
+async def validate_input(hass: core.HomeAssistant, data):
     """Validate the user input allows us to connect."""
     session = aiohttp_client.async_get_clientsession(hass)
     auth = Auth(session, data[CONF_USERNAME], data[CONF_PASSWORD], data[CONF_COUNTRY])
     try:
         contracts = await Installation.list(auth)
+        return auth, contracts
     except ConnectionRefusedError:
         raise InvalidAuth from ConnectionRefusedError
     except ConnectionError:
         raise CannotConnect from ConnectionError
-    return auth, contracts
 
 
-class ProsegurConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Prosegur Alarm."""
 
     VERSION = 1
@@ -62,8 +61,8 @@ class ProsegurConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
                 errors["base"] = "invalid_auth"
-            except Exception:
-                _LOGGER.exception("Unexpected exception")
+            except Exception as exception:  # pylint: disable=broad-except
+                _LOGGER.exception(exception)
                 errors["base"] = "unknown"
             else:
                 self.user_input = user_input
@@ -75,7 +74,7 @@ class ProsegurConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_choose_contract(
         self, user_input: Any | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Let user decide which contract is being setup."""
 
         if user_input:
@@ -104,9 +103,7 @@ class ProsegurConfigFlow(ConfigFlow, domain=DOMAIN):
             ),
         )
 
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Handle initiation of re-authentication with Prosegur."""
         self.entry = cast(
             ConfigEntry,
@@ -127,7 +124,7 @@ class ProsegurConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
                 errors["base"] = "invalid_auth"
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
@@ -158,9 +155,9 @@ class ProsegurConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(exceptions.HomeAssistantError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(exceptions.HomeAssistantError):
     """Error to indicate there is invalid auth."""

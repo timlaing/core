@@ -1,5 +1,4 @@
 """Support for Envisalink devices."""
-
 import asyncio
 import logging
 

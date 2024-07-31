@@ -1,5 +1,4 @@
 """Constants for the automation integration."""
-
 import logging
 
 CONF_ACTION = "action"

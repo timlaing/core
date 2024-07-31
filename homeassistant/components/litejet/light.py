@@ -1,5 +1,4 @@
 """Support for LiteJet lights."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -97,7 +96,7 @@ class LiteJetLight(LightEntity):
             try:
                 await self._lj.activate_load(self._index)
             except LiteJetError as exc:
-                raise HomeAssistantError from exc
+                raise HomeAssistantError() from exc
             return
 
         # If either attribute is specified then Home Assistant must
@@ -109,7 +108,7 @@ class LiteJetLight(LightEntity):
         try:
             await self._lj.activate_load_at(self._index, brightness, int(transition))
         except LiteJetError as exc:
-            raise HomeAssistantError from exc
+            raise HomeAssistantError() from exc
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the light."""
@@ -117,7 +116,7 @@ class LiteJetLight(LightEntity):
             try:
                 await self._lj.activate_load_at(self._index, 0, kwargs[ATTR_TRANSITION])
             except LiteJetError as exc:
-                raise HomeAssistantError from exc
+                raise HomeAssistantError() from exc
             return
 
         # If transition attribute is not specified then the simple
@@ -126,7 +125,7 @@ class LiteJetLight(LightEntity):
         try:
             await self._lj.deactivate_load(self._index)
         except LiteJetError as exc:
-            raise HomeAssistantError from exc
+            raise HomeAssistantError() from exc
 
     async def async_update(self) -> None:
         """Retrieve the light's brightness from the LiteJet system."""

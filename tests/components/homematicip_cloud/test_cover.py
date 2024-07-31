@@ -1,5 +1,4 @@
 """Tests for HomematicIP Cloud cover."""
-
 from homematicip.base.enums import DoorCommand, DoorState
 
 from homeassistant.components.cover import (

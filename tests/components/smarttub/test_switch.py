@@ -1,5 +1,4 @@
 """Test the SmartTub switch platform."""
-
 import pytest
 
 from homeassistant.const import STATE_OFF, STATE_ON

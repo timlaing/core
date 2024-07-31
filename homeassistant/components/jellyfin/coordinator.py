@@ -1,5 +1,4 @@
 """Data update coordinator for the Jellyfin integration."""
-
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -8,6 +7,7 @@ from typing import Any, TypeVar
 
 from jellyfin_apiclient_python import JellyfinClient
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
@@ -21,6 +21,8 @@ JellyfinDataT = TypeVar(
 
 class JellyfinDataUpdateCoordinator(DataUpdateCoordinator[JellyfinDataT], ABC):
     """Data update coordinator for the Jellyfin integration."""
+
+    config_entry: ConfigEntry
 
     def __init__(
         self,

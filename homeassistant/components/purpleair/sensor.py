@@ -1,5 +1,4 @@
 """Support for PurpleAir sensors."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -34,11 +33,18 @@ from .coordinator import PurpleAirDataUpdateCoordinator
 CONCENTRATION_PARTICLES_PER_100_MILLILITERS = f"particles/100{UnitOfVolume.MILLILITERS}"
 
 
-@dataclass(frozen=True, kw_only=True)
-class PurpleAirSensorEntityDescription(SensorEntityDescription):
-    """Define an object to describe PurpleAir sensor entities."""
+@dataclass
+class PurpleAirSensorEntityDescriptionMixin:
+    """Define a description mixin for PurpleAir sensor entities."""
 
     value_fn: Callable[[SensorModel], float | str | None]
+
+
+@dataclass
+class PurpleAirSensorEntityDescription(
+    SensorEntityDescription, PurpleAirSensorEntityDescriptionMixin
+):
+    """Define an object to describe PurpleAir sensor entities."""
 
 
 SENSOR_DESCRIPTIONS = [
@@ -53,6 +59,7 @@ SENSOR_DESCRIPTIONS = [
         key="pm0.3_count_concentration",
         translation_key="pm0_3_count_concentration",
         entity_registry_enabled_default=False,
+        icon="mdi:blur",
         native_unit_of_measurement=CONCENTRATION_PARTICLES_PER_100_MILLILITERS,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda sensor: sensor.pm0_3_um_count,
@@ -61,6 +68,7 @@ SENSOR_DESCRIPTIONS = [
         key="pm0.5_count_concentration",
         translation_key="pm0_5_count_concentration",
         entity_registry_enabled_default=False,
+        icon="mdi:blur",
         native_unit_of_measurement=CONCENTRATION_PARTICLES_PER_100_MILLILITERS,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda sensor: sensor.pm0_5_um_count,
@@ -69,6 +77,7 @@ SENSOR_DESCRIPTIONS = [
         key="pm1.0_count_concentration",
         translation_key="pm1_0_count_concentration",
         entity_registry_enabled_default=False,
+        icon="mdi:blur",
         native_unit_of_measurement=CONCENTRATION_PARTICLES_PER_100_MILLILITERS,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda sensor: sensor.pm1_0_um_count,
@@ -84,6 +93,7 @@ SENSOR_DESCRIPTIONS = [
         key="pm10.0_count_concentration",
         translation_key="pm10_0_count_concentration",
         entity_registry_enabled_default=False,
+        icon="mdi:blur",
         native_unit_of_measurement=CONCENTRATION_PARTICLES_PER_100_MILLILITERS,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda sensor: sensor.pm10_0_um_count,
@@ -99,6 +109,7 @@ SENSOR_DESCRIPTIONS = [
         key="pm2.5_count_concentration",
         translation_key="pm2_5_count_concentration",
         entity_registry_enabled_default=False,
+        icon="mdi:blur",
         native_unit_of_measurement=CONCENTRATION_PARTICLES_PER_100_MILLILITERS,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda sensor: sensor.pm2_5_um_count,
@@ -114,6 +125,7 @@ SENSOR_DESCRIPTIONS = [
         key="pm5.0_count_concentration",
         translation_key="pm5_0_count_concentration",
         entity_registry_enabled_default=False,
+        icon="mdi:blur",
         native_unit_of_measurement=CONCENTRATION_PARTICLES_PER_100_MILLILITERS,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda sensor: sensor.pm5_0_um_count,

@@ -1,24 +1,18 @@
 """Config flow for Somfy MyLink integration."""
-
 from __future__ import annotations
 
+import asyncio
 from copy import deepcopy
 import logging
 
 from somfy_mylink_synergy import SomfyMyLinkSynergy
 import voluptuous as vol
 
+from homeassistant import config_entries, core, exceptions
 from homeassistant.components import dhcp
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigEntryState,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlow,
-)
 from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.core import callback
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.device_registry import format_mac
 
 from .const import (
@@ -35,7 +29,7 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
-async def validate_input(hass: HomeAssistant, data):
+async def validate_input(hass: core.HomeAssistant, data):
     """Validate the user input allows us to connect.
 
     Data has the keys from schema with values provided by the user.
@@ -46,7 +40,7 @@ async def validate_input(hass: HomeAssistant, data):
 
     try:
         status_info = await somfy_mylink.status_info()
-    except TimeoutError as ex:
+    except asyncio.TimeoutError as ex:
         raise CannotConnect from ex
 
     if not status_info or "error" in status_info:
@@ -56,7 +50,7 @@ async def validate_input(hass: HomeAssistant, data):
     return {"title": f"MyLink {data[CONF_HOST]}"}
 
 
-class SomfyConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Somfy MyLink."""
 
     VERSION = 1
@@ -67,9 +61,7 @@ class SomfyConfigFlow(ConfigFlow, domain=DOMAIN):
         self.mac = None
         self.ip_address = None
 
-    async def async_step_dhcp(
-        self, discovery_info: dhcp.DhcpServiceInfo
-    ) -> ConfigFlowResult:
+    async def async_step_dhcp(self, discovery_info: dhcp.DhcpServiceInfo) -> FlowResult:
         """Handle dhcp discovery."""
         self._async_abort_entries_match({CONF_HOST: discovery_info.ip})
 
@@ -95,7 +87,7 @@ class SomfyConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
                 errors["base"] = "invalid_auth"
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
@@ -121,16 +113,16 @@ class SomfyConfigFlow(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: ConfigEntry,
+        config_entry: config_entries.ConfigEntry,
     ) -> OptionsFlowHandler:
         """Get the options flow for this handler."""
         return OptionsFlowHandler(config_entry)
 
 
-class OptionsFlowHandler(OptionsFlow):
+class OptionsFlowHandler(config_entries.OptionsFlow):
     """Handle a option flow for somfy_mylink."""
 
-    def __init__(self, config_entry: ConfigEntry) -> None:
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         self.config_entry = config_entry
         self.options = deepcopy(dict(config_entry.options))
@@ -155,7 +147,7 @@ class OptionsFlowHandler(OptionsFlow):
     async def async_step_init(self, user_input=None):
         """Handle options flow."""
 
-        if self.config_entry.state is not ConfigEntryState.LOADED:
+        if self.config_entry.state is not config_entries.ConfigEntryState.LOADED:
             _LOGGER.error("MyLink must be connected to manage device options")
             return self.async_abort(reason="cannot_connect")
 
@@ -203,9 +195,9 @@ class OptionsFlowHandler(OptionsFlow):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(exceptions.HomeAssistantError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(exceptions.HomeAssistantError):
     """Error to indicate there is invalid auth."""

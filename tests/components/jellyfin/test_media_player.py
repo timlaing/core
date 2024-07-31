@@ -1,5 +1,4 @@
 """Tests for the Jellyfin media_player platform."""
-
 from datetime import timedelta
 from unittest.mock import MagicMock
 
@@ -42,13 +41,14 @@ from tests.typing import WebSocketGenerator
 
 async def test_media_player(
     hass: HomeAssistant,
-    device_registry: dr.DeviceRegistry,
-    entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
     mock_jellyfin: MagicMock,
     mock_api: MagicMock,
 ) -> None:
     """Test the Jellyfin media player."""
+    device_registry = dr.async_get(hass)
+    entity_registry = er.async_get(hass)
+
     state = hass.states.get("media_player.jellyfin_device")
 
     assert state
@@ -97,12 +97,13 @@ async def test_media_player(
 
 async def test_media_player_music(
     hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
     mock_jellyfin: MagicMock,
     mock_api: MagicMock,
 ) -> None:
     """Test the Jellyfin media player."""
+    entity_registry = er.async_get(hass)
+
     state = hass.states.get("media_player.jellyfin_device_four")
 
     assert state

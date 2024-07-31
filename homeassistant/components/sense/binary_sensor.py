@@ -1,34 +1,44 @@
 """Support for monitoring a Sense energy sensor device."""
-
 import logging
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import SenseConfigEntry
-from .const import ATTRIBUTION, DOMAIN, MDI_ICONS, SENSE_DEVICE_UPDATE
+from .const import (
+    ATTRIBUTION,
+    DOMAIN,
+    MDI_ICONS,
+    SENSE_DATA,
+    SENSE_DEVICE_UPDATE,
+    SENSE_DEVICES_DATA,
+    SENSE_DISCOVERED_DEVICES_DATA,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: SenseConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Sense binary sensor."""
-    sense_monitor_id = config_entry.runtime_data.data.sense_monitor_id
+    data = hass.data[DOMAIN][config_entry.entry_id][SENSE_DATA]
+    sense_devices_data = hass.data[DOMAIN][config_entry.entry_id][SENSE_DEVICES_DATA]
+    sense_monitor_id = data.sense_monitor_id
 
-    sense_devices = config_entry.runtime_data.discovered
-    device_data = config_entry.runtime_data.device_data
+    sense_devices = hass.data[DOMAIN][config_entry.entry_id][
+        SENSE_DISCOVERED_DEVICES_DATA
+    ]
     devices = [
-        SenseDevice(device_data, device, sense_monitor_id)
+        SenseDevice(sense_devices_data, device, sense_monitor_id)
         for device in sense_devices
         if device["tags"]["DeviceListAllowed"] == "true"
     ]

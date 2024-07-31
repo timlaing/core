@@ -1,5 +1,4 @@
 """Support for Snips on-device ASR and NLU."""
-
 from datetime import timedelta
 import json
 import logging

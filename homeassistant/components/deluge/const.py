@@ -1,5 +1,4 @@
 """Constants for the Deluge integration."""
-
 import logging
 from typing import Final
 

@@ -1,5 +1,4 @@
 """Tests for the Bond light device."""
-
 from datetime import timedelta
 
 from bond_async import Action, DeviceType
@@ -33,6 +32,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.entity_registry import EntityRegistry
 from homeassistant.util import utcnow
 
 from .common import (
@@ -153,10 +153,7 @@ def light_brightness_increase_decrease_only(name: str):
     }
 
 
-async def test_fan_entity_registry(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-) -> None:
+async def test_fan_entity_registry(hass: HomeAssistant) -> None:
     """Tests that fan with light devices are registered in the entity registry."""
     await setup_platform(
         hass,
@@ -166,14 +163,12 @@ async def test_fan_entity_registry(
         bond_device_id="test-device-id",
     )
 
-    entity = entity_registry.entities["light.fan_name"]
+    registry: EntityRegistry = er.async_get(hass)
+    entity = registry.entities["light.fan_name"]
     assert entity.unique_id == "test-hub-id_test-device-id"
 
 
-async def test_fan_up_light_entity_registry(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-) -> None:
+async def test_fan_up_light_entity_registry(hass: HomeAssistant) -> None:
     """Tests that fan with up light devices are registered in the entity registry."""
     await setup_platform(
         hass,
@@ -183,14 +178,12 @@ async def test_fan_up_light_entity_registry(
         bond_device_id="test-device-id",
     )
 
-    entity = entity_registry.entities["light.fan_name_up_light"]
+    registry: EntityRegistry = er.async_get(hass)
+    entity = registry.entities["light.fan_name_up_light"]
     assert entity.unique_id == "test-hub-id_test-device-id_up_light"
 
 
-async def test_fan_down_light_entity_registry(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-) -> None:
+async def test_fan_down_light_entity_registry(hass: HomeAssistant) -> None:
     """Tests that fan with down light devices are registered in the entity registry."""
     await setup_platform(
         hass,
@@ -200,14 +193,12 @@ async def test_fan_down_light_entity_registry(
         bond_device_id="test-device-id",
     )
 
-    entity = entity_registry.entities["light.fan_name_down_light"]
+    registry: EntityRegistry = er.async_get(hass)
+    entity = registry.entities["light.fan_name_down_light"]
     assert entity.unique_id == "test-hub-id_test-device-id_down_light"
 
 
-async def test_fireplace_entity_registry(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-) -> None:
+async def test_fireplace_entity_registry(hass: HomeAssistant) -> None:
     """Tests that flame fireplace devices are registered in the entity registry."""
     await setup_platform(
         hass,
@@ -217,14 +208,12 @@ async def test_fireplace_entity_registry(
         bond_device_id="test-device-id",
     )
 
-    entity = entity_registry.entities["light.fireplace_name"]
+    registry: EntityRegistry = er.async_get(hass)
+    entity = registry.entities["light.fireplace_name"]
     assert entity.unique_id == "test-hub-id_test-device-id"
 
 
-async def test_fireplace_with_light_entity_registry(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-) -> None:
+async def test_fireplace_with_light_entity_registry(hass: HomeAssistant) -> None:
     """Tests that flame+light devices are registered in the entity registry."""
     await setup_platform(
         hass,
@@ -234,16 +223,14 @@ async def test_fireplace_with_light_entity_registry(
         bond_device_id="test-device-id",
     )
 
-    entity_flame = entity_registry.entities["light.fireplace_name"]
+    registry: EntityRegistry = er.async_get(hass)
+    entity_flame = registry.entities["light.fireplace_name"]
     assert entity_flame.unique_id == "test-hub-id_test-device-id"
-    entity_light = entity_registry.entities["light.fireplace_name_light"]
+    entity_light = registry.entities["light.fireplace_name_light"]
     assert entity_light.unique_id == "test-hub-id_test-device-id_light"
 
 
-async def test_light_entity_registry(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-) -> None:
+async def test_light_entity_registry(hass: HomeAssistant) -> None:
     """Tests lights are registered in the entity registry."""
     await setup_platform(
         hass,
@@ -253,7 +240,8 @@ async def test_light_entity_registry(
         bond_device_id="test-device-id",
     )
 
-    entity = entity_registry.entities["light.light_name"]
+    registry: EntityRegistry = er.async_get(hass)
+    entity = registry.entities["light.light_name"]
     assert entity.unique_id == "test-hub-id_test-device-id"
 
 
@@ -330,17 +318,16 @@ async def test_light_set_brightness_belief_api_error(hass: HomeAssistant) -> Non
         bond_device_id="test-device-id",
     )
 
-    with (
-        pytest.raises(HomeAssistantError),
-        patch_bond_action_returns_clientresponseerror(),
-        patch_bond_device_state(),
-    ):
+    with pytest.raises(
+        HomeAssistantError
+    ), patch_bond_action_returns_clientresponseerror(), patch_bond_device_state():
         await hass.services.async_call(
             DOMAIN,
             SERVICE_SET_LIGHT_BRIGHTNESS_TRACKED_STATE,
             {ATTR_ENTITY_ID: "light.name_1", ATTR_BRIGHTNESS: 255},
             blocking=True,
         )
+        await hass.async_block_till_done()
 
 
 async def test_fp_light_set_brightness_belief_full(hass: HomeAssistant) -> None:
@@ -375,17 +362,16 @@ async def test_fp_light_set_brightness_belief_api_error(hass: HomeAssistant) -> 
         bond_device_id="test-device-id",
     )
 
-    with (
-        pytest.raises(HomeAssistantError),
-        patch_bond_action_returns_clientresponseerror(),
-        patch_bond_device_state(),
-    ):
+    with pytest.raises(
+        HomeAssistantError
+    ), patch_bond_action_returns_clientresponseerror(), patch_bond_device_state():
         await hass.services.async_call(
             DOMAIN,
             SERVICE_SET_LIGHT_BRIGHTNESS_TRACKED_STATE,
             {ATTR_ENTITY_ID: "light.name_1", ATTR_BRIGHTNESS: 255},
             blocking=True,
         )
+        await hass.async_block_till_done()
 
 
 async def test_light_set_brightness_belief_brightness_not_supported(
@@ -406,6 +392,7 @@ async def test_light_set_brightness_belief_brightness_not_supported(
             {ATTR_ENTITY_ID: "light.name_1", ATTR_BRIGHTNESS: 255},
             blocking=True,
         )
+        await hass.async_block_till_done()
 
 
 async def test_light_set_brightness_belief_zero(hass: HomeAssistant) -> None:
@@ -486,17 +473,16 @@ async def test_light_set_power_belief_api_error(hass: HomeAssistant) -> None:
         bond_device_id="test-device-id",
     )
 
-    with (
-        pytest.raises(HomeAssistantError),
-        patch_bond_action_returns_clientresponseerror(),
-        patch_bond_device_state(),
-    ):
+    with pytest.raises(
+        HomeAssistantError
+    ), patch_bond_action_returns_clientresponseerror(), patch_bond_device_state():
         await hass.services.async_call(
             DOMAIN,
             SERVICE_SET_LIGHT_POWER_TRACKED_STATE,
             {ATTR_ENTITY_ID: "light.name_1", ATTR_POWER_STATE: False},
             blocking=True,
         )
+        await hass.async_block_till_done()
 
 
 async def test_fp_light_set_power_belief(hass: HomeAssistant) -> None:
@@ -531,17 +517,16 @@ async def test_fp_light_set_power_belief_api_error(hass: HomeAssistant) -> None:
         bond_device_id="test-device-id",
     )
 
-    with (
-        pytest.raises(HomeAssistantError),
-        patch_bond_action_returns_clientresponseerror(),
-        patch_bond_device_state(),
-    ):
+    with pytest.raises(
+        HomeAssistantError
+    ), patch_bond_action_returns_clientresponseerror(), patch_bond_device_state():
         await hass.services.async_call(
             DOMAIN,
             SERVICE_SET_LIGHT_POWER_TRACKED_STATE,
             {ATTR_ENTITY_ID: "light.name_1", ATTR_POWER_STATE: False},
             blocking=True,
         )
+        await hass.async_block_till_done()
 
 
 async def test_fp_light_set_brightness_belief_brightness_not_supported(
@@ -562,6 +547,7 @@ async def test_fp_light_set_brightness_belief_brightness_not_supported(
             {ATTR_ENTITY_ID: "light.name_1", ATTR_BRIGHTNESS: 255},
             blocking=True,
         )
+        await hass.async_block_till_done()
 
 
 async def test_light_start_increasing_brightness(hass: HomeAssistant) -> None:
@@ -602,6 +588,7 @@ async def test_light_start_increasing_brightness_missing_service(
             {ATTR_ENTITY_ID: "light.name_1"},
             blocking=True,
         )
+        await hass.async_block_till_done()
 
 
 async def test_light_start_decreasing_brightness(hass: HomeAssistant) -> None:
@@ -645,6 +632,7 @@ async def test_light_start_decreasing_brightness_missing_service(
             {ATTR_ENTITY_ID: "light.name_1"},
             blocking=True,
         )
+        await hass.async_block_till_done()
 
 
 async def test_light_stop(hass: HomeAssistant) -> None:
@@ -686,6 +674,7 @@ async def test_light_stop_missing_service(
             {ATTR_ENTITY_ID: "light.name_1"},
             blocking=True,
         )
+        await hass.async_block_till_done()
 
 
 async def test_turn_on_light(hass: HomeAssistant) -> None:

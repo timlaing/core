@@ -1,5 +1,4 @@
 """ONVIF switches for controlling cameras."""
-
 from __future__ import annotations
 
 from collections.abc import Callable, Coroutine
@@ -17,9 +16,9 @@ from .device import ONVIFDevice
 from .models import Profile
 
 
-@dataclass(frozen=True, kw_only=True)
-class ONVIFSwitchEntityDescription(SwitchEntityDescription):
-    """Describes ONVIF switch entity."""
+@dataclass
+class ONVIFSwitchEntityDescriptionMixin:
+    """Mixin for required keys."""
 
     turn_on_fn: Callable[
         [ONVIFDevice], Callable[[Profile, Any], Coroutine[Any, Any, None]]
@@ -32,10 +31,18 @@ class ONVIFSwitchEntityDescription(SwitchEntityDescription):
     supported_fn: Callable[[ONVIFDevice], bool]
 
 
+@dataclass
+class ONVIFSwitchEntityDescription(
+    SwitchEntityDescription, ONVIFSwitchEntityDescriptionMixin
+):
+    """Describes ONVIF switch entity."""
+
+
 SWITCHES: tuple[ONVIFSwitchEntityDescription, ...] = (
     ONVIFSwitchEntityDescription(
         key="autofocus",
-        translation_key="autofocus",
+        name="Autofocus",
+        icon="mdi:focus-auto",
         turn_on_data={"Focus": {"AutoFocusMode": "AUTO"}},
         turn_off_data={"Focus": {"AutoFocusMode": "MANUAL"}},
         turn_on_fn=lambda device: device.async_set_imaging_settings,
@@ -44,7 +51,8 @@ SWITCHES: tuple[ONVIFSwitchEntityDescription, ...] = (
     ),
     ONVIFSwitchEntityDescription(
         key="ir_lamp",
-        translation_key="ir_lamp",
+        name="IR lamp",
+        icon="mdi:spotlight-beam",
         turn_on_data={"IrCutFilter": "OFF"},
         turn_off_data={"IrCutFilter": "ON"},
         turn_on_fn=lambda device: device.async_set_imaging_settings,
@@ -53,7 +61,8 @@ SWITCHES: tuple[ONVIFSwitchEntityDescription, ...] = (
     ),
     ONVIFSwitchEntityDescription(
         key="wiper",
-        translation_key="wiper",
+        name="Wiper",
+        icon="mdi:wiper",
         turn_on_data="tt:Wiper|On",
         turn_off_data="tt:Wiper|Off",
         turn_on_fn=lambda device: device.async_run_aux_command,

@@ -1,5 +1,4 @@
 """Support for mobile_app push notifications."""
-
 from __future__ import annotations
 
 import asyncio
@@ -198,7 +197,7 @@ class MobileAppNotificationService(BaseNotificationService):
             else:
                 _LOGGER.error(message)
 
-        except TimeoutError:
+        except asyncio.TimeoutError:
             _LOGGER.error("Timeout sending notification to %s", push_url)
         except aiohttp.ClientError as err:
             _LOGGER.error("Error sending notification to %s: %r", push_url, err)

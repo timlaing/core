@@ -1,5 +1,4 @@
 """Support for switch controlled using a telnet connection."""
-
 from __future__ import annotations
 
 from datetime import timedelta
@@ -11,7 +10,7 @@ import voluptuous as vol
 
 from homeassistant.components.switch import (
     ENTITY_ID_FORMAT,
-    PLATFORM_SCHEMA as SWITCH_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     SwitchEntity,
 )
 from homeassistant.const import (
@@ -49,7 +48,7 @@ SWITCH_SCHEMA = vol.Schema(
     }
 )
 
-PLATFORM_SCHEMA = SWITCH_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {vol.Required(CONF_SWITCHES): cv.schema_with_slug_keys(SWITCH_SCHEMA)}
 )
 

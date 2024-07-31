@@ -1,5 +1,4 @@
 """The sensor tests for the tado platform."""
-
 from homeassistant.core import HomeAssistant
 
 from .util import async_init_integration

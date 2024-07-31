@@ -3,21 +3,18 @@
 These tests fake out the subscriber/devicemanager, and are not using a real
 pubsub subscriber.
 """
-
-from collections.abc import Generator
 import datetime
 from http import HTTPStatus
 from unittest.mock import AsyncMock, Mock, patch
 
 import aiohttp
-from freezegun import freeze_time
 from google_nest_sdm.event import EventMessage
 import pytest
 
 from homeassistant.components import camera
 from homeassistant.components.camera import STATE_IDLE, STATE_STREAMING, StreamType
 from homeassistant.components.nest.const import DOMAIN
-from homeassistant.components.websocket_api import TYPE_RESULT
+from homeassistant.components.websocket_api.const import TYPE_RESULT
 from homeassistant.const import ATTR_FRIENDLY_NAME
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er
@@ -105,12 +102,12 @@ def webrtc_camera_device(create_device: CreateDevice) -> None:
 def make_motion_event(
     event_id: str = MOTION_EVENT_ID,
     event_session_id: str = EVENT_SESSION_ID,
-    timestamp: datetime.datetime | None = None,
+    timestamp: datetime.datetime = None,
 ) -> EventMessage:
     """Create an EventMessage for a motion event."""
     if not timestamp:
         timestamp = utcnow()
-    return EventMessage.create_event(
+    return EventMessage(
         {
             "eventId": "some-event-id",  # Ignored; we use the resource updated event id below
             "timestamp": timestamp.isoformat(timespec="seconds"),
@@ -129,7 +126,7 @@ def make_motion_event(
 
 
 def make_stream_url_response(
-    expiration: datetime.datetime | None = None, token_num: int = 0
+    expiration: datetime.datetime = None, token_num: int = 0
 ) -> aiohttp.web.Response:
     """Make response for the API that generates a streaming url."""
     if not expiration:
@@ -150,7 +147,7 @@ def make_stream_url_response(
 
 
 @pytest.fixture
-async def mock_create_stream(hass: HomeAssistant) -> Generator[AsyncMock]:
+async def mock_create_stream(hass) -> Mock:
     """Fixture to mock out the create stream call."""
     assert await async_setup_component(hass, "stream", {})
     with patch(
@@ -176,7 +173,7 @@ async def async_get_image(hass, width=None, height=None):
 
 async def fire_alarm(hass, point_in_time):
     """Fire an alarm and wait for callbacks to run."""
-    with freeze_time(point_in_time):
+    with patch("homeassistant.util.dt.utcnow", return_value=point_in_time):
         async_fire_time_changed(hass, point_in_time)
         await hass.async_block_till_done()
 
@@ -204,11 +201,7 @@ async def test_ineligible_device(
 
 
 async def test_camera_device(
-    hass: HomeAssistant,
-    device_registry: dr.DeviceRegistry,
-    entity_registry: er.EntityRegistry,
-    setup_platform: PlatformSetup,
-    camera_device: None,
+    hass: HomeAssistant, setup_platform: PlatformSetup, camera_device: None
 ) -> None:
     """Test a basic camera with a live stream."""
     await setup_platform()
@@ -219,10 +212,12 @@ async def test_camera_device(
     assert camera.state == STATE_STREAMING
     assert camera.attributes.get(ATTR_FRIENDLY_NAME) == "My Camera"
 
-    entry = entity_registry.async_get("camera.my_camera")
+    registry = er.async_get(hass)
+    entry = registry.async_get("camera.my_camera")
     assert entry.unique_id == f"{DEVICE_ID}-camera"
     assert entry.domain == "camera"
 
+    device_registry = dr.async_get(hass)
     device = device_registry.async_get(entry.device_id)
     assert device.name == "My Camera"
     assert device.model == "Camera"

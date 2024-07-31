@@ -1,5 +1,4 @@
 """Test the Ridwell config flow."""
-
 from unittest.mock import AsyncMock, patch
 
 from aioridwell.errors import InvalidCredentialsError, RidwellError
@@ -28,7 +27,7 @@ async def test_create_entry(
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "user"
 
     # Test errors that can arise:
@@ -39,7 +38,7 @@ async def test_create_entry(
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], user_input=config
         )
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == FlowResultType.FORM
         assert result["step_id"] == "user"
         assert result["errors"] == errors
 
@@ -47,7 +46,7 @@ async def test_create_entry(
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input=config
     )
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["title"] == TEST_USERNAME
     assert result["data"] == {
         CONF_USERNAME: TEST_USERNAME,
@@ -60,7 +59,7 @@ async def test_duplicate_error(hass: HomeAssistant, config, setup_config_entry) 
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}, data=config
     )
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
 
@@ -75,6 +74,6 @@ async def test_step_reauth(
         result["flow_id"],
         user_input={CONF_PASSWORD: "new_password"},
     )
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
     assert len(hass.config_entries.async_entries()) == 1

@@ -1,13 +1,7 @@
-"""Support for Motionblinds sensors."""
+"""Support for Motion Blinds sensors."""
+from motionblinds import DEVICE_TYPES_WIFI, BlindType
 
-from motionblinds import DEVICE_TYPES_WIFI
-from motionblinds.motion_blinds import DEVICE_TYPE_TDBU
-
-from homeassistant.components.sensor import (
-    SensorDeviceClass,
-    SensorEntity,
-    SensorStateClass,
-)
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     PERCENTAGE,
@@ -28,14 +22,14 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Perform the setup for Motionblinds."""
+    """Perform the setup for Motion Blinds."""
     entities: list[SensorEntity] = []
     motion_gateway = hass.data[DOMAIN][config_entry.entry_id][KEY_GATEWAY]
     coordinator = hass.data[DOMAIN][config_entry.entry_id][KEY_COORDINATOR]
 
     for blind in motion_gateway.device_list.values():
         entities.append(MotionSignalStrengthSensor(coordinator, blind))
-        if blind.device_type == DEVICE_TYPE_TDBU:
+        if blind.type == BlindType.TopDownBottomUp:
             entities.append(MotionTDBUBatterySensor(coordinator, blind, "Bottom"))
             entities.append(MotionTDBUBatterySensor(coordinator, blind, "Top"))
         elif blind.battery_voltage is not None and blind.battery_voltage > 0:
@@ -54,8 +48,6 @@ class MotionBatterySensor(MotionCoordinatorEntity, SensorEntity):
 
     _attr_device_class = SensorDeviceClass.BATTERY
     _attr_native_unit_of_measurement = PERCENTAGE
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-    _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, coordinator, blind):
         """Initialize the Motion Battery Sensor."""

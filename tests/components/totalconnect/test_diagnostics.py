@@ -1,5 +1,4 @@
 """Test TotalConnect diagnostics."""
-
 from homeassistant.components.diagnostics import REDACTED
 from homeassistant.core import HomeAssistant
 

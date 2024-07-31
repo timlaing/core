@@ -6,9 +6,6 @@
         "description": "Enter your Roku information.",
         "data": {
           "host": "[%key:common::config_flow::data::host%]"
-        },
-        "data_description": {
-          "host": "The hostname or IP address of the Roku device to control."
         }
       },
       "discovery_confirm": {

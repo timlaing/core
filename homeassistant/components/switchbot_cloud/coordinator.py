@@ -1,5 +1,4 @@
 """SwitchBot Cloud coordinator."""
-
 from asyncio import timeout
 from logging import getLogger
 from typing import Any
@@ -9,11 +8,11 @@ from switchbot_api import CannotConnect, Device, Remote, SwitchBotAPI
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import DEFAULT_SCAN_INTERVAL, DOMAIN
+from .const import DOMAIN, SCAN_INTERVAL
 
 _LOGGER = getLogger(__name__)
 
-type Status = dict[str, Any] | None
+Status = dict[str, Any] | None
 
 
 class SwitchBotCoordinator(DataUpdateCoordinator[Status]):
@@ -21,6 +20,7 @@ class SwitchBotCoordinator(DataUpdateCoordinator[Status]):
 
     _api: SwitchBotAPI
     _device_id: str
+    _should_poll = False
 
     def __init__(
         self, hass: HomeAssistant, api: SwitchBotAPI, device: Device | Remote
@@ -30,7 +30,7 @@ class SwitchBotCoordinator(DataUpdateCoordinator[Status]):
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=DEFAULT_SCAN_INTERVAL,
+            update_interval=SCAN_INTERVAL,
         )
         self._api = api
         self._device_id = device.device_id

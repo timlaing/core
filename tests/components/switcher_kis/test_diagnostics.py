@@ -1,23 +1,17 @@
 """Tests for the diagnostics data provided by Switcher."""
 
-import pytest
-
 from homeassistant.components.diagnostics import REDACTED
 from homeassistant.core import HomeAssistant
 
 from . import init_integration
 from .consts import DUMMY_WATER_HEATER_DEVICE
 
-from tests.common import ANY
 from tests.components.diagnostics import get_diagnostics_for_config_entry
 from tests.typing import ClientSessionGenerator
 
 
 async def test_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    mock_bridge,
-    monkeypatch: pytest.MonkeyPatch,
+    hass: HomeAssistant, hass_client: ClientSessionGenerator, mock_bridge, monkeypatch
 ) -> None:
     """Test diagnostics."""
     entry = await init_integration(hass)
@@ -31,7 +25,6 @@ async def test_diagnostics(
             {
                 "auto_shutdown": "02:00:00",
                 "device_id": REDACTED,
-                "device_key": REDACTED,
                 "device_state": {
                     "__type": "<enum 'DeviceState'>",
                     "repr": "<DeviceState.ON: ('01', 'on')>",
@@ -55,7 +48,6 @@ async def test_diagnostics(
         "entry": {
             "entry_id": entry.entry_id,
             "version": 1,
-            "minor_version": 1,
             "domain": "switcher_kis",
             "title": "Mock Title",
             "data": {},
@@ -65,7 +57,5 @@ async def test_diagnostics(
             "source": "user",
             "unique_id": "switcher_kis",
             "disabled_by": None,
-            "created_at": ANY,
-            "modified_at": ANY,
         },
     }

@@ -1,5 +1,4 @@
 """Tests for pylint."""
-
 import contextlib
 
 from pylint.testutils.unittest_linter import UnittestLinter

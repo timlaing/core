@@ -1,5 +1,4 @@
 """Support for controlling Global Cache gc100."""
-
 import gc100
 import voluptuous as vol
 

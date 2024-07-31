@@ -1,5 +1,4 @@
 """Config flow for DSMR integration."""
-
 from __future__ import annotations
 
 import asyncio
@@ -18,18 +17,15 @@ import serial
 import serial.tools.list_ports
 import voluptuous as vol
 
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlow,
-)
-from homeassistant.const import CONF_HOST, CONF_PORT, CONF_PROTOCOL, CONF_TYPE
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant import config_entries, core, exceptions
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TYPE
+from homeassistant.core import callback
+from homeassistant.data_entry_flow import FlowResult
 
 from .const import (
     CONF_DSMR_VERSION,
+    CONF_PROTOCOL,
     CONF_SERIAL_ID,
     CONF_SERIAL_ID_GAS,
     CONF_TIME_BETWEEN_UPDATE,
@@ -57,8 +53,6 @@ class DSMRConnection:
         self._protocol = protocol
         self._telegram: dict[str, DSMRObject] = {}
         self._equipment_identifier = obis_ref.EQUIPMENT_IDENTIFIER
-        if dsmr_version == "5B":
-            self._equipment_identifier = obis_ref.BELGIUM_EQUIPMENT_IDENTIFIER
         if dsmr_version == "5L":
             self._equipment_identifier = obis_ref.LUXEMBOURG_EQUIPMENT_IDENTIFIER
         if dsmr_version == "Q3D":
@@ -80,7 +74,7 @@ class DSMRConnection:
             return identifier
         return None
 
-    async def validate_connect(self, hass: HomeAssistant) -> bool:
+    async def validate_connect(self, hass: core.HomeAssistant) -> bool:
         """Test if we can validate connection with the device."""
 
         def update_telegram(telegram: dict[str, DSMRObject]) -> None:
@@ -120,7 +114,7 @@ class DSMRConnection:
 
         try:
             transport, protocol = await asyncio.create_task(reader_factory())
-        except (serial.SerialException, OSError):
+        except (serial.serialutil.SerialException, OSError):
             LOGGER.exception("Error connecting to DSMR")
             return False
 
@@ -128,7 +122,7 @@ class DSMRConnection:
             try:
                 async with asyncio.timeout(30):
                     await protocol.wait_closed()
-            except TimeoutError:
+            except asyncio.TimeoutError:
                 # Timeout (no data received), close transport and return True (if telegram is empty, will result in CannotCommunicate error)
                 transport.close()
                 await protocol.wait_closed()
@@ -136,7 +130,7 @@ class DSMRConnection:
 
 
 async def _validate_dsmr_connection(
-    hass: HomeAssistant, data: dict[str, Any], protocol: str
+    hass: core.HomeAssistant, data: dict[str, Any], protocol: str
 ) -> dict[str, str | None]:
     """Validate the user input allows us to connect."""
     conn = DSMRConnection(
@@ -162,7 +156,7 @@ async def _validate_dsmr_connection(
     }
 
 
-class DSMRFlowHandler(ConfigFlow, domain=DOMAIN):
+class DSMRFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for DSMR."""
 
     VERSION = 1
@@ -177,7 +171,7 @@ class DSMRFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Step when user initializes a integration."""
         if user_input is not None:
             user_selection = user_input[CONF_TYPE]
@@ -193,7 +187,7 @@ class DSMRFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_setup_network(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Step when setting up network configuration."""
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -218,7 +212,7 @@ class DSMRFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_setup_serial(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Step when setting up serial configuration."""
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -262,7 +256,7 @@ class DSMRFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_setup_serial_manual_path(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Select path manually."""
         if user_input is not None:
             validate_data = {
@@ -308,7 +302,7 @@ class DSMRFlowHandler(ConfigFlow, domain=DOMAIN):
         return data
 
 
-class DSMROptionFlowHandler(OptionsFlow):
+class DSMROptionFlowHandler(config_entries.OptionsFlow):
     """Handle options."""
 
     def __init__(self, entry: ConfigEntry) -> None:
@@ -317,7 +311,7 @@ class DSMROptionFlowHandler(OptionsFlow):
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Manage the options."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
@@ -349,9 +343,9 @@ def get_serial_by_id(dev_path: str) -> str:
     return dev_path
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(exceptions.HomeAssistantError):
     """Error to indicate we cannot connect."""
 
 
-class CannotCommunicate(HomeAssistantError):
+class CannotCommunicate(exceptions.HomeAssistantError):
     """Error to indicate we cannot connect."""

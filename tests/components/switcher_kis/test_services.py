@@ -1,5 +1,4 @@
 """Test the services for the Switcher integration."""
-
 from unittest.mock import patch
 
 from aioswitcher.api import Command
@@ -30,7 +29,7 @@ from .consts import (
 
 @pytest.mark.parametrize("mock_bridge", [[DUMMY_WATER_HEATER_DEVICE]], indirect=True)
 async def test_turn_on_with_timer_service(
-    hass: HomeAssistant, mock_bridge, mock_api, monkeypatch: pytest.MonkeyPatch
+    hass: HomeAssistant, mock_bridge, mock_api, monkeypatch
 ) -> None:
     """Test the turn on with timer service."""
     await init_integration(hass)

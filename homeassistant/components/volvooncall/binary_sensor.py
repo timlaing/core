@@ -1,5 +1,4 @@
 """Support for VOC."""
-
 from __future__ import annotations
 
 from contextlib import suppress
@@ -32,17 +31,21 @@ async def async_setup_entry(
     @callback
     def async_discover_device(instruments: list[Instrument]) -> None:
         """Discover and add a discovered Volvo On Call binary sensor."""
-        async_add_entities(
-            VolvoSensor(
-                coordinator,
-                instrument.vehicle.vin,
-                instrument.component,
-                instrument.attr,
-                instrument.slug_attr,
-            )
-            for instrument in instruments
-            if instrument.component == "binary_sensor"
-        )
+        entities: list[VolvoSensor] = []
+
+        for instrument in instruments:
+            if instrument.component == "binary_sensor":
+                entities.append(
+                    VolvoSensor(
+                        coordinator,
+                        instrument.vehicle.vin,
+                        instrument.component,
+                        instrument.attr,
+                        instrument.slug_attr,
+                    )
+                )
+
+        async_add_entities(entities)
 
     async_discover_device([*volvo_data.instruments])
 

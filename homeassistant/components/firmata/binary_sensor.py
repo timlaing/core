@@ -1,5 +1,4 @@
 """Support for Firmata binary sensor input."""
-
 import logging
 
 from homeassistant.components.binary_sensor import BinarySensorEntity

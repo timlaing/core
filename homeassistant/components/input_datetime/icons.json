@@ -1,6 +1,0 @@
-{
-  "services": {
-    "set_datetime": "mdi:calendar-clock",
-    "reload": "mdi:reload"
-  }
-}

@@ -1,5 +1,4 @@
 """Support for Logi Circle devices."""
-
 import asyncio
 
 from aiohttp.client_exceptions import ClientResponseError
@@ -23,7 +22,7 @@ from homeassistant.const import (
     Platform,
 )
 from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv, issue_registry as ir
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.typing import ConfigType
 
@@ -132,19 +131,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Logi Circle from a config entry."""
-    ir.async_create_issue(
-        hass,
-        DOMAIN,
-        DOMAIN,
-        breaks_in_ha_version="2024.9.0",
-        is_fixable=False,
-        severity=ir.IssueSeverity.WARNING,
-        translation_key="integration_removed",
-        translation_placeholders={
-            "entries": "/config/integrations/integration/logi_circle",
-        },
-    )
-
     logi_circle = LogiCircle(
         client_id=entry.data[CONF_CLIENT_ID],
         client_secret=entry.data[CONF_CLIENT_SECRET],
@@ -184,7 +170,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             notification_id=NOTIFICATION_ID,
         )
         return False
-    except TimeoutError:
+    except asyncio.TimeoutError:
         # The TimeoutError exception object returns nothing when casted to a
         # string, so we'll handle it separately.
         err = f"{_TIMEOUT}s timeout exceeded when connecting to Logi Circle API"
@@ -253,13 +239,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    if all(
-        config_entry.state is config_entries.ConfigEntryState.NOT_LOADED
-        for config_entry in hass.config_entries.async_entries(DOMAIN)
-        if config_entry.entry_id != entry.entry_id
-    ):
-        ir.async_delete_issue(hass, DOMAIN, DOMAIN)
-
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     logi_circle = hass.data.pop(DATA_LOGI)

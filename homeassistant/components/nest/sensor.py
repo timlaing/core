@@ -1,5 +1,4 @@
 """Support for Google Nest SDM sensors."""
-
 from __future__ import annotations
 
 import logging

@@ -1,5 +1,4 @@
 """Support for Fjäråskupan fans."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -65,13 +64,7 @@ async def async_setup_entry(
 class Fan(CoordinatorEntity[FjaraskupanCoordinator], FanEntity):
     """Fan entity."""
 
-    _attr_supported_features = (
-        FanEntityFeature.SET_SPEED
-        | FanEntityFeature.PRESET_MODE
-        | FanEntityFeature.TURN_OFF
-        | FanEntityFeature.TURN_ON
-    )
-    _enable_turn_on_off_backwards_compatibility = False
+    _attr_supported_features = FanEntityFeature.SET_SPEED | FanEntityFeature.PRESET_MODE
     _attr_has_entity_name = True
     _attr_name = None
 
@@ -92,7 +85,7 @@ class Fan(CoordinatorEntity[FjaraskupanCoordinator], FanEntity):
     async def async_set_percentage(self, percentage: int) -> None:
         """Set speed."""
 
-        # Proactively update percentage to manage successive increases
+        # Proactively update percentage to mange successive increases
         self._percentage = percentage
 
         async with self.coordinator.async_connect_and_update() as device:
@@ -138,9 +131,11 @@ class Fan(CoordinatorEntity[FjaraskupanCoordinator], FanEntity):
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set new preset mode."""
-        command = PRESET_TO_COMMAND[preset_mode]
-        async with self.coordinator.async_connect_and_update() as device:
-            await device.send_command(command)
+        if command := PRESET_TO_COMMAND.get(preset_mode):
+            async with self.coordinator.async_connect_and_update() as device:
+                await device.send_command(command)
+        else:
+            raise UnsupportedPreset(f"The preset {preset_mode} is unsupported")
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""

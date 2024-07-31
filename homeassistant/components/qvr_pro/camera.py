@@ -1,5 +1,4 @@
 """Support for QVR Pro streams."""
-
 from __future__ import annotations
 
 import logging
@@ -43,17 +42,18 @@ def get_stream_source(guid, client):
     """Get channel stream source."""
     try:
         resp = client.get_channel_live_stream(guid, protocol="rtsp")
+
+        full_url = resp["resourceUris"]
+
+        protocol = full_url[:7]
+        auth = f"{client.get_auth_string()}@"
+        url = full_url[7:]
+
+        return f"{protocol}{auth}{url}"
+
     except QVRResponseError as ex:
         _LOGGER.error(ex)
         return None
-
-    full_url = resp["resourceUris"]
-
-    protocol = full_url[:7]
-    auth = f"{client.get_auth_string()}@"
-    url = full_url[7:]
-
-    return f"{protocol}{auth}{url}"
 
 
 class QVRProCamera(Camera):
@@ -90,7 +90,9 @@ class QVRProCamera(Camera):
     @property
     def extra_state_attributes(self):
         """Get the state attributes."""
-        return {"qvr_guid": self.guid}
+        attrs = {"qvr_guid": self.guid}
+
+        return attrs
 
     def camera_image(
         self, width: int | None = None, height: int | None = None

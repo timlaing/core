@@ -1,5 +1,4 @@
 """Support for SensorPro sensors."""
-
 from __future__ import annotations
 
 from sensorpro_ble import (
@@ -127,9 +126,7 @@ async def async_setup_entry(
 
 
 class SensorProBluetoothSensorEntity(
-    PassiveBluetoothProcessorEntity[
-        PassiveBluetoothDataProcessor[float | int | None, SensorUpdate]
-    ],
+    PassiveBluetoothProcessorEntity[PassiveBluetoothDataProcessor[float | int | None]],
     SensorEntity,
 ):
     """Representation of a SensorPro sensor."""

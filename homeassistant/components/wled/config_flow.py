@@ -1,5 +1,4 @@
 """Config flow to configure the WLED integration."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -8,14 +7,10 @@ import voluptuous as vol
 from wled import WLED, Device, WLEDConnectionError
 
 from homeassistant.components import onboarding, zeroconf
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlowWithConfigEntry,
-)
+from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
 from homeassistant.const import CONF_HOST, CONF_MAC
 from homeassistant.core import callback
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_KEEP_MAIN_LIGHT, DEFAULT_KEEP_MAIN_LIGHT, DOMAIN
@@ -36,7 +31,7 @@ class WLEDFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow initiated by the user."""
         errors = {}
 
@@ -46,6 +41,8 @@ class WLEDFlowHandler(ConfigFlow, domain=DOMAIN):
             except WLEDConnectionError:
                 errors["base"] = "cannot_connect"
             else:
+                if device.info.leds.cct:
+                    return self.async_abort(reason="cct_unsupported")
                 await self.async_set_unique_id(device.info.mac_address)
                 self._abort_if_unique_id_configured(
                     updates={CONF_HOST: user_input[CONF_HOST]}
@@ -67,7 +64,7 @@ class WLEDFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_zeroconf(
         self, discovery_info: zeroconf.ZeroconfServiceInfo
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle zeroconf discovery."""
         # Abort quick if the mac address is provided by discovery info
         if mac := discovery_info.properties.get(CONF_MAC):
@@ -82,6 +79,9 @@ class WLEDFlowHandler(ConfigFlow, domain=DOMAIN):
         except WLEDConnectionError:
             return self.async_abort(reason="cannot_connect")
 
+        if self.discovered_device.info.leds.cct:
+            return self.async_abort(reason="cct_unsupported")
+
         await self.async_set_unique_id(self.discovered_device.info.mac_address)
         self._abort_if_unique_id_configured(updates={CONF_HOST: discovery_info.host})
 
@@ -95,7 +95,7 @@ class WLEDFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_zeroconf_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow initiated by zeroconf."""
         if user_input is not None or not onboarding.async_is_onboarded(self.hass):
             return self.async_create_entry(
@@ -117,12 +117,16 @@ class WLEDFlowHandler(ConfigFlow, domain=DOMAIN):
         return await wled.update()
 
 
-class WLEDOptionsFlowHandler(OptionsFlowWithConfigEntry):
+class WLEDOptionsFlowHandler(OptionsFlow):
     """Handle WLED options."""
+
+    def __init__(self, config_entry: ConfigEntry) -> None:
+        """Initialize WLED options flow."""
+        self.config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Manage WLED options."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
@@ -133,7 +137,7 @@ class WLEDOptionsFlowHandler(OptionsFlowWithConfigEntry):
                 {
                     vol.Optional(
                         CONF_KEEP_MAIN_LIGHT,
-                        default=self.options.get(
+                        default=self.config_entry.options.get(
                             CONF_KEEP_MAIN_LIGHT, DEFAULT_KEEP_MAIN_LIGHT
                         ),
                     ): bool,

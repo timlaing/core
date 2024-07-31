@@ -1,8 +1,8 @@
 """Test the Nibe Heat Pump config flow."""
-
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
+from freezegun.api import FrozenDateTimeFactory
 from nibe.coil import CoilData
 from nibe.coil_groups import UNIT_COILGROUPS
 from nibe.heatpump import Model
@@ -17,7 +17,19 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 
-from . import async_add_model
+from . import async_add_entry
+
+from tests.common import async_fire_time_changed
+
+MOCK_ENTRY_DATA = {
+    "model": None,
+    "ip_address": "127.0.0.1",
+    "listening_port": 9999,
+    "remote_read_port": 10000,
+    "remote_write_port": 10001,
+    "word_swap": True,
+    "connection_type": "nibegw",
+}
 
 
 @pytest.fixture(autouse=True)
@@ -40,8 +52,8 @@ async def test_reset_button(
     model: Model,
     entity_id: str,
     coils: dict[int, Any],
-    freezer_ticker: Any,
-) -> None:
+    freezer: FrozenDateTimeFactory,
+):
     """Test reset button."""
 
     unit = UNIT_COILGROUPS[model.series]["main"]
@@ -50,7 +62,7 @@ async def test_reset_button(
     coils[unit.alarm_reset] = 0
     coils[unit.alarm] = 0
 
-    await async_add_model(hass, model)
+    await async_add_entry(hass, {**MOCK_ENTRY_DATA, "model": model.name})
 
     state = hass.states.get(entity_id)
     assert state
@@ -59,7 +71,9 @@ async def test_reset_button(
     # Signal alarm
     coils[unit.alarm] = 100
 
-    await freezer_ticker(60)
+    freezer.tick(60)
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
 
     state = hass.states.get(entity_id)
     assert state

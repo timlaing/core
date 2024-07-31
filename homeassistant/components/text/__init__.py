@@ -1,11 +1,9 @@
 """Component to allow setting text as platforms."""
-
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from datetime import timedelta
 from enum import StrEnum
-from functools import cached_property
 import logging
 import re
 from typing import Any, final
@@ -16,6 +14,10 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import MAX_LENGTH_STATE_STATE
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.config_validation import (  # noqa: F401
+    PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA_BASE,
+)
 from homeassistant.helpers.entity import Entity, EntityDescription
 from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.helpers.restore_state import ExtraStoredData, RestoreEntity
@@ -31,15 +33,13 @@ from .const import (
     SERVICE_SET_VALUE,
 )
 
-_LOGGER = logging.getLogger(__name__)
+SCAN_INTERVAL = timedelta(seconds=30)
 
 ENTITY_ID_FORMAT = DOMAIN + ".{}"
-PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA
-PLATFORM_SCHEMA_BASE = cv.PLATFORM_SCHEMA_BASE
-SCAN_INTERVAL = timedelta(seconds=30)
 
 MIN_TIME_BETWEEN_SCANS = timedelta(seconds=10)
 
+_LOGGER = logging.getLogger(__name__)
 
 __all__ = ["DOMAIN", "TextEntity", "TextEntityDescription", "TextMode"]
 
@@ -98,7 +98,8 @@ class TextMode(StrEnum):
     TEXT = "text"
 
 
-class TextEntityDescription(EntityDescription, frozen_or_thawed=True):
+@dataclass
+class TextEntityDescription(EntityDescription):
     """A class that describes text entities."""
 
     native_min: int = 0
@@ -107,16 +108,7 @@ class TextEntityDescription(EntityDescription, frozen_or_thawed=True):
     pattern: str | None = None
 
 
-CACHED_PROPERTIES_WITH_ATTR_ = {
-    "mode",
-    "native_value",
-    "native_min",
-    "native_max",
-    "pattern",
-}
-
-
-class TextEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
+class TextEntity(Entity):
     """Representation of a Text entity."""
 
     _entity_component_unrecorded_attributes = frozenset(
@@ -165,7 +157,7 @@ class TextEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
             )
         return self.native_value
 
-    @cached_property
+    @property
     def mode(self) -> TextMode:
         """Return the mode of the entity."""
         if hasattr(self, "_attr_mode"):
@@ -174,7 +166,7 @@ class TextEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
             return self.entity_description.mode
         return TextMode.TEXT
 
-    @cached_property
+    @property
     def native_min(self) -> int:
         """Return the minimum length of the value."""
         if hasattr(self, "_attr_native_min"):
@@ -189,7 +181,7 @@ class TextEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         """Return the minimum length of the value."""
         return max(self.native_min, 0)
 
-    @cached_property
+    @property
     def native_max(self) -> int:
         """Return the maximum length of the value."""
         if hasattr(self, "_attr_native_max"):
@@ -215,7 +207,7 @@ class TextEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
             self.__pattern_cmp = re.compile(self.pattern)
         return self.__pattern_cmp
 
-    @cached_property
+    @property
     def pattern(self) -> str | None:
         """Return the regex pattern that the value must match."""
         if hasattr(self, "_attr_pattern"):
@@ -224,14 +216,14 @@ class TextEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
             return self.entity_description.pattern
         return None
 
-    @cached_property
+    @property
     def native_value(self) -> str | None:
         """Return the value reported by the text."""
         return self._attr_native_value
 
     def set_value(self, value: str) -> None:
         """Change the value."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
     async def async_set_value(self, value: str) -> None:
         """Change the value."""

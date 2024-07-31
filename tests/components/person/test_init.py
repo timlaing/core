@@ -1,5 +1,4 @@
 """The tests for the person component."""
-
 from typing import Any
 from unittest.mock import patch
 
@@ -100,7 +99,7 @@ async def test_valid_invalid_user_ids(
 
 async def test_setup_tracker(hass: HomeAssistant, hass_admin_user: MockUser) -> None:
     """Test set up person with one device tracker."""
-    hass.set_state(CoreState.not_running)
+    hass.state = CoreState.not_running
     user_id = hass_admin_user.id
     config = {
         DOMAIN: {
@@ -160,7 +159,7 @@ async def test_setup_two_trackers(
     hass: HomeAssistant, hass_admin_user: MockUser
 ) -> None:
     """Test set up person with two device trackers."""
-    hass.set_state(CoreState.not_running)
+    hass.state = CoreState.not_running
     user_id = hass_admin_user.id
     config = {
         DOMAIN: {
@@ -248,7 +247,7 @@ async def test_ignore_unavailable_states(
     hass: HomeAssistant, hass_admin_user: MockUser
 ) -> None:
     """Test set up person with two device trackers, one unavailable."""
-    hass.set_state(CoreState.not_running)
+    hass.state = CoreState.not_running
     user_id = hass_admin_user.id
     config = {
         DOMAIN: {
@@ -303,7 +302,7 @@ async def test_restore_home_state(
     }
     state = State("person.tracked_person", "home", attrs)
     mock_restore_cache(hass, (state,))
-    hass.set_state(CoreState.not_running)
+    hass.state = CoreState.not_running
     mock_component(hass, "recorder")
     config = {
         DOMAIN: {
@@ -349,8 +348,8 @@ async def test_create_person_during_run(hass: HomeAssistant) -> None:
     hass.states.async_set(DEVICE_TRACKER, "home")
     await hass.async_block_till_done()
 
-    await person.async_create_person(
-        hass, "tracked person", device_trackers=[DEVICE_TRACKER]
+    await hass.components.person.async_create_person(
+        "tracked person", device_trackers=[DEVICE_TRACKER]
     )
     await hass.async_block_till_done()
 
@@ -571,10 +570,7 @@ async def test_ws_update_require_admin(
 
 
 async def test_ws_delete(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
-    entity_registry: er.EntityRegistry,
-    storage_setup,
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, storage_setup
 ) -> None:
     """Test deleting via WS."""
     manager = hass.data[DOMAIN][1]
@@ -592,7 +588,8 @@ async def test_ws_delete(
 
     assert resp["success"]
     assert len(hass.states.async_entity_ids("person")) == 0
-    assert not entity_registry.async_is_registered("person.tracked_person")
+    ent_reg = er.async_get(hass)
+    assert not ent_reg.async_is_registered("person.tracked_person")
 
 
 async def test_ws_delete_require_admin(
@@ -687,12 +684,11 @@ async def test_update_person_when_user_removed(
     assert storage_collection.data[person["id"]]["user_id"] is None
 
 
-async def test_removing_device_tracker(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, storage_setup
-) -> None:
+async def test_removing_device_tracker(hass: HomeAssistant, storage_setup) -> None:
     """Test we automatically remove removed device trackers."""
     storage_collection = hass.data[DOMAIN][1]
-    entry = entity_registry.async_get_or_create(
+    reg = er.async_get(hass)
+    entry = reg.async_get_or_create(
         "device_tracker", "mobile_app", "bla", suggested_object_id="pixel"
     )
 
@@ -700,7 +696,7 @@ async def test_removing_device_tracker(
         {"name": "Hello", "device_trackers": [entry.entity_id]}
     )
 
-    entity_registry.async_remove(entry.entity_id)
+    reg.async_remove(entry.entity_id)
     await hass.async_block_till_done()
 
     assert storage_collection.data[person["id"]]["device_trackers"] == []

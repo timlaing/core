@@ -1,5 +1,4 @@
 """Test pi_hole config flow."""
-
 from homeassistant.components import pi_hole
 from homeassistant.components.pi_hole.const import DOMAIN
 from homeassistant.config_entries import SOURCE_USER
@@ -32,7 +31,7 @@ async def test_flow_user_with_api_key(hass: HomeAssistant) -> None:
             DOMAIN,
             context={"source": SOURCE_USER},
         )
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == FlowResultType.FORM
         assert result["step_id"] == "user"
         assert result["errors"] == {}
 
@@ -40,7 +39,7 @@ async def test_flow_user_with_api_key(hass: HomeAssistant) -> None:
             result["flow_id"],
             user_input=CONFIG_FLOW_USER,
         )
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == FlowResultType.FORM
         assert result["step_id"] == "api_key"
         assert result["errors"] == {}
 
@@ -48,7 +47,7 @@ async def test_flow_user_with_api_key(hass: HomeAssistant) -> None:
             result["flow_id"],
             user_input={CONF_API_KEY: "some_key"},
         )
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == FlowResultType.FORM
         assert result["step_id"] == "api_key"
         assert result["errors"] == {CONF_API_KEY: "invalid_auth"}
 
@@ -57,7 +56,7 @@ async def test_flow_user_with_api_key(hass: HomeAssistant) -> None:
             result["flow_id"],
             user_input=CONFIG_FLOW_API_KEY,
         )
-        assert result["type"] is FlowResultType.CREATE_ENTRY
+        assert result["type"] == FlowResultType.CREATE_ENTRY
         assert result["title"] == NAME
         assert result["data"] == CONFIG_ENTRY_WITH_API_KEY
         mock_setup.assert_called_once()
@@ -68,7 +67,7 @@ async def test_flow_user_with_api_key(hass: HomeAssistant) -> None:
             context={"source": SOURCE_USER},
             data=CONFIG_FLOW_USER,
         )
-        assert result["type"] is FlowResultType.ABORT
+        assert result["type"] == FlowResultType.ABORT
         assert result["reason"] == "already_configured"
 
 
@@ -80,7 +79,7 @@ async def test_flow_user_without_api_key(hass: HomeAssistant) -> None:
             DOMAIN,
             context={"source": SOURCE_USER},
         )
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == FlowResultType.FORM
         assert result["step_id"] == "user"
         assert result["errors"] == {}
 
@@ -88,7 +87,7 @@ async def test_flow_user_without_api_key(hass: HomeAssistant) -> None:
             result["flow_id"],
             user_input=CONFIG_FLOW_USER,
         )
-        assert result["type"] is FlowResultType.CREATE_ENTRY
+        assert result["type"] == FlowResultType.CREATE_ENTRY
         assert result["title"] == NAME
         assert result["data"] == CONFIG_ENTRY_WITHOUT_API_KEY
         mock_setup.assert_called_once()
@@ -101,7 +100,7 @@ async def test_flow_user_invalid(hass: HomeAssistant) -> None:
         result = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}, data=CONFIG_FLOW_USER
         )
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == FlowResultType.FORM
         assert result["step_id"] == "user"
         assert result["errors"] == {"base": "cannot_connect"}
 
@@ -113,7 +112,6 @@ async def test_flow_reauth(hass: HomeAssistant) -> None:
     entry.add_to_hass(hass)
     with _patch_init_hole(mocked_hole), _patch_config_flow_hole(mocked_hole):
         assert not await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
 
         flows = hass.config_entries.flow.async_progress()
 
@@ -128,6 +126,7 @@ async def test_flow_reauth(hass: HomeAssistant) -> None:
             user_input={CONF_API_KEY: "newkey"},
         )
 
-        assert result["type"] is FlowResultType.ABORT
+        await hass.async_block_till_done()
+        assert result["type"] == FlowResultType.ABORT
         assert result["reason"] == "reauth_successful"
         assert entry.data[CONF_API_KEY] == "newkey"

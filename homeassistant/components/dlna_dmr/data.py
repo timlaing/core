@@ -1,5 +1,4 @@
 """Data used by this integration."""
-
 from __future__ import annotations
 
 import asyncio

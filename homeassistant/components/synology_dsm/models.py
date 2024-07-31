@@ -1,5 +1,4 @@
 """The synology_dsm integration models."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass

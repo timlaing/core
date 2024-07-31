@@ -1,5 +1,4 @@
 """Tests for rainforest eagle sensors."""
-
 from homeassistant.components.rainforest_eagle.const import DOMAIN
 from homeassistant.core import HomeAssistant
 

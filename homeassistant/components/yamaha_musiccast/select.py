@@ -1,5 +1,4 @@
 """The select entities for musiccast."""
-
 from __future__ import annotations
 
 from aiomusiccast.capabilities import OptionSetter
@@ -21,18 +20,18 @@ async def async_setup_entry(
     """Set up MusicCast select entities based on a config entry."""
     coordinator: MusicCastDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
 
-    select_entities = [
-        SelectableCapability(coordinator, capability)
-        for capability in coordinator.data.capabilities
-        if isinstance(capability, OptionSetter)
-    ]
+    select_entities = []
 
-    select_entities.extend(
-        SelectableCapability(coordinator, capability, zone)
-        for zone, data in coordinator.data.zones.items()
-        for capability in data.capabilities
-        if isinstance(capability, OptionSetter)
-    )
+    for capability in coordinator.data.capabilities:
+        if isinstance(capability, OptionSetter):
+            select_entities.append(SelectableCapability(coordinator, capability))
+
+    for zone, data in coordinator.data.zones.items():
+        for capability in data.capabilities:
+            if isinstance(capability, OptionSetter):
+                select_entities.append(
+                    SelectableCapability(coordinator, capability, zone)
+                )
 
     async_add_entities(select_entities)
 

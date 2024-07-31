@@ -1,11 +1,9 @@
 """Provides the Toon DataUpdateCoordinator."""
-
 from __future__ import annotations
 
 import logging
 import secrets
 
-from aiohttp import web
 from toonapi import Status, Toon, ToonError
 
 from homeassistant.components import cloud, webhook
@@ -99,7 +97,7 @@ class ToonDataUpdateCoordinator(DataUpdateCoordinator[Status]):
         )
 
     async def handle_webhook(
-        self, hass: HomeAssistant, webhook_id: str, request: web.Request
+        self, hass: HomeAssistant, webhook_id: str, request
     ) -> None:
         """Handle webhook callback."""
         try:

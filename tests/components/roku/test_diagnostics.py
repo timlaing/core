@@ -1,5 +1,4 @@
 """Tests for the diagnostics data provided by the Roku integration."""
-
 from rokuecp import Device as RokuDevice
 from syrupy import SnapshotAssertion
 

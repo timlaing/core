@@ -1,5 +1,4 @@
 """Support for Freedompro lock."""
-
 import json
 from typing import Any
 

@@ -1,9 +1,8 @@
 """Config flow for growatt server integration."""
-
 import growattServer
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow
+from homeassistant import config_entries
 from homeassistant.const import CONF_NAME, CONF_PASSWORD, CONF_URL, CONF_USERNAME
 from homeassistant.core import callback
 
@@ -16,7 +15,7 @@ from .const import (
 )
 
 
-class GrowattServerConfigFlow(ConfigFlow, domain=DOMAIN):
+class GrowattServerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow class."""
 
     VERSION = 1

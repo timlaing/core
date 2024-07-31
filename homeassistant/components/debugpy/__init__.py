@@ -1,12 +1,11 @@
 """The Remote Python Debugger integration."""
-
 from __future__ import annotations
 
 from asyncio import Event, get_running_loop
 import logging
 from threading import Thread
 
-import debugpy  # noqa: T100
+import debugpy
 import voluptuous as vol
 
 from homeassistant.const import CONF_HOST, CONF_PORT
@@ -60,7 +59,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             ready = Event()
 
             def waitfor():
-                debugpy.wait_for_client()  # noqa: T100
+                debugpy.wait_for_client()
                 hass.loop.call_soon_threadsafe(ready.set)
 
             Thread(target=waitfor).start()

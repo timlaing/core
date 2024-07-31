@@ -1,5 +1,4 @@
 """Constants for the Firmata component."""
-
 from typing import Final
 
 from homeassistant.const import (

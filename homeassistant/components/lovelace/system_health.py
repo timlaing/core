@@ -1,5 +1,4 @@
 """Provide info to system health."""
-
 import asyncio
 
 from homeassistant.components import system_health

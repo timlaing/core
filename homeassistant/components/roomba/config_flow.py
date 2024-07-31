@@ -1,25 +1,19 @@
 """Config flow to configure roomba component."""
-
 from __future__ import annotations
 
 import asyncio
 from functools import partial
-from typing import Any
 
-from roombapy import RoombaFactory, RoombaInfo
+from roombapy import RoombaFactory
 from roombapy.discovery import RoombaDiscovery
 from roombapy.getpassword import RoombaPassword
 import voluptuous as vol
 
+from homeassistant import config_entries, core
 from homeassistant.components import dhcp, zeroconf
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlowWithConfigEntry,
-)
 from homeassistant.const import CONF_DELAY, CONF_HOST, CONF_NAME, CONF_PASSWORD
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import callback
+from homeassistant.data_entry_flow import FlowResult
 
 from . import CannotConnect, async_connect_or_timeout, async_disconnect_or_timeout
 from .const import (
@@ -44,7 +38,7 @@ AUTH_HELP_URL_KEY = "auth_help_url"
 AUTH_HELP_URL_VALUE = "https://www.home-assistant.io/integrations/roomba/#manually-retrieving-your-credentials"
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
+async def validate_input(hass: core.HomeAssistant, data):
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
@@ -71,46 +65,41 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     }
 
 
-class RoombaConfigFlow(ConfigFlow, domain=DOMAIN):
+class RoombaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Roomba configuration flow."""
 
     VERSION = 1
 
-    name: str | None = None
-    blid: str | None = None
-    host: str | None = None
-
-    def __init__(self) -> None:
+    def __init__(self):
         """Initialize the roomba flow."""
-        self.discovered_robots: dict[str, RoombaInfo] = {}
+        self.discovered_robots = {}
+        self.name = None
+        self.blid = None
+        self.host = None
 
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: ConfigEntry,
-    ) -> RoombaOptionsFlowHandler:
+        config_entry: config_entries.ConfigEntry,
+    ) -> OptionsFlowHandler:
         """Get the options flow for this handler."""
-        return RoombaOptionsFlowHandler(config_entry)
+        return OptionsFlowHandler(config_entry)
 
     async def async_step_zeroconf(
         self, discovery_info: zeroconf.ZeroconfServiceInfo
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle zeroconf discovery."""
         return await self._async_step_discovery(
-            discovery_info.host, discovery_info.hostname.lower().removesuffix(".local.")
+            discovery_info.host, discovery_info.hostname.lower().rstrip(".local.")
         )
 
-    async def async_step_dhcp(
-        self, discovery_info: dhcp.DhcpServiceInfo
-    ) -> ConfigFlowResult:
+    async def async_step_dhcp(self, discovery_info: dhcp.DhcpServiceInfo) -> FlowResult:
         """Handle dhcp discovery."""
         return await self._async_step_discovery(
             discovery_info.ip, discovery_info.hostname
         )
 
-    async def _async_step_discovery(
-        self, ip_address: str, hostname: str
-    ) -> ConfigFlowResult:
+    async def _async_step_discovery(self, ip_address: str, hostname: str) -> FlowResult:
         """Handle any discovery."""
         self._async_abort_entries_match({CONF_HOST: ip_address})
 
@@ -137,9 +126,8 @@ class RoombaConfigFlow(ConfigFlow, domain=DOMAIN):
         self.context["title_placeholders"] = {"host": self.host, "name": self.blid}
         return await self.async_step_user()
 
-    async def _async_start_link(self) -> ConfigFlowResult:
+    async def _async_start_link(self):
         """Start linking."""
-        assert self.host
         device = self.discovered_robots[self.host]
         self.blid = device.blid
         self.name = device.robot_name
@@ -147,9 +135,7 @@ class RoombaConfigFlow(ConfigFlow, domain=DOMAIN):
         self._abort_if_unique_id_configured()
         return await self.async_step_link()
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_user(self, user_input=None):
         """Handle a flow start."""
         # Check if user chooses manual entry
         if user_input is not None and not user_input.get(CONF_HOST):
@@ -186,23 +172,25 @@ class RoombaConfigFlow(ConfigFlow, domain=DOMAIN):
         if not self.discovered_robots:
             return await self.async_step_manual()
 
-        hosts: dict[str | None, str] = {
-            **{
-                device.ip: f"{device.robot_name} ({device.ip})"
-                for device in devices
-                if device.blid not in already_configured
-            },
-            None: "Manually add a Roomba or Braava",
-        }
-
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema({vol.Optional("host"): vol.In(hosts)}),
+            data_schema=vol.Schema(
+                {
+                    vol.Optional("host"): vol.In(
+                        {
+                            **{
+                                device.ip: f"{device.robot_name} ({device.ip})"
+                                for device in devices
+                                if device.blid not in already_configured
+                            },
+                            None: "Manually add a Roomba or Braava",
+                        }
+                    )
+                }
+            ),
         )
 
-    async def async_step_manual(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_manual(self, user_input=None):
         """Handle manual device setup."""
         if user_input is None:
             return self.async_show_form(
@@ -227,9 +215,7 @@ class RoombaConfigFlow(ConfigFlow, domain=DOMAIN):
         self._abort_if_unique_id_configured()
         return await self.async_step_link()
 
-    async def async_step_link(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_link(self, user_input=None):
         """Attempt to link with the Roomba.
 
         Given a configured host, will ask the user to press the home and target buttons
@@ -240,7 +226,7 @@ class RoombaConfigFlow(ConfigFlow, domain=DOMAIN):
                 step_id="link",
                 description_placeholders={CONF_NAME: self.name or self.blid},
             )
-        assert self.host
+
         roomba_pw = RoombaPassword(self.host)
 
         try:
@@ -265,12 +251,10 @@ class RoombaConfigFlow(ConfigFlow, domain=DOMAIN):
                 return self.async_abort(reason="cannot_connect")
 
             self.name = info[CONF_NAME]
-        assert self.name
+
         return self.async_create_entry(title=self.name, data=config)
 
-    async def async_step_link_manual(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_link_manual(self, user_input=None):
         """Handle manual linking."""
         errors = {}
 
@@ -285,7 +269,8 @@ class RoombaConfigFlow(ConfigFlow, domain=DOMAIN):
                 info = await validate_input(self.hass, config)
             except CannotConnect:
                 errors = {"base": "cannot_connect"}
-            else:
+
+            if not errors:
                 return self.async_create_entry(title=info[CONF_NAME], data=config)
 
         return self.async_show_form(
@@ -296,12 +281,14 @@ class RoombaConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class RoombaOptionsFlowHandler(OptionsFlowWithConfigEntry):
+class OptionsFlowHandler(config_entries.OptionsFlow):
     """Handle options."""
 
-    async def async_step_init(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        """Initialize options flow."""
+        self.config_entry = config_entry
+
+    async def async_step_init(self, user_input=None):
         """Manage the options."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
@@ -312,11 +299,15 @@ class RoombaOptionsFlowHandler(OptionsFlowWithConfigEntry):
                 {
                     vol.Optional(
                         CONF_CONTINUOUS,
-                        default=self.options.get(CONF_CONTINUOUS, DEFAULT_CONTINUOUS),
+                        default=self.config_entry.options.get(
+                            CONF_CONTINUOUS, DEFAULT_CONTINUOUS
+                        ),
                     ): bool,
                     vol.Optional(
                         CONF_DELAY,
-                        default=self.options.get(CONF_DELAY, DEFAULT_DELAY),
+                        default=self.config_entry.options.get(
+                            CONF_DELAY, DEFAULT_DELAY
+                        ),
                     ): int,
                 }
             ),
@@ -324,7 +315,7 @@ class RoombaOptionsFlowHandler(OptionsFlowWithConfigEntry):
 
 
 @callback
-def _async_get_roomba_discovery() -> RoombaDiscovery:
+def _async_get_roomba_discovery():
     """Create a discovery object."""
     discovery = RoombaDiscovery()
     discovery.amount_of_broadcasted_messages = MAX_NUM_DEVICES_TO_DISCOVER
@@ -332,28 +323,24 @@ def _async_get_roomba_discovery() -> RoombaDiscovery:
 
 
 @callback
-def _async_blid_from_hostname(hostname: str) -> str:
+def _async_blid_from_hostname(hostname):
     """Extract the blid from the hostname."""
     return hostname.split("-")[1].split(".")[0].upper()
 
 
-async def _async_discover_roombas(
-    hass: HomeAssistant, host: str | None = None
-) -> list[RoombaInfo]:
-    discovered_hosts: set[str] = set()
-    devices: list[RoombaInfo] = []
+async def _async_discover_roombas(hass, host):
+    discovered_hosts = set()
+    devices = []
     discover_lock = hass.data.setdefault(ROOMBA_DISCOVERY_LOCK, asyncio.Lock())
     discover_attempts = HOST_ATTEMPTS if host else ALL_ATTEMPTS
 
     for attempt in range(discover_attempts + 1):
         async with discover_lock:
             discovery = _async_get_roomba_discovery()
-            discovered: set[RoombaInfo] = set()
             try:
                 if host:
                     device = await hass.async_add_executor_job(discovery.get, host)
-                    if device:
-                        discovered.add(device)
+                    discovered = [device] if device else []
                 else:
                     discovered = await hass.async_add_executor_job(discovery.get_all)
             except OSError:

@@ -1,5 +1,4 @@
 """Helpers to setup multi-factor auth module."""
-
 from __future__ import annotations
 
 import logging
@@ -62,8 +61,7 @@ class MfaFlowManager(data_entry_flow.FlowManager):
         return result
 
 
-@callback
-def async_setup(hass: HomeAssistant) -> None:
+async def async_setup(hass: HomeAssistant) -> None:
     """Init mfa setup flow manager."""
     hass.data[DATA_SETUP_FLOW_MGR] = MfaFlowManager(hass)
 
@@ -148,7 +146,8 @@ def _prepare_result_json(
 ) -> data_entry_flow.FlowResult:
     """Convert result to JSON."""
     if result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY:
-        return result.copy()
+        data = result.copy()
+        return data
 
     if result["type"] != data_entry_flow.FlowResultType.FORM:
         return result
@@ -156,7 +155,7 @@ def _prepare_result_json(
     data = result.copy()
 
     if (schema := data["data_schema"]) is None:
-        data["data_schema"] = []  # type: ignore[typeddict-item]  # json result type
+        data["data_schema"] = []
     else:
         data["data_schema"] = voluptuous_serialize.convert(schema)
 

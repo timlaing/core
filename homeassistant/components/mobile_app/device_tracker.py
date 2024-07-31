@@ -1,5 +1,4 @@
 """Device tracker for Mobile app."""
-
 from homeassistant.components.device_tracker import (
     ATTR_BATTERY,
     ATTR_GPS,

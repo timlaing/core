@@ -1,5 +1,4 @@
 """The sms gateway to interact with a GSM modem."""
-
 import logging
 
 import gammu
@@ -92,6 +91,7 @@ class Gateway:
         start = True
         entries = []
         all_parts = -1
+        all_parts_arrived = False
         _LOGGER.debug("Start remaining:%i", start_remaining)
 
         try:
@@ -100,30 +100,32 @@ class Gateway:
                     entry = state_machine.GetNextSMS(Folder=0, Start=True)
                     all_parts = entry[0]["UDH"]["AllParts"]
                     part_number = entry[0]["UDH"]["PartNumber"]
-                    part_is_missing = all_parts > start_remaining
+                    is_single_part = all_parts == 0
+                    is_multi_part = 0 <= all_parts < start_remaining
                     _LOGGER.debug("All parts:%i", all_parts)
                     _LOGGER.debug("Part Number:%i", part_number)
                     _LOGGER.debug("Remaining:%i", remaining)
-                    _LOGGER.debug("Start is_part_missing:%s", part_is_missing)
+                    all_parts_arrived = is_multi_part or is_single_part
+                    _LOGGER.debug("Start all_parts_arrived:%s", all_parts_arrived)
                     start = False
                 else:
                     entry = state_machine.GetNextSMS(
                         Folder=0, Location=entry[0]["Location"]
                     )
 
-                if part_is_missing and not force:
+                if all_parts_arrived or force:
+                    remaining = remaining - 1
+                    entries.append(entry)
+
+                    # delete retrieved sms
+                    _LOGGER.debug("Deleting message")
+                    try:
+                        state_machine.DeleteSMS(Folder=0, Location=entry[0]["Location"])
+                    except gammu.ERR_MEMORY_NOT_AVAILABLE:
+                        _LOGGER.error("Error deleting SMS, memory not available")
+                else:
                     _LOGGER.debug("Not all parts have arrived")
                     break
-
-                remaining = remaining - 1
-                entries.append(entry)
-
-                # delete retrieved sms
-                _LOGGER.debug("Deleting message")
-                try:
-                    state_machine.DeleteSMS(Folder=0, Location=entry[0]["Location"])
-                except gammu.ERR_MEMORY_NOT_AVAILABLE:
-                    _LOGGER.error("Error deleting SMS, memory not available")
 
         except gammu.ERR_EMPTY:
             # error is raised if memory is empty (this induces wrong reported
@@ -131,7 +133,9 @@ class Gateway:
             _LOGGER.info("Failed to read messages!")
 
         # Link all SMS when there are concatenated messages
-        return gammu.LinkSMS(entries)
+        entries = gammu.LinkSMS(entries)
+
+        return entries
 
     @callback
     def _notify_incoming_sms(self, messages):
@@ -174,7 +178,7 @@ class Gateway:
         """Get the model of the modem."""
         model = await self._worker.get_model_async()
         if not model or not model[0]:
-            return None
+            return
         display = model[0]  # Identification model
         if model[1]:  # Real model
             display = f"{display} ({model[1]})"
@@ -184,7 +188,7 @@ class Gateway:
         """Get the firmware information of the modem."""
         firmware = await self._worker.get_firmware_async()
         if not firmware or not firmware[0]:
-            return None
+            return
         display = firmware[0]  # Version
         if firmware[1]:  # Date
             display = f"{display} ({firmware[1]})"
@@ -205,7 +209,7 @@ async def create_sms_gateway(config, hass):
             _LOGGER.error("Failed to initialize, error %s", exc)
             await gateway.terminate_async()
             return None
+        return gateway
     except gammu.GSMError as exc:
         _LOGGER.error("Failed to create async worker, error %s", exc)
         return None
-    return gateway

@@ -1,5 +1,4 @@
 """Support for SwitchBot binary sensors."""
-
 from __future__ import annotations
 
 from homeassistant.components.binary_sensor import (
@@ -7,11 +6,13 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .coordinator import SwitchbotConfigEntry, SwitchbotDataUpdateCoordinator
+from .const import DOMAIN
+from .coordinator import SwitchbotDataUpdateCoordinator
 from .entity import SwitchbotEntity
 
 PARALLEL_UPDATES = 0
@@ -68,12 +69,10 @@ BINARY_SENSOR_TYPES: dict[str, BinarySensorEntityDescription] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: SwitchbotConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up Switchbot curtain based on a config entry."""
-    coordinator = entry.runtime_data
+    coordinator: SwitchbotDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities(
         SwitchBotBinarySensor(coordinator, binary_sensor)
         for binary_sensor in coordinator.device.parsed_data

@@ -1,5 +1,4 @@
 """Models for Hardware."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass

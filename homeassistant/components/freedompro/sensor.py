@@ -1,5 +1,4 @@
 """Support for Freedompro sensor."""
-
 from typing import Any
 
 from homeassistant.components.sensor import (

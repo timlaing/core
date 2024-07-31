@@ -1,5 +1,4 @@
 """The tests for the Daikin target temperature conversion."""
-
 from homeassistant.components.daikin.climate import format_target_temperature
 
 

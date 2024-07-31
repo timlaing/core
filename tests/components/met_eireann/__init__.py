@@ -1,15 +1,13 @@
 """Tests for Met Éireann."""
-
 from unittest.mock import patch
 
 from homeassistant.components.met_eireann.const import DOMAIN
 from homeassistant.const import CONF_ELEVATION, CONF_LATITUDE, CONF_LONGITUDE, CONF_NAME
-from homeassistant.core import HomeAssistant
 
 from tests.common import MockConfigEntry
 
 
-async def init_integration(hass: HomeAssistant) -> MockConfigEntry:
+async def init_integration(hass) -> MockConfigEntry:
     """Set up the Met Éireann integration in Home Assistant."""
     entry_data = {
         CONF_NAME: "test",

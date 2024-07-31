@@ -1,5 +1,4 @@
 """Config flow to configure Axis devices."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -10,14 +9,9 @@ from urllib.parse import urlsplit
 
 import voluptuous as vol
 
+from homeassistant import config_entries
 from homeassistant.components import dhcp, ssdp, zeroconf
-from homeassistant.config_entries import (
-    SOURCE_IGNORE,
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlowWithConfigEntry,
-)
+from homeassistant.config_entries import SOURCE_IGNORE, ConfigEntry
 from homeassistant.const import (
     CONF_HOST,
     CONF_MAC,
@@ -25,15 +19,13 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_PASSWORD,
     CONF_PORT,
-    CONF_PROTOCOL,
     CONF_USERNAME,
 )
 from homeassistant.core import callback
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.typing import VolDictType
 from homeassistant.util.network import is_link_local
 
-from . import AxisConfigEntry
 from .const import (
     CONF_STREAM_PROFILE,
     CONF_VIDEO_SOURCE,
@@ -41,16 +33,14 @@ from .const import (
     DEFAULT_VIDEO_SOURCE,
     DOMAIN as AXIS_DOMAIN,
 )
+from .device import AxisNetworkDevice, get_axis_device
 from .errors import AuthenticationRequired, CannotConnect
-from .hub import AxisHub, get_axis_api
 
 AXIS_OUI = {"00:40:8c", "ac:cc:8e", "b8:a4:4f"}
-DEFAULT_PORT = 443
-DEFAULT_PROTOCOL = "https"
-PROTOCOL_CHOICES = ["https", "http"]
+DEFAULT_PORT = 80
 
 
-class AxisFlowHandler(ConfigFlow, domain=AXIS_DOMAIN):
+class AxisFlowHandler(config_entries.ConfigFlow, domain=AXIS_DOMAIN):
     """Handle a Axis config flow."""
 
     VERSION = 3
@@ -63,12 +53,12 @@ class AxisFlowHandler(ConfigFlow, domain=AXIS_DOMAIN):
 
     def __init__(self) -> None:
         """Initialize the Axis config flow."""
-        self.config: dict[str, Any] = {}
-        self.discovery_schema: VolDictType | None = None
+        self.device_config: dict[str, Any] = {}
+        self.discovery_schema: dict[vol.Required, type[str | int]] | None = None
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a Axis config flow start.
 
         Manage device specific parameters.
@@ -77,21 +67,13 @@ class AxisFlowHandler(ConfigFlow, domain=AXIS_DOMAIN):
 
         if user_input is not None:
             try:
-                api = await get_axis_api(self.hass, MappingProxyType(user_input))
+                device = await get_axis_device(self.hass, MappingProxyType(user_input))
 
-            except AuthenticationRequired:
-                errors["base"] = "invalid_auth"
-
-            except CannotConnect:
-                errors["base"] = "cannot_connect"
-
-            else:
-                serial = api.vapix.serial_number
+                serial = device.vapix.serial_number
                 await self.async_set_unique_id(format_mac(serial))
 
                 self._abort_if_unique_id_configured(
                     updates={
-                        CONF_PROTOCOL: user_input[CONF_PROTOCOL],
                         CONF_HOST: user_input[CONF_HOST],
                         CONF_PORT: user_input[CONF_PORT],
                         CONF_USERNAME: user_input[CONF_USERNAME],
@@ -99,19 +81,23 @@ class AxisFlowHandler(ConfigFlow, domain=AXIS_DOMAIN):
                     }
                 )
 
-                self.config = {
-                    CONF_PROTOCOL: user_input[CONF_PROTOCOL],
+                self.device_config = {
                     CONF_HOST: user_input[CONF_HOST],
                     CONF_PORT: user_input[CONF_PORT],
                     CONF_USERNAME: user_input[CONF_USERNAME],
                     CONF_PASSWORD: user_input[CONF_PASSWORD],
-                    CONF_MODEL: api.vapix.product_number,
+                    CONF_MODEL: device.vapix.product_number,
                 }
 
                 return await self._create_entry(serial)
 
+            except AuthenticationRequired:
+                errors["base"] = "invalid_auth"
+
+            except CannotConnect:
+                errors["base"] = "cannot_connect"
+
         data = self.discovery_schema or {
-            vol.Required(CONF_PROTOCOL): vol.In(PROTOCOL_CHOICES),
             vol.Required(CONF_HOST): str,
             vol.Required(CONF_USERNAME): str,
             vol.Required(CONF_PASSWORD): str,
@@ -120,17 +106,17 @@ class AxisFlowHandler(ConfigFlow, domain=AXIS_DOMAIN):
 
         return self.async_show_form(
             step_id="user",
-            description_placeholders=self.config,
+            description_placeholders=self.device_config,
             data_schema=vol.Schema(data),
             errors=errors,
         )
 
-    async def _create_entry(self, serial: str) -> ConfigFlowResult:
+    async def _create_entry(self, serial: str) -> FlowResult:
         """Create entry for device.
 
         Generate a name to be used as a prefix for device entities.
         """
-        model = self.config[CONF_MODEL]
+        model = self.device_config[CONF_MODEL]
         same_model = [
             entry.data[CONF_NAME]
             for entry in self.hass.config_entries.async_entries(AXIS_DOMAIN)
@@ -143,61 +129,39 @@ class AxisFlowHandler(ConfigFlow, domain=AXIS_DOMAIN):
             if name not in same_model:
                 break
 
-        self.config[CONF_NAME] = name
+        self.device_config[CONF_NAME] = name
 
         title = f"{model} - {serial}"
-        return self.async_create_entry(title=title, data=self.config)
+        return self.async_create_entry(title=title, data=self.device_config)
 
-    async def async_step_reconfigure(
-        self, user_input: Mapping[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Trigger a reconfiguration flow."""
-        entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
-        assert entry
-        return await self._redo_configuration(entry.data, keep_password=True)
-
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Trigger a reauthentication flow."""
         self.context["title_placeholders"] = {
             CONF_NAME: entry_data[CONF_NAME],
             CONF_HOST: entry_data[CONF_HOST],
         }
-        return await self._redo_configuration(entry_data, keep_password=False)
 
-    async def _redo_configuration(
-        self, entry_data: Mapping[str, Any], keep_password: bool
-    ) -> ConfigFlowResult:
-        """Re-run configuration step."""
-        protocol = entry_data.get(CONF_PROTOCOL, "http")
-        password = entry_data[CONF_PASSWORD] if keep_password else ""
         self.discovery_schema = {
-            vol.Required(CONF_PROTOCOL, default=protocol): vol.In(PROTOCOL_CHOICES),
             vol.Required(CONF_HOST, default=entry_data[CONF_HOST]): str,
             vol.Required(CONF_USERNAME, default=entry_data[CONF_USERNAME]): str,
-            vol.Required(CONF_PASSWORD, default=password): str,
+            vol.Required(CONF_PASSWORD): str,
             vol.Required(CONF_PORT, default=entry_data[CONF_PORT]): int,
         }
 
         return await self.async_step_user()
 
-    async def async_step_dhcp(
-        self, discovery_info: dhcp.DhcpServiceInfo
-    ) -> ConfigFlowResult:
+    async def async_step_dhcp(self, discovery_info: dhcp.DhcpServiceInfo) -> FlowResult:
         """Prepare configuration for a DHCP discovered Axis device."""
         return await self._process_discovered_device(
             {
                 CONF_HOST: discovery_info.ip,
                 CONF_MAC: format_mac(discovery_info.macaddress),
                 CONF_NAME: discovery_info.hostname,
-                CONF_PORT: 80,
+                CONF_PORT: DEFAULT_PORT,
             }
         )
 
-    async def async_step_ssdp(
-        self, discovery_info: ssdp.SsdpServiceInfo
-    ) -> ConfigFlowResult:
+    async def async_step_ssdp(self, discovery_info: ssdp.SsdpServiceInfo) -> FlowResult:
         """Prepare configuration for a SSDP discovered Axis device."""
         url = urlsplit(discovery_info.upnp[ssdp.ATTR_UPNP_PRESENTATION_URL])
         return await self._process_discovered_device(
@@ -211,7 +175,7 @@ class AxisFlowHandler(ConfigFlow, domain=AXIS_DOMAIN):
 
     async def async_step_zeroconf(
         self, discovery_info: zeroconf.ZeroconfServiceInfo
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Prepare configuration for a Zeroconf discovered Axis device."""
         return await self._process_discovered_device(
             {
@@ -222,59 +186,58 @@ class AxisFlowHandler(ConfigFlow, domain=AXIS_DOMAIN):
             }
         )
 
-    async def _process_discovered_device(
-        self, discovery_info: dict[str, Any]
-    ) -> ConfigFlowResult:
+    async def _process_discovered_device(self, device: dict[str, Any]) -> FlowResult:
         """Prepare configuration for a discovered Axis device."""
-        if discovery_info[CONF_MAC][:8] not in AXIS_OUI:
+        if device[CONF_MAC][:8] not in AXIS_OUI:
             return self.async_abort(reason="not_axis_device")
 
-        if is_link_local(ip_address(discovery_info[CONF_HOST])):
+        if is_link_local(ip_address(device[CONF_HOST])):
             return self.async_abort(reason="link_local_address")
 
-        await self.async_set_unique_id(discovery_info[CONF_MAC])
+        await self.async_set_unique_id(device[CONF_MAC])
 
         self._abort_if_unique_id_configured(
-            updates={CONF_HOST: discovery_info[CONF_HOST]}
+            updates={
+                CONF_HOST: device[CONF_HOST],
+                CONF_PORT: device[CONF_PORT],
+            }
         )
 
         self.context.update(
             {
                 "title_placeholders": {
-                    CONF_NAME: discovery_info[CONF_NAME],
-                    CONF_HOST: discovery_info[CONF_HOST],
+                    CONF_NAME: device[CONF_NAME],
+                    CONF_HOST: device[CONF_HOST],
                 },
-                "configuration_url": f"http://{discovery_info[CONF_HOST]}:{discovery_info[CONF_PORT]}",
+                "configuration_url": f"http://{device[CONF_HOST]}:{device[CONF_PORT]}",
             }
         )
 
         self.discovery_schema = {
-            vol.Required(CONF_PROTOCOL): vol.In(PROTOCOL_CHOICES),
-            vol.Required(CONF_HOST, default=discovery_info[CONF_HOST]): str,
+            vol.Required(CONF_HOST, default=device[CONF_HOST]): str,
             vol.Required(CONF_USERNAME): str,
             vol.Required(CONF_PASSWORD): str,
-            vol.Required(CONF_PORT, default=DEFAULT_PORT): int,
+            vol.Required(CONF_PORT, default=device[CONF_PORT]): int,
         }
 
         return await self.async_step_user()
 
 
-class AxisOptionsFlowHandler(OptionsFlowWithConfigEntry):
+class AxisOptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
     """Handle Axis device options."""
 
-    config_entry: AxisConfigEntry
-    hub: AxisHub
+    device: AxisNetworkDevice
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Manage the Axis device options."""
-        self.hub = self.config_entry.runtime_data
+        self.device = self.hass.data[AXIS_DOMAIN][self.config_entry.entry_id]
         return await self.async_step_configure_stream()
 
     async def async_step_configure_stream(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Manage the Axis device stream options."""
         if user_input is not None:
             self.options.update(user_input)
@@ -282,39 +245,34 @@ class AxisOptionsFlowHandler(OptionsFlowWithConfigEntry):
 
         schema = {}
 
-        vapix = self.hub.api.vapix
+        vapix = self.device.api.vapix
 
         # Stream profiles
 
-        if vapix.stream_profiles or (
-            (profiles := vapix.params.stream_profile_handler.get("0"))
-            and profiles.max_groups > 0
-        ):
+        if vapix.stream_profiles or vapix.params.stream_profiles_max_groups > 0:
             stream_profiles = [DEFAULT_STREAM_PROFILE]
-            stream_profiles.extend(profile.name for profile in vapix.streaming_profiles)
+            for profile in vapix.streaming_profiles:
+                stream_profiles.append(profile.name)
 
             schema[
                 vol.Optional(
-                    CONF_STREAM_PROFILE, default=self.hub.config.stream_profile
+                    CONF_STREAM_PROFILE, default=self.device.option_stream_profile
                 )
             ] = vol.In(stream_profiles)
 
         # Video sources
 
-        if (
-            properties := vapix.params.property_handler.get("0")
-        ) and properties.image_number_of_views > 0:
-            await vapix.params.image_handler.update()
-            video_sources: dict[int | str, str] = {
-                DEFAULT_VIDEO_SOURCE: DEFAULT_VIDEO_SOURCE
-            }
-            for idx, video_source in vapix.params.image_handler.items():
-                if not video_source.enabled:
+        if vapix.params.image_nbrofviews > 0:
+            await vapix.params.update_image()
+
+            video_sources = {DEFAULT_VIDEO_SOURCE: DEFAULT_VIDEO_SOURCE}
+            for idx, video_source in vapix.params.image_sources.items():
+                if not video_source["Enabled"]:
                     continue
-                video_sources[int(idx) + 1] = video_source.name
+                video_sources[idx + 1] = video_source["Name"]
 
             schema[
-                vol.Optional(CONF_VIDEO_SOURCE, default=self.hub.config.video_source)
+                vol.Optional(CONF_VIDEO_SOURCE, default=self.device.option_video_source)
             ] = vol.In(video_sources)
 
         return self.async_show_form(

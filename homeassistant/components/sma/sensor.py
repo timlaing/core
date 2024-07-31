@@ -1,5 +1,4 @@
 """SMA Solar Webconnect interface."""
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -844,16 +843,19 @@ async def async_setup_entry(
     if TYPE_CHECKING:
         assert config_entry.unique_id
 
-    async_add_entities(
-        SMAsensor(
-            coordinator,
-            config_entry.unique_id,
-            SENSOR_ENTITIES.get(sensor.name),
-            device_info,
-            sensor,
+    entities = []
+    for sensor in used_sensors:
+        entities.append(
+            SMAsensor(
+                coordinator,
+                config_entry.unique_id,
+                SENSOR_ENTITIES.get(sensor.name),
+                device_info,
+                sensor,
+            )
         )
-        for sensor in used_sensors
-    )
+
+    async_add_entities(entities)
 
 
 class SMAsensor(CoordinatorEntity, SensorEntity):

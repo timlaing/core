@@ -1,5 +1,4 @@
 """The tests for the MQTT eventstream component."""
-
 import json
 from unittest.mock import ANY, patch
 
@@ -66,7 +65,7 @@ async def test_subscribe(hass: HomeAssistant, mqtt_mock: MqttMockHAClient) -> No
     await hass.async_block_till_done()
 
     # Verify that the this entity was subscribed to the topic
-    mqtt_mock.async_subscribe.assert_called_with(sub_topic, ANY, 0, ANY, ANY)
+    mqtt_mock.async_subscribe.assert_called_with(sub_topic, ANY, 0, ANY)
 
 
 async def test_state_changed_event_sends_message(
@@ -104,14 +103,13 @@ async def test_state_changed_event_sends_message(
     event = {}
     event["event_type"] = EVENT_STATE_CHANGED
     new_state = {
-        "attributes": {},
-        "entity_id": e_id,
-        "last_changed": now.isoformat(),
-        "last_reported": now.isoformat(),
         "last_updated": now.isoformat(),
         "state": "on",
+        "entity_id": e_id,
+        "attributes": {},
+        "last_changed": now.isoformat(),
     }
-    event["event_data"] = {"new_state": new_state, "entity_id": e_id, "old_state": None}
+    event["event_data"] = {"new_state": new_state, "entity_id": e_id}
 
     # Verify that the message received was that expected
     result = json.loads(msg)

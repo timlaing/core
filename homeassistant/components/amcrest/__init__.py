@@ -1,5 +1,4 @@
 """Support for Amcrest IP cameras."""
-
 from __future__ import annotations
 
 import asyncio
@@ -35,7 +34,7 @@ from homeassistant.const import (
     HTTP_BASIC_AUTHENTICATION,
     Platform,
 )
-from homeassistant.core import HomeAssistant, ServiceCall, callback
+from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import Unauthorized, UnknownUser
 from homeassistant.helpers import discovery
 import homeassistant.helpers.config_validation as cv
@@ -177,8 +176,7 @@ class AmcrestChecker(ApiWrapper):
         """Return event flag that indicates if camera's API is responding."""
         return self._async_wrap_event_flag
 
-    @callback
-    def _async_start_recovery(self) -> None:
+    def _start_recovery(self) -> None:
         self.available_flag.clear()
         self.async_available_flag.clear()
         async_dispatcher_send(
@@ -204,17 +202,17 @@ class AmcrestChecker(ApiWrapper):
     async def async_command(self, *args: Any, **kwargs: Any) -> httpx.Response:
         """amcrest.ApiWrapper.command wrapper to catch errors."""
         async with self._async_command_wrapper():
-            return await super().async_command(*args, **kwargs)
+            ret = await super().async_command(*args, **kwargs)
+        return ret
 
     @asynccontextmanager
     async def async_stream_command(
         self, *args: Any, **kwargs: Any
     ) -> AsyncIterator[httpx.Response]:
         """amcrest.ApiWrapper.command wrapper to catch errors."""
-        async with (
-            self._async_command_wrapper(),
-            super().async_stream_command(*args, **kwargs) as ret,
-        ):
+        async with self._async_command_wrapper(), super().async_stream_command(
+            *args, **kwargs
+        ) as ret:
             yield ret
 
     @asynccontextmanager
@@ -223,98 +221,50 @@ class AmcrestChecker(ApiWrapper):
             yield
         except LoginError as ex:
             async with self._async_wrap_lock:
-                self._async_handle_offline(ex)
+                self._handle_offline(ex)
             raise
         except AmcrestError:
             async with self._async_wrap_lock:
-                self._async_handle_error()
+                self._handle_error()
             raise
         async with self._async_wrap_lock:
-            self._async_set_online()
+            self._set_online()
 
-    def _handle_offline_thread_safe(self, ex: Exception) -> bool:
-        """Handle camera offline status shared between threads and event loop.
-
-        Returns if the camera was online as a bool.
-        """
+    def _handle_offline(self, ex: Exception) -> None:
         with self._wrap_lock:
             was_online = self.available
             was_login_err = self._wrap_login_err
             self._wrap_login_err = True
         if not was_login_err:
             _LOGGER.error("%s camera offline: Login error: %s", self._wrap_name, ex)
-        return was_online
+        if was_online:
+            self._start_recovery()
 
-    def _handle_offline(self, ex: Exception) -> None:
-        """Handle camera offline status from a thread."""
-        if self._handle_offline_thread_safe(ex):
-            self._hass.loop.call_soon_threadsafe(self._async_start_recovery)
-
-    @callback
-    def _async_handle_offline(self, ex: Exception) -> None:
-        if self._handle_offline_thread_safe(ex):
-            self._async_start_recovery()
-
-    def _handle_error_thread_safe(self) -> bool:
-        """Handle camera error status shared between threads and event loop.
-
-        Returns if the camera was online and is now offline as
-        a bool.
-        """
+    def _handle_error(self) -> None:
         with self._wrap_lock:
             was_online = self.available
             errs = self._wrap_errors = self._wrap_errors + 1
             offline = not self.available
         _LOGGER.debug("%s camera errs: %i", self._wrap_name, errs)
-        return was_online and offline
-
-    def _handle_error(self) -> None:
-        """Handle camera error status from a thread."""
-        if self._handle_error_thread_safe():
+        if was_online and offline:
             _LOGGER.error("%s camera offline: Too many errors", self._wrap_name)
-            self._hass.loop.call_soon_threadsafe(self._async_start_recovery)
+            self._start_recovery()
 
-    @callback
-    def _async_handle_error(self) -> None:
-        """Handle camera error status from the event loop."""
-        if self._handle_error_thread_safe():
-            _LOGGER.error("%s camera offline: Too many errors", self._wrap_name)
-            self._async_start_recovery()
-
-    def _set_online_thread_safe(self) -> bool:
-        """Set camera online status shared between threads and event loop.
-
-        Returns if the camera was offline as a bool.
-        """
+    def _set_online(self) -> None:
         with self._wrap_lock:
             was_offline = not self.available
             self._wrap_errors = 0
             self._wrap_login_err = False
-        return was_offline
-
-    def _set_online(self) -> None:
-        """Set camera online status from a thread."""
-        if self._set_online_thread_safe():
-            self._hass.loop.call_soon_threadsafe(self._async_signal_online)
-
-    @callback
-    def _async_set_online(self) -> None:
-        """Set camera online status from the event loop."""
-        if self._set_online_thread_safe():
-            self._async_signal_online()
-
-    @callback
-    def _async_signal_online(self) -> None:
-        """Signal that camera is back online."""
-        assert self._unsub_recheck is not None
-        self._unsub_recheck()
-        self._unsub_recheck = None
-        _LOGGER.error("%s camera back online", self._wrap_name)
-        self.available_flag.set()
-        self.async_available_flag.set()
-        async_dispatcher_send(
-            self._hass, service_signal(SERVICE_UPDATE, self._wrap_name)
-        )
+        if was_offline:
+            assert self._unsub_recheck is not None
+            self._unsub_recheck()
+            self._unsub_recheck = None
+            _LOGGER.error("%s camera back online", self._wrap_name)
+            self.available_flag.set()
+            self.async_available_flag.set()
+            async_dispatcher_send(
+                self._hass, service_signal(SERVICE_UPDATE, self._wrap_name)
+            )
 
     async def _wrap_test_online(self, now: datetime) -> None:
         """Test if camera is back online."""
@@ -491,7 +441,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         return entity_ids
 
     async def async_service_handler(call: ServiceCall) -> None:
-        args = [call.data[arg] for arg in CAMERA_SERVICES[call.service][2]]
+        args = []
+        for arg in CAMERA_SERVICES[call.service][2]:
+            args.append(call.data[arg])
         for entity_id in await async_extract_from_service(call):
             async_dispatcher_send(hass, service_signal(call.service, entity_id), *args)
 

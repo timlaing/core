@@ -1,5 +1,4 @@
 """Support for Freebox devices (Freebox v6 and Freebox mini 4K)."""
-
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
@@ -19,11 +18,18 @@ from .const import DOMAIN
 from .router import FreeboxRouter
 
 
-@dataclass(frozen=True, kw_only=True)
-class FreeboxButtonEntityDescription(ButtonEntityDescription):
-    """Class describing Freebox button entities."""
+@dataclass
+class FreeboxButtonRequiredKeysMixin:
+    """Mixin for required keys."""
 
     async_press: Callable[[FreeboxRouter], Awaitable]
+
+
+@dataclass
+class FreeboxButtonEntityDescription(
+    ButtonEntityDescription, FreeboxButtonRequiredKeysMixin
+):
+    """Class describing Freebox button entities."""
 
 
 BUTTON_DESCRIPTIONS: tuple[FreeboxButtonEntityDescription, ...] = (

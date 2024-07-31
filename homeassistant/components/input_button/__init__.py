@@ -1,5 +1,4 @@
 """Support to keep track of user controlled buttons which can be used in automations."""
-
 from __future__ import annotations
 
 import logging
@@ -22,13 +21,13 @@ from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.helpers.restore_state import RestoreEntity
 import homeassistant.helpers.service
 from homeassistant.helpers.storage import Store
-from homeassistant.helpers.typing import ConfigType, VolDictType
+from homeassistant.helpers.typing import ConfigType
 
 DOMAIN = "input_button"
 
 _LOGGER = logging.getLogger(__name__)
 
-STORAGE_FIELDS: VolDictType = {
+STORAGE_FIELDS = {
     vol.Required(CONF_NAME): vol.All(str, vol.Length(min=1)),
     vol.Optional(CONF_ICON): cv.icon,
 }
@@ -58,9 +57,9 @@ class InputButtonStorageCollection(collection.DictStorageCollection):
 
     CREATE_UPDATE_SCHEMA = vol.Schema(STORAGE_FIELDS)
 
-    async def _process_create_data(self, data: dict) -> dict[str, str]:
+    async def _process_create_data(self, data: dict) -> vol.Schema:
         """Validate the config is valid."""
-        return self.CREATE_UPDATE_SCHEMA(data)  # type: ignore[no-any-return]
+        return self.CREATE_UPDATE_SCHEMA(data)
 
     @callback
     def _get_suggested_id(self, info: dict) -> str:
@@ -174,9 +173,10 @@ class InputButton(collection.CollectionEntity, ButtonEntity, RestoreEntity):
     async def async_press(self) -> None:
         """Press the button.
 
-        Left empty intentionally.
+        Left emtpty intentionally.
         The input button itself doesn't trigger anything.
         """
+        return None
 
     async def async_update_config(self, config: ConfigType) -> None:
         """Handle when the config is updated."""

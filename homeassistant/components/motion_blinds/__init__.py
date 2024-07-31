@@ -1,5 +1,4 @@
 """The motion_blinds component."""
-
 import asyncio
 from datetime import timedelta
 import logging
@@ -57,7 +56,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 hass.config_entries.async_update_entry(entry, data=data)
                 _LOGGER.debug(
                     (
-                        "Motionblinds interface updated from %s to %s, "
+                        "Motion Blinds interface updated from %s to %s, "
                         "this should only occur after a network change"
                     ),
                     multicast_interface,

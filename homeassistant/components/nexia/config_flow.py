@@ -1,5 +1,5 @@
 """Config flow for Nexia integration."""
-
+import asyncio
 import logging
 
 import aiohttp
@@ -7,10 +7,8 @@ from nexia.const import BRAND_ASAIR, BRAND_NEXIA, BRAND_TRANE
 from nexia.home import NexiaHome
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow
+from homeassistant import config_entries, core, exceptions
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
@@ -39,7 +37,7 @@ DATA_SCHEMA = vol.Schema(
 )
 
 
-async def validate_input(hass: HomeAssistant, data):
+async def validate_input(hass: core.HomeAssistant, data):
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
@@ -59,7 +57,7 @@ async def validate_input(hass: HomeAssistant, data):
     )
     try:
         await nexia_home.login()
-    except TimeoutError as ex:
+    except asyncio.TimeoutError as ex:
         _LOGGER.error("Unable to connect to Nexia service: %s", ex)
         raise CannotConnect from ex
     except aiohttp.ClientResponseError as http_ex:
@@ -76,7 +74,7 @@ async def validate_input(hass: HomeAssistant, data):
     return info
 
 
-class NexiaConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Nexia."""
 
     VERSION = 1
@@ -91,7 +89,7 @@ class NexiaConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
                 errors["base"] = "invalid_auth"
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
 
@@ -105,9 +103,9 @@ class NexiaConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(exceptions.HomeAssistantError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(exceptions.HomeAssistantError):
     """Error to indicate there is invalid auth."""

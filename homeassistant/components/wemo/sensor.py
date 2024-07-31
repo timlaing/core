@@ -1,5 +1,4 @@
 """Support for power sensors in WeMo Insight devices."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -19,11 +18,11 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 
 from . import async_wemo_dispatcher_connect
-from .coordinator import DeviceCoordinator
 from .entity import WemoEntity
+from .wemo_device import DeviceCoordinator
 
 
-@dataclass(frozen=True)
+@dataclass
 class AttributeSensorDescription(SensorEntityDescription):
     """SensorEntityDescription for WeMo AttributeSensor entities."""
 

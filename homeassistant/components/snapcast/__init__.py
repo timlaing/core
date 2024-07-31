@@ -1,5 +1,4 @@
 """Snapcast Integration."""
-
 import logging
 
 import snapcast.control

@@ -1,5 +1,4 @@
 """Support for LiteJet scenes."""
-
 import logging
 from typing import Any
 
@@ -52,7 +51,7 @@ class LiteJetScene(Scene):
             identifiers={(DOMAIN, f"{entry_id}_mcp")},
             name="LiteJet",
             manufacturer="Centralite",
-            model=system.model_name,
+            model="CL24",
         )
 
     async def async_added_to_hass(self) -> None:
@@ -77,4 +76,4 @@ class LiteJetScene(Scene):
         try:
             await self._lj.activate_scene(self._index)
         except LiteJetError as exc:
-            raise HomeAssistantError from exc
+            raise HomeAssistantError() from exc

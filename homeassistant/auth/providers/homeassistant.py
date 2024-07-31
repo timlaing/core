@@ -1,5 +1,4 @@
 """Home Assistant auth provider."""
-
 from __future__ import annotations
 
 import asyncio
@@ -13,11 +12,11 @@ import voluptuous as vol
 
 from homeassistant.const import CONF_ID
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.storage import Store
 
-from ..models import AuthFlowResult, Credentials, UserMeta
+from ..models import Credentials, UserMeta
 from . import AUTH_PROVIDER_SCHEMA, AUTH_PROVIDERS, AuthProvider, LoginFlow
 
 STORAGE_VERSION = 1
@@ -55,27 +54,6 @@ class InvalidUser(HomeAssistantError):
     Will not be raised when validating authentication.
     """
 
-    def __init__(
-        self,
-        *args: object,
-        translation_key: str | None = None,
-        translation_placeholders: dict[str, str] | None = None,
-    ) -> None:
-        """Initialize exception."""
-        super().__init__(
-            *args,
-            translation_domain="auth",
-            translation_key=translation_key,
-            translation_placeholders=translation_placeholders,
-        )
-
-
-class InvalidUsername(InvalidUser):
-    """Raised when invalid username is specified.
-
-    Will not be raised when validating authentication.
-    """
-
 
 class Data:
     """Hold the user data."""
@@ -89,15 +67,13 @@ class Data:
         self._data: dict[str, list[dict[str, str]]] | None = None
         # Legacy mode will allow usernames to start/end with whitespace
         # and will compare usernames case-insensitive.
-        # Deprecated in June 2019 and will be removed in 2026.7
+        # Remove in 2020 or when we launch 1.0.
         self.is_legacy = False
 
     @callback
-    def normalize_username(
-        self, username: str, *, force_normalize: bool = False
-    ) -> str:
+    def normalize_username(self, username: str) -> str:
         """Normalize a username based on the mode."""
-        if self.is_legacy and not force_normalize:
+        if self.is_legacy:
             return username
 
         return username.strip().casefold()
@@ -107,49 +83,44 @@ class Data:
         if (data := await self._store.async_load()) is None:
             data = cast(dict[str, list[dict[str, str]]], {"users": []})
 
-        self._async_check_for_not_normalized_usernames(data)
-        self._data = data
-
-    @callback
-    def _async_check_for_not_normalized_usernames(
-        self, data: dict[str, list[dict[str, str]]]
-    ) -> None:
-        not_normalized_usernames: set[str] = set()
+        seen: set[str] = set()
 
         for user in data["users"]:
             username = user["username"]
 
-            if self.normalize_username(username, force_normalize=True) != username:
+            # check if we have duplicates
+            if (folded := username.casefold()) in seen:
+                self.is_legacy = True
+
                 logging.getLogger(__name__).warning(
                     (
                         "Home Assistant auth provider is running in legacy mode "
-                        "because we detected usernames that are normalized (lowercase and without spaces)."
-                        " Please change the username: '%s'."
+                        "because we detected usernames that are case-insensitive"
+                        "equivalent. Please change the username: '%s'."
                     ),
                     username,
                 )
-                not_normalized_usernames.add(username)
 
-        if not_normalized_usernames:
-            self.is_legacy = True
-            ir.async_create_issue(
-                self.hass,
-                "auth",
-                "homeassistant_provider_not_normalized_usernames",
-                breaks_in_ha_version="2026.7.0",
-                is_fixable=False,
-                severity=ir.IssueSeverity.WARNING,
-                translation_key="homeassistant_provider_not_normalized_usernames",
-                translation_placeholders={
-                    "usernames": f'- "{'"\n- "'.join(sorted(not_normalized_usernames))}"'
-                },
-                learn_more_url="homeassistant://config/users",
-            )
-        else:
-            self.is_legacy = False
-            ir.async_delete_issue(
-                self.hass, "auth", "homeassistant_provider_not_normalized_usernames"
-            )
+                break
+
+            seen.add(folded)
+
+            # check if we have unstripped usernames
+            if username != username.strip():
+                self.is_legacy = True
+
+                logging.getLogger(__name__).warning(
+                    (
+                        "Home Assistant auth provider is running in legacy mode "
+                        "because we detected usernames that start or end in a "
+                        "space. Please change the username: '%s'."
+                    ),
+                    username,
+                )
+
+                break
+
+        self._data = data
 
     @property
     def users(self) -> list[dict[str, str]]:
@@ -191,11 +162,13 @@ class Data:
         return hashed
 
     def add_auth(self, username: str, password: str) -> None:
-        """Add a new authenticated user/pass.
+        """Add a new authenticated user/pass."""
+        username = self.normalize_username(username)
 
-        Raises InvalidUsername if the new username is invalid.
-        """
-        self._validate_new_username(username)
+        if any(
+            self.normalize_username(user["username"]) == username for user in self.users
+        ):
+            raise InvalidUser
 
         self.users.append(
             {
@@ -216,7 +189,7 @@ class Data:
                 break
 
         if index is None:
-            raise InvalidUser(translation_key="user_not_found")
+            raise InvalidUser
 
         self.users.pop(index)
 
@@ -232,50 +205,7 @@ class Data:
                 user["password"] = self.hash_password(new_password, True).decode()
                 break
         else:
-            raise InvalidUser(translation_key="user_not_found")
-
-    @callback
-    def _validate_new_username(self, new_username: str) -> None:
-        """Validate that username is normalized and unique.
-
-        Raises InvalidUsername if the new username is invalid.
-        """
-        normalized_username = self.normalize_username(
-            new_username, force_normalize=True
-        )
-        if normalized_username != new_username:
-            raise InvalidUsername(
-                translation_key="username_not_normalized",
-                translation_placeholders={"new_username": new_username},
-            )
-
-        if any(
-            self.normalize_username(user["username"]) == normalized_username
-            for user in self.users
-        ):
-            raise InvalidUsername(
-                translation_key="username_already_exists",
-                translation_placeholders={"username": new_username},
-            )
-
-    @callback
-    def change_username(self, username: str, new_username: str) -> None:
-        """Update the username.
-
-        Raises InvalidUser if user cannot be found.
-        Raises InvalidUsername if the new username is invalid.
-        """
-        username = self.normalize_username(username)
-        self._validate_new_username(new_username)
-
-        for user in self.users:
-            if self.normalize_username(user["username"]) == username:
-                user["username"] = new_username
-                assert self._data is not None
-                self._async_check_for_not_normalized_usernames(self._data)
-                break
-        else:
-            raise InvalidUser(translation_key="user_not_found")
+            raise InvalidUser
 
     async def async_save(self) -> None:
         """Save data."""
@@ -348,20 +278,6 @@ class HassAuthProvider(AuthProvider):
         )
         await self.data.async_save()
 
-    async def async_change_username(
-        self, credential: Credentials, new_username: str
-    ) -> None:
-        """Validate new username and change it including updating credentials object."""
-        if self.data is None:
-            await self.async_initialize()
-            assert self.data is not None
-
-        self.data.change_username(credential.data["username"], new_username)
-        self.hass.auth.async_update_user_credentials_data(
-            credential, {**credential.data, "username": new_username}
-        )
-        await self.data.async_save()
-
     async def async_get_or_create_credentials(
         self, flow_result: Mapping[str, str]
     ) -> Credentials:
@@ -405,7 +321,7 @@ class HassLoginFlow(LoginFlow):
 
     async def async_step_init(
         self, user_input: dict[str, str] | None = None
-    ) -> AuthFlowResult:
+    ) -> FlowResult:
         """Handle the step of the form."""
         errors = {}
 

@@ -1,5 +1,4 @@
 """Models for the mystrom integration."""
-
 from dataclasses import dataclass
 from typing import Any
 

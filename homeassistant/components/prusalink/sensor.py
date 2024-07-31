@@ -1,5 +1,4 @@
 """PrusaLink sensors."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -7,8 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Generic, TypeVar, cast
 
-from pyprusalink.types import JobInfo, PrinterInfo, PrinterState, PrinterStatus
-from pyprusalink.types_legacy import LegacyPrinterStatus
+from pyprusalink import JobInfo, PrinterInfo
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -17,33 +15,26 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
-    PERCENTAGE,
-    REVOLUTIONS_PER_MINUTE,
-    UnitOfLength,
-    UnitOfTemperature,
-)
+from homeassistant.const import PERCENTAGE, UnitOfLength, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.util.dt import utcnow
 from homeassistant.util.variance import ignore_variance
 
-from . import PrusaLinkEntity
-from .const import DOMAIN
-from .coordinator import PrusaLinkUpdateCoordinator
+from . import DOMAIN, PrusaLinkEntity, PrusaLinkUpdateCoordinator
 
-T = TypeVar("T", PrinterStatus, LegacyPrinterStatus, JobInfo, PrinterInfo)
+T = TypeVar("T", PrinterInfo, JobInfo)
 
 
-@dataclass(frozen=True)
+@dataclass
 class PrusaLinkSensorEntityDescriptionMixin(Generic[T]):
     """Mixin for required keys."""
 
     value_fn: Callable[[T], datetime | StateType]
 
 
-@dataclass(frozen=True)
+@dataclass
 class PrusaLinkSensorEntityDescription(
     SensorEntityDescription, PrusaLinkSensorEntityDescriptionMixin[T], Generic[T]
 ):
@@ -53,92 +44,81 @@ class PrusaLinkSensorEntityDescription(
 
 
 SENSORS: dict[str, tuple[PrusaLinkSensorEntityDescription, ...]] = {
-    "status": (
-        PrusaLinkSensorEntityDescription[PrinterStatus](
+    "printer": (
+        PrusaLinkSensorEntityDescription[PrinterInfo](
             key="printer.state",
             name=None,
-            value_fn=lambda data: (cast(str, data["printer"]["state"].lower())),
+            icon="mdi:printer-3d",
+            value_fn=lambda data: (
+                "pausing"
+                if (flags := data["state"]["flags"])["pausing"]
+                else "cancelling"
+                if flags["cancelling"]
+                else "paused"
+                if flags["paused"]
+                else "printing"
+                if flags["printing"]
+                else "idle"
+            ),
             device_class=SensorDeviceClass.ENUM,
-            options=[state.value.lower() for state in PrinterState],
+            options=["cancelling", "idle", "paused", "pausing", "printing"],
             translation_key="printer_state",
         ),
-        PrusaLinkSensorEntityDescription[PrinterStatus](
+        PrusaLinkSensorEntityDescription[PrinterInfo](
             key="printer.telemetry.temp-bed",
             translation_key="heatbed_temperature",
             native_unit_of_measurement=UnitOfTemperature.CELSIUS,
             device_class=SensorDeviceClass.TEMPERATURE,
             state_class=SensorStateClass.MEASUREMENT,
-            value_fn=lambda data: cast(float, data["printer"]["temp_bed"]),
+            value_fn=lambda data: cast(float, data["telemetry"]["temp-bed"]),
             entity_registry_enabled_default=False,
         ),
-        PrusaLinkSensorEntityDescription[PrinterStatus](
+        PrusaLinkSensorEntityDescription[PrinterInfo](
             key="printer.telemetry.temp-nozzle",
             translation_key="nozzle_temperature",
             native_unit_of_measurement=UnitOfTemperature.CELSIUS,
             device_class=SensorDeviceClass.TEMPERATURE,
             state_class=SensorStateClass.MEASUREMENT,
-            value_fn=lambda data: cast(float, data["printer"]["temp_nozzle"]),
+            value_fn=lambda data: cast(float, data["telemetry"]["temp-nozzle"]),
             entity_registry_enabled_default=False,
         ),
-        PrusaLinkSensorEntityDescription[PrinterStatus](
+        PrusaLinkSensorEntityDescription[PrinterInfo](
             key="printer.telemetry.temp-bed.target",
             translation_key="heatbed_target_temperature",
             native_unit_of_measurement=UnitOfTemperature.CELSIUS,
             device_class=SensorDeviceClass.TEMPERATURE,
             state_class=SensorStateClass.MEASUREMENT,
-            value_fn=lambda data: cast(float, data["printer"]["target_bed"]),
+            value_fn=lambda data: cast(float, data["temperature"]["bed"]["target"]),
             entity_registry_enabled_default=False,
         ),
-        PrusaLinkSensorEntityDescription[PrinterStatus](
+        PrusaLinkSensorEntityDescription[PrinterInfo](
             key="printer.telemetry.temp-nozzle.target",
             translation_key="nozzle_target_temperature",
             native_unit_of_measurement=UnitOfTemperature.CELSIUS,
             device_class=SensorDeviceClass.TEMPERATURE,
             state_class=SensorStateClass.MEASUREMENT,
-            value_fn=lambda data: cast(float, data["printer"]["target_nozzle"]),
+            value_fn=lambda data: cast(float, data["temperature"]["tool0"]["target"]),
             entity_registry_enabled_default=False,
         ),
-        PrusaLinkSensorEntityDescription[PrinterStatus](
+        PrusaLinkSensorEntityDescription[PrinterInfo](
             key="printer.telemetry.z-height",
             translation_key="z_height",
             native_unit_of_measurement=UnitOfLength.MILLIMETERS,
             device_class=SensorDeviceClass.DISTANCE,
             state_class=SensorStateClass.MEASUREMENT,
-            value_fn=lambda data: cast(float, data["printer"]["axis_z"]),
+            value_fn=lambda data: cast(float, data["telemetry"]["z-height"]),
             entity_registry_enabled_default=False,
         ),
-        PrusaLinkSensorEntityDescription[PrinterStatus](
+        PrusaLinkSensorEntityDescription[PrinterInfo](
             key="printer.telemetry.print-speed",
             translation_key="print_speed",
             native_unit_of_measurement=PERCENTAGE,
-            value_fn=lambda data: cast(float, data["printer"]["speed"]),
+            value_fn=lambda data: cast(float, data["telemetry"]["print-speed"]),
         ),
-        PrusaLinkSensorEntityDescription[PrinterStatus](
-            key="printer.telemetry.print-flow",
-            translation_key="print_flow",
-            native_unit_of_measurement=PERCENTAGE,
-            value_fn=lambda data: cast(float, data["printer"]["flow"]),
-            entity_registry_enabled_default=False,
-        ),
-        PrusaLinkSensorEntityDescription[PrinterStatus](
-            key="printer.telemetry.fan-hotend",
-            translation_key="fan_hotend",
-            native_unit_of_measurement=REVOLUTIONS_PER_MINUTE,
-            value_fn=lambda data: cast(float, data["printer"]["fan_hotend"]),
-            entity_registry_enabled_default=False,
-        ),
-        PrusaLinkSensorEntityDescription[PrinterStatus](
-            key="printer.telemetry.fan-print",
-            translation_key="fan_print",
-            native_unit_of_measurement=REVOLUTIONS_PER_MINUTE,
-            value_fn=lambda data: cast(float, data["printer"]["fan_print"]),
-            entity_registry_enabled_default=False,
-        ),
-    ),
-    "legacy_status": (
-        PrusaLinkSensorEntityDescription[LegacyPrinterStatus](
+        PrusaLinkSensorEntityDescription[PrinterInfo](
             key="printer.telemetry.material",
             translation_key="material",
+            icon="mdi:palette-swatch-variant",
             value_fn=lambda data: cast(str, data["telemetry"]["material"]),
         ),
     ),
@@ -146,57 +126,43 @@ SENSORS: dict[str, tuple[PrusaLinkSensorEntityDescription, ...]] = {
         PrusaLinkSensorEntityDescription[JobInfo](
             key="job.progress",
             translation_key="progress",
+            icon="mdi:progress-clock",
             native_unit_of_measurement=PERCENTAGE,
-            value_fn=lambda data: cast(float, data["progress"]),
-            available_fn=lambda data: (
-                data.get("progress") is not None
-                and data.get("state") != PrinterState.IDLE.value
-            ),
+            value_fn=lambda data: cast(float, data["progress"]["completion"]) * 100,
+            available_fn=lambda data: data.get("progress") is not None,
         ),
         PrusaLinkSensorEntityDescription[JobInfo](
             key="job.filename",
             translation_key="filename",
-            value_fn=lambda data: cast(str, data["file"]["display_name"]),
-            available_fn=lambda data: (
-                data.get("file") is not None
-                and data.get("state") != PrinterState.IDLE.value
-            ),
+            icon="mdi:file-image-outline",
+            value_fn=lambda data: cast(str, data["job"]["file"]["display"]),
+            available_fn=lambda data: data.get("job") is not None,
         ),
         PrusaLinkSensorEntityDescription[JobInfo](
             key="job.start",
             translation_key="print_start",
             device_class=SensorDeviceClass.TIMESTAMP,
+            icon="mdi:clock-start",
             value_fn=ignore_variance(
-                lambda data: (utcnow() - timedelta(seconds=data["time_printing"])),
+                lambda data: (
+                    utcnow() - timedelta(seconds=data["progress"]["printTime"])
+                ),
                 timedelta(minutes=2),
             ),
-            available_fn=lambda data: (
-                data.get("time_printing") is not None
-                and data.get("state") != PrinterState.IDLE.value
-            ),
+            available_fn=lambda data: data.get("progress") is not None,
         ),
         PrusaLinkSensorEntityDescription[JobInfo](
             key="job.finish",
             translation_key="print_finish",
+            icon="mdi:clock-end",
             device_class=SensorDeviceClass.TIMESTAMP,
             value_fn=ignore_variance(
-                lambda data: (utcnow() + timedelta(seconds=data["time_remaining"])),
+                lambda data: (
+                    utcnow() + timedelta(seconds=data["progress"]["printTimeLeft"])
+                ),
                 timedelta(minutes=2),
             ),
-            available_fn=lambda data: (
-                data.get("time_remaining") is not None
-                and data.get("state") != PrinterState.IDLE.value
-            ),
-        ),
-    ),
-    "info": (
-        PrusaLinkSensorEntityDescription[PrinterInfo](
-            key="info.nozzle_diameter",
-            translation_key="nozzle_diameter",
-            native_unit_of_measurement=UnitOfLength.MILLIMETERS,
-            device_class=SensorDeviceClass.DISTANCE,
-            value_fn=lambda data: cast(str, data["nozzle_diameter"]),
-            entity_registry_enabled_default=False,
+            available_fn=lambda data: data.get("progress") is not None,
         ),
     ),
 }

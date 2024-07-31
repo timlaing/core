@@ -1,5 +1,4 @@
 """Helper for OwnTracks."""
-
 try:
     import nacl
 except ImportError:

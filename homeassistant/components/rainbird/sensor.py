@@ -1,5 +1,4 @@
 """Support for Rain Bird Irrigation system LNK Wi-Fi Module."""
-
 from __future__ import annotations
 
 import logging
@@ -20,6 +19,7 @@ _LOGGER = logging.getLogger(__name__)
 RAIN_DELAY_ENTITY_DESCRIPTION = SensorEntityDescription(
     key="raindelay",
     translation_key="raindelay",
+    icon="mdi:water-off",
 )
 
 

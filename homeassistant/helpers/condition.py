@@ -1,5 +1,4 @@
 """Offer reusable conditions."""
-
 from __future__ import annotations
 
 import asyncio
@@ -115,7 +114,7 @@ class ConditionProtocol(Protocol):
         """Evaluate state based on configuration."""
 
 
-type ConditionCheckerType = Callable[[HomeAssistant, TemplateVarsType], bool | None]
+ConditionCheckerType = Callable[[HomeAssistant, TemplateVarsType], bool | None]
 
 
 def condition_trace_append(variables: TemplateVarsType, path: str) -> TraceElement:
@@ -150,7 +149,7 @@ def condition_trace_update_result(**kwargs: Any) -> None:
 
 
 @contextmanager
-def trace_condition(variables: TemplateVarsType) -> Generator[TraceElement]:
+def trace_condition(variables: TemplateVarsType) -> Generator[TraceElement, None, None]:
     """Trace condition evaluation."""
     should_pop = True
     trace_element = trace_stack_top(trace_stack_cv)
@@ -164,7 +163,7 @@ def trace_condition(variables: TemplateVarsType) -> Generator[TraceElement]:
         yield trace_element
     except Exception as ex:
         trace_element.set_error(ex)
-        raise
+        raise ex
     finally:
         if should_pop:
             trace_stack_pop(trace_stack_cv)
@@ -198,7 +197,7 @@ async def _async_get_condition_platform(
             f'Invalid condition "{platform}" specified {config}'
         ) from None
     try:
-        return await integration.async_get_platform("condition")
+        return integration.get_platform("condition")
     except ImportError:
         raise HomeAssistantError(
             f"Integration '{platform}' does not provide condition support"
@@ -227,25 +226,16 @@ async def async_from_config(
         factory = platform.async_condition_from_config
 
     # Check if condition is not enabled
-    if CONF_ENABLED in config:
-        enabled = config[CONF_ENABLED]
-        if isinstance(enabled, Template):
-            try:
-                enabled = enabled.async_render(limited=True)
-            except TemplateError as err:
-                raise HomeAssistantError(
-                    f"Error rendering condition enabled template: {err}"
-                ) from err
-        if not enabled:
+    if not config.get(CONF_ENABLED, True):
 
-            @trace_condition_function
-            def disabled_condition(
-                hass: HomeAssistant, variables: TemplateVarsType = None
-            ) -> bool | None:
-                """Condition not enabled, will act as if it didn't exist."""
-                return None
+        @trace_condition_function
+        def disabled_condition(
+            hass: HomeAssistant, variables: TemplateVarsType = None
+        ) -> bool | None:
+            """Condition not enabled, will act as if it didn't exist."""
+            return None
 
-            return disabled_condition
+        return disabled_condition
 
     # Check for partials to properly determine if coroutine function
     check_factory = factory
@@ -352,7 +342,7 @@ async def async_not_from_config(
 
 def numeric_state(
     hass: HomeAssistant,
-    entity: str | State | None,
+    entity: None | str | State,
     below: float | str | None = None,
     above: float | str | None = None,
     value_template: Template | None = None,
@@ -371,9 +361,9 @@ def numeric_state(
     ).result()
 
 
-def async_numeric_state(
+def async_numeric_state(  # noqa: C901
     hass: HomeAssistant,
-    entity: str | State | None,
+    entity: None | str | State,
     below: float | str | None = None,
     above: float | str | None = None,
     value_template: Template | None = None,
@@ -545,7 +535,7 @@ def async_numeric_state_from_config(config: ConfigType) -> ConditionCheckerType:
 
 def state(
     hass: HomeAssistant,
-    entity: str | State | None,
+    entity: None | str | State,
     req_state: Any,
     for_period: timedelta | None = None,
     attribute: str | None = None,
@@ -803,7 +793,7 @@ def time(
     hass: HomeAssistant,
     before: dt_time | str | None = None,
     after: dt_time | str | None = None,
-    weekday: str | Container[str] | None = None,
+    weekday: None | str | Container[str] = None,
 ) -> bool:
     """Test if local time condition matches.
 
@@ -902,8 +892,8 @@ def time_from_config(config: ConfigType) -> ConditionCheckerType:
 
 def zone(
     hass: HomeAssistant,
-    zone_ent: str | State | None,
-    entity: str | State | None,
+    zone_ent: None | str | State,
+    entity: None | str | State,
 ) -> bool:
     """Test if zone-condition matches.
 
@@ -1065,9 +1055,9 @@ async def async_validate_conditions_config(
     hass: HomeAssistant, conditions: list[ConfigType]
 ) -> list[ConfigType | Template]:
     """Validate config."""
-    # No gather here because async_validate_condition_config is unlikely
-    # to suspend and the overhead of creating many tasks is not worth it
-    return [await async_validate_condition_config(hass, cond) for cond in conditions]
+    return await asyncio.gather(
+        *(async_validate_condition_config(hass, cond) for cond in conditions)
+    )
 
 
 @callback

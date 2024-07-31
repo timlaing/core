@@ -1,5 +1,4 @@
 """Support for the Tank Utility propane monitor."""
-
 from __future__ import annotations
 
 import datetime
@@ -9,10 +8,7 @@ import requests
 from tank_utility import auth, device as tank_monitor
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
-    SensorEntity,
-)
+from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 from homeassistant.const import CONF_DEVICES, CONF_EMAIL, CONF_PASSWORD, PERCENTAGE
 from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
@@ -23,7 +19,7 @@ _LOGGER = logging.getLogger(__name__)
 
 SCAN_INTERVAL = datetime.timedelta(hours=1)
 
-PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_EMAIL): cv.string,
         vol.Required(CONF_PASSWORD): cv.string,
@@ -129,7 +125,7 @@ class TankUtilitySensor(SensorEntity):
                 self._token = auth.get_token(self._email, self._password, force=True)
                 data = tank_monitor.get_device_data(self._token, self.device)
             else:
-                raise
+                raise http_error
         data.update(data.pop("device", {}))
         data.update(data.pop("lastReading", {}))
         return data

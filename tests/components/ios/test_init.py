@@ -1,5 +1,4 @@
 """Tests for the iOS init file."""
-
 from unittest.mock import patch
 
 import pytest
@@ -19,7 +18,7 @@ def mock_load_json():
 
 
 @pytest.fixture(autouse=True)
-def mock_dependencies(hass: HomeAssistant) -> None:
+def mock_dependencies(hass):
     """Mock dependencies loaded."""
     mock_component(hass, "zeroconf")
     mock_component(hass, "device_tracker")

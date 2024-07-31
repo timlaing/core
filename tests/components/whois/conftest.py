@@ -1,5 +1,4 @@
 """Fixtures for Whois integration tests."""
-
 from __future__ import annotations
 
 from collections.abc import Generator
@@ -30,7 +29,7 @@ def mock_config_entry() -> MockConfigEntry:
 
 
 @pytest.fixture
-def mock_setup_entry() -> Generator[AsyncMock]:
+def mock_setup_entry() -> Generator[AsyncMock, None, None]:
     """Mock setting up a config entry."""
     with patch(
         "homeassistant.components.whois.async_setup_entry", return_value=True
@@ -39,13 +38,12 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 
 
 @pytest.fixture
-def mock_whois() -> Generator[MagicMock]:
+def mock_whois() -> Generator[MagicMock, None, None]:
     """Return a mocked query."""
-    with (
-        patch(
-            "homeassistant.components.whois.whois_query",
-        ) as whois_mock,
-        patch("homeassistant.components.whois.config_flow.whois.query", new=whois_mock),
+    with patch(
+        "homeassistant.components.whois.whois_query",
+    ) as whois_mock, patch(
+        "homeassistant.components.whois.config_flow.whois.query", new=whois_mock
     ):
         domain = whois_mock.return_value
         domain.abuse_contact = "abuse@example.com"
@@ -68,7 +66,7 @@ def mock_whois() -> Generator[MagicMock]:
 
 
 @pytest.fixture
-def mock_whois_missing_some_attrs() -> Generator[Mock]:
+def mock_whois_missing_some_attrs() -> Generator[Mock, None, None]:
     """Return a mocked query that only sets admin."""
 
     class LimitedWhoisMock:

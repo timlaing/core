@@ -1,5 +1,4 @@
 """Platform to control a Salda Smarty XP/XV ventilation unit."""
-
 from __future__ import annotations
 
 import logging
@@ -15,10 +14,10 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.util.percentage import (
+    int_states_in_range,
     percentage_to_ranged_value,
     ranged_value_to_percentage,
 )
-from homeassistant.util.scaling import int_states_in_range
 
 from . import DOMAIN, SIGNAL_UPDATE_SMARTY
 
@@ -46,12 +45,7 @@ class SmartyFan(FanEntity):
 
     _attr_icon = "mdi:air-conditioner"
     _attr_should_poll = False
-    _attr_supported_features = (
-        FanEntityFeature.SET_SPEED
-        | FanEntityFeature.TURN_OFF
-        | FanEntityFeature.TURN_ON
-    )
-    _enable_turn_on_off_backwards_compatibility = False
+    _attr_supported_features = FanEntityFeature.SET_SPEED
 
     def __init__(self, name, smarty):
         """Initialize the entity."""

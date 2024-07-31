@@ -1,5 +1,6 @@
 """Test ESPHome switches."""
 
+
 from unittest.mock import call
 
 from aioesphomeapi import APIClient, SwitchInfo, SwitchState

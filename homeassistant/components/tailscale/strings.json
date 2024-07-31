@@ -29,9 +29,6 @@
       "client": {
         "name": "Client"
       },
-      "key_expiry_disabled": {
-        "name": "Key expiry disabled"
-      },
       "client_supports_hair_pinning": {
         "name": "Supports hairpinning"
       },

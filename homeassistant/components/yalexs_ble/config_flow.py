@@ -1,5 +1,4 @@
 """Config flow for Yale Access Bluetooth integration."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -17,20 +16,15 @@ from yalexs_ble import (
 )
 from yalexs_ble.const import YALE_MFR_ID
 
+from homeassistant import config_entries, data_entry_flow
 from homeassistant.components.bluetooth import (
     BluetoothServiceInfoBleak,
     async_ble_device_from_address,
     async_discovered_service_info,
 )
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlow,
-)
 from homeassistant.const import CONF_ADDRESS
 from homeassistant.core import callback
-from homeassistant.data_entry_flow import AbortFlow
+from homeassistant.data_entry_flow import AbortFlow, FlowResult
 from homeassistant.helpers.typing import DiscoveryInfoType
 
 from .const import CONF_ALWAYS_CONNECTED, CONF_KEY, CONF_LOCAL_NAME, CONF_SLOT, DOMAIN
@@ -57,13 +51,13 @@ async def async_validate_lock_or_error(
         return {CONF_KEY: "invalid_auth"}
     except BleakError:
         return {"base": "cannot_connect"}
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         _LOGGER.exception("Unexpected error")
         return {"base": "unknown"}
     return {}
 
 
-class YalexsConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Yale Access Bluetooth."""
 
     VERSION = 1
@@ -73,11 +67,11 @@ class YalexsConfigFlow(ConfigFlow, domain=DOMAIN):
         self._discovery_info: BluetoothServiceInfoBleak | None = None
         self._discovered_devices: dict[str, BluetoothServiceInfoBleak] = {}
         self._lock_cfg: ValidatedLockConfig | None = None
-        self._reauth_entry: ConfigEntry | None = None
+        self._reauth_entry: config_entries.ConfigEntry | None = None
 
     async def async_step_bluetooth(
         self, discovery_info: BluetoothServiceInfoBleak
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the bluetooth discovery step."""
         await self.async_set_unique_id(discovery_info.address)
         self._abort_if_unique_id_configured()
@@ -92,7 +86,7 @@ class YalexsConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_integration_discovery(
         self, discovery_info: DiscoveryInfoType
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a discovered integration."""
         lock_cfg = ValidatedLockConfig(
             discovery_info["name"],
@@ -119,9 +113,13 @@ class YalexsConfigFlow(ConfigFlow, domain=DOMAIN):
                 local_name_is_unique(lock_cfg.local_name)
                 and entry.data.get(CONF_LOCAL_NAME) == lock_cfg.local_name
             ):
-                return self.async_update_reload_and_abort(
-                    entry, data={**entry.data, **new_data}, reason="already_configured"
-                )
+                if hass.config_entries.async_update_entry(
+                    entry, data={**entry.data, **new_data}
+                ):
+                    hass.async_create_task(
+                        hass.config_entries.async_reload(entry.entry_id)
+                    )
+                raise AbortFlow(reason="already_configured")
 
         self._discovery_info = async_find_existing_service_info(
             hass, local_name, address
@@ -143,7 +141,7 @@ class YalexsConfigFlow(ConfigFlow, domain=DOMAIN):
                     # and entered the keys. We abort the discovery flow since
                     # we assume they do not want to use the discovered keys for
                     # some reason.
-                    raise AbortFlow("already_in_progress")
+                    raise data_entry_flow.AbortFlow("already_in_progress")
                 hass.config_entries.flow.async_abort(progress["flow_id"])
 
         self._lock_cfg = lock_cfg
@@ -156,7 +154,7 @@ class YalexsConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_integration_discovery_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a confirmation of discovered integration."""
         assert self._discovery_info is not None
         assert self._lock_cfg is not None
@@ -180,9 +178,7 @@ class YalexsConfigFlow(ConfigFlow, domain=DOMAIN):
             },
         )
 
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Handle configuration by re-auth."""
         self._reauth_entry = self.hass.config_entries.async_get_entry(
             self.context["entry_id"]
@@ -191,7 +187,7 @@ class YalexsConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_reauth_validate(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle reauth and validation."""
         errors = {}
         reauth_entry = self._reauth_entry
@@ -211,9 +207,11 @@ class YalexsConfigFlow(ConfigFlow, domain=DOMAIN):
                     user_input[CONF_SLOT],
                 )
             ):
-                return self.async_update_reload_and_abort(
+                self.hass.config_entries.async_update_entry(
                     reauth_entry, data={**reauth_entry.data, **user_input}
                 )
+                await self.hass.config_entries.async_reload(reauth_entry.entry_id)
+                return self.async_abort(reason="reauth_successful")
 
         return self.async_show_form(
             step_id="reauth_validate",
@@ -229,7 +227,7 @@ class YalexsConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the user step to pick discovered device."""
         errors: dict[str, str] = {}
 
@@ -304,28 +302,28 @@ class YalexsConfigFlow(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: ConfigEntry,
+        config_entry: config_entries.ConfigEntry,
     ) -> YaleXSBLEOptionsFlowHandler:
         """Get the options flow for this handler."""
         return YaleXSBLEOptionsFlowHandler(config_entry)
 
 
-class YaleXSBLEOptionsFlowHandler(OptionsFlow):
+class YaleXSBLEOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle YaleXSBLE options."""
 
-    def __init__(self, config_entry: ConfigEntry) -> None:
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize YaleXSBLE options flow."""
         self.entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Manage the YaleXSBLE options."""
         return await self.async_step_device_options()
 
     async def async_step_device_options(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Manage the YaleXSBLE devices options."""
         if user_input is not None:
             return self.async_create_entry(

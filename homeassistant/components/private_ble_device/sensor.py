@@ -1,5 +1,4 @@
-"""Support for Private BLE Device sensors."""
-
+"""Support for iBeacon device sensors."""
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -27,13 +26,20 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .entity import BasePrivateDeviceEntity
 
 
-@dataclass(frozen=True, kw_only=True)
-class PrivateDeviceSensorEntityDescription(SensorEntityDescription):
-    """Describes sensor entity."""
+@dataclass
+class PrivateDeviceSensorEntityDescriptionRequired:
+    """Required domain specific fields for sensor entity."""
 
     value_fn: Callable[
         [HomeAssistant, bluetooth.BluetoothServiceInfoBleak], str | int | float | None
     ]
+
+
+@dataclass
+class PrivateDeviceSensorEntityDescription(
+    SensorEntityDescription, PrivateDeviceSensorEntityDescriptionRequired
+):
+    """Describes sensor entity."""
 
 
 SENSOR_DESCRIPTIONS = (
@@ -59,6 +65,7 @@ SENSOR_DESCRIPTIONS = (
     PrivateDeviceSensorEntityDescription(
         key="estimated_distance",
         translation_key="estimated_distance",
+        icon="mdi:signal-distance-variant",
         native_unit_of_measurement=UnitOfLength.METERS,
         value_fn=lambda _, service_info: service_info.advertisement
         and service_info.advertisement.tx_power
@@ -72,20 +79,17 @@ SENSOR_DESCRIPTIONS = (
     PrivateDeviceSensorEntityDescription(
         key="estimated_broadcast_interval",
         translation_key="estimated_broadcast_interval",
+        icon="mdi:timer-sync-outline",
         native_unit_of_measurement=UnitOfTime.SECONDS,
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=(
-            lambda hass, service_info: (
-                bluetooth.async_get_learned_advertising_interval(
-                    hass, service_info.address
-                )
-                or bluetooth.async_get_fallback_availability_interval(
-                    hass, service_info.address
-                )
-                or bluetooth.FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS
-            )
-        ),
+        value_fn=lambda hass, service_info: bluetooth.async_get_learned_advertising_interval(
+            hass, service_info.address
+        )
+        or bluetooth.async_get_fallback_availability_interval(
+            hass, service_info.address
+        )
+        or bluetooth.FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS,
         suggested_display_precision=1,
     ),
 )

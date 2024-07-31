@@ -1,5 +1,4 @@
 """API for Smappee bound to Home Assistant OAuth."""
-
 from asyncio import run_coroutine_threadsafe
 
 from pysmappee import api

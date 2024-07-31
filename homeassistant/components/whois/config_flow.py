@@ -1,5 +1,4 @@
 """Config flow to configure the Whois integration."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -13,8 +12,9 @@ from whois.exceptions import (
     WhoisCommandFailed,
 )
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import ConfigFlow
 from homeassistant.const import CONF_DOMAIN
+from homeassistant.data_entry_flow import FlowResult
 
 from .const import DOMAIN
 
@@ -28,7 +28,7 @@ class WhoisFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow initialized by the user."""
         errors = {}
 

@@ -1,5 +1,4 @@
 """API for Lokalise."""
-
 from __future__ import annotations
 
 from pprint import pprint

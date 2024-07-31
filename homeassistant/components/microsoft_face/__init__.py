@@ -1,12 +1,9 @@
 """Support for Microsoft face recognition."""
-
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Coroutine
 import json
 import logging
-from typing import Any
 
 import aiohttp
 from aiohttp.hdrs import CONTENT_TYPE
@@ -244,7 +241,11 @@ class MicrosoftFaceGroupEntity(Entity):
     @property
     def extra_state_attributes(self):
         """Return device specific state attributes."""
-        return dict(self._api.store[self._id])
+        attr = {}
+        for name, p_id in self._api.store[self._id].items():
+            attr[name] = p_id
+
+        return attr
 
 
 class MicrosoftFace:
@@ -266,11 +267,11 @@ class MicrosoftFace:
         """Store group/person data and IDs."""
         return self._store
 
-    async def update_store(self) -> None:
+    async def update_store(self):
         """Load all group/person data into local store."""
         groups = await self.call_api("get", "persongroups")
 
-        remove_tasks: list[Coroutine[Any, Any, None]] = []
+        remove_tasks = []
         new_entities = []
         for group in groups:
             g_id = group["personGroupId"]
@@ -292,7 +293,7 @@ class MicrosoftFace:
                 self._store[g_id][person["name"]] = person["personId"]
 
         if remove_tasks:
-            await asyncio.gather(*remove_tasks)
+            await asyncio.gather(remove_tasks)
         await self._component.async_add_entities(new_entities)
 
     async def call_api(self, method, function, data=None, binary=False, params=None):
@@ -331,7 +332,7 @@ class MicrosoftFace:
         except aiohttp.ClientError:
             _LOGGER.warning("Can't connect to microsoft face api")
 
-        except TimeoutError:
+        except asyncio.TimeoutError:
             _LOGGER.warning("Timeout from microsoft face api %s", response.url)
 
         raise HomeAssistantError("Network error on microsoft face api.")

@@ -1,5 +1,4 @@
 """Constants for Stream component."""
-
 DOMAIN = "stream"
 
 ATTR_ENDPOINTS = "endpoints"

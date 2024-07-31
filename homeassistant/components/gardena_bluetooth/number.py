@@ -1,5 +1,4 @@
 """Support for number entities."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -30,7 +29,7 @@ from .coordinator import (
 )
 
 
-@dataclass(frozen=True)
+@dataclass
 class GardenaBluetoothNumberEntityDescription(NumberEntityDescription):
     """Description of entity."""
 

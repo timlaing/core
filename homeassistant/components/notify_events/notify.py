@@ -1,5 +1,4 @@
 """Notify.Events platform for notify component."""
-
 from __future__ import annotations
 
 import logging

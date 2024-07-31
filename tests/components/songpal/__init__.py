@@ -1,5 +1,4 @@
 """Test the songpal integration."""
-
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from songpal import SongpalException
@@ -23,9 +22,7 @@ CONF_DATA = {
 }
 
 
-def _create_mocked_device(
-    throw_exception=False, wired_mac=MAC, wireless_mac=None, no_soundfield=False
-):
+def _create_mocked_device(throw_exception=False, wired_mac=MAC, wireless_mac=None):
     mocked_device = MagicMock()
 
     type(mocked_device).get_supported_methods = AsyncMock(
@@ -86,31 +83,6 @@ def _create_mocked_device(
     input2.uri = "uri2"
     input2.active = True
     type(mocked_device).get_inputs = AsyncMock(return_value=[input1, input2])
-
-    sound_mode1 = MagicMock()
-    sound_mode1.title = "Sound Mode 1"
-    sound_mode1.value = "sound_mode1"
-    sound_mode1.isAvailable = True
-    sound_mode2 = MagicMock()
-    sound_mode2.title = "Sound Mode 2"
-    sound_mode2.value = "sound_mode2"
-    sound_mode2.isAvailable = True
-    sound_mode3 = MagicMock()
-    sound_mode3.title = "Sound Mode 3"
-    sound_mode3.value = "sound_mode3"
-    sound_mode3.isAvailable = False
-
-    soundField = MagicMock()
-    soundField.currentValue = "sound_mode2"
-    soundField.candidate = [sound_mode1, sound_mode2, sound_mode3]
-
-    settings = MagicMock()
-    settings.target = "soundField"
-    settings.__iter__.return_value = [soundField]
-
-    type(mocked_device).get_sound_settings = AsyncMock(
-        return_value=[] if no_soundfield else [settings]
-    )
 
     type(mocked_device).set_power = AsyncMock()
     type(mocked_device).set_sound_settings = AsyncMock()

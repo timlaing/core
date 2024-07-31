@@ -2,16 +2,20 @@
 
 from typing import Any
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .types import ScreenLogicConfigEntry
+from .const import DOMAIN
+from .coordinator import ScreenlogicDataUpdateCoordinator
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: ScreenLogicConfigEntry
+    hass: HomeAssistant, config_entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    coordinator = config_entry.runtime_data
+    coordinator: ScreenlogicDataUpdateCoordinator = hass.data[DOMAIN][
+        config_entry.entry_id
+    ]
 
     return {
         "config_entry": config_entry.as_dict(),

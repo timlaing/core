@@ -1,5 +1,4 @@
 """Test state helpers."""
-
 import asyncio
 from unittest.mock import patch
 

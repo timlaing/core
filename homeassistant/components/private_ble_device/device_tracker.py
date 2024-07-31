@@ -1,5 +1,4 @@
 """Tracking for bluetooth low energy devices."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -32,7 +31,6 @@ class BasePrivateDeviceTracker(BasePrivateDeviceEntity, BaseTrackerEntity):
 
     _attr_should_poll = False
     _attr_has_entity_name = True
-    _attr_translation_key = "device_tracker"
     _attr_name = None
 
     @property
@@ -70,3 +68,8 @@ class BasePrivateDeviceTracker(BasePrivateDeviceEntity, BaseTrackerEntity):
     def source_type(self) -> SourceType:
         """Return the source type, eg gps or router, of the device."""
         return SourceType.BLUETOOTH_LE
+
+    @property
+    def icon(self) -> str:
+        """Return device icon."""
+        return "mdi:bluetooth-connect" if self._last_info else "mdi:bluetooth-off"

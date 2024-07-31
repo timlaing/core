@@ -1,8 +1,6 @@
 """Test the Insteon Scenes APIs."""
-
-from collections.abc import Generator
+import json
 import os
-from typing import Any
 from unittest.mock import AsyncMock, patch
 
 from pyinsteon.constants import ResponseStatus
@@ -12,22 +10,21 @@ import pytest
 from homeassistant.components.insteon.api import async_load_api, scenes
 from homeassistant.components.insteon.const import ID, TYPE
 from homeassistant.core import HomeAssistant
-from homeassistant.util.json import JsonArrayType
 
 from .mock_devices import MockDevices
 
-from tests.common import load_json_array_fixture
-from tests.typing import MockHAClientWebSocket, WebSocketGenerator
+from tests.common import load_fixture
+from tests.typing import WebSocketGenerator
 
 
-@pytest.fixture(name="scene_data", scope="module")
-def aldb_data_fixture() -> JsonArrayType:
+@pytest.fixture(name="scene_data", scope="session")
+def aldb_data_fixture():
     """Load the controller state fixture data."""
-    return load_json_array_fixture("insteon/scene_data.json")
+    return json.loads(load_fixture("insteon/scene_data.json"))
 
 
 @pytest.fixture(name="remove_json")
-def remove_insteon_devices_json(hass: HomeAssistant) -> Generator[None]:
+def remove_insteon_devices_json(hass):
     """Fixture to remove insteon_devices.json at the end of the test."""
     yield
     file = os.path.join(hass.config.config_dir, "insteon_devices.json")
@@ -35,7 +32,7 @@ def remove_insteon_devices_json(hass: HomeAssistant) -> Generator[None]:
         os.remove(file)
 
 
-def _scene_to_array(scene: dict[str, Any]) -> list[dict[str, Any]]:
+def _scene_to_array(scene):
     """Convert a scene object to a dictionary."""
     scene_list = []
     for device, links in scene["devices"].items():
@@ -49,9 +46,7 @@ def _scene_to_array(scene: dict[str, Any]) -> list[dict[str, Any]]:
     return scene_list
 
 
-async def _setup(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, scene_data: JsonArrayType
-) -> tuple[MockHAClientWebSocket, MockDevices]:
+async def _setup(hass, hass_ws_client, scene_data):
     """Set up tests."""
     ws_client = await hass_ws_client(hass)
     devices = MockDevices()
@@ -67,7 +62,7 @@ async def _setup(
 # This tests needs to be adjusted to remove lingering tasks
 @pytest.mark.parametrize("expected_lingering_tasks", [True])
 async def test_get_scenes(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, scene_data: JsonArrayType
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, scene_data
 ) -> None:
     """Test getting all Insteon scenes."""
     ws_client, devices = await _setup(hass, hass_ws_client, scene_data)
@@ -83,7 +78,7 @@ async def test_get_scenes(
 # This tests needs to be adjusted to remove lingering tasks
 @pytest.mark.parametrize("expected_lingering_tasks", [True])
 async def test_get_scene(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, scene_data: JsonArrayType
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, scene_data
 ) -> None:
     """Test getting an Insteon scene."""
     ws_client, devices = await _setup(hass, hass_ws_client, scene_data)
@@ -97,21 +92,17 @@ async def test_get_scene(
 
 # This tests needs to be adjusted to remove lingering tasks
 @pytest.mark.parametrize("expected_lingering_tasks", [True])
-@pytest.mark.usefixtures("remove_json")
 async def test_save_scene(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
-    scene_data: JsonArrayType,
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, scene_data, remove_json
 ) -> None:
     """Test saving an Insteon scene."""
     ws_client, devices = await _setup(hass, hass_ws_client, scene_data)
 
     mock_add_or_update_scene = AsyncMock(return_value=(20, ResponseStatus.SUCCESS))
 
-    with (
-        patch.object(pyinsteon.managers.scene_manager, "devices", devices),
-        patch.object(scenes, "async_add_or_update_scene", mock_add_or_update_scene),
-    ):
+    with patch.object(
+        pyinsteon.managers.scene_manager, "devices", devices
+    ), patch.object(scenes, "async_add_or_update_scene", mock_add_or_update_scene):
         scene = await pyinsteon.managers.scene_manager.async_get_scene(20)
         scene["devices"]["1a1a1a"] = []
         links = _scene_to_array(scene)
@@ -132,21 +123,17 @@ async def test_save_scene(
 
 # This tests needs to be adjusted to remove lingering tasks
 @pytest.mark.parametrize("expected_lingering_tasks", [True])
-@pytest.mark.usefixtures("remove_json")
 async def test_save_new_scene(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
-    scene_data: JsonArrayType,
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, scene_data, remove_json
 ) -> None:
     """Test saving a new Insteon scene."""
     ws_client, devices = await _setup(hass, hass_ws_client, scene_data)
 
     mock_add_or_update_scene = AsyncMock(return_value=(21, ResponseStatus.SUCCESS))
 
-    with (
-        patch.object(pyinsteon.managers.scene_manager, "devices", devices),
-        patch.object(scenes, "async_add_or_update_scene", mock_add_or_update_scene),
-    ):
+    with patch.object(
+        pyinsteon.managers.scene_manager, "devices", devices
+    ), patch.object(scenes, "async_add_or_update_scene", mock_add_or_update_scene):
         scene = await pyinsteon.managers.scene_manager.async_get_scene(20)
         scene["devices"]["1a1a1a"] = []
         links = _scene_to_array(scene)
@@ -167,21 +154,17 @@ async def test_save_new_scene(
 
 # This tests needs to be adjusted to remove lingering tasks
 @pytest.mark.parametrize("expected_lingering_tasks", [True])
-@pytest.mark.usefixtures("remove_json")
 async def test_save_scene_error(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
-    scene_data: JsonArrayType,
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, scene_data, remove_json
 ) -> None:
     """Test saving an Insteon scene with error."""
     ws_client, devices = await _setup(hass, hass_ws_client, scene_data)
 
     mock_add_or_update_scene = AsyncMock(return_value=(20, ResponseStatus.FAILURE))
 
-    with (
-        patch.object(pyinsteon.managers.scene_manager, "devices", devices),
-        patch.object(scenes, "async_add_or_update_scene", mock_add_or_update_scene),
-    ):
+    with patch.object(
+        pyinsteon.managers.scene_manager, "devices", devices
+    ), patch.object(scenes, "async_add_or_update_scene", mock_add_or_update_scene):
         scene = await pyinsteon.managers.scene_manager.async_get_scene(20)
         scene["devices"]["1a1a1a"] = []
         links = _scene_to_array(scene)
@@ -202,21 +185,17 @@ async def test_save_scene_error(
 
 # This tests needs to be adjusted to remove lingering tasks
 @pytest.mark.parametrize("expected_lingering_tasks", [True])
-@pytest.mark.usefixtures("remove_json")
 async def test_delete_scene(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
-    scene_data: JsonArrayType,
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, scene_data, remove_json
 ) -> None:
     """Test delete an Insteon scene."""
     ws_client, devices = await _setup(hass, hass_ws_client, scene_data)
 
     mock_delete_scene = AsyncMock(return_value=ResponseStatus.SUCCESS)
 
-    with (
-        patch.object(pyinsteon.managers.scene_manager, "devices", devices),
-        patch.object(scenes, "async_delete_scene", mock_delete_scene),
-    ):
+    with patch.object(
+        pyinsteon.managers.scene_manager, "devices", devices
+    ), patch.object(scenes, "async_delete_scene", mock_delete_scene):
         await ws_client.send_json(
             {
                 ID: 1,

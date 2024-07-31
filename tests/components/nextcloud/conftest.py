@@ -9,13 +9,15 @@ import pytest
 @pytest.fixture
 def mock_nextcloud_monitor() -> Mock:
     """Mock of NextcloudMonitor."""
-    return Mock(
+    ncm = Mock(
         update=Mock(return_value=True),
     )
 
+    return ncm
+
 
 @pytest.fixture
-def mock_setup_entry() -> Generator[AsyncMock]:
+def mock_setup_entry() -> Generator[AsyncMock, None, None]:
     """Override async_setup_entry."""
     with patch(
         "homeassistant.components.nextcloud.async_setup_entry", return_value=True

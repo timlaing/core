@@ -1,18 +1,15 @@
 """Test fixtures for IoTaWatt."""
-
-from collections.abc import Generator
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from homeassistant.components.iotawatt import DOMAIN
-from homeassistant.core import HomeAssistant
 
 from tests.common import MockConfigEntry
 
 
 @pytest.fixture
-def entry(hass: HomeAssistant) -> MockConfigEntry:
+def entry(hass):
     """Mock config entry added to HA."""
     entry = MockConfigEntry(domain=DOMAIN, data={"host": "1.2.3.4"})
     entry.add_to_hass(hass)
@@ -20,7 +17,7 @@ def entry(hass: HomeAssistant) -> MockConfigEntry:
 
 
 @pytest.fixture
-def mock_iotawatt(entry: MockConfigEntry) -> Generator[MagicMock]:
+def mock_iotawatt(entry):
     """Mock iotawatt."""
     with patch("homeassistant.components.iotawatt.coordinator.Iotawatt") as mock:
         instance = mock.return_value

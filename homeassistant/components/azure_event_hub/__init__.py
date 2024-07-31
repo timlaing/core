@@ -1,5 +1,4 @@
 """Support for Azure Event Hubs."""
-
 from __future__ import annotations
 
 import asyncio

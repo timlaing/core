@@ -4,13 +4,22 @@
     'attributes': ReadOnlyDict({
       'attribution': 'RIVM - Rijksinstituut voor Volksgezondheid en Milieum, Landelijk Meetnet Luchtkwaliteit and World Air Quality Index Project',
       'device_class': 'aqi',
+      'dominentpol': <Pollutant.OZONE: 'o3'>,
       'friendly_name': 'de Jongweg, Utrecht Air quality index',
+      'humidity': 80,
+      'nitrogen_dioxide': 2.3,
+      'ozone': 29.4,
+      'pm_10': 12,
+      'pm_2_5': 17,
+      'pressure': 1008.8,
       'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
+      'sulfur_dioxide': 2.3,
+      'temperature': 16,
+      'time': datetime.datetime(2023, 8, 7, 17, 0, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200))),
     }),
     'context': <ANY>,
     'entity_id': 'sensor.de_jongweg_utrecht_air_quality_index',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '29',
   })
@@ -27,27 +36,11 @@
     'context': <ANY>,
     'entity_id': 'sensor.de_jongweg_utrecht_humidity',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '80',
   })
 # ---
 # name: test_sensor.10
-  StateSnapshot({
-    'attributes': ReadOnlyDict({
-      'attribution': 'RIVM - Rijksinstituut voor Volksgezondheid en Milieum, Landelijk Meetnet Luchtkwaliteit and World Air Quality Index Project',
-      'friendly_name': 'de Jongweg, Utrecht Visbility using nephelometry',
-      'state_class': <SensorStateClass.MEASUREMENT: 'measurement'>,
-    }),
-    'context': <ANY>,
-    'entity_id': 'sensor.de_jongweg_utrecht_visbility_using_nephelometry',
-    'last_changed': <ANY>,
-    'last_reported': <ANY>,
-    'last_updated': <ANY>,
-    'state': '80',
-  })
-# ---
-# name: test_sensor.11
   StateSnapshot({
     'attributes': ReadOnlyDict({
       'attribution': 'RIVM - Rijksinstituut voor Volksgezondheid en Milieum, Landelijk Meetnet Luchtkwaliteit and World Air Quality Index Project',
@@ -66,7 +59,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.de_jongweg_utrecht_dominant_pollutant',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'o3',
   })
@@ -83,7 +75,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.de_jongweg_utrecht_pressure',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '1008.8',
   })
@@ -100,7 +91,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.de_jongweg_utrecht_temperature',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '16',
   })
@@ -115,7 +105,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.de_jongweg_utrecht_carbon_monoxide',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2.3',
   })
@@ -130,7 +119,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.de_jongweg_utrecht_nitrogen_dioxide',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2.3',
   })
@@ -145,7 +133,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.de_jongweg_utrecht_ozone',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '29.4',
   })
@@ -160,7 +147,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.de_jongweg_utrecht_sulphur_dioxide',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2.3',
   })
@@ -175,7 +161,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.de_jongweg_utrecht_pm10',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '12',
   })
@@ -190,7 +175,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.de_jongweg_utrecht_pm2_5',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '17',
   })

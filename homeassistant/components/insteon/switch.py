@@ -1,5 +1,4 @@
 """Support for INSTEON dimmers via PowerLinc Modem."""
-
 from typing import Any
 
 from homeassistant.components.switch import SwitchEntity

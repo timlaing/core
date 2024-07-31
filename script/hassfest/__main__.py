@@ -1,5 +1,4 @@
 """Validate manifests."""
-
 from __future__ import annotations
 
 import argparse
@@ -14,10 +13,9 @@ from . import (
     codeowners,
     config_flow,
     config_schema,
+    coverage,
     dependencies,
     dhcp,
-    docker,
-    icons,
     json,
     manifest,
     metadata,
@@ -39,7 +37,6 @@ INTEGRATION_PLUGINS = [
     config_schema,
     dependencies,
     dhcp,
-    icons,
     json,
     manifest,
     mqtt,
@@ -52,7 +49,7 @@ INTEGRATION_PLUGINS = [
     config_flow,  # This needs to run last, after translations are processed
 ]
 HASS_PLUGINS = [
-    docker,
+    coverage,
     mypy_config,
     metadata,
 ]

@@ -1,5 +1,4 @@
 """Provides the constants needed for component."""
-
 from enum import IntFlag, StrEnum
 
 # How long our auth signature on the content should be valid for

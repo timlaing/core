@@ -1,8 +1,7 @@
 """Config flow to configure emulated_roku component."""
-
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow
+from homeassistant import config_entries
 from homeassistant.const import CONF_NAME
 from homeassistant.core import callback
 
@@ -17,7 +16,7 @@ def configured_servers(hass):
     }
 
 
-class EmulatedRokuFlowHandler(ConfigFlow, domain=DOMAIN):
+class EmulatedRokuFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle an emulated_roku config flow."""
 
     VERSION = 1

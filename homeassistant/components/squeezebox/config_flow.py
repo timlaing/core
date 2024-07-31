@@ -1,5 +1,4 @@
-"""Config flow for Squeezebox integration."""
-
+"""Config flow for Logitech Squeezebox integration."""
 import asyncio
 from http import HTTPStatus
 import logging
@@ -8,16 +7,15 @@ from typing import TYPE_CHECKING
 from pysqueezebox import Server, async_discover
 import voluptuous as vol
 
+from homeassistant import config_entries, data_entry_flow
 from homeassistant.components import dhcp
 from homeassistant.components.media_player import DOMAIN as MP_DOMAIN
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_USERNAME
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.device_registry import format_mac
+from homeassistant.helpers.entity_registry import async_get
 
-from .const import CONF_HTTPS, DEFAULT_PORT, DOMAIN
+from .const import DEFAULT_PORT, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,20 +49,14 @@ def _base_schema(discovery_info=None):
         )
     else:
         base_schema.update({vol.Required(CONF_PORT, default=DEFAULT_PORT): int})
-
     base_schema.update(
-        {
-            vol.Optional(CONF_USERNAME): str,
-            vol.Optional(CONF_PASSWORD): str,
-            vol.Optional(CONF_HTTPS, default=False): bool,
-        }
+        {vol.Optional(CONF_USERNAME): str, vol.Optional(CONF_PASSWORD): str}
     )
-
     return vol.Schema(base_schema)
 
 
-class SqueezeboxConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Squeezebox."""
+class SqueezeboxConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for Logitech Squeezebox."""
 
     VERSION = 1
 
@@ -113,7 +105,6 @@ class SqueezeboxConfigFlow(ConfigFlow, domain=DOMAIN):
             data[CONF_PORT],
             data.get(CONF_USERNAME),
             data.get(CONF_PASSWORD),
-            https=data[CONF_HTTPS],
         )
 
         try:
@@ -122,7 +113,7 @@ class SqueezeboxConfigFlow(ConfigFlow, domain=DOMAIN):
                 if server.http_status == HTTPStatus.UNAUTHORIZED:
                     return "invalid_auth"
                 return "cannot_connect"
-        except Exception:  # noqa: BLE001
+        except Exception:  # pylint: disable=broad-except
             return "unknown"
 
         if "uuid" in status:
@@ -142,7 +133,7 @@ class SqueezeboxConfigFlow(ConfigFlow, domain=DOMAIN):
             async with asyncio.timeout(TIMEOUT):
                 await self._discover()
             return await self.async_step_edit()
-        except TimeoutError:
+        except asyncio.TimeoutError:
             errors["base"] = "no_server_found"
 
         # display the form
@@ -189,7 +180,7 @@ class SqueezeboxConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_dhcp(
         self, discovery_info: dhcp.DhcpServiceInfo
-    ) -> ConfigFlowResult:
+    ) -> data_entry_flow.FlowResult:
         """Handle dhcp discovery of a Squeezebox player."""
         _LOGGER.debug(
             "Reached dhcp discovery of a player with info: %s", discovery_info
@@ -199,14 +190,14 @@ class SqueezeboxConfigFlow(ConfigFlow, domain=DOMAIN):
 
         _LOGGER.debug("Configuring dhcp player with unique id: %s", self.unique_id)
 
-        registry = er.async_get(self.hass)
+        registry = async_get(self.hass)
 
         if TYPE_CHECKING:
             assert self.unique_id
         # if we have detected this player, do nothing. if not, there must be a server out there for us to configure, so start the normal user flow (which tries to autodetect server)
         if registry.async_get_entity_id(MP_DOMAIN, DOMAIN, self.unique_id) is not None:
             # this player is already known, so do nothing other than mark as configured
-            raise AbortFlow("already_configured")
+            raise data_entry_flow.AbortFlow("already_configured")
 
         # if the player is unknown, then we likely need to configure its server
         return await self.async_step_user()

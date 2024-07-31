@@ -1,5 +1,4 @@
 """Tests for the DirecTV component."""
-
 from http import HTTPStatus
 
 from homeassistant.components import ssdp

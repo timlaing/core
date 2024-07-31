@@ -1,5 +1,4 @@
 """Support for Vallox ventilation unit binary sensors."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -13,9 +12,8 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import ValloxEntity
+from . import ValloxDataUpdateCoordinator, ValloxEntity
 from .const import DOMAIN
-from .coordinator import ValloxDataUpdateCoordinator
 
 
 class ValloxBinarySensorEntity(ValloxEntity, BinarySensorEntity):
@@ -40,20 +38,28 @@ class ValloxBinarySensorEntity(ValloxEntity, BinarySensorEntity):
     @property
     def is_on(self) -> bool | None:
         """Return true if the binary sensor is on."""
-        return self.coordinator.data.get(self.entity_description.metric_key) == 1
+        return self.coordinator.data.get_metric(self.entity_description.metric_key) == 1
 
 
-@dataclass(frozen=True, kw_only=True)
-class ValloxBinarySensorEntityDescription(BinarySensorEntityDescription):
-    """Describes Vallox binary sensor entity."""
+@dataclass
+class ValloxMetricKeyMixin:
+    """Dataclass to allow defining metric_key without a default value."""
 
     metric_key: str
+
+
+@dataclass
+class ValloxBinarySensorEntityDescription(
+    BinarySensorEntityDescription, ValloxMetricKeyMixin
+):
+    """Describes Vallox binary sensor entity."""
 
 
 BINARY_SENSOR_ENTITIES: tuple[ValloxBinarySensorEntityDescription, ...] = (
     ValloxBinarySensorEntityDescription(
         key="post_heater",
         translation_key="post_heater",
+        icon="mdi:radiator",
         metric_key="A_CYC_IO_HEATER",
     ),
 )
@@ -69,6 +75,8 @@ async def async_setup_entry(
     data = hass.data[DOMAIN][entry.entry_id]
 
     async_add_entities(
-        ValloxBinarySensorEntity(data["name"], data["coordinator"], description)
-        for description in BINARY_SENSOR_ENTITIES
+        [
+            ValloxBinarySensorEntity(data["name"], data["coordinator"], description)
+            for description in BINARY_SENSOR_ENTITIES
+        ]
     )

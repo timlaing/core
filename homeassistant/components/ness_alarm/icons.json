@@ -1,6 +1,0 @@
-{
-  "services": {
-    "aux": "mdi:audio-input-stereo-minijack",
-    "panic": "mdi:fire"
-  }
-}

@@ -1,5 +1,4 @@
 """The test for the Facebook notify module."""
-
 from http import HTTPStatus
 
 import pytest
@@ -10,15 +9,13 @@ from homeassistant.core import HomeAssistant
 
 
 @pytest.fixture
-def facebook() -> fb.FacebookNotificationService:
+def facebook():
     """Fixture for facebook."""
     access_token = "page-access-token"
     return fb.FacebookNotificationService(access_token)
 
 
-async def test_send_simple_message(
-    hass: HomeAssistant, facebook: fb.FacebookNotificationService
-) -> None:
+async def test_send_simple_message(hass: HomeAssistant, facebook) -> None:
     """Test sending a simple message with success."""
     with requests_mock.Mocker() as mock:
         mock.register_uri(requests_mock.POST, fb.BASE_URL, status_code=HTTPStatus.OK)
@@ -42,9 +39,7 @@ async def test_send_simple_message(
         assert mock.last_request.qs == expected_params
 
 
-async def test_send_multiple_message(
-    hass: HomeAssistant, facebook: fb.FacebookNotificationService
-) -> None:
+async def test_send_multiple_message(hass: HomeAssistant, facebook) -> None:
     """Test sending a message to multiple targets."""
     with requests_mock.Mocker() as mock:
         mock.register_uri(requests_mock.POST, fb.BASE_URL, status_code=HTTPStatus.OK)
@@ -70,9 +65,7 @@ async def test_send_multiple_message(
             assert request.qs == expected_params
 
 
-async def test_send_message_attachment(
-    hass: HomeAssistant, facebook: fb.FacebookNotificationService
-) -> None:
+async def test_send_message_attachment(hass: HomeAssistant, facebook) -> None:
     """Test sending a message with a remote attachment."""
     with requests_mock.Mocker() as mock:
         mock.register_uri(requests_mock.POST, fb.BASE_URL, status_code=HTTPStatus.OK)
@@ -101,36 +94,32 @@ async def test_send_message_attachment(
         expected_params = {"access_token": ["page-access-token"]}
         assert mock.last_request.qs == expected_params
 
+    async def test_send_targetless_message(hass, facebook):
+        """Test sending a message without a target."""
+        with requests_mock.Mocker() as mock:
+            mock.register_uri(
+                requests_mock.POST, fb.BASE_URL, status_code=HTTPStatus.OK
+            )
 
-async def test_send_targetless_message(
-    hass: HomeAssistant, facebook: fb.FacebookNotificationService
-) -> None:
-    """Test sending a message without a target."""
-    with requests_mock.Mocker() as mock:
-        mock.register_uri(requests_mock.POST, fb.BASE_URL, status_code=HTTPStatus.OK)
+            facebook.send_message(message="going nowhere")
+            assert not mock.called
 
-        facebook.send_message(message="going nowhere")
-        assert not mock.called
-
-
-async def test_send_message_with_400(
-    hass: HomeAssistant, facebook: fb.FacebookNotificationService
-) -> None:
-    """Test sending a message with a 400 from Facebook."""
-    with requests_mock.Mocker() as mock:
-        mock.register_uri(
-            requests_mock.POST,
-            fb.BASE_URL,
-            status_code=HTTPStatus.BAD_REQUEST,
-            json={
-                "error": {
-                    "message": "Invalid OAuth access token.",
-                    "type": "OAuthException",
-                    "code": 190,
-                    "fbtrace_id": "G4Da2pFp2Dp",
-                }
-            },
-        )
-        facebook.send_message(message="nope!", target=["+15555551234"])
-        assert mock.called
-        assert mock.call_count == 1
+    async def test_send_message_with_400(hass, facebook):
+        """Test sending a message with a 400 from Facebook."""
+        with requests_mock.Mocker() as mock:
+            mock.register_uri(
+                requests_mock.POST,
+                fb.BASE_URL,
+                status_code=HTTPStatus.BAD_REQUEST,
+                json={
+                    "error": {
+                        "message": "Invalid OAuth access token.",
+                        "type": "OAuthException",
+                        "code": 190,
+                        "fbtrace_id": "G4Da2pFp2Dp",
+                    }
+                },
+            )
+            facebook.send_message(message="nope!", target=["+15555551234"])
+            assert mock.called
+            assert mock.call_count == 1

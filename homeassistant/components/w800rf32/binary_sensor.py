@@ -1,5 +1,4 @@
 """Support for w800rf32 binary sensors."""
-
 from __future__ import annotations
 
 import logging
@@ -9,7 +8,7 @@ import W800rf32 as w800
 
 from homeassistant.components.binary_sensor import (
     DEVICE_CLASSES_SCHEMA,
-    PLATFORM_SCHEMA as BINARY_SENSOR_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     BinarySensorEntity,
 )
 from homeassistant.const import CONF_DEVICE_CLASS, CONF_DEVICES, CONF_NAME
@@ -25,7 +24,7 @@ _LOGGER = logging.getLogger(__name__)
 
 CONF_OFF_DELAY = "off_delay"
 
-PLATFORM_SCHEMA = BINARY_SENSOR_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_DEVICES): {
             cv.string: vol.Schema(

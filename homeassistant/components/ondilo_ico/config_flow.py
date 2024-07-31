@@ -1,23 +1,20 @@
 """Config flow for Ondilo ICO."""
-
 import logging
-from typing import Any
 
-from homeassistant.config_entries import ConfigFlowResult
-from homeassistant.helpers.config_entry_oauth2_flow import AbstractOAuth2FlowHandler
+from homeassistant.helpers import config_entry_oauth2_flow
 
 from .const import DOMAIN
 from .oauth_impl import OndiloOauth2Implementation
 
 
-class OndiloIcoOAuth2FlowHandler(AbstractOAuth2FlowHandler, domain=DOMAIN):
+class OAuth2FlowHandler(
+    config_entry_oauth2_flow.AbstractOAuth2FlowHandler, domain=DOMAIN
+):
     """Config flow to handle Ondilo ICO OAuth2 authentication."""
 
     DOMAIN = DOMAIN
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_user(self, user_input=None):
         """Handle a flow initialized by the user."""
         await self.async_set_unique_id(DOMAIN)
 

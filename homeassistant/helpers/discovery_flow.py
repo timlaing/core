@@ -1,21 +1,17 @@
 """The discovery flow helper."""
-
 from __future__ import annotations
 
 from collections.abc import Coroutine
 from typing import Any, NamedTuple
 
-from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 from homeassistant.core import CoreState, Event, HomeAssistant, callback
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.loader import bind_hass
 from homeassistant.util.async_ import gather_with_limited_concurrency
-from homeassistant.util.hass_dict import HassKey
 
-FLOW_INIT_LIMIT = 20
-DISCOVERY_FLOW_DISPATCHER: HassKey[FlowDispatcher] = HassKey(
-    "discovery_flow_dispatcher"
-)
+FLOW_INIT_LIMIT = 2
+DISCOVERY_FLOW_DISPATCHER = "discovery_flow_dispatcher"
 
 
 @bind_hass
@@ -27,24 +23,22 @@ def async_create_flow(
     dispatcher: FlowDispatcher | None = None
     if DISCOVERY_FLOW_DISPATCHER in hass.data:
         dispatcher = hass.data[DISCOVERY_FLOW_DISPATCHER]
-    elif hass.state is not CoreState.running:
+    elif hass.state != CoreState.running:
         dispatcher = hass.data[DISCOVERY_FLOW_DISPATCHER] = FlowDispatcher(hass)
         dispatcher.async_setup()
 
     if not dispatcher or dispatcher.started:
         if init_coro := _async_init_flow(hass, domain, context, data):
-            hass.async_create_background_task(
-                init_coro, f"discovery flow {domain} {context}", eager_start=True
-            )
+            hass.async_create_task(init_coro, f"discovery flow {domain} {context}")
         return
 
-    dispatcher.async_create(domain, context, data)
+    return dispatcher.async_create(domain, context, data)
 
 
 @callback
 def _async_init_flow(
     hass: HomeAssistant, domain: str, context: dict[str, Any], data: Any
-) -> Coroutine[None, None, ConfigFlowResult] | None:
+) -> Coroutine[None, None, FlowResult] | None:
     """Create a discovery flow."""
     # Avoid spawning flows that have the same initial discovery data
     # as ones in progress as it may cause additional device probing
@@ -92,20 +86,17 @@ class FlowDispatcher:
         pending_flows = self.pending_flows
         self.pending_flows = {}
         self.started = True
-        init_coros = (
-            init_coro
+        init_coros = [
+            _async_init_flow(
+                self.hass, flow_key.domain, flow_values.context, flow_values.data
+            )
             for flow_key, flows in pending_flows.items()
             for flow_values in flows
-            if (
-                init_coro := _async_init_flow(
-                    self.hass,
-                    flow_key.domain,
-                    flow_values.context,
-                    flow_values.data,
-                )
-            )
+        ]
+        await gather_with_limited_concurrency(
+            FLOW_INIT_LIMIT,
+            *[init_coro for init_coro in init_coros if init_coro is not None],
         )
-        await gather_with_limited_concurrency(FLOW_INIT_LIMIT, *init_coros)
 
     @callback
     def async_create(self, domain: str, context: dict[str, Any], data: Any) -> None:

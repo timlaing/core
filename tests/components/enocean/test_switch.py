@@ -22,16 +22,15 @@ SWITCH_CONFIG = {
 }
 
 
-async def test_unique_id_migration(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-) -> None:
+async def test_unique_id_migration(hass: HomeAssistant) -> None:
     """Test EnOcean switch ID migration."""
 
     entity_name = SWITCH_CONFIG["switch"][0]["name"]
     switch_entity_id = f"{SWITCH_DOMAIN}.{entity_name}"
     dev_id = SWITCH_CONFIG["switch"][0]["id"]
     channel = SWITCH_CONFIG["switch"][0]["channel"]
+
+    ent_reg = er.async_get(hass)
 
     old_unique_id = f"{combine_hex(dev_id)}"
 
@@ -40,7 +39,7 @@ async def test_unique_id_migration(
     entry.add_to_hass(hass)
 
     # Add a switch with an old unique_id to the entity registry
-    entity_entry = entity_registry.async_get_or_create(
+    entity_entry = ent_reg.async_get_or_create(
         SWITCH_DOMAIN,
         ENOCEAN_DOMAIN,
         old_unique_id,
@@ -64,13 +63,11 @@ async def test_unique_id_migration(
     await hass.async_block_till_done()
 
     # Check that new entry has a new unique_id
-    entity_entry = entity_registry.async_get(switch_entity_id)
+    entity_entry = ent_reg.async_get(switch_entity_id)
     new_unique_id = f"{combine_hex(dev_id)}-{channel}"
 
     assert entity_entry.unique_id == new_unique_id
     assert (
-        entity_registry.async_get_entity_id(
-            SWITCH_DOMAIN, ENOCEAN_DOMAIN, old_unique_id
-        )
+        ent_reg.async_get_entity_id(SWITCH_DOMAIN, ENOCEAN_DOMAIN, old_unique_id)
         is None
     )

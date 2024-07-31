@@ -1,5 +1,4 @@
 """Provide common fixtures."""
-
 from __future__ import annotations
 
 import asyncio
@@ -22,7 +21,7 @@ MOCK_COMPR_FABRIC_ID = 1234
 
 
 @pytest.fixture(name="matter_client")
-async def matter_client_fixture() -> AsyncGenerator[MagicMock]:
+async def matter_client_fixture() -> AsyncGenerator[MagicMock, None]:
     """Fixture for a Matter client."""
     with patch(
         "homeassistant.components.matter.MatterClient", autospec=True
@@ -51,7 +50,6 @@ async def matter_client_fixture() -> AsyncGenerator[MagicMock]:
             wifi_credentials_set=True,
             thread_credentials_set=True,
             min_supported_schema_version=SCHEMA_VERSION,
-            bluetooth_enabled=False,
         )
 
         yield client
@@ -71,7 +69,7 @@ async def integration_fixture(
 
 
 @pytest.fixture(name="create_backup")
-def create_backup_fixture() -> Generator[AsyncMock]:
+def create_backup_fixture() -> Generator[AsyncMock, None, None]:
     """Mock Supervisor create backup of add-on."""
     with patch(
         "homeassistant.components.hassio.addon_manager.async_create_backup"
@@ -80,7 +78,7 @@ def create_backup_fixture() -> Generator[AsyncMock]:
 
 
 @pytest.fixture(name="addon_store_info")
-def addon_store_info_fixture() -> Generator[AsyncMock]:
+def addon_store_info_fixture() -> Generator[AsyncMock, None, None]:
     """Mock Supervisor add-on store info."""
     with patch(
         "homeassistant.components.hassio.addon_manager.async_get_addon_store_info"
@@ -95,7 +93,7 @@ def addon_store_info_fixture() -> Generator[AsyncMock]:
 
 
 @pytest.fixture(name="addon_info")
-def addon_info_fixture() -> Generator[AsyncMock]:
+def addon_info_fixture() -> Generator[AsyncMock, None, None]:
     """Mock Supervisor add-on info."""
     with patch(
         "homeassistant.components.hassio.addon_manager.async_get_addon_info",
@@ -159,7 +157,7 @@ def addon_running_fixture(
 @pytest.fixture(name="install_addon")
 def install_addon_fixture(
     addon_store_info: AsyncMock, addon_info: AsyncMock
-) -> Generator[AsyncMock]:
+) -> Generator[AsyncMock, None, None]:
     """Mock install add-on."""
 
     async def install_addon_side_effect(hass: HomeAssistant, slug: str) -> None:
@@ -182,7 +180,7 @@ def install_addon_fixture(
 
 
 @pytest.fixture(name="start_addon")
-def start_addon_fixture() -> Generator[AsyncMock]:
+def start_addon_fixture() -> Generator[AsyncMock, None, None]:
     """Mock start add-on."""
     with patch(
         "homeassistant.components.hassio.addon_manager.async_start_addon"
@@ -191,7 +189,7 @@ def start_addon_fixture() -> Generator[AsyncMock]:
 
 
 @pytest.fixture(name="stop_addon")
-def stop_addon_fixture() -> Generator[AsyncMock]:
+def stop_addon_fixture() -> Generator[AsyncMock, None, None]:
     """Mock stop add-on."""
     with patch(
         "homeassistant.components.hassio.addon_manager.async_stop_addon"
@@ -200,7 +198,7 @@ def stop_addon_fixture() -> Generator[AsyncMock]:
 
 
 @pytest.fixture(name="uninstall_addon")
-def uninstall_addon_fixture() -> Generator[AsyncMock]:
+def uninstall_addon_fixture() -> Generator[AsyncMock, None, None]:
     """Mock uninstall add-on."""
     with patch(
         "homeassistant.components.hassio.addon_manager.async_uninstall_addon"
@@ -209,7 +207,7 @@ def uninstall_addon_fixture() -> Generator[AsyncMock]:
 
 
 @pytest.fixture(name="update_addon")
-def update_addon_fixture() -> Generator[AsyncMock]:
+def update_addon_fixture() -> Generator[AsyncMock, None, None]:
     """Mock update add-on."""
     with patch(
         "homeassistant.components.hassio.addon_manager.async_update_addon"
@@ -223,16 +221,6 @@ async def door_lock_fixture(
 ) -> MatterNode:
     """Fixture for a door lock node."""
     return await setup_integration_with_node_fixture(hass, "door-lock", matter_client)
-
-
-@pytest.fixture(name="door_lock_with_unbolt")
-async def door_lock_with_unbolt_fixture(
-    hass: HomeAssistant, matter_client: MagicMock
-) -> MatterNode:
-    """Fixture for a door lock node with unbolt feature."""
-    return await setup_integration_with_node_fixture(
-        hass, "door-lock-with-unbolt", matter_client
-    )
 
 
 @pytest.fixture(name="eve_contact_sensor_node")

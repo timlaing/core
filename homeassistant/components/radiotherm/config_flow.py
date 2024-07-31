@@ -1,18 +1,19 @@
 """Config flow for Radio Thermostat integration."""
-
 from __future__ import annotations
 
 import logging
+from socket import timeout
 from typing import Any
 from urllib.error import URLError
 
 from radiotherm.validate import RadiothermTstatError
 import voluptuous as vol
 
+from homeassistant import config_entries
 from homeassistant.components import dhcp
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import DOMAIN
@@ -29,11 +30,11 @@ async def validate_connection(hass: HomeAssistant, host: str) -> RadioThermInitD
     """Validate the connection."""
     try:
         return await async_get_init_data(hass, host)
-    except (TimeoutError, RadiothermTstatError, URLError, OSError) as ex:
+    except (timeout, RadiothermTstatError, URLError, OSError) as ex:
         raise CannotConnect(f"Failed to connect to {host}: {ex}") from ex
 
 
-class RadioThermConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Radio Thermostat."""
 
     VERSION = 1
@@ -43,9 +44,7 @@ class RadioThermConfigFlow(ConfigFlow, domain=DOMAIN):
         self.discovered_ip: str | None = None
         self.discovered_init_data: RadioThermInitData | None = None
 
-    async def async_step_dhcp(
-        self, discovery_info: dhcp.DhcpServiceInfo
-    ) -> ConfigFlowResult:
+    async def async_step_dhcp(self, discovery_info: dhcp.DhcpServiceInfo) -> FlowResult:
         """Discover via DHCP."""
         self._async_abort_entries_match({CONF_HOST: discovery_info.ip})
         try:
@@ -86,7 +85,7 @@ class RadioThermConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         errors = {}
         if user_input is not None:
@@ -94,7 +93,7 @@ class RadioThermConfigFlow(ConfigFlow, domain=DOMAIN):
                 init_data = await validate_connection(self.hass, user_input[CONF_HOST])
             except CannotConnect:
                 errors[CONF_HOST] = "cannot_connect"
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:

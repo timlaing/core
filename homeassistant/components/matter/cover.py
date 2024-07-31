@@ -1,5 +1,4 @@
 """Matter cover."""
-
 from __future__ import annotations
 
 from enum import IntEnum
@@ -200,9 +199,7 @@ class MatterCover(MatterEntity, CoverEntity):
 DISCOVERY_SCHEMAS = [
     MatterDiscoverySchema(
         platform=Platform.COVER,
-        entity_description=CoverEntityDescription(
-            key="MatterCover", translation_key="cover"
-        ),
+        entity_description=CoverEntityDescription(key="MatterCover", name=None),
         entity_class=MatterCover,
         required_attributes=(
             clusters.WindowCovering.Attributes.OperationalStatus,
@@ -216,7 +213,7 @@ DISCOVERY_SCHEMAS = [
     MatterDiscoverySchema(
         platform=Platform.COVER,
         entity_description=CoverEntityDescription(
-            key="MatterCoverPositionAwareLift", translation_key="cover"
+            key="MatterCoverPositionAwareLift", name=None
         ),
         entity_class=MatterCover,
         required_attributes=(
@@ -231,7 +228,7 @@ DISCOVERY_SCHEMAS = [
     MatterDiscoverySchema(
         platform=Platform.COVER,
         entity_description=CoverEntityDescription(
-            key="MatterCoverPositionAwareTilt", translation_key="cover"
+            key="MatterCoverPositionAwareTilt", name=None
         ),
         entity_class=MatterCover,
         required_attributes=(
@@ -246,7 +243,7 @@ DISCOVERY_SCHEMAS = [
     MatterDiscoverySchema(
         platform=Platform.COVER,
         entity_description=CoverEntityDescription(
-            key="MatterCoverPositionAwareLiftAndTilt", translation_key="cover"
+            key="MatterCoverPositionAwareLiftAndTilt", name=None
         ),
         entity_class=MatterCover,
         required_attributes=(

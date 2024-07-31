@@ -1,5 +1,4 @@
 """Mycroft AI notification platform."""
-
 from __future__ import annotations
 
 import logging

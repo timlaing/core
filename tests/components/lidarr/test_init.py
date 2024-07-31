@@ -1,5 +1,4 @@
 """Test Lidarr integration."""
-
 from homeassistant.components.lidarr.const import DEFAULT_NAME, DOMAIN
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
@@ -14,7 +13,7 @@ async def test_setup(
     """Test setup."""
     await setup_integration()
     entry = hass.config_entries.async_entries(DOMAIN)[0]
-    assert entry.state is ConfigEntryState.LOADED
+    assert entry.state == ConfigEntryState.LOADED
 
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()
@@ -30,7 +29,7 @@ async def test_async_setup_entry_not_ready(
     await setup_integration()
     entry = hass.config_entries.async_entries(DOMAIN)[0]
     assert len(hass.config_entries.async_entries(DOMAIN)) == 1
-    assert entry.state is ConfigEntryState.SETUP_RETRY
+    assert entry.state == ConfigEntryState.SETUP_RETRY
     assert not hass.data.get(DOMAIN)
 
 
@@ -41,19 +40,17 @@ async def test_async_setup_entry_auth_failed(
     await setup_integration()
     entry = hass.config_entries.async_entries(DOMAIN)[0]
     assert len(hass.config_entries.async_entries(DOMAIN)) == 1
-    assert entry.state is ConfigEntryState.SETUP_ERROR
+    assert entry.state == ConfigEntryState.SETUP_ERROR
     assert not hass.data.get(DOMAIN)
 
 
 async def test_device_info(
-    hass: HomeAssistant,
-    device_registry: dr.DeviceRegistry,
-    setup_integration: ComponentSetup,
-    connection,
+    hass: HomeAssistant, setup_integration: ComponentSetup, connection
 ) -> None:
     """Test device info."""
     await setup_integration()
     entry = hass.config_entries.async_entries(DOMAIN)[0]
+    device_registry = dr.async_get(hass)
     await hass.async_block_till_done()
     device = device_registry.async_get_device(identifiers={(DOMAIN, entry.entry_id)})
 

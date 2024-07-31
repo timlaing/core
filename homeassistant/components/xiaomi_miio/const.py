@@ -1,5 +1,4 @@
 """Constants for the Xiaomi Miio component."""
-
 from miio.integrations.vacuum.roborock.vacuum import (
     ROCKROBO_E2,
     ROCKROBO_S4,
@@ -19,6 +18,8 @@ DOMAIN = "xiaomi_miio"
 # Config flow
 CONF_FLOW_TYPE = "config_flow_device"
 CONF_GATEWAY = "gateway"
+CONF_DEVICE = "device"
+CONF_MAC = "mac"
 CONF_CLOUD_USERNAME = "cloud_username"
 CONF_CLOUD_PASSWORD = "cloud_password"
 CONF_CLOUD_COUNTRY = "cloud_country"
@@ -61,14 +62,12 @@ MODEL_AIRPURIFIER_2S = "zhimi.airpurifier.mc1"
 MODEL_AIRPURIFIER_3 = "zhimi.airpurifier.ma4"
 MODEL_AIRPURIFIER_3C = "zhimi.airpurifier.mb4"
 MODEL_AIRPURIFIER_3H = "zhimi.airpurifier.mb3"
-MODEL_AIRPURIFIER_COMPACT = "xiaomi.airp.cpa4"
 MODEL_AIRPURIFIER_M1 = "zhimi.airpurifier.m1"
 MODEL_AIRPURIFIER_M2 = "zhimi.airpurifier.m2"
 MODEL_AIRPURIFIER_MA1 = "zhimi.airpurifier.ma1"
 MODEL_AIRPURIFIER_MA2 = "zhimi.airpurifier.ma2"
 MODEL_AIRPURIFIER_PRO = "zhimi.airpurifier.v6"
 MODEL_AIRPURIFIER_PROH = "zhimi.airpurifier.va1"
-MODEL_AIRPURIFIER_PROH_EU = "zhimi.airpurifier.vb2"
 MODEL_AIRPURIFIER_PRO_V7 = "zhimi.airpurifier.v7"
 MODEL_AIRPURIFIER_SA1 = "zhimi.airpurifier.sa1"
 MODEL_AIRPURIFIER_SA2 = "zhimi.airpurifier.sa2"
@@ -84,7 +83,6 @@ MODEL_AIRHUMIDIFIER_CA4 = "zhimi.humidifier.ca4"
 MODEL_AIRHUMIDIFIER_CB1 = "zhimi.humidifier.cb1"
 MODEL_AIRHUMIDIFIER_JSQ = "deerma.humidifier.jsq"
 MODEL_AIRHUMIDIFIER_JSQ1 = "deerma.humidifier.jsq1"
-MODEL_AIRHUMIDIFIER_JSQ2W = "deerma.humidifier.jsq2w"
 MODEL_AIRHUMIDIFIER_MJJSQ = "deerma.humidifier.mjjsq"
 
 MODEL_AIRFRESH_A1 = "dmaker.airfresh.a1"
@@ -128,7 +126,6 @@ MODELS_PURIFIER_MIOT = [
     MODEL_AIRPURIFIER_3C,
     MODEL_AIRPURIFIER_3H,
     MODEL_AIRPURIFIER_PROH,
-    MODEL_AIRPURIFIER_PROH_EU,
     MODEL_AIRPURIFIER_4_LITE_RMA1,
     MODEL_AIRPURIFIER_4_LITE_RMB1,
     MODEL_AIRPURIFIER_4,
@@ -150,7 +147,6 @@ MODELS_PURIFIER_MIIO = [
     MODEL_AIRPURIFIER_SA2,
     MODEL_AIRPURIFIER_2S,
     MODEL_AIRPURIFIER_2H,
-    MODEL_AIRPURIFIER_COMPACT,
     MODEL_AIRFRESH_A1,
     MODEL_AIRFRESH_VA2,
     MODEL_AIRFRESH_VA4,
@@ -165,7 +161,6 @@ MODELS_HUMIDIFIER_MIOT = [MODEL_AIRHUMIDIFIER_CA4]
 MODELS_HUMIDIFIER_MJJSQ = [
     MODEL_AIRHUMIDIFIER_JSQ,
     MODEL_AIRHUMIDIFIER_JSQ1,
-    MODEL_AIRHUMIDIFIER_JSQ2W,
     MODEL_AIRHUMIDIFIER_MJJSQ,
 ]
 

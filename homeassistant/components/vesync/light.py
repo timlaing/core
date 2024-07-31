@@ -1,5 +1,4 @@
 """Support for VeSync bulbs and wall dimmers."""
-
 import logging
 from typing import Any
 
@@ -15,9 +14,16 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .common import VeSyncDevice
-from .const import DEV_TYPE_TO_HA, DOMAIN, VS_DISCOVERY, VS_LIGHTS
+from .const import DOMAIN, VS_DISCOVERY, VS_LIGHTS
 
 _LOGGER = logging.getLogger(__name__)
+
+DEV_TYPE_TO_HA = {
+    "ESD16": "walldimmer",
+    "ESWD16": "walldimmer",
+    "ESL100": "bulb-dimmable",
+    "ESL100CW": "bulb-tunable-white",
+}
 
 
 async def async_setup_entry(

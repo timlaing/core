@@ -1,5 +1,4 @@
 """Bridge between emulated_roku and Home Assistant."""
-
 import logging
 
 from emulated_roku import EmulatedRokuCommandHandler, EmulatedRokuServer
@@ -156,7 +155,7 @@ class EmulatedRoku:
                 )
 
         # start immediately if already running
-        if self.hass.state is CoreState.running:
+        if self.hass.state == CoreState.running:
             await emulated_roku_start(None)
         else:
             self._unsub_start_listener = self.hass.bus.async_listen_once(

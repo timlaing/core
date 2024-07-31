@@ -1,5 +1,4 @@
 """Tests for the schema based data entry flows."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -24,7 +23,13 @@ from homeassistant.helpers.schema_config_entry_flow import (
 )
 from homeassistant.util.decorator import Registry
 
-from tests.common import MockConfigEntry, MockModule, mock_integration, mock_platform
+from tests.common import (
+    MockConfigEntry,
+    MockModule,
+    mock_entity_platform,
+    mock_integration,
+    mock_platform,
+)
 
 TEST_DOMAIN = "test"
 
@@ -68,15 +73,14 @@ def manager_fixture():
             return result
 
     mgr = FlowManager(None)
-    # pylint: disable-next=attribute-defined-outside-init
     mgr.mock_created_entries = entries
-    # pylint: disable-next=attribute-defined-outside-init
     mgr.mock_reg_handler = handlers.register
     return mgr
 
 
-async def test_name(hass: HomeAssistant, entity_registry: er.EntityRegistry) -> None:
+async def test_name(hass: HomeAssistant) -> None:
     """Test the config flow name is copied from registry entry, with fallback to state."""
+    registry = er.async_get(hass)
     entity_id = "switch.ceiling"
 
     # No entry or state, use Object ID
@@ -88,7 +92,7 @@ async def test_name(hass: HomeAssistant, entity_registry: er.EntityRegistry) -> 
 
     # Entity registered, use original name from registry entry
     hass.states.async_remove(entity_id)
-    entry = entity_registry.async_get_or_create(
+    entry = registry.async_get_or_create(
         "switch",
         "test",
         "unique",
@@ -101,12 +105,12 @@ async def test_name(hass: HomeAssistant, entity_registry: er.EntityRegistry) -> 
     assert wrapped_entity_config_entry_title(hass, entry.id) == "Original Name"
 
     # Entity has customized name
-    entity_registry.async_update_entity("switch.ceiling", name="Custom Name")
+    registry.async_update_entity("switch.ceiling", name="Custom Name")
     assert wrapped_entity_config_entry_title(hass, entity_id) == "Custom Name"
     assert wrapped_entity_config_entry_title(hass, entry.id) == "Custom Name"
 
 
-@pytest.mark.parametrize("marker", [vol.Required, vol.Optional])
+@pytest.mark.parametrize("marker", (vol.Required, vol.Optional))
 async def test_config_flow_advanced_option(
     hass: HomeAssistant, manager: data_entry_flow.FlowManager, marker
 ) -> None:
@@ -201,7 +205,7 @@ async def test_config_flow_advanced_option(
         assert isinstance(option, str)
 
 
-@pytest.mark.parametrize("marker", [vol.Required, vol.Optional])
+@pytest.mark.parametrize("marker", (vol.Required, vol.Optional))
 async def test_options_flow_advanced_option(
     hass: HomeAssistant, manager: data_entry_flow.FlowManager, marker
 ) -> None:
@@ -229,7 +233,7 @@ async def test_options_flow_advanced_option(
         options_flow = OPTIONS_FLOW
 
     mock_integration(hass, MockModule("test"))
-    mock_platform(hass, "test.config_flow", None)
+    mock_entity_platform(hass, "config_flow.test", None)
     config_entry = MockConfigEntry(
         data={},
         domain="test",
@@ -518,7 +522,7 @@ async def test_suggested_values(
         options_flow = OPTIONS_FLOW
 
     mock_integration(hass, MockModule("test"))
-    mock_platform(hass, "test.config_flow", None)
+    mock_entity_platform(hass, "config_flow.test", None)
     config_entry = MockConfigEntry(
         data={},
         domain="test",
@@ -631,7 +635,7 @@ async def test_options_flow_state(hass: HomeAssistant) -> None:
         options_flow = OPTIONS_FLOW
 
     mock_integration(hass, MockModule("test"))
-    mock_platform(hass, "test.config_flow", None)
+    mock_entity_platform(hass, "config_flow.test", None)
     config_entry = MockConfigEntry(
         data={},
         domain="test",
@@ -697,7 +701,7 @@ async def test_options_flow_omit_optional_keys(
         options_flow = OPTIONS_FLOW
 
     mock_integration(hass, MockModule("test"))
-    mock_platform(hass, "test.config_flow", None)
+    mock_entity_platform(hass, "config_flow.test", None)
     config_entry = MockConfigEntry(
         data={},
         domain="test",

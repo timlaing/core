@@ -1,5 +1,4 @@
 """Adds config flow for SabNzbd."""
-
 from __future__ import annotations
 
 import logging
@@ -7,7 +6,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant import config_entries
 from homeassistant.const import (
     CONF_API_KEY,
     CONF_HOST,
@@ -16,6 +15,7 @@ from homeassistant.const import (
     CONF_SSL,
     CONF_URL,
 )
+from homeassistant.data_entry_flow import FlowResult
 
 from .const import DEFAULT_NAME, DOMAIN
 from .sab import get_client
@@ -31,7 +31,7 @@ USER_SCHEMA = vol.Schema(
 )
 
 
-class SABnzbdConfigFlow(ConfigFlow, domain=DOMAIN):
+class SABnzbdConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Sabnzbd config flow."""
 
     VERSION = 1
@@ -47,7 +47,7 @@ class SABnzbdConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow initialized by the user."""
 
         errors = {}
@@ -68,7 +68,7 @@ class SABnzbdConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_import(self, import_data):
         """Import sabnzbd config from configuration.yaml."""
         protocol = "https://" if import_data[CONF_SSL] else "http://"
-        import_data[CONF_URL] = (
-            f"{protocol}{import_data[CONF_HOST]}:{import_data[CONF_PORT]}"
-        )
+        import_data[
+            CONF_URL
+        ] = f"{protocol}{import_data[CONF_HOST]}:{import_data[CONF_PORT]}"
         return await self.async_step_user(import_data)

@@ -1,5 +1,4 @@
 """Test the Scrape config flow."""
-
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, patch
@@ -49,7 +48,7 @@ async def test_form(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["step_id"] == "user"
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
 
     with patch(
         "homeassistant.components.rest.RestData",
@@ -75,7 +74,7 @@ async def test_form(
         )
         await hass.async_block_till_done()
 
-    assert result3["type"] is FlowResultType.CREATE_ENTRY
+    assert result3["type"] == FlowResultType.CREATE_ENTRY
     assert result3["version"] == 1
     assert result3["options"] == {
         CONF_RESOURCE: "https://www.home-assistant.io",
@@ -106,7 +105,7 @@ async def test_form_with_post(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["step_id"] == "user"
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
 
     with patch(
         "homeassistant.components.rest.RestData",
@@ -133,7 +132,7 @@ async def test_form_with_post(
         )
         await hass.async_block_till_done()
 
-    assert result3["type"] is FlowResultType.CREATE_ENTRY
+    assert result3["type"] == FlowResultType.CREATE_ENTRY
     assert result3["version"] == 1
     assert result3["options"] == {
         CONF_RESOURCE: "https://www.home-assistant.io",
@@ -165,7 +164,7 @@ async def test_flow_fails(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == config_entries.SOURCE_USER
 
     with patch(
@@ -224,7 +223,7 @@ async def test_flow_fails(
         )
         await hass.async_block_till_done()
 
-    assert result4["type"] is FlowResultType.CREATE_ENTRY
+    assert result4["type"] == FlowResultType.CREATE_ENTRY
     assert result4["title"] == "https://www.home-assistant.io"
     assert result4["options"] == {
         CONF_RESOURCE: "https://www.home-assistant.io",
@@ -253,7 +252,7 @@ async def test_options_resource_flow(
 
     result = await hass.config_entries.options.async_init(loaded_entry.entry_id)
 
-    assert result["type"] is FlowResultType.MENU
+    assert result["type"] == FlowResultType.MENU
     assert result["step_id"] == "init"
 
     result = await hass.config_entries.options.async_configure(
@@ -261,7 +260,7 @@ async def test_options_resource_flow(
         {"next_step_id": "resource"},
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "resource"
 
     mocker = MockRestData("test_scrape_sensor2")
@@ -280,7 +279,7 @@ async def test_options_resource_flow(
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"] == {
         CONF_RESOURCE: "https://www.home-assistant.io",
         CONF_METHOD: "GET",
@@ -319,7 +318,7 @@ async def test_options_add_remove_sensor_flow(
 
     result = await hass.config_entries.options.async_init(loaded_entry.entry_id)
 
-    assert result["type"] is FlowResultType.MENU
+    assert result["type"] == FlowResultType.MENU
     assert result["step_id"] == "init"
 
     result = await hass.config_entries.options.async_configure(
@@ -327,16 +326,13 @@ async def test_options_add_remove_sensor_flow(
         {"next_step_id": "add_sensor"},
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "add_sensor"
 
     mocker = MockRestData("test_scrape_sensor2")
-    with (
-        patch("homeassistant.components.rest.RestData", return_value=mocker),
-        patch(
-            "homeassistant.components.scrape.config_flow.uuid.uuid1",
-            return_value=uuid.UUID("3699ef88-69e6-11ed-a1eb-0242ac120003"),
-        ),
+    with patch("homeassistant.components.rest.RestData", return_value=mocker), patch(
+        "homeassistant.components.scrape.config_flow.uuid.uuid1",
+        return_value=uuid.UUID("3699ef88-69e6-11ed-a1eb-0242ac120003"),
     ):
         result = await hass.config_entries.options.async_configure(
             result["flow_id"],
@@ -348,7 +344,7 @@ async def test_options_add_remove_sensor_flow(
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"] == {
         CONF_RESOURCE: "https://www.home-assistant.io",
         CONF_METHOD: "GET",
@@ -387,7 +383,7 @@ async def test_options_add_remove_sensor_flow(
 
     result = await hass.config_entries.options.async_init(loaded_entry.entry_id)
 
-    assert result["type"] is FlowResultType.MENU
+    assert result["type"] == FlowResultType.MENU
     assert result["step_id"] == "init"
 
     result = await hass.config_entries.options.async_configure(
@@ -395,7 +391,7 @@ async def test_options_add_remove_sensor_flow(
         {"next_step_id": "remove_sensor"},
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "remove_sensor"
 
     mocker = MockRestData("test_scrape_sensor2")
@@ -408,7 +404,7 @@ async def test_options_add_remove_sensor_flow(
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"] == {
         CONF_RESOURCE: "https://www.home-assistant.io",
         CONF_METHOD: "GET",
@@ -445,7 +441,7 @@ async def test_options_edit_sensor_flow(
 
     result = await hass.config_entries.options.async_init(loaded_entry.entry_id)
 
-    assert result["type"] is FlowResultType.MENU
+    assert result["type"] == FlowResultType.MENU
     assert result["step_id"] == "init"
 
     result = await hass.config_entries.options.async_configure(
@@ -453,7 +449,7 @@ async def test_options_edit_sensor_flow(
         {"next_step_id": "select_edit_sensor"},
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "select_edit_sensor"
 
     result = await hass.config_entries.options.async_configure(
@@ -461,7 +457,7 @@ async def test_options_edit_sensor_flow(
         {"index": "0"},
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "edit_sensor"
 
     mocker = MockRestData("test_scrape_sensor2")
@@ -475,7 +471,7 @@ async def test_options_edit_sensor_flow(
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"] == {
         CONF_RESOURCE: "https://www.home-assistant.io",
         CONF_METHOD: "GET",
@@ -529,21 +525,21 @@ async def test_sensor_options_add_device_class(
     entry.add_to_hass(hass)
 
     result = await hass.config_entries.options.async_init(entry.entry_id)
-    assert result["type"] is FlowResultType.MENU
+    assert result["type"] == FlowResultType.MENU
     assert result["step_id"] == "init"
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         {"next_step_id": "select_edit_sensor"},
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "select_edit_sensor"
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         {"index": "0"},
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "edit_sensor"
 
     result = await hass.config_entries.options.async_configure(
@@ -559,7 +555,7 @@ async def test_sensor_options_add_device_class(
     )
     await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"] == {
         CONF_RESOURCE: "https://www.home-assistant.io",
         CONF_METHOD: "GET",
@@ -611,21 +607,21 @@ async def test_sensor_options_remove_device_class(
     entry.add_to_hass(hass)
 
     result = await hass.config_entries.options.async_init(entry.entry_id)
-    assert result["type"] is FlowResultType.MENU
+    assert result["type"] == FlowResultType.MENU
     assert result["step_id"] == "init"
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         {"next_step_id": "select_edit_sensor"},
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "select_edit_sensor"
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         {"index": "0"},
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "edit_sensor"
 
     result = await hass.config_entries.options.async_configure(
@@ -638,7 +634,7 @@ async def test_sensor_options_remove_device_class(
     )
     await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"] == {
         CONF_RESOURCE: "https://www.home-assistant.io",
         CONF_METHOD: "GET",

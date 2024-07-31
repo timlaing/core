@@ -1,5 +1,4 @@
 """Fixtures for the Fully Kiosk Browser integration tests."""
-
 from __future__ import annotations
 
 from collections.abc import Generator
@@ -9,13 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from homeassistant.components.fully_kiosk.const import DOMAIN
-from homeassistant.const import (
-    CONF_HOST,
-    CONF_MAC,
-    CONF_PASSWORD,
-    CONF_SSL,
-    CONF_VERIFY_SSL,
-)
+from homeassistant.const import CONF_HOST, CONF_MAC, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
 
 from tests.common import MockConfigEntry, load_fixture
@@ -31,15 +24,13 @@ def mock_config_entry() -> MockConfigEntry:
             CONF_HOST: "127.0.0.1",
             CONF_PASSWORD: "mocked-password",
             CONF_MAC: "aa:bb:cc:dd:ee:ff",
-            CONF_SSL: False,
-            CONF_VERIFY_SSL: False,
         },
         unique_id="12345",
     )
 
 
 @pytest.fixture
-def mock_setup_entry() -> Generator[AsyncMock]:
+def mock_setup_entry() -> Generator[AsyncMock, None, None]:
     """Mock setting up a config entry."""
     with patch(
         "homeassistant.components.fully_kiosk.async_setup_entry", return_value=True
@@ -48,7 +39,7 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 
 
 @pytest.fixture
-def mock_fully_kiosk_config_flow() -> Generator[MagicMock]:
+def mock_fully_kiosk_config_flow() -> Generator[MagicMock, None, None]:
     """Return a mocked Fully Kiosk client for the config flow."""
     with patch(
         "homeassistant.components.fully_kiosk.config_flow.FullyKiosk",
@@ -64,7 +55,7 @@ def mock_fully_kiosk_config_flow() -> Generator[MagicMock]:
 
 
 @pytest.fixture
-def mock_fully_kiosk() -> Generator[MagicMock]:
+def mock_fully_kiosk() -> Generator[MagicMock, None, None]:
     """Return a mocked Fully Kiosk client."""
     with patch(
         "homeassistant.components.fully_kiosk.coordinator.FullyKiosk",

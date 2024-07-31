@@ -1,5 +1,4 @@
 """Test fixtures for Brottplatskartan."""
-
 from collections.abc import Generator
 from unittest.mock import AsyncMock, patch
 
@@ -7,7 +6,7 @@ import pytest
 
 
 @pytest.fixture
-def mock_setup_entry() -> Generator[AsyncMock]:
+def mock_setup_entry() -> Generator[AsyncMock, None, None]:
     """Override async_setup_entry."""
     with patch(
         "homeassistant.components.brottsplatskartan.async_setup_entry",
@@ -17,7 +16,7 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 
 
 @pytest.fixture(autouse=True)
-def uuid_generator() -> Generator[AsyncMock]:
+def uuid_generator() -> Generator[AsyncMock, None, None]:
     """Generate uuid for app-id."""
     with patch(
         "homeassistant.components.brottsplatskartan.config_flow.uuid.getnode",

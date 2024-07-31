@@ -1,5 +1,4 @@
 """Constants for the Wallbox integration."""
-
 from enum import StrEnum
 
 DOMAIN = "wallbox"

@@ -1,5 +1,4 @@
 """The Aussie Broadband integration."""
-
 from __future__ import annotations
 
 from datetime import timedelta
@@ -32,16 +31,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         async_get_clientsession(hass),
     )
 
-    # Ignore services that don't support usage data
-    ignore_types = [*FETCH_TYPES, "Hardware"]
-
     try:
         await client.login()
-        services = await client.get_services(drop_types=ignore_types)
+        services = await client.get_services(drop_types=FETCH_TYPES)
     except AuthenticationException as exc:
-        raise ConfigEntryAuthFailed from exc
+        raise ConfigEntryAuthFailed() from exc
     except ClientError as exc:
-        raise ConfigEntryNotReady from exc
+        raise ConfigEntryNotReady() from exc
 
     # Create an appropriate refresh function
     def update_data_factory(service_id):

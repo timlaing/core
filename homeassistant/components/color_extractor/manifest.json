@@ -4,6 +4,5 @@
   "codeowners": ["@GenericStudent"],
   "config_flow": true,
   "documentation": "https://www.home-assistant.io/integrations/color_extractor",
-  "requirements": ["colorthief==0.2.1"],
-  "single_config_entry": true
+  "requirements": ["colorthief==0.2.1"]
 }

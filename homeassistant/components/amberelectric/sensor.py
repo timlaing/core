@@ -4,8 +4,10 @@
 # Current and forecast will create general, controlled load and feed in as required
 # At the moment renewables in the only grid sensor.
 
+
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from amberelectric.model.channel import ChannelType
@@ -25,6 +27,12 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import ATTRIBUTION, DOMAIN
 from .coordinator import AmberUpdateCoordinator, normalize_descriptor
+
+ICONS = {
+    "general": "mdi:transmission-tower",
+    "controlled_load": "mdi:clock-outline",
+    "feed_in": "mdi:solar-power",
+}
 
 UNIT = f"{CURRENCY_DOLLAR}/{UnitOfEnergy.KILO_WATT_HOUR}"
 
@@ -78,7 +86,7 @@ class AmberPriceSensor(AmberSensor):
         return format_cents_to_dollars(interval.per_kwh)
 
     @property
-    def extra_state_attributes(self) -> dict[str, Any] | None:
+    def extra_state_attributes(self) -> Mapping[str, Any] | None:
         """Return additional pieces of information about the price."""
         interval = self.coordinator.data[self.entity_description.key][self.channel_type]
 
@@ -125,7 +133,7 @@ class AmberForecastSensor(AmberSensor):
         return format_cents_to_dollars(interval.per_kwh)
 
     @property
-    def extra_state_attributes(self) -> dict[str, Any] | None:
+    def extra_state_attributes(self) -> Mapping[str, Any] | None:
         """Return additional pieces of information about the price."""
         intervals = self.coordinator.data[self.entity_description.key].get(
             self.channel_type
@@ -169,7 +177,7 @@ class AmberPriceDescriptorSensor(AmberSensor):
     @property
     def native_value(self) -> str | None:
         """Return the current price descriptor."""
-        return self.coordinator.data[self.entity_description.key][self.channel_type]  # type: ignore[no-any-return]
+        return self.coordinator.data[self.entity_description.key][self.channel_type]
 
 
 class AmberGridSensor(CoordinatorEntity[AmberUpdateCoordinator], SensorEntity):
@@ -191,7 +199,7 @@ class AmberGridSensor(CoordinatorEntity[AmberUpdateCoordinator], SensorEntity):
     @property
     def native_value(self) -> str | None:
         """Return the value of the sensor."""
-        return self.coordinator.data["grid"][self.entity_description.key]  # type: ignore[no-any-return]
+        return self.coordinator.data["grid"][self.entity_description.key]
 
 
 async def async_setup_entry(
@@ -205,14 +213,14 @@ async def async_setup_entry(
     current: dict[str, CurrentInterval] = coordinator.data["current"]
     forecasts: dict[str, list[ForecastInterval]] = coordinator.data["forecasts"]
 
-    entities: list[SensorEntity] = []
+    entities: list = []
     for channel_type in current:
         description = SensorEntityDescription(
             key="current",
             name=f"{entry.title} - {friendly_channel_type(channel_type)} Price",
             native_unit_of_measurement=UNIT,
             state_class=SensorStateClass.MEASUREMENT,
-            translation_key=channel_type,
+            icon=ICONS[channel_type],
         )
         entities.append(AmberPriceSensor(coordinator, description, channel_type))
 
@@ -223,7 +231,7 @@ async def async_setup_entry(
                 f"{entry.title} - {friendly_channel_type(channel_type)} Price"
                 " Descriptor"
             ),
-            translation_key=channel_type,
+            icon=ICONS[channel_type],
         )
         entities.append(
             AmberPriceDescriptorSensor(coordinator, description, channel_type)
@@ -235,7 +243,7 @@ async def async_setup_entry(
             name=f"{entry.title} - {friendly_channel_type(channel_type)} Forecast",
             native_unit_of_measurement=UNIT,
             state_class=SensorStateClass.MEASUREMENT,
-            translation_key=channel_type,
+            icon=ICONS[channel_type],
         )
         entities.append(AmberForecastSensor(coordinator, description, channel_type))
 
@@ -244,7 +252,7 @@ async def async_setup_entry(
         name=f"{entry.title} - Renewables",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        translation_key="renewables",
+        icon="mdi:solar-power",
     )
     entities.append(AmberGridSensor(coordinator, renewables_description))
 

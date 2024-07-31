@@ -1,5 +1,4 @@
 """The test for the NuHeat thermostat module."""
-
 from datetime import timedelta
 from unittest.mock import patch
 

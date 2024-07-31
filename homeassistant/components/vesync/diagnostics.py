@@ -1,5 +1,4 @@
 """Diagnostics support for VeSync."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -24,7 +23,7 @@ async def async_get_config_entry_diagnostics(
     """Return diagnostics for a config entry."""
     manager: VeSync = hass.data[DOMAIN][VS_MANAGER]
 
-    return {
+    data = {
         DOMAIN: {
             "bulb_count": len(manager.bulbs),
             "fan_count": len(manager.fans),
@@ -39,6 +38,8 @@ async def async_get_config_entry_diagnostics(
             "switches": [_redact_device_values(device) for device in manager.switches],
         },
     }
+
+    return data
 
 
 async def async_get_device_diagnostics(

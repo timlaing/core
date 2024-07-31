@@ -1,5 +1,4 @@
 """Support for Tasmota binary sensors."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -43,12 +42,12 @@ async def async_setup_entry(
             ]
         )
 
-    hass.data[DATA_REMOVE_DISCOVER_COMPONENT.format(binary_sensor.DOMAIN)] = (
-        async_dispatcher_connect(
-            hass,
-            TASMOTA_DISCOVERY_ENTITY_NEW.format(binary_sensor.DOMAIN),
-            async_discover,
-        )
+    hass.data[
+        DATA_REMOVE_DISCOVER_COMPONENT.format(binary_sensor.DOMAIN)
+    ] = async_dispatcher_connect(
+        hass,
+        TASMOTA_DISCOVERY_ENTITY_NEW.format(binary_sensor.DOMAIN),
+        async_discover,
     )
 
 

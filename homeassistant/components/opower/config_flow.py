@@ -1,10 +1,8 @@
 """Config flow for Opower integration."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
 import logging
-import socket
 from typing import Any
 
 from opower import (
@@ -16,11 +14,11 @@ from opower import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_NAME, CONF_PASSWORD, CONF_USERNAME
+from homeassistant import config_entries
+from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
-from homeassistant.helpers.typing import VolDictType
 
 from .const import CONF_TOTP_SECRET, CONF_UTILITY, DOMAIN
 
@@ -40,7 +38,7 @@ async def _validate_login(
 ) -> dict[str, str]:
     """Validate login data and return any errors."""
     api = Opower(
-        async_create_clientsession(hass, family=socket.AF_INET),
+        async_create_clientsession(hass),
         login_data[CONF_UTILITY],
         login_data[CONF_USERNAME],
         login_data[CONF_PASSWORD],
@@ -56,19 +54,19 @@ async def _validate_login(
     return errors
 
 
-class OpowerConfigFlow(ConfigFlow, domain=DOMAIN):
+class OpowerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Opower."""
 
     VERSION = 1
 
     def __init__(self) -> None:
         """Initialize a new OpowerConfigFlow."""
-        self.reauth_entry: ConfigEntry | None = None
+        self.reauth_entry: config_entries.ConfigEntry | None = None
         self.utility_info: dict[str, Any] | None = None
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -92,7 +90,7 @@ class OpowerConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_mfa(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle MFA step."""
         assert self.utility_info is not None
         errors: dict[str, str] = {}
@@ -121,16 +119,14 @@ class OpowerConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
     @callback
-    def _async_create_opower_entry(self, data: dict[str, Any]) -> ConfigFlowResult:
+    def _async_create_opower_entry(self, data: dict[str, Any]) -> FlowResult:
         """Create the config entry."""
         return self.async_create_entry(
             title=f"{data[CONF_UTILITY]} ({data[CONF_USERNAME]})",
             data=data,
         )
 
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Handle configuration by re-auth."""
         self.reauth_entry = self.hass.config_entries.async_get_entry(
             self.context["entry_id"]
@@ -139,7 +135,7 @@ class OpowerConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Dialog that informs the user that reauth is required."""
         assert self.reauth_entry
         errors: dict[str, str] = {}
@@ -152,7 +148,7 @@ class OpowerConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
                 await self.hass.config_entries.async_reload(self.reauth_entry.entry_id)
                 return self.async_abort(reason="reauth_successful")
-        schema: VolDictType = {
+        schema = {
             vol.Required(CONF_USERNAME): self.reauth_entry.data[CONF_USERNAME],
             vol.Required(CONF_PASSWORD): str,
         }
@@ -162,5 +158,4 @@ class OpowerConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="reauth_confirm",
             data_schema=vol.Schema(schema),
             errors=errors,
-            description_placeholders={CONF_NAME: self.reauth_entry.title},
         )

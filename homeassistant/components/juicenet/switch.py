@@ -1,5 +1,4 @@
 """Support for monitoring juicenet/juicepoint/juicebox based EVSE switches."""
-
 from typing import Any
 
 from homeassistant.components.switch import SwitchEntity
@@ -17,13 +16,14 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the JuiceNet switches."""
+    entities = []
     juicenet_data = hass.data[DOMAIN][config_entry.entry_id]
     api = juicenet_data[JUICENET_API]
     coordinator = juicenet_data[JUICENET_COORDINATOR]
 
-    async_add_entities(
-        JuiceNetChargeNowSwitch(device, coordinator) for device in api.devices
-    )
+    for device in api.devices:
+        entities.append(JuiceNetChargeNowSwitch(device, coordinator))
+    async_add_entities(entities)
 
 
 class JuiceNetChargeNowSwitch(JuiceNetDevice, SwitchEntity):

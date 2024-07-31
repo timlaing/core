@@ -1,5 +1,4 @@
 """Support for XS1 switches."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -23,12 +22,14 @@ def setup_platform(
     """Set up the XS1 switch platform."""
     actuators = hass.data[COMPONENT_DOMAIN][ACTUATORS]
 
-    add_entities(
-        XS1SwitchEntity(actuator)
-        for actuator in actuators
-        if (actuator.type() == ActuatorType.SWITCH)
-        or (actuator.type() == ActuatorType.DIMMER)
-    )
+    switch_entities = []
+    for actuator in actuators:
+        if (actuator.type() == ActuatorType.SWITCH) or (
+            actuator.type() == ActuatorType.DIMMER
+        ):
+            switch_entities.append(XS1SwitchEntity(actuator))
+
+    add_entities(switch_entities)
 
 
 class XS1SwitchEntity(XS1DeviceEntity, SwitchEntity):

@@ -1,8 +1,6 @@
 """Test the Z-Wave JS Websocket API."""
-
 from copy import deepcopy
 from http import HTTPStatus
-from io import BytesIO
 import json
 from typing import Any
 from unittest.mock import patch
@@ -38,6 +36,7 @@ from zwave_js_server.model.value import ConfigurationValue, get_value_id_str
 
 from homeassistant.components.websocket_api import ERR_INVALID_FORMAT, ERR_NOT_FOUND
 from homeassistant.components.zwave_js.api import (
+    ADDITIONAL_PROPERTIES,
     APPLICATION_VERSION,
     CLIENT_SIDE_AUTH,
     COMMAND_CLASS_ID,
@@ -58,7 +57,6 @@ from homeassistant.components.zwave_js.api import (
     LEVEL,
     LOG_TO_FILE,
     MANUFACTURER_ID,
-    MAX_INCLUSION_REQUEST_INTERVAL,
     NODE_ID,
     OPTED_IN,
     PIN,
@@ -74,9 +72,7 @@ from homeassistant.components.zwave_js.api import (
     SPECIFIC_DEVICE_CLASS,
     STATUS,
     STRATEGY,
-    SUPPORTED_PROTOCOLS,
     TYPE,
-    UUID,
     VALUE,
     VERSION,
 )
@@ -128,7 +124,6 @@ async def test_no_driver(
 
 async def test_network_status(
     hass: HomeAssistant,
-    device_registry: dr.DeviceRegistry,
     multisensor_6,
     controller_state,
     client,
@@ -161,7 +156,8 @@ async def test_network_status(
     assert result["controller"]["inclusion_state"] == InclusionState.IDLE
 
     # Try API call with device ID
-    device = device_registry.async_get_device(
+    dev_reg = dr.async_get(hass)
+    device = dev_reg.async_get_device(
         identifiers={(DOMAIN, "3245146787-52")},
     )
     assert device
@@ -253,7 +249,6 @@ async def test_network_status(
 
 async def test_subscribe_node_status(
     hass: HomeAssistant,
-    device_registry: dr.DeviceRegistry,
     multisensor_6_state,
     client,
     integration,
@@ -268,7 +263,8 @@ async def test_subscribe_node_status(
     driver = client.driver
     driver.controller.nodes[node.node_id] = node
 
-    device = device_registry.async_get_or_create(
+    dev_reg = dr.async_get(hass)
+    device = dev_reg.async_get_or_create(
         config_entry_id=entry.entry_id, identifiers={get_device_id(driver, node)}
     )
 
@@ -461,9 +457,8 @@ async def test_node_metadata(
     assert msg["error"]["code"] == ERR_NOT_LOADED
 
 
-async def test_node_alerts(
+async def test_node_comments(
     hass: HomeAssistant,
-    device_registry: dr.DeviceRegistry,
     wallmote_central_scene,
     integration,
     hass_ws_client: WebSocketGenerator,
@@ -471,20 +466,20 @@ async def test_node_alerts(
     """Test the node comments websocket command."""
     ws_client = await hass_ws_client(hass)
 
-    device = device_registry.async_get_device(identifiers={(DOMAIN, "3245146787-35")})
+    dev_reg = dr.async_get(hass)
+    device = dev_reg.async_get_device(identifiers={(DOMAIN, "3245146787-35")})
     assert device
 
     await ws_client.send_json(
         {
             ID: 3,
-            TYPE: "zwave_js/node_alerts",
+            TYPE: "zwave_js/node_comments",
             DEVICE_ID: device.id,
         }
     )
     msg = await ws_client.receive_json()
     result = msg["result"]
     assert result["comments"] == [{"level": "info", "text": "test"}]
-    assert result["is_embedded"]
 
 
 async def test_add_node(
@@ -531,25 +526,6 @@ async def test_add_node(
 
     msg = await ws_client.receive_json()
     assert msg["event"]["event"] == "inclusion started"
-
-    event = Event(
-        type="node found",
-        data={
-            "source": "controller",
-            "event": "node found",
-            "node": {
-                "nodeId": 67,
-            },
-        },
-    )
-    client.driver.receive_event(event)
-
-    msg = await ws_client.receive_json()
-    assert msg["event"]["event"] == "node found"
-    node_details = {
-        "node_id": 67,
-    }
-    assert msg["event"]["node"] == node_details
 
     event = Event(
         type="grant security classes",
@@ -1093,7 +1069,7 @@ async def test_provision_smart_start_node(
                 PRODUCT_TYPE: 1,
                 PRODUCT_ID: 1,
                 APPLICATION_VERSION: "test",
-                "name": "test",
+                ADDITIONAL_PROPERTIES: {"name": "test"},
             },
         }
     )
@@ -1352,7 +1328,13 @@ async def test_get_provisioning_entries(
     msg = await ws_client.receive_json()
     assert msg["success"]
     assert msg["result"] == [
-        {DSK: "test", SECURITY_CLASSES: [0], STATUS: 0, "fake": "test"}
+        {
+            "dsk": "test",
+            "security_classes": [SecurityClass.S2_UNAUTHENTICATED],
+            "requested_security_classes": None,
+            "status": 0,
+            "additional_properties": {"fake": "test"},
+        }
     ]
 
     assert len(client.async_send_command.call_args_list) == 1
@@ -1428,20 +1410,22 @@ async def test_parse_qr_code_string(
     msg = await ws_client.receive_json()
     assert msg["success"]
     assert msg["result"] == {
-        VERSION: 0,
-        SECURITY_CLASSES: [0],
-        DSK: "test",
-        GENERIC_DEVICE_CLASS: 1,
-        SPECIFIC_DEVICE_CLASS: 1,
-        INSTALLER_ICON_TYPE: 1,
-        MANUFACTURER_ID: 1,
-        PRODUCT_TYPE: 1,
-        PRODUCT_ID: 1,
-        APPLICATION_VERSION: "test",
-        MAX_INCLUSION_REQUEST_INTERVAL: 1,
-        UUID: "test",
-        SUPPORTED_PROTOCOLS: [Protocols.ZWAVE],
-        STATUS: 0,
+        "version": 0,
+        "security_classes": [SecurityClass.S2_UNAUTHENTICATED],
+        "dsk": "test",
+        "generic_device_class": 1,
+        "specific_device_class": 1,
+        "installer_icon_type": 1,
+        "manufacturer_id": 1,
+        "product_type": 1,
+        "product_id": 1,
+        "application_version": "test",
+        "max_inclusion_request_interval": 1,
+        "uuid": "test",
+        "supported_protocols": [Protocols.ZWAVE],
+        "status": 0,
+        "requested_security_classes": None,
+        "additional_properties": {},
     }
 
     assert len(client.async_send_command.call_args_list) == 1
@@ -1661,7 +1645,6 @@ async def test_cancel_inclusion_exclusion(
 
 async def test_remove_node(
     hass: HomeAssistant,
-    device_registry: dr.DeviceRegistry,
     integration,
     client,
     hass_ws_client: WebSocketGenerator,
@@ -1698,8 +1681,10 @@ async def test_remove_node(
     msg = await ws_client.receive_json()
     assert msg["event"]["event"] == "exclusion started"
 
+    dev_reg = dr.async_get(hass)
+
     # Create device registry entry for mock node
-    device = device_registry.async_get_or_create(
+    device = dev_reg.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, "3245146787-67")},
         name="Node 67",
@@ -1711,7 +1696,7 @@ async def test_remove_node(
     assert msg["event"]["event"] == "node removed"
 
     # Verify device was removed from device registry
-    device = device_registry.async_get_device(
+    device = dev_reg.async_get_device(
         identifiers={(DOMAIN, "3245146787-67")},
     )
     assert device is None
@@ -1771,7 +1756,6 @@ async def test_remove_node(
 
 async def test_replace_failed_node(
     hass: HomeAssistant,
-    device_registry: dr.DeviceRegistry,
     nortek_thermostat,
     integration,
     client,
@@ -1783,8 +1767,10 @@ async def test_replace_failed_node(
     entry = integration
     ws_client = await hass_ws_client(hass)
 
+    dev_reg = dr.async_get(hass)
+
     # Create device registry entry for mock node
-    device = device_registry.async_get_or_create(
+    device = dev_reg.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, "3245146787-67")},
         name="Node 67",
@@ -1829,25 +1815,6 @@ async def test_replace_failed_node(
 
     msg = await ws_client.receive_json()
     assert msg["event"]["event"] == "inclusion started"
-
-    event = Event(
-        type="node found",
-        data={
-            "source": "controller",
-            "event": "node found",
-            "node": {
-                "nodeId": 67,
-            },
-        },
-    )
-    client.driver.receive_event(event)
-
-    msg = await ws_client.receive_json()
-    assert msg["event"]["event"] == "node found"
-    node_details = {
-        "node_id": 67,
-    }
-    assert msg["event"]["node"] == node_details
 
     event = Event(
         type="grant security classes",
@@ -1899,7 +1866,7 @@ async def test_replace_failed_node(
 
     # Verify device was removed from device registry
     assert (
-        device_registry.async_get_device(
+        dev_reg.async_get_device(
             identifiers={(DOMAIN, "3245146787-67")},
         )
         is None
@@ -2138,7 +2105,6 @@ async def test_replace_failed_node(
 
 async def test_remove_failed_node(
     hass: HomeAssistant,
-    device_registry: dr.DeviceRegistry,
     nortek_thermostat,
     integration,
     client,
@@ -2182,8 +2148,10 @@ async def test_remove_failed_node(
     msg = await ws_client.receive_json()
     assert msg["success"]
 
+    dev_reg = dr.async_get(hass)
+
     # Create device registry entry for mock node
-    device = device_registry.async_get_or_create(
+    device = dev_reg.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, "3245146787-67")},
         name="Node 67",
@@ -2196,7 +2164,7 @@ async def test_remove_failed_node(
 
     # Verify device was removed from device registry
     assert (
-        device_registry.async_get_device(
+        dev_reg.async_get_device(
             identifiers={(DOMAIN, "3245146787-67")},
         )
         is None
@@ -2825,7 +2793,6 @@ async def test_set_config_parameter(
 
     msg = await ws_client.receive_json()
     assert msg["success"]
-    assert msg["result"]["status"] == "queued"
 
     assert len(client.async_send_command_no_wait.call_args_list) == 1
     args = client.async_send_command_no_wait.call_args[0][0]
@@ -2858,7 +2825,6 @@ async def test_set_config_parameter(
 
     msg = await ws_client.receive_json()
     assert msg["success"]
-    assert msg["result"]["status"] == "queued"
 
     assert len(client.async_send_command_no_wait.call_args_list) == 1
     args = client.async_send_command_no_wait.call_args[0][0]
@@ -2890,7 +2856,6 @@ async def test_set_config_parameter(
 
     msg = await ws_client.receive_json()
     assert msg["success"]
-    assert msg["result"]["status"] == "queued"
 
     assert len(client.async_send_command_no_wait.call_args_list) == 1
     args = client.async_send_command_no_wait.call_args[0][0]
@@ -3100,17 +3065,13 @@ async def test_firmware_upload_view(
     """Test the HTTP firmware upload view."""
     client = await hass_client()
     device = get_device(hass, multisensor_6)
-    with (
-        patch(
-            "homeassistant.components.zwave_js.api.update_firmware",
-        ) as mock_node_cmd,
-        patch(
-            "homeassistant.components.zwave_js.api.controller_firmware_update_otw",
-        ) as mock_controller_cmd,
-        patch.dict(
-            "homeassistant.components.zwave_js.api.USER_AGENT",
-            {"HomeAssistant": "0.0.0"},
-        ),
+    with patch(
+        "homeassistant.components.zwave_js.api.update_firmware",
+    ) as mock_node_cmd, patch(
+        "homeassistant.components.zwave_js.api.controller_firmware_update_otw",
+    ) as mock_controller_cmd, patch.dict(
+        "homeassistant.components.zwave_js.api.USER_AGENT",
+        {"HomeAssistant": "0.0.0"},
     ):
         data = {"file": firmware_file}
         data.update(firmware_data)
@@ -3119,9 +3080,7 @@ async def test_firmware_upload_view(
             f"/api/zwave_js/firmware/upload/{device.id}", data=data
         )
 
-        update_data = NodeFirmwareUpdateData(
-            "file", b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-        )
+        update_data = NodeFirmwareUpdateData("file", bytes(10))
         for attr, value in expected_data.items():
             setattr(update_data, attr, value)
 
@@ -3143,17 +3102,13 @@ async def test_firmware_upload_view_controller(
     """Test the HTTP firmware upload view for a controller."""
     hass_client = await hass_client()
     device = get_device(hass, client.driver.controller.nodes[1])
-    with (
-        patch(
-            "homeassistant.components.zwave_js.api.update_firmware",
-        ) as mock_node_cmd,
-        patch(
-            "homeassistant.components.zwave_js.api.controller_firmware_update_otw",
-        ) as mock_controller_cmd,
-        patch.dict(
-            "homeassistant.components.zwave_js.api.USER_AGENT",
-            {"HomeAssistant": "0.0.0"},
-        ),
+    with patch(
+        "homeassistant.components.zwave_js.api.update_firmware",
+    ) as mock_node_cmd, patch(
+        "homeassistant.components.zwave_js.api.controller_firmware_update_otw",
+    ) as mock_controller_cmd, patch.dict(
+        "homeassistant.components.zwave_js.api.USER_AGENT",
+        {"HomeAssistant": "0.0.0"},
     ):
         resp = await hass_client.post(
             f"/api/zwave_js/firmware/upload/{device.id}",
@@ -3161,9 +3116,7 @@ async def test_firmware_upload_view_controller(
         )
         mock_node_cmd.assert_not_called()
         assert mock_controller_cmd.call_args[0][1:2] == (
-            ControllerFirmwareUpdateData(
-                "file", b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-            ),
+            ControllerFirmwareUpdateData("file", bytes(10)),
         )
         assert mock_controller_cmd.call_args[1] == {
             "additional_user_agent_components": {"HomeAssistant": "0.0.0"},
@@ -3200,7 +3153,7 @@ async def test_firmware_upload_view_invalid_payload(
     client = await hass_client()
     resp = await client.post(
         f"/api/zwave_js/firmware/upload/{device.id}",
-        data={"wrong_key": BytesIO(bytes(10))},
+        data={"wrong_key": bytes(10)},
     )
     assert resp.status == HTTPStatus.BAD_REQUEST
 
@@ -3218,7 +3171,7 @@ async def test_firmware_upload_view_no_driver(
     aiohttp_client = await hass_client()
     resp = await aiohttp_client.post(
         f"/api/zwave_js/firmware/upload/{device.id}",
-        data={"wrong_key": BytesIO(bytes(10))},
+        data={"wrong_key": bytes(10)},
     )
     assert resp.status == HTTPStatus.NOT_FOUND
 
@@ -4700,20 +4653,11 @@ async def test_subscribe_node_statistics(
 
 
 async def test_hard_reset_controller(
-    hass: HomeAssistant,
-    device_registry: dr.DeviceRegistry,
-    client,
-    integration,
-    listen_block,
-    hass_ws_client: WebSocketGenerator,
+    hass: HomeAssistant, client, integration, hass_ws_client: WebSocketGenerator
 ) -> None:
     """Test that the hard_reset_controller WS API call works."""
     entry = integration
     ws_client = await hass_ws_client(hass)
-
-    device = device_registry.async_get_device(
-        identifiers={get_device_id(client.driver, client.driver.controller.nodes[1])}
-    )
 
     client.async_send_command.return_value = {}
     await ws_client.send_json(
@@ -4723,13 +4667,8 @@ async def test_hard_reset_controller(
             ENTRY_ID: entry.entry_id,
         }
     )
-
-    listen_block.set()
-    listen_block.clear()
-    await hass.async_block_till_done()
-
     msg = await ws_client.receive_json()
-    assert msg["result"] == device.id
+    assert msg["result"] is None
     assert msg["success"]
 
     assert len(client.async_send_command.call_args_list) == 1

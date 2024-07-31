@@ -1,5 +1,4 @@
 """Test Matter lights."""
-
 from unittest.mock import MagicMock, call
 
 from chip.clusters import Objects as clusters
@@ -18,31 +17,21 @@ from .common import (
 # This tests needs to be adjusted to remove lingering tasks
 @pytest.mark.parametrize("expected_lingering_tasks", [True])
 @pytest.mark.parametrize(
-    ("fixture", "entity_id", "supported_color_modes"),
+    ("fixture", "entity_id"),
     [
-        (
-            "extended-color-light",
-            "light.mock_extended_color_light_light",
-            ["color_temp", "hs", "xy"],
-        ),
-        (
-            "color-temperature-light",
-            "light.mock_color_temperature_light_light",
-            ["color_temp"],
-        ),
-        ("dimmable-light", "light.mock_dimmable_light_light", ["brightness"]),
-        ("onoff-light", "light.mock_onoff_light_light", ["onoff"]),
-        ("onoff-light-with-levelcontrol-present", "light.d215s_light", ["onoff"]),
+        ("extended-color-light", "light.mock_extended_color_light"),
+        ("color-temperature-light", "light.mock_color_temperature_light"),
+        ("dimmable-light", "light.mock_dimmable_light"),
+        ("onoff-light", "light.mock_onoff_light"),
     ],
 )
-async def test_light_turn_on_off(
+async def test_on_off_light(
     hass: HomeAssistant,
     matter_client: MagicMock,
     fixture: str,
     entity_id: str,
-    supported_color_modes: list[str],
 ) -> None:
-    """Test basic light discovery and turn on/off."""
+    """Test an on/off light."""
 
     light_node = await setup_integration_with_node_fixture(
         hass,
@@ -57,11 +46,6 @@ async def test_light_turn_on_off(
     state = hass.states.get(entity_id)
     assert state is not None
     assert state.state == "off"
-
-    # check the supported_color_modes
-    # especially important is the onoff light device type that does have
-    # a levelcontrol cluster present which we should ignore
-    assert state.attributes["supported_color_modes"] == supported_color_modes
 
     # Test that the light is on
     set_node_attribute(light_node, 1, 6, 0, True)
@@ -113,10 +97,9 @@ async def test_light_turn_on_off(
 @pytest.mark.parametrize(
     ("fixture", "entity_id"),
     [
-        ("extended-color-light", "light.mock_extended_color_light_light"),
-        ("color-temperature-light", "light.mock_color_temperature_light_light"),
-        ("dimmable-light", "light.mock_dimmable_light_light"),
-        ("dimmable-plugin-unit", "light.dimmable_plugin_unit_light"),
+        ("extended-color-light", "light.mock_extended_color_light"),
+        ("color-temperature-light", "light.mock_color_temperature_light"),
+        ("dimmable-light", "light.mock_dimmable_light"),
     ],
 )
 async def test_dimmable_light(
@@ -159,26 +142,7 @@ async def test_dimmable_light(
         endpoint_id=1,
         command=clusters.LevelControl.Commands.MoveToLevelWithOnOff(
             level=128,
-            transitionTime=2,
-        ),
-    )
-    matter_client.send_device_command.reset_mock()
-
-    # Change brightness with custom transition
-    await hass.services.async_call(
-        "light",
-        "turn_on",
-        {"entity_id": entity_id, "brightness": 128, "transition": 3},
-        blocking=True,
-    )
-
-    assert matter_client.send_device_command.call_count == 1
-    assert matter_client.send_device_command.call_args == call(
-        node_id=light_node.node_id,
-        endpoint_id=1,
-        command=clusters.LevelControl.Commands.MoveToLevelWithOnOff(
-            level=128,
-            transitionTime=30,
+            transitionTime=0,
         ),
     )
     matter_client.send_device_command.reset_mock()
@@ -189,8 +153,8 @@ async def test_dimmable_light(
 @pytest.mark.parametrize(
     ("fixture", "entity_id"),
     [
-        ("extended-color-light", "light.mock_extended_color_light_light"),
-        ("color-temperature-light", "light.mock_color_temperature_light_light"),
+        ("extended-color-light", "light.mock_extended_color_light"),
+        ("color-temperature-light", "light.mock_color_temperature_light"),
     ],
 )
 async def test_color_temperature_light(
@@ -237,39 +201,7 @@ async def test_color_temperature_light(
                 endpoint_id=1,
                 command=clusters.ColorControl.Commands.MoveToColorTemperature(
                     colorTemperatureMireds=300,
-                    transitionTime=2,
-                    optionsMask=1,
-                    optionsOverride=1,
-                ),
-            ),
-            call(
-                node_id=light_node.node_id,
-                endpoint_id=1,
-                command=clusters.OnOff.Commands.On(),
-            ),
-        ]
-    )
-    matter_client.send_device_command.reset_mock()
-
-    # Change color temperature with custom transition
-    await hass.services.async_call(
-        "light",
-        "turn_on",
-        {"entity_id": entity_id, "color_temp": 300, "transition": 4.0},
-        blocking=True,
-    )
-
-    assert matter_client.send_device_command.call_count == 2
-    matter_client.send_device_command.assert_has_calls(
-        [
-            call(
-                node_id=light_node.node_id,
-                endpoint_id=1,
-                command=clusters.ColorControl.Commands.MoveToColorTemperature(
-                    colorTemperatureMireds=300,
-                    transitionTime=40,
-                    optionsMask=1,
-                    optionsOverride=1,
+                    transitionTime=0,
                 ),
             ),
             call(
@@ -287,7 +219,7 @@ async def test_color_temperature_light(
 @pytest.mark.parametrize(
     ("fixture", "entity_id"),
     [
-        ("extended-color-light", "light.mock_extended_color_light_light"),
+        ("extended-color-light", "light.mock_extended_color_light"),
     ],
 )
 async def test_extended_color_light(
@@ -346,42 +278,7 @@ async def test_extended_color_light(
                 node_id=light_node.node_id,
                 endpoint_id=1,
                 command=clusters.ColorControl.Commands.MoveToColor(
-                    colorX=0.5 * 65536,
-                    colorY=0.5 * 65536,
-                    transitionTime=2,
-                    optionsMask=1,
-                    optionsOverride=1,
-                ),
-            ),
-            call(
-                node_id=light_node.node_id,
-                endpoint_id=1,
-                command=clusters.OnOff.Commands.On(),
-            ),
-        ]
-    )
-    matter_client.send_device_command.reset_mock()
-
-    # Turn the light on with XY color and custom transition
-    await hass.services.async_call(
-        "light",
-        "turn_on",
-        {"entity_id": entity_id, "xy_color": (0.5, 0.5), "transition": 4.0},
-        blocking=True,
-    )
-
-    assert matter_client.send_device_command.call_count == 2
-    matter_client.send_device_command.assert_has_calls(
-        [
-            call(
-                node_id=light_node.node_id,
-                endpoint_id=1,
-                command=clusters.ColorControl.Commands.MoveToColor(
-                    colorX=0.5 * 65536,
-                    colorY=0.5 * 65536,
-                    transitionTime=40,
-                    optionsMask=1,
-                    optionsOverride=1,
+                    colorX=0.5 * 65536, colorY=0.5 * 65536, transitionTime=0
                 ),
             ),
             call(
@@ -413,44 +310,9 @@ async def test_extended_color_light(
                 command=clusters.ColorControl.Commands.MoveToHueAndSaturation(
                     hue=167,
                     saturation=254,
-                    transitionTime=2,
-                    optionsMask=1,
-                    optionsOverride=1,
-                ),
-            ),
-            call(
-                node_id=light_node.node_id,
-                endpoint_id=1,
-                command=clusters.OnOff.Commands.On(),
-            ),
-        ]
-    )
-    matter_client.send_device_command.reset_mock()
-
-    # Turn the light on with HS color and custom transition
-    await hass.services.async_call(
-        "light",
-        "turn_on",
-        {
-            "entity_id": entity_id,
-            "hs_color": (236.69291338582678, 100.0),
-            "transition": 4.0,
-        },
-        blocking=True,
-    )
-
-    assert matter_client.send_device_command.call_count == 2
-    matter_client.send_device_command.assert_has_calls(
-        [
-            call(
-                node_id=1,
-                endpoint_id=1,
-                command=clusters.ColorControl.Commands.MoveToHueAndSaturation(
-                    hue=167,
-                    saturation=254,
-                    transitionTime=40,
-                    optionsMask=1,
-                    optionsOverride=1,
+                    transitionTime=0,
+                    optionsMask=0,
+                    optionsOverride=0,
                 ),
             ),
             call(

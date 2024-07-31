@@ -1,5 +1,4 @@
 """Config flow for Vera."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -11,18 +10,12 @@ import pyvera as pv
 from requests.exceptions import RequestException
 import voluptuous as vol
 
-from homeassistant.config_entries import (
-    SOURCE_IMPORT,
-    SOURCE_USER,
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlow,
-)
+from homeassistant import config_entries
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_EXCLUDE, CONF_LIGHTS, CONF_SOURCE
 from homeassistant.core import callback
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.typing import VolDictType
 
 from .const import CONF_CONTROLLER, CONF_LEGACY_UNIQUE_ID, DOMAIN
 
@@ -50,7 +43,9 @@ def new_options(lights: list[int], exclude: list[int]) -> dict[str, list[int]]:
     return {CONF_LIGHTS: lights, CONF_EXCLUDE: exclude}
 
 
-def options_schema(options: Mapping[str, Any] | None = None) -> VolDictType:
+def options_schema(
+    options: Mapping[str, Any] | None = None
+) -> dict[vol.Optional, type[str]]:
     """Return options schema."""
     options = options or {}
     return {
@@ -73,7 +68,7 @@ def options_data(user_input: dict[str, str]) -> dict[str, list[int]]:
     )
 
 
-class OptionsFlowHandler(OptionsFlow):
+class OptionsFlowHandler(config_entries.OptionsFlow):
     """Options for the component."""
 
     def __init__(self, config_entry: ConfigEntry) -> None:
@@ -83,7 +78,7 @@ class OptionsFlowHandler(OptionsFlow):
     async def async_step_init(
         self,
         user_input: dict[str, str] | None = None,
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Manage the options."""
         if user_input is not None:
             return self.async_create_entry(
@@ -97,7 +92,7 @@ class OptionsFlowHandler(OptionsFlow):
         )
 
 
-class VeraFlowHandler(ConfigFlow, domain=DOMAIN):
+class VeraFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Vera config flow."""
 
     @staticmethod
@@ -108,26 +103,26 @@ class VeraFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle user initiated flow."""
         if user_input is not None:
             return await self.async_step_finish(
                 {
                     **user_input,
                     **options_data(user_input),
-                    CONF_SOURCE: SOURCE_USER,
-                    CONF_LEGACY_UNIQUE_ID: False,
+                    **{CONF_SOURCE: config_entries.SOURCE_USER},
+                    **{CONF_LEGACY_UNIQUE_ID: False},
                 }
             )
 
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema(
-                {vol.Required(CONF_CONTROLLER): str, **options_schema()}
+                {**{vol.Required(CONF_CONTROLLER): str}, **options_schema()}
             ),
         )
 
-    async def async_step_import(self, config: dict[str, Any]) -> ConfigFlowResult:
+    async def async_step_import(self, config: dict[str, Any]) -> FlowResult:
         """Handle a flow initialized by import."""
 
         # If there are entities with the legacy unique_id, then this imported config
@@ -147,12 +142,12 @@ class VeraFlowHandler(ConfigFlow, domain=DOMAIN):
         return await self.async_step_finish(
             {
                 **config,
-                CONF_SOURCE: SOURCE_IMPORT,
-                CONF_LEGACY_UNIQUE_ID: use_legacy_unique_id,
+                **{CONF_SOURCE: config_entries.SOURCE_IMPORT},
+                **{CONF_LEGACY_UNIQUE_ID: use_legacy_unique_id},
             }
         )
 
-    async def async_step_finish(self, config: dict[str, Any]) -> ConfigFlowResult:
+    async def async_step_finish(self, config: dict[str, Any]) -> FlowResult:
         """Validate and create config entry."""
         base_url = config[CONF_CONTROLLER] = config[CONF_CONTROLLER].rstrip("/")
         controller = pv.VeraController(base_url)

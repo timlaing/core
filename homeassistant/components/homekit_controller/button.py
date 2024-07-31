@@ -3,10 +3,8 @@
 These are mostly used where a HomeKit accessory exposes additional non-standard
 characteristics that don't map to a Home Assistant feature.
 """
-
 from __future__ import annotations
 
-from collections.abc import Callable
 from dataclasses import dataclass
 import logging
 
@@ -30,11 +28,10 @@ from .entity import CharacteristicEntity
 _LOGGER = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
+@dataclass
 class HomeKitButtonEntityDescription(ButtonEntityDescription):
     """Describes Homekit button."""
 
-    probe: Callable[[Characteristic], bool] | None = None
     write_value: int | str | None = None
 
 
@@ -42,21 +39,20 @@ BUTTON_ENTITIES: dict[str, HomeKitButtonEntityDescription] = {
     CharacteristicsTypes.VENDOR_HAA_SETUP: HomeKitButtonEntityDescription(
         key=CharacteristicsTypes.VENDOR_HAA_SETUP,
         name="Setup",
-        translation_key="setup",
+        icon="mdi:cog",
         entity_category=EntityCategory.CONFIG,
-        write_value="#HAA@trcmd",  # codespell:ignore haa
+        write_value="#HAA@trcmd",
     ),
     CharacteristicsTypes.VENDOR_HAA_UPDATE: HomeKitButtonEntityDescription(
         key=CharacteristicsTypes.VENDOR_HAA_UPDATE,
         name="Update",
         device_class=ButtonDeviceClass.UPDATE,
         entity_category=EntityCategory.CONFIG,
-        write_value="#HAA@trcmd",  # codespell:ignore haa
+        write_value="#HAA@trcmd",
     ),
     CharacteristicsTypes.IDENTIFY: HomeKitButtonEntityDescription(
         key=CharacteristicsTypes.IDENTIFY,
         name="Identify",
-        device_class=ButtonDeviceClass.IDENTIFY,
         entity_category=EntityCategory.DIAGNOSTIC,
         write_value=True,
     ),
@@ -74,19 +70,13 @@ async def async_setup_entry(
 
     @callback
     def async_add_characteristic(char: Characteristic) -> bool:
-        entities: list[CharacteristicEntity] = []
+        entities: list[HomeKitButton | HomeKitEcobeeClearHoldButton] = []
         info = {"aid": char.service.accessory.aid, "iid": char.service.iid}
 
         if description := BUTTON_ENTITIES.get(char.type):
             entities.append(HomeKitButton(conn, info, char, description))
         elif entity_type := BUTTON_ENTITY_CLASSES.get(char.type):
             entities.append(entity_type(conn, info, char))
-        elif char.type == CharacteristicsTypes.THREAD_CONTROL_POINT:
-            if not conn.is_unprovisioned_thread_device:
-                return False
-            entities.append(
-                HomeKitProvisionPreferredThreadCredentials(conn, info, char)
-            )
         else:
             return False
 
@@ -101,11 +91,7 @@ async def async_setup_entry(
     conn.add_char_factory(async_add_characteristic)
 
 
-class BaseHomeKitButton(CharacteristicEntity, ButtonEntity):
-    """Base class for all HomeKit buttons."""
-
-
-class HomeKitButton(BaseHomeKitButton):
+class HomeKitButton(CharacteristicEntity, ButtonEntity):
     """Representation of a Button control on a homekit accessory."""
 
     entity_description: HomeKitButtonEntityDescription
@@ -139,7 +125,7 @@ class HomeKitButton(BaseHomeKitButton):
         await self.async_put_characteristics({key: val})
 
 
-class HomeKitEcobeeClearHoldButton(BaseHomeKitButton):
+class HomeKitEcobeeClearHoldButton(CharacteristicEntity, ButtonEntity):
     """Representation of a Button control for Ecobee clear hold request."""
 
     def get_characteristic_types(self) -> list[str]:
@@ -168,7 +154,7 @@ class HomeKitEcobeeClearHoldButton(BaseHomeKitButton):
             await self.async_put_characteristics({key: val})
 
 
-class HomeKitProvisionPreferredThreadCredentials(BaseHomeKitButton):
+class HomeKitProvisionPreferredThreadCredentials(CharacteristicEntity, ButtonEntity):
     """A button users can press to migrate their HomeKit BLE device to Thread."""
 
     _attr_entity_category = EntityCategory.CONFIG
@@ -192,4 +178,5 @@ class HomeKitProvisionPreferredThreadCredentials(BaseHomeKitButton):
 
 BUTTON_ENTITY_CLASSES: dict[str, type] = {
     CharacteristicsTypes.VENDOR_ECOBEE_CLEAR_HOLD: HomeKitEcobeeClearHoldButton,
+    CharacteristicsTypes.THREAD_CONTROL_POINT: HomeKitProvisionPreferredThreadCredentials,
 }

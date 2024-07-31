@@ -10,7 +10,7 @@ from tests.common import MockConfigEntry
 
 
 @pytest.fixture(name="config_entry")
-def config_entry_fixture() -> MockConfigEntry:
+def config_entry_fixture():
     """Create hass config_entry fixture."""
     data = {
         CONF_HOST: "192.168.1.1",

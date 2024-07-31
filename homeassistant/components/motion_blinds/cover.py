@@ -1,5 +1,4 @@
-"""Support for Motionblinds using their WLAN API."""
-
+"""Support for Motion Blinds using their WLAN API."""
 from __future__ import annotations
 
 import logging
@@ -20,7 +19,6 @@ from homeassistant.core import CALLBACK_TYPE, HomeAssistant
 from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.typing import VolDictType
 
 from .const import (
     ATTR_ABSOLUTE_POSITION,
@@ -53,7 +51,6 @@ POSITION_DEVICE_MAP = {
     BlindType.CurtainLeft: CoverDeviceClass.CURTAIN,
     BlindType.CurtainRight: CoverDeviceClass.CURTAIN,
     BlindType.SkylightBlind: CoverDeviceClass.SHADE,
-    BlindType.InsectScreen: CoverDeviceClass.SHADE,
 }
 
 TILT_DEVICE_MAP = {
@@ -72,11 +69,10 @@ TILT_ONLY_DEVICE_MAP = {
 
 TDBU_DEVICE_MAP = {
     BlindType.TopDownBottomUp: CoverDeviceClass.SHADE,
-    BlindType.TriangleBlind: CoverDeviceClass.BLIND,
 }
 
 
-SET_ABSOLUTE_POSITION_SCHEMA: VolDictType = {
+SET_ABSOLUTE_POSITION_SCHEMA = {
     vol.Required(ATTR_ABSOLUTE_POSITION): vol.All(cv.positive_int, vol.Range(max=100)),
     vol.Optional(ATTR_TILT_POSITION): vol.All(cv.positive_int, vol.Range(max=100)),
     vol.Optional(ATTR_WIDTH): vol.All(cv.positive_int, vol.Range(max=100)),
@@ -89,7 +85,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Motion Blind from a config entry."""
-    entities: list[MotionBaseDevice] = []
+    entities = []
     motion_gateway = hass.data[DOMAIN][config_entry.entry_id][KEY_GATEWAY]
     coordinator = hass.data[DOMAIN][config_entry.entry_id][KEY_COORDINATOR]
 
@@ -170,9 +166,10 @@ async def async_setup_entry(
     )
 
 
-class MotionBaseDevice(MotionCoordinatorEntity, CoverEntity):
-    """Representation of a Motionblinds Device."""
+class MotionPositionDevice(MotionCoordinatorEntity, CoverEntity):
+    """Representation of a Motion Blind Device."""
 
+    _attr_name = None
     _restore_tilt = False
 
     def __init__(self, coordinator, blind, device_class):
@@ -306,14 +303,8 @@ class MotionBaseDevice(MotionCoordinatorEntity, CoverEntity):
         await self.async_request_position_till_stop(delay=UPDATE_DELAY_STOP)
 
 
-class MotionPositionDevice(MotionBaseDevice):
-    """Representation of a Motion Blind Device."""
-
-    _attr_name = None
-
-
 class MotionTiltDevice(MotionPositionDevice):
-    """Representation of a Motionblinds Device."""
+    """Representation of a Motion Blind Device."""
 
     _restore_tilt = True
 
@@ -359,7 +350,7 @@ class MotionTiltDevice(MotionPositionDevice):
 
 
 class MotionTiltOnlyDevice(MotionTiltDevice):
-    """Representation of a Motionblinds Device."""
+    """Representation of a Motion Blind Device."""
 
     _restore_tilt = False
 
@@ -401,7 +392,7 @@ class MotionTiltOnlyDevice(MotionTiltDevice):
                 )
 
 
-class MotionTDBUDevice(MotionBaseDevice):
+class MotionTDBUDevice(MotionPositionDevice):
     """Representation of a Motion Top Down Bottom Up blind Device."""
 
     def __init__(self, coordinator, blind, device_class, motor):

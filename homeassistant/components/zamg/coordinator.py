@@ -1,5 +1,4 @@
 """Data Update coordinator for ZAMG weather data."""
-
 from __future__ import annotations
 
 from zamg import ZamgData as ZamgDevice

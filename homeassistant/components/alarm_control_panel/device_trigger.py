@@ -1,5 +1,4 @@
 """Provides device automations for Alarm control panel."""
-
 from __future__ import annotations
 
 from typing import Final
@@ -30,7 +29,12 @@ from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
 from homeassistant.helpers.typing import ConfigType
 
 from . import DOMAIN
-from .const import AlarmControlPanelEntityFeature
+from .const import (
+    SUPPORT_ALARM_ARM_AWAY,
+    SUPPORT_ALARM_ARM_HOME,
+    SUPPORT_ALARM_ARM_NIGHT,
+    SUPPORT_ALARM_ARM_VACATION,
+)
 
 BASIC_TRIGGER_TYPES: Final[set[str]] = {"triggered", "disarmed", "arming"}
 TRIGGER_TYPES: Final[set[str]] = BASIC_TRIGGER_TYPES | {
@@ -78,28 +82,28 @@ async def async_get_triggers(
             }
             for trigger in BASIC_TRIGGER_TYPES
         ]
-        if supported_features & AlarmControlPanelEntityFeature.ARM_HOME:
+        if supported_features & SUPPORT_ALARM_ARM_HOME:
             triggers.append(
                 {
                     **base_trigger,
                     CONF_TYPE: "armed_home",
                 }
             )
-        if supported_features & AlarmControlPanelEntityFeature.ARM_AWAY:
+        if supported_features & SUPPORT_ALARM_ARM_AWAY:
             triggers.append(
                 {
                     **base_trigger,
                     CONF_TYPE: "armed_away",
                 }
             )
-        if supported_features & AlarmControlPanelEntityFeature.ARM_NIGHT:
+        if supported_features & SUPPORT_ALARM_ARM_NIGHT:
             triggers.append(
                 {
                     **base_trigger,
                     CONF_TYPE: "armed_night",
                 }
             )
-        if supported_features & AlarmControlPanelEntityFeature.ARM_VACATION:
+        if supported_features & SUPPORT_ALARM_ARM_VACATION:
             triggers.append(
                 {
                     **base_trigger,

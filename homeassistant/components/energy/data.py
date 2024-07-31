@@ -1,5 +1,4 @@
 """Energy data."""
-
 from __future__ import annotations
 
 import asyncio
@@ -121,7 +120,7 @@ class WaterSourceType(TypedDict):
     number_energy_price: float | None  # Price for energy ($/m³)
 
 
-type SourceType = (
+SourceType = (
     GridSourceType
     | SolarSourceType
     | BatterySourceType
@@ -135,9 +134,6 @@ class DeviceConsumption(TypedDict):
 
     # This is an ever increasing value
     stat_consumption: str
-
-    # An optional custom name for display in energy graphs
-    name: str | None
 
 
 class EnergyPreferences(TypedDict):
@@ -290,7 +286,6 @@ ENERGY_SOURCE_SCHEMA = vol.All(
 DEVICE_CONSUMPTION_SCHEMA = vol.Schema(
     {
         vol.Required("stat_consumption"): str,
-        vol.Optional("name"): str,
     }
 )
 

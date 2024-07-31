@@ -1,10 +1,10 @@
 """Diagnostics support for AirNow."""
-
 from __future__ import annotations
 
 from typing import Any
 
 from homeassistant.components.diagnostics import async_redact_data
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     CONF_API_KEY,
     CONF_LATITUDE,
@@ -13,7 +13,8 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 
-from . import AirNowConfigEntry
+from . import AirNowDataUpdateCoordinator
+from .const import DOMAIN
 
 ATTR_LATITUDE_CAP = "Latitude"
 ATTR_LONGITUDE_CAP = "Longitude"
@@ -38,10 +39,10 @@ TO_REDACT = {
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: AirNowConfigEntry
+    hass: HomeAssistant, entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    coordinator = entry.runtime_data
+    coordinator: AirNowDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     return async_redact_data(
         {

@@ -1,21 +1,28 @@
 """Test the Rfxtrx config flow."""
-
 import os
 from unittest.mock import MagicMock, patch, sentinel
 
-from RFXtrx import RFXtrxTransportError
 import serial.tools.list_ports
 
-from homeassistant import config_entries
+from homeassistant import config_entries, data_entry_flow
 from homeassistant.components.rfxtrx import DOMAIN, config_flow
 from homeassistant.const import STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import MockConfigEntry
 
 SOME_PROTOCOLS = ["ac", "arc"]
+
+
+def serial_connect(self):
+    """Mock a serial connection."""
+    self.serial = True
+
+
+def serial_connect_fail(self):
+    """Mock a failed serial connection."""
+    self.serial = None
 
 
 def com_port():
@@ -39,13 +46,14 @@ async def start_options_flow(hass, entry):
     return await hass.config_entries.options.async_init(entry.entry_id)
 
 
+@patch("homeassistant.components.rfxtrx.rfxtrxmod.PyNetworkTransport", autospec=True)
 async def test_setup_network(transport_mock, hass: HomeAssistant) -> None:
     """Test we can setup network."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
@@ -54,7 +62,7 @@ async def test_setup_network(transport_mock, hass: HomeAssistant) -> None:
         {"type": "Network"},
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "setup_network"
     assert result["errors"] == {}
 
@@ -63,7 +71,7 @@ async def test_setup_network(transport_mock, hass: HomeAssistant) -> None:
             result["flow_id"], {"host": "10.10.0.1", "port": 1234}
         )
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == "create_entry"
     assert result["title"] == "RFXTRX"
     assert result["data"] == {
         "host": "10.10.0.1",
@@ -75,7 +83,15 @@ async def test_setup_network(transport_mock, hass: HomeAssistant) -> None:
 
 
 @patch("serial.tools.list_ports.comports", return_value=[com_port()])
-async def test_setup_serial(com_mock, transport_mock, hass: HomeAssistant) -> None:
+@patch(
+    "homeassistant.components.rfxtrx.rfxtrxmod.PySerialTransport.connect",
+    serial_connect,
+)
+@patch(
+    "homeassistant.components.rfxtrx.rfxtrxmod.PySerialTransport.close",
+    return_value=None,
+)
+async def test_setup_serial(com_mock, connect_mock, hass: HomeAssistant) -> None:
     """Test we can setup serial."""
     port = com_port()
 
@@ -83,7 +99,7 @@ async def test_setup_serial(com_mock, transport_mock, hass: HomeAssistant) -> No
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
@@ -92,7 +108,7 @@ async def test_setup_serial(com_mock, transport_mock, hass: HomeAssistant) -> No
         {"type": "Serial"},
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "setup_serial"
     assert result["errors"] == {}
 
@@ -101,7 +117,7 @@ async def test_setup_serial(com_mock, transport_mock, hass: HomeAssistant) -> No
             result["flow_id"], {"device": port.device}
         )
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == "create_entry"
     assert result["title"] == "RFXTRX"
     assert result["data"] == {
         "host": None,
@@ -113,15 +129,21 @@ async def test_setup_serial(com_mock, transport_mock, hass: HomeAssistant) -> No
 
 
 @patch("serial.tools.list_ports.comports", return_value=[com_port()])
-async def test_setup_serial_manual(
-    com_mock, transport_mock, hass: HomeAssistant
-) -> None:
+@patch(
+    "homeassistant.components.rfxtrx.rfxtrxmod.PySerialTransport.connect",
+    serial_connect,
+)
+@patch(
+    "homeassistant.components.rfxtrx.rfxtrxmod.PySerialTransport.close",
+    return_value=None,
+)
+async def test_setup_serial_manual(com_mock, connect_mock, hass: HomeAssistant) -> None:
     """Test we can setup serial with manual entry."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
@@ -130,7 +152,7 @@ async def test_setup_serial_manual(
         {"type": "Serial"},
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "setup_serial"
     assert result["errors"] == {}
 
@@ -138,7 +160,7 @@ async def test_setup_serial_manual(
         result["flow_id"], {"device": "Enter Manually"}
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "setup_serial_manual_path"
     assert result["errors"] == {}
 
@@ -147,7 +169,7 @@ async def test_setup_serial_manual(
             result["flow_id"], {"device": "/dev/ttyUSB0"}
         )
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == "create_entry"
     assert result["title"] == "RFXTRX"
     assert result["data"] == {
         "host": None,
@@ -158,14 +180,18 @@ async def test_setup_serial_manual(
     }
 
 
+@patch(
+    "homeassistant.components.rfxtrx.rfxtrxmod.PyNetworkTransport",
+    autospec=True,
+    side_effect=OSError,
+)
 async def test_setup_network_fail(transport_mock, hass: HomeAssistant) -> None:
     """Test we can setup network."""
-    transport_mock.return_value.connect.side_effect = RFXtrxTransportError
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
@@ -174,7 +200,7 @@ async def test_setup_network_fail(transport_mock, hass: HomeAssistant) -> None:
         {"type": "Network"},
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "setup_network"
     assert result["errors"] == {}
 
@@ -182,22 +208,25 @@ async def test_setup_network_fail(transport_mock, hass: HomeAssistant) -> None:
         result["flow_id"], {"host": "10.10.0.1", "port": 1234}
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "setup_network"
     assert result["errors"] == {"base": "cannot_connect"}
 
 
 @patch("serial.tools.list_ports.comports", return_value=[com_port()])
-async def test_setup_serial_fail(com_mock, transport_mock, hass: HomeAssistant) -> None:
+@patch(
+    "homeassistant.components.rfxtrx.rfxtrxmod.PySerialTransport.connect",
+    side_effect=serial.serialutil.SerialException,
+)
+async def test_setup_serial_fail(com_mock, connect_mock, hass: HomeAssistant) -> None:
     """Test setup serial failed connection."""
-    transport_mock.return_value.connect.side_effect = RFXtrxTransportError
     port = com_port()
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
@@ -206,7 +235,7 @@ async def test_setup_serial_fail(com_mock, transport_mock, hass: HomeAssistant) 
         {"type": "Serial"},
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "setup_serial"
     assert result["errors"] == {}
 
@@ -214,22 +243,23 @@ async def test_setup_serial_fail(com_mock, transport_mock, hass: HomeAssistant) 
         result["flow_id"], {"device": port.device}
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "setup_serial"
     assert result["errors"] == {"base": "cannot_connect"}
 
 
 @patch("serial.tools.list_ports.comports", return_value=[com_port()])
-async def test_setup_serial_manual_fail(
-    com_mock, transport_mock, hass: HomeAssistant
-) -> None:
+@patch(
+    "homeassistant.components.rfxtrx.rfxtrxmod.PySerialTransport.connect",
+    serial_connect_fail,
+)
+async def test_setup_serial_manual_fail(com_mock, hass: HomeAssistant) -> None:
     """Test setup serial failed connection."""
-    transport_mock.return_value.connect.side_effect = RFXtrxTransportError
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
@@ -238,7 +268,7 @@ async def test_setup_serial_manual_fail(
         {"type": "Serial"},
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "setup_serial"
     assert result["errors"] == {}
 
@@ -246,7 +276,7 @@ async def test_setup_serial_manual_fail(
         result["flow_id"], {"device": "Enter Manually"}
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "setup_serial_manual_path"
     assert result["errors"] == {}
 
@@ -254,7 +284,7 @@ async def test_setup_serial_manual_fail(
         result["flow_id"], {"device": "/dev/ttyUSB0"}
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "setup_serial_manual_path"
     assert result["errors"] == {"base": "cannot_connect"}
 
@@ -277,7 +307,7 @@ async def test_options_global(hass: HomeAssistant) -> None:
     with patch("homeassistant.components.rfxtrx.async_setup_entry", return_value=True):
         result = await start_options_flow(hass, entry)
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "prompt_options"
 
     result = await hass.config_entries.options.async_configure(
@@ -285,7 +315,7 @@ async def test_options_global(hass: HomeAssistant) -> None:
         user_input={"automatic_add": True, "protocols": SOME_PROTOCOLS},
     )
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
 
     await hass.async_block_till_done()
 
@@ -312,7 +342,7 @@ async def test_no_protocols(hass: HomeAssistant) -> None:
     with patch("homeassistant.components.rfxtrx.async_setup_entry", return_value=True):
         result = await start_options_flow(hass, entry)
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "prompt_options"
 
     result = await hass.config_entries.options.async_configure(
@@ -320,7 +350,7 @@ async def test_no_protocols(hass: HomeAssistant) -> None:
         user_input={"automatic_add": False, "protocols": []},
     )
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
 
     await hass.async_block_till_done()
 
@@ -345,7 +375,7 @@ async def test_options_add_device(hass: HomeAssistant) -> None:
     )
     result = await start_options_flow(hass, entry)
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "prompt_options"
 
     # Try with invalid event code
@@ -354,7 +384,7 @@ async def test_options_add_device(hass: HomeAssistant) -> None:
         user_input={"automatic_add": True, "event_code": "1234"},
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "prompt_options"
     assert result["errors"]
     assert result["errors"]["event_code"] == "invalid_event_code"
@@ -368,14 +398,14 @@ async def test_options_add_device(hass: HomeAssistant) -> None:
         },
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "set_device_options"
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], user_input={}
     )
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
 
     await hass.async_block_till_done()
 
@@ -409,7 +439,7 @@ async def test_options_add_duplicate_device(hass: HomeAssistant) -> None:
 
     result = await hass.config_entries.options.async_init(entry.entry_id)
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "prompt_options"
 
     result = await hass.config_entries.options.async_configure(
@@ -420,17 +450,13 @@ async def test_options_add_duplicate_device(hass: HomeAssistant) -> None:
         },
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "prompt_options"
     assert result["errors"]
     assert result["errors"]["event_code"] == "already_configured_device"
 
 
-async def test_options_replace_sensor_device(
-    hass: HomeAssistant,
-    device_registry: dr.DeviceRegistry,
-    entity_registry: er.EntityRegistry,
-) -> None:
+async def test_options_replace_sensor_device(hass: HomeAssistant) -> None:
     """Test we can replace a sensor device."""
 
     entry = MockConfigEntry(
@@ -490,6 +516,7 @@ async def test_options_replace_sensor_device(
     )
     assert state
 
+    device_registry = dr.async_get(hass)
     device_entries = dr.async_entries_for_config_entry(device_registry, entry.entry_id)
 
     old_device = next(
@@ -511,7 +538,7 @@ async def test_options_replace_sensor_device(
 
     result = await hass.config_entries.options.async_init(entry.entry_id)
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "prompt_options"
 
     result = await hass.config_entries.options.async_configure(
@@ -522,7 +549,7 @@ async def test_options_replace_sensor_device(
         },
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "set_device_options"
 
     result = await hass.config_entries.options.async_configure(
@@ -532,9 +559,11 @@ async def test_options_replace_sensor_device(
         },
     )
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
 
     await hass.async_block_till_done()
+
+    entity_registry = er.async_get(hass)
 
     entry = entity_registry.async_get(
         "sensor.thgn122_123_thgn132_thgr122_228_238_268_f0_04_signal_strength"
@@ -584,11 +613,7 @@ async def test_options_replace_sensor_device(
     assert not state
 
 
-async def test_options_replace_control_device(
-    hass: HomeAssistant,
-    device_registry: dr.DeviceRegistry,
-    entity_registry: er.EntityRegistry,
-) -> None:
+async def test_options_replace_control_device(hass: HomeAssistant) -> None:
     """Test we can replace a control device."""
 
     entry = MockConfigEntry(
@@ -624,6 +649,7 @@ async def test_options_replace_control_device(
     state = hass.states.get("switch.ac_1118cdea_2")
     assert state
 
+    device_registry = dr.async_get(hass)
     device_entries = dr.async_entries_for_config_entry(device_registry, entry.entry_id)
 
     old_device = next(
@@ -645,7 +671,7 @@ async def test_options_replace_control_device(
 
     result = await hass.config_entries.options.async_init(entry.entry_id)
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "prompt_options"
 
     result = await hass.config_entries.options.async_configure(
@@ -656,7 +682,7 @@ async def test_options_replace_control_device(
         },
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "set_device_options"
 
     result = await hass.config_entries.options.async_configure(
@@ -666,9 +692,11 @@ async def test_options_replace_control_device(
         },
     )
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
 
     await hass.async_block_till_done()
+
+    entity_registry = er.async_get(hass)
 
     entry = entity_registry.async_get("binary_sensor.ac_118cdea_2")
     assert entry
@@ -688,9 +716,7 @@ async def test_options_replace_control_device(
     assert not state
 
 
-async def test_options_add_and_configure_device(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
-) -> None:
+async def test_options_add_and_configure_device(hass: HomeAssistant) -> None:
     """Test we can add a device."""
 
     entry = MockConfigEntry(
@@ -706,7 +732,7 @@ async def test_options_add_and_configure_device(
     )
     result = await start_options_flow(hass, entry)
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "prompt_options"
 
     result = await hass.config_entries.options.async_configure(
@@ -717,7 +743,7 @@ async def test_options_add_and_configure_device(
         },
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "set_device_options"
 
     result = await hass.config_entries.options.async_configure(
@@ -730,7 +756,7 @@ async def test_options_add_and_configure_device(
         },
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "set_device_options"
     assert result["errors"]
     assert result["errors"]["off_delay"] == "invalid_input_off_delay"
@@ -747,7 +773,7 @@ async def test_options_add_and_configure_device(
         },
     )
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
 
     await hass.async_block_till_done()
 
@@ -761,13 +787,14 @@ async def test_options_add_and_configure_device(
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get("friendly_name") == "PT2262 22670e"
 
+    device_registry = dr.async_get(hass)
     device_entries = dr.async_entries_for_config_entry(device_registry, entry.entry_id)
 
     assert device_entries[0].id
 
     result = await hass.config_entries.options.async_init(entry.entry_id)
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "prompt_options"
 
     result = await hass.config_entries.options.async_configure(
@@ -778,7 +805,7 @@ async def test_options_add_and_configure_device(
         },
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "set_device_options"
 
     result = await hass.config_entries.options.async_configure(
@@ -790,7 +817,7 @@ async def test_options_add_and_configure_device(
         },
     )
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
 
     await hass.async_block_till_done()
 
@@ -798,9 +825,7 @@ async def test_options_add_and_configure_device(
     assert "delay_off" not in entry.data["devices"]["0913000022670e013970"]
 
 
-async def test_options_configure_rfy_cover_device(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
-) -> None:
+async def test_options_configure_rfy_cover_device(hass: HomeAssistant) -> None:
     """Test we can configure the venetion blind mode of an Rfy cover."""
 
     entry = MockConfigEntry(
@@ -816,7 +841,7 @@ async def test_options_configure_rfy_cover_device(
     )
     result = await start_options_flow(hass, entry)
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "prompt_options"
 
     result = await hass.config_entries.options.async_configure(
@@ -827,7 +852,7 @@ async def test_options_configure_rfy_cover_device(
         },
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "set_device_options"
 
     result = await hass.config_entries.options.async_configure(
@@ -847,13 +872,14 @@ async def test_options_configure_rfy_cover_device(
         entry.data["devices"]["0C1a0000010203010000000000"]["device_id"], list
     )
 
+    device_registry = dr.async_get(hass)
     device_entries = dr.async_entries_for_config_entry(device_registry, entry.entry_id)
 
     assert device_entries[0].id
 
     result = await hass.config_entries.options.async_init(entry.entry_id)
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "prompt_options"
 
     result = await hass.config_entries.options.async_configure(
@@ -864,7 +890,7 @@ async def test_options_configure_rfy_cover_device(
         },
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "set_device_options"
 
     result = await hass.config_entries.options.async_configure(
@@ -874,7 +900,7 @@ async def test_options_configure_rfy_cover_device(
         },
     )
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
 
     await hass.async_block_till_done()
 
@@ -900,17 +926,16 @@ def test_get_serial_by_id_no_dir() -> None:
 
 def test_get_serial_by_id() -> None:
     """Test serial by id conversion."""
+    p1 = patch("os.path.isdir", MagicMock(return_value=True))
+    p2 = patch("os.scandir")
 
     def _realpath(path):
         if path is sentinel.matched_link:
             return sentinel.path
         return sentinel.serial_link_path
 
-    with (
-        patch("os.path.isdir", MagicMock(return_value=True)) as is_dir_mock,
-        patch("os.scandir") as scan_mock,
-        patch("os.path.realpath", side_effect=_realpath),
-    ):
+    p3 = patch("os.path.realpath", side_effect=_realpath)
+    with p1 as is_dir_mock, p2 as scan_mock, p3:
         res = config_flow.get_serial_by_id(sentinel.path)
         assert res is sentinel.path
         assert is_dir_mock.call_count == 1

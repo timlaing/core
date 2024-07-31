@@ -1,5 +1,4 @@
 """Tests for Konnected Alarm Panel config flow."""
-
 from unittest.mock import patch
 
 import pytest
@@ -8,7 +7,6 @@ from homeassistant import config_entries
 from homeassistant.components import konnected, ssdp
 from homeassistant.components.konnected import config_flow
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -34,7 +32,7 @@ async def test_flow_works(hass: HomeAssistant, mock_panel) -> None:
     result = await hass.config_entries.flow.async_init(
         config_flow.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "user"
 
     mock_panel.get_status.return_value = {
@@ -44,7 +42,7 @@ async def test_flow_works(hass: HomeAssistant, mock_panel) -> None:
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input={"port": 1234, "host": "1.2.3.4"}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "confirm"
     assert result["description_placeholders"] == {
         "model": "Konnected Alarm Panel",
@@ -56,7 +54,7 @@ async def test_flow_works(hass: HomeAssistant, mock_panel) -> None:
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == "create_entry"
     assert result["data"]["host"] == "1.2.3.4"
     assert result["data"]["port"] == 1234
     assert result["data"]["model"] == "Konnected"
@@ -71,7 +69,7 @@ async def test_pro_flow_works(hass: HomeAssistant, mock_panel) -> None:
     result = await hass.config_entries.flow.async_init(
         config_flow.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "user"
 
     # pro uses chipId instead of MAC as unique id
@@ -83,7 +81,7 @@ async def test_pro_flow_works(hass: HomeAssistant, mock_panel) -> None:
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input={"port": 1234, "host": "1.2.3.4"}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "confirm"
     assert result["description_placeholders"] == {
         "model": "Konnected Alarm Panel Pro",
@@ -95,7 +93,7 @@ async def test_pro_flow_works(hass: HomeAssistant, mock_panel) -> None:
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == "create_entry"
     assert result["data"]["host"] == "1.2.3.4"
     assert result["data"]["port"] == 1234
     assert result["data"]["model"] == "Konnected Pro"
@@ -127,7 +125,7 @@ async def test_ssdp(hass: HomeAssistant, mock_panel) -> None:
         ),
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "confirm"
     assert result["description_placeholders"] == {
         "model": "Konnected Alarm Panel",
@@ -152,7 +150,7 @@ async def test_ssdp(hass: HomeAssistant, mock_panel) -> None:
         ),
     )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "cannot_connect"
 
     # Test abort if invalid data
@@ -168,7 +166,7 @@ async def test_ssdp(hass: HomeAssistant, mock_panel) -> None:
         ),
     )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "unknown"
 
     # Test abort if invalid manufacturer
@@ -186,7 +184,7 @@ async def test_ssdp(hass: HomeAssistant, mock_panel) -> None:
         ),
     )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "not_konn_panel"
 
     # Test abort if invalid model
@@ -204,7 +202,7 @@ async def test_ssdp(hass: HomeAssistant, mock_panel) -> None:
         ),
     )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "not_konn_panel"
 
     # Test abort if already configured
@@ -228,7 +226,7 @@ async def test_ssdp(hass: HomeAssistant, mock_panel) -> None:
         ),
     )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "already_configured"
 
 
@@ -268,21 +266,21 @@ async def test_import_no_host_user_finish(hass: HomeAssistant, mock_panel) -> No
             "id": "aabbccddeeff",
         },
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "import_confirm"
     assert result["description_placeholders"]["id"] == "aabbccddeeff"
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "user"
 
     # confirm user is prompted to enter host
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input={"host": "1.1.1.1", "port": 1234}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "confirm"
     assert result["description_placeholders"] == {
         "model": "Konnected Alarm Panel Pro",
@@ -295,7 +293,7 @@ async def test_import_no_host_user_finish(hass: HomeAssistant, mock_panel) -> No
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == "create_entry"
 
 
 async def test_import_ssdp_host_user_finish(hass: HomeAssistant, mock_panel) -> None:
@@ -335,7 +333,7 @@ async def test_import_ssdp_host_user_finish(hass: HomeAssistant, mock_panel) -> 
             "id": "somechipid",
         },
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "import_confirm"
     assert result["description_placeholders"]["id"] == "somechipid"
 
@@ -353,13 +351,13 @@ async def test_import_ssdp_host_user_finish(hass: HomeAssistant, mock_panel) -> 
             },
         ),
     )
-    assert ssdp_result["type"] is FlowResultType.ABORT
+    assert ssdp_result["type"] == "abort"
     assert ssdp_result["reason"] == "already_in_progress"
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "confirm"
     assert result["description_placeholders"] == {
         "model": "Konnected Alarm Panel Pro",
@@ -372,7 +370,7 @@ async def test_import_ssdp_host_user_finish(hass: HomeAssistant, mock_panel) -> 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == "create_entry"
 
 
 async def test_ssdp_already_configured(hass: HomeAssistant, mock_panel) -> None:
@@ -400,7 +398,7 @@ async def test_ssdp_already_configured(hass: HomeAssistant, mock_panel) -> None:
             },
         ),
     )
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "already_configured"
 
 
@@ -480,7 +478,7 @@ async def test_ssdp_host_update(hass: HomeAssistant, mock_panel) -> None:
             },
         ),
     )
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
 
     # confirm the host value was updated, access_token was not
     entry = hass.config_entries.async_entries(config_flow.DOMAIN)[0]
@@ -538,13 +536,13 @@ async def test_import_existing_config(hass: HomeAssistant, mock_panel) -> None:
             }
         ),
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "confirm"
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == "create_entry"
     assert result["data"] == {
         "host": "1.2.3.4",
         "port": 1234,
@@ -666,7 +664,7 @@ async def test_import_existing_config_entry(hass: HomeAssistant, mock_panel) -> 
         },
     )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
 
     # We should have updated the host info but not the access token
     assert len(hass.config_entries.async_entries("konnected")) == 1
@@ -718,13 +716,13 @@ async def test_import_pin_config(hass: HomeAssistant, mock_panel) -> None:
             }
         ),
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "confirm"
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == "create_entry"
     assert result["data"] == {
         "host": "1.2.3.4",
         "port": 1234,
@@ -803,7 +801,7 @@ async def test_option_flow(hass: HomeAssistant, mock_panel) -> None:
     result = await hass.config_entries.options.async_init(
         entry.entry_id, context={"source": "test"}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_io"
 
     result = await hass.config_entries.options.async_configure(
@@ -818,7 +816,7 @@ async def test_option_flow(hass: HomeAssistant, mock_panel) -> None:
             "out": "Switchable Output",
         },
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_binary"
     assert result["description_placeholders"] == {
         "zone": "Zone 2",
@@ -828,7 +826,7 @@ async def test_option_flow(hass: HomeAssistant, mock_panel) -> None:
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], user_input={"type": "door"}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_binary"
     assert result["description_placeholders"] == {
         "zone": "Zone 6",
@@ -839,7 +837,7 @@ async def test_option_flow(hass: HomeAssistant, mock_panel) -> None:
         result["flow_id"],
         user_input={"type": "window", "name": "winder", "inverse": True},
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_digital"
     assert result["description_placeholders"] == {
         "zone": "Zone 3",
@@ -849,7 +847,7 @@ async def test_option_flow(hass: HomeAssistant, mock_panel) -> None:
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], user_input={"type": "dht"}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_switch"
     assert result["description_placeholders"] == {
         "zone": "Zone 4",
@@ -860,7 +858,7 @@ async def test_option_flow(hass: HomeAssistant, mock_panel) -> None:
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], user_input={}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_switch"
     assert result["description_placeholders"] == {
         "zone": "OUT",
@@ -880,7 +878,7 @@ async def test_option_flow(hass: HomeAssistant, mock_panel) -> None:
         },
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_switch"
     assert result["description_placeholders"] == {
         "zone": "OUT",
@@ -900,7 +898,7 @@ async def test_option_flow(hass: HomeAssistant, mock_panel) -> None:
         },
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_misc"
     # make sure we enforce url format
     result = await hass.config_entries.options.async_configure(
@@ -913,7 +911,7 @@ async def test_option_flow(hass: HomeAssistant, mock_panel) -> None:
         },
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_misc"
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
@@ -924,7 +922,7 @@ async def test_option_flow(hass: HomeAssistant, mock_panel) -> None:
             "api_host": "http://overridehost:1111",
         },
     )
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == "create_entry"
     assert result["data"] == {
         "io": {
             "2": "Binary Sensor",
@@ -989,7 +987,7 @@ async def test_option_flow_pro(hass: HomeAssistant, mock_panel) -> None:
     result = await hass.config_entries.options.async_init(
         entry.entry_id, context={"source": "test"}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_io"
 
     result = await hass.config_entries.options.async_configure(
@@ -1004,7 +1002,7 @@ async def test_option_flow_pro(hass: HomeAssistant, mock_panel) -> None:
             "7": "Digital Sensor",
         },
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_io_ext"
 
     result = await hass.config_entries.options.async_configure(
@@ -1020,14 +1018,14 @@ async def test_option_flow_pro(hass: HomeAssistant, mock_panel) -> None:
             "alarm2_out2": "Disabled",
         },
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_binary"
 
     # zone 2
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], user_input={"type": "door"}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_binary"
 
     # zone 6
@@ -1035,42 +1033,42 @@ async def test_option_flow_pro(hass: HomeAssistant, mock_panel) -> None:
         result["flow_id"],
         user_input={"type": "window", "name": "winder", "inverse": True},
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_binary"
 
     # zone 10
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], user_input={"type": "door"}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_binary"
 
     # zone 11
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], user_input={"type": "window"}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_digital"
 
     # zone 3
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], user_input={"type": "dht"}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_digital"
 
     # zone 7
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], user_input={"type": "ds18b20", "name": "temper"}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_switch"
 
     # zone 4
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], user_input={}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_switch"
 
     # zone 8
@@ -1084,21 +1082,21 @@ async def test_option_flow_pro(hass: HomeAssistant, mock_panel) -> None:
             "repeat": 4,
         },
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_switch"
 
     # zone out1
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], user_input={}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_switch"
 
     # zone alarm1
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], user_input={}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_misc"
 
     result = await hass.config_entries.options.async_configure(
@@ -1106,7 +1104,7 @@ async def test_option_flow_pro(hass: HomeAssistant, mock_panel) -> None:
         user_input={"discovery": False, "blink": True, "override_api_host": False},
     )
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == "create_entry"
     assert result["data"] == {
         "io": {
             "10": "Binary Sensor",
@@ -1202,7 +1200,7 @@ async def test_option_flow_import(hass: HomeAssistant, mock_panel) -> None:
     result = await hass.config_entries.options.async_init(
         entry.entry_id, context={"source": "test"}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_io"
 
     # confirm the defaults are set based on current config - we"ll spot check this throughout
@@ -1219,7 +1217,7 @@ async def test_option_flow_import(hass: HomeAssistant, mock_panel) -> None:
             "3": "Switchable Output",
         },
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_io_ext"
     schema = result["data_schema"]({})
     assert schema["8"] == "Disabled"
@@ -1228,7 +1226,7 @@ async def test_option_flow_import(hass: HomeAssistant, mock_panel) -> None:
         result["flow_id"],
         user_input={},
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_binary"
 
     # zone 1
@@ -1239,7 +1237,7 @@ async def test_option_flow_import(hass: HomeAssistant, mock_panel) -> None:
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], user_input={"type": "door"}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_digital"
 
     # zone 2
@@ -1250,7 +1248,7 @@ async def test_option_flow_import(hass: HomeAssistant, mock_panel) -> None:
         result["flow_id"],
         user_input={"type": "dht"},
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_switch"
 
     # zone 3
@@ -1264,7 +1262,7 @@ async def test_option_flow_import(hass: HomeAssistant, mock_panel) -> None:
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], user_input={"activation": "high", "more_states": "No"}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_misc"
 
     schema = result["data_schema"]({})
@@ -1276,7 +1274,7 @@ async def test_option_flow_import(hass: HomeAssistant, mock_panel) -> None:
     )
 
     # verify the updated fields
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == "create_entry"
     assert result["data"] == {
         "io": {"1": "Binary Sensor", "2": "Digital Sensor", "3": "Switchable Output"},
         "discovery": True,
@@ -1349,7 +1347,7 @@ async def test_option_flow_existing(hass: HomeAssistant, mock_panel) -> None:
     result = await hass.config_entries.options.async_init(
         entry.entry_id, context={"source": "test"}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "options_io"
 
     # confirm the defaults are pulled in from the existing options

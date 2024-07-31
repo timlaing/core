@@ -1,21 +1,16 @@
 """Config flow for AWS component."""
 
-from collections.abc import Mapping
-from typing import Any
-
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant import config_entries
 
 from .const import DOMAIN
 
 
-class AWSFlowHandler(ConfigFlow, domain=DOMAIN):
+class AWSFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow."""
 
     VERSION = 1
 
-    async def async_step_import(
-        self, user_input: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_import(self, user_input):
         """Import a config entry."""
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")

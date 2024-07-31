@@ -1,5 +1,4 @@
 """Constants for the NFAndroidTV integration."""
-
 DOMAIN: str = "nfandroidtv"
 CONF_DURATION = "duration"
 CONF_FONTSIZE = "fontsize"

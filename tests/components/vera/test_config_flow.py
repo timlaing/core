@@ -1,10 +1,9 @@
 """Vera tests."""
-
 from unittest.mock import MagicMock, patch
 
 from requests.exceptions import RequestException
 
-from homeassistant import config_entries
+from homeassistant import config_entries, data_entry_flow
 from homeassistant.components.vera import CONF_CONTROLLER, CONF_LEGACY_UNIQUE_ID, DOMAIN
 from homeassistant.const import CONF_EXCLUDE, CONF_LIGHTS, CONF_SOURCE
 from homeassistant.core import HomeAssistant
@@ -25,7 +24,7 @@ async def test_async_step_user_success(hass: HomeAssistant) -> None:
         result = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == FlowResultType.FORM
         assert result["step_id"] == config_entries.SOURCE_USER
 
         result = await hass.config_entries.flow.async_configure(
@@ -36,7 +35,7 @@ async def test_async_step_user_success(hass: HomeAssistant) -> None:
                 CONF_EXCLUDE: "14 15",
             },
         )
-        assert result["type"] is FlowResultType.CREATE_ENTRY
+        assert result["type"] == FlowResultType.CREATE_ENTRY
         assert result["title"] == "http://127.0.0.1:123"
         assert result["data"] == {
             CONF_CONTROLLER: "http://127.0.0.1:123",
@@ -65,7 +64,7 @@ async def test_async_step_import_success(hass: HomeAssistant) -> None:
             data={CONF_CONTROLLER: "http://127.0.0.1:123/"},
         )
 
-        assert result["type"] is FlowResultType.CREATE_ENTRY
+        assert result["type"] == FlowResultType.CREATE_ENTRY
         assert result["title"] == "http://127.0.0.1:123"
         assert result["data"] == {
             CONF_CONTROLLER: "http://127.0.0.1:123",
@@ -95,7 +94,7 @@ async def test_async_step_import_success_with_legacy_unique_id(
             data={CONF_CONTROLLER: "http://127.0.0.1:123/"},
         )
 
-        assert result["type"] is FlowResultType.CREATE_ENTRY
+        assert result["type"] == FlowResultType.CREATE_ENTRY
         assert result["title"] == "http://127.0.0.1:123"
         assert result["data"] == {
             CONF_CONTROLLER: "http://127.0.0.1:123",
@@ -118,7 +117,7 @@ async def test_async_step_finish_error(hass: HomeAssistant) -> None:
             data={CONF_CONTROLLER: "http://127.0.0.1:123/"},
         )
 
-        assert result["type"] is FlowResultType.ABORT
+        assert result["type"] == "abort"
         assert result["reason"] == "cannot_connect"
         assert result["description_placeholders"] == {
             "base_url": "http://127.0.0.1:123"
@@ -139,7 +138,7 @@ async def test_options(hass: HomeAssistant) -> None:
     result = await hass.config_entries.options.async_init(
         entry.entry_id, context={"source": "test"}, data=None
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["step_id"] == "init"
 
     result = await hass.config_entries.options.async_configure(
@@ -149,7 +148,7 @@ async def test_options(hass: HomeAssistant) -> None:
             CONF_EXCLUDE: "8,9;10  11 12_13bb14",
         },
     )
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
     assert result["data"] == {
         CONF_LIGHTS: [1, 2, 3, 4, 5, 6, 7],
         CONF_EXCLUDE: [8, 9, 10, 11, 12, 13, 14],

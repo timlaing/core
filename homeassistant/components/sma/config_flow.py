@@ -1,5 +1,4 @@
 """Config flow for the sma integration."""
-
 from __future__ import annotations
 
 import logging
@@ -8,9 +7,9 @@ from typing import Any
 import pysma
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant import config_entries, core
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_SSL, CONF_VERIFY_SSL
-from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
 
@@ -19,7 +18,9 @@ from .const import CONF_GROUP, DOMAIN, GROUPS
 _LOGGER = logging.getLogger(__name__)
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
+async def validate_input(
+    hass: core.HomeAssistant, data: dict[str, Any]
+) -> dict[str, Any]:
     """Validate the user input allows us to connect."""
     session = async_get_clientsession(hass, verify_ssl=data[CONF_VERIFY_SSL])
 
@@ -36,14 +37,14 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     return device_info
 
 
-class SmaConfigFlow(ConfigFlow, domain=DOMAIN):
+class SmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for SMA."""
 
     VERSION = 1
 
     def __init__(self) -> None:
         """Initialize."""
-        self._data: dict[str, Any] = {
+        self._data = {
             CONF_HOST: vol.UNDEFINED,
             CONF_SSL: False,
             CONF_VERIFY_SSL: True,
@@ -53,7 +54,7 @@ class SmaConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """First step in config flow."""
         errors = {}
         if user_input is not None:
@@ -71,7 +72,7 @@ class SmaConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "invalid_auth"
             except pysma.exceptions.SmaReadException:
                 errors["base"] = "cannot_retrieve_device_info"
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
 

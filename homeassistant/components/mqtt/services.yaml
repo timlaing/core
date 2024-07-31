@@ -8,8 +8,12 @@ publish:
       selector:
         text:
     payload:
-      required: true
-      example: "The temperature is {{ states('sensor.temperature') }}"
+      example: This is great
+      selector:
+        text:
+    payload_template:
+      advanced: true
+      example: "{{ states('sensor.temperature') }}"
       selector:
         template:
     qos:

@@ -1,5 +1,4 @@
 """Provides device automations for Philips Hue events."""
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any

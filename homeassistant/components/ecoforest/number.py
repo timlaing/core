@@ -1,5 +1,4 @@
 """Support for Ecoforest number platform."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -17,11 +16,18 @@ from .coordinator import EcoforestCoordinator
 from .entity import EcoforestEntity
 
 
-@dataclass(frozen=True, kw_only=True)
-class EcoforestNumberEntityDescription(NumberEntityDescription):
-    """Describes an ecoforest number entity."""
+@dataclass
+class EcoforestRequiredKeysMixin:
+    """Mixin for required keys."""
 
     value_fn: Callable[[Device], float | None]
+
+
+@dataclass
+class EcoforestNumberEntityDescription(
+    NumberEntityDescription, EcoforestRequiredKeysMixin
+):
+    """Describes an ecoforest number entity."""
 
 
 NUMBER_ENTITIES = (

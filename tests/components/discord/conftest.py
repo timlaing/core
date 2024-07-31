@@ -1,5 +1,4 @@
 """Discord notification test helpers."""
-
 from http import HTTPStatus
 
 import pytest
@@ -29,7 +28,7 @@ def discord_aiohttp_mock_factory(
     """Create Discord service mock from factory."""
 
     def _discord_aiohttp_mock_factory(
-        headers: dict[str, str] | None = None,
+        headers: dict[str, str] = None,
     ) -> AiohttpClientMocker:
         if headers is not None:
             aioclient_mock.get(

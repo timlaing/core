@@ -1,5 +1,4 @@
 """Support for monitoring a Smappee energy sensor."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -19,21 +18,26 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import DOMAIN
 
 
-@dataclass(frozen=True, kw_only=True)
-class SmappeeSensorEntityDescription(SensorEntityDescription):
-    """Describes Smappee sensor entity."""
+@dataclass
+class SmappeeRequiredKeysMixin:
+    """Mixin for required keys."""
 
     sensor_id: str
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass
+class SmappeeSensorEntityDescription(SensorEntityDescription, SmappeeRequiredKeysMixin):
+    """Describes Smappee sensor entity."""
+
+
+@dataclass
 class SmappeePollingSensorEntityDescription(SmappeeSensorEntityDescription):
     """Describes Smappee sensor entity."""
 
     local_polling: bool = False
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass
 class SmappeeVoltageSensorEntityDescription(SmappeeSensorEntityDescription):
     """Describes Smappee sensor entity."""
 

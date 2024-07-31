@@ -1,5 +1,4 @@
 """The tests for the demo sensor component."""
-
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -26,7 +25,7 @@ async def sensor_only() -> None:
         yield
 
 
-@pytest.mark.parametrize(("entity_id", "delta"), [("sensor.total_energy_kwh", 0.5)])
+@pytest.mark.parametrize(("entity_id", "delta"), (("sensor.total_energy_kwh", 0.5),))
 async def test_energy_sensor(
     hass: HomeAssistant, entity_id, delta, freezer: FrozenDateTimeFactory
 ) -> None:
@@ -47,7 +46,7 @@ async def test_energy_sensor(
     assert state.state == str(delta)
 
 
-@pytest.mark.parametrize(("entity_id", "delta"), [("sensor.total_energy_kwh", 0.5)])
+@pytest.mark.parametrize(("entity_id", "delta"), (("sensor.total_energy_kwh", 0.5),))
 async def test_restore_state(
     hass: HomeAssistant, entity_id, delta, freezer: FrozenDateTimeFactory
 ) -> None:

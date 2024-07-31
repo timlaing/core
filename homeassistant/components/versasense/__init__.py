@@ -1,5 +1,4 @@
 """Support for VersaSense MicroPnP devices."""
-
 import logging
 
 import pyversasense as pyv

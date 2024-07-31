@@ -1,5 +1,5 @@
 """Support for Tibber."""
-
+import asyncio
 import logging
 
 import aiohttp
@@ -21,9 +21,8 @@ from homeassistant.helpers.typing import ConfigType
 from homeassistant.util import dt as dt_util
 
 from .const import DATA_HASS_CONFIG, DOMAIN
-from .services import async_setup_services
 
-PLATFORMS = [Platform.NOTIFY, Platform.SENSOR]
+PLATFORMS = [Platform.SENSOR]
 
 CONFIG_SCHEMA = cv.removed(DOMAIN, raise_if_present=False)
 
@@ -34,9 +33,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the Tibber component."""
 
     hass.data[DATA_HASS_CONFIG] = config
-
-    async_setup_services(hass)
-
     return True
 
 
@@ -46,7 +42,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     tibber_connection = tibber.Tibber(
         access_token=entry.data[CONF_ACCESS_TOKEN],
         websession=async_get_clientsession(hass),
-        time_zone=dt_util.get_default_time_zone(),
+        time_zone=dt_util.DEFAULT_TIME_ZONE,
     )
     hass.data[DOMAIN] = tibber_connection
 
@@ -59,7 +55,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await tibber_connection.update_info()
 
     except (
-        TimeoutError,
+        asyncio.TimeoutError,
         aiohttp.ClientError,
         tibber.RetryableHttpException,
     ) as err:
@@ -72,9 +68,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # Use discovery to load platform legacy notify platform
-    # The use of the legacy notify service was deprecated with HA Core 2024.6
-    # Support will be removed with HA Core 2024.12
+    # set up notify platform, no entry support for notify component yet,
+    # have to use discovery to load platform.
     hass.async_create_task(
         discovery.async_load_platform(
             hass,
@@ -84,7 +79,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             hass.data[DATA_HASS_CONFIG],
         )
     )
-
     return True
 
 

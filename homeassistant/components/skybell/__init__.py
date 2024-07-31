@@ -1,5 +1,4 @@
 """Support for the Skybell HD Doorbell."""
-
 from __future__ import annotations
 
 import asyncio

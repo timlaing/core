@@ -1,12 +1,9 @@
 """Test that validation works."""
-
 from unittest.mock import patch
 
 import pytest
 
 from homeassistant.components.energy import async_get_manager, validate
-from homeassistant.components.energy.data import EnergyManager
-from homeassistant.components.recorder import Recorder
 from homeassistant.const import UnitOfEnergy
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.json import JSON_DUMP
@@ -48,9 +45,7 @@ def mock_get_metadata():
 
 
 @pytest.fixture(autouse=True)
-async def mock_energy_manager(
-    recorder_mock: Recorder, hass: HomeAssistant
-) -> EnergyManager:
+async def mock_energy_manager(recorder_mock, hass):
     """Set up energy."""
     assert await async_setup_component(hass, "energy", {"energy": {}})
     manager = await async_get_manager(hass)
@@ -694,7 +689,7 @@ async def test_validation_grid_auto_cost_entity_errors(
 
 @pytest.mark.parametrize(
     ("state", "unit", "expected"),
-    [
+    (
         (
             "123,123.12",
             "$/kWh",
@@ -715,7 +710,7 @@ async def test_validation_grid_auto_cost_entity_errors(
                 },
             },
         ),
-    ],
+    ),
 )
 async def test_validation_grid_price_errors(
     hass: HomeAssistant, mock_energy_manager, mock_get_metadata, state, unit, expected

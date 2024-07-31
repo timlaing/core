@@ -8,7 +8,7 @@ import pytest
 
 
 @pytest.fixture
-def mock_setup_entry() -> Generator[AsyncMock]:
+def mock_setup_entry() -> Generator[AsyncMock, None, None]:
     """Override async_setup_entry."""
 
     with patch(
@@ -18,7 +18,7 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 
 
 @pytest.fixture
-def mock_gaierror() -> Generator[AsyncMock]:
+def mock_gaierror() -> Generator[AsyncMock, None, None]:
     """Override async_setup_entry."""
 
     with patch(

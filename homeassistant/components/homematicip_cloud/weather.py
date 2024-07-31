@@ -1,5 +1,4 @@
 """Support for HomematicIP Cloud weather devices."""
-
 from __future__ import annotations
 
 from homematicip.aio.device import (

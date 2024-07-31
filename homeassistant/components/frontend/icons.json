@@ -1,6 +1,0 @@
-{
-  "services": {
-    "set_theme": "mdi:palette-swatch",
-    "reload_themes": "mdi:reload"
-  }
-}

@@ -1,5 +1,4 @@
 """The tests for elkm1 logbook."""
-
 from homeassistant.components.elkm1.const import (
     ATTR_KEY,
     ATTR_KEY_NAME,

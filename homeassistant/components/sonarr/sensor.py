@@ -1,5 +1,4 @@
 """Support for Sonarr sensors."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -32,7 +31,7 @@ from .coordinator import SonarrDataT, SonarrDataUpdateCoordinator
 from .entity import SonarrEntity
 
 
-@dataclass(frozen=True)
+@dataclass
 class SonarrSensorEntityDescriptionMixIn(Generic[SonarrDataT]):
     """Mixin for Sonarr sensor."""
 
@@ -40,7 +39,7 @@ class SonarrSensorEntityDescriptionMixIn(Generic[SonarrDataT]):
     value_fn: Callable[[SonarrDataT], StateType]
 
 
-@dataclass(frozen=True)
+@dataclass
 class SonarrSensorEntityDescription(
     SensorEntityDescription, SonarrSensorEntityDescriptionMixIn[SonarrDataT]
 ):
@@ -54,9 +53,9 @@ def get_disk_space_attr(disks: list[Diskspace]) -> dict[str, str]:
         free = disk.freeSpace / 1024**3
         total = disk.totalSpace / 1024**3
         usage = free / total * 100
-        attrs[disk.path] = (
-            f"{free:.2f}/{total:.2f}{UnitOfInformation.GIGABYTES} ({usage:.2f}%)"
-        )
+        attrs[
+            disk.path
+        ] = f"{free:.2f}/{total:.2f}{UnitOfInformation.GIGABYTES} ({usage:.2f}%)"
     return attrs
 
 
@@ -90,6 +89,7 @@ SENSOR_TYPES: dict[str, SonarrSensorEntityDescription[Any]] = {
     "commands": SonarrSensorEntityDescription[list[Command]](
         key="commands",
         translation_key="commands",
+        icon="mdi:code-braces",
         native_unit_of_measurement="Commands",
         entity_registry_enabled_default=False,
         value_fn=len,
@@ -98,6 +98,7 @@ SENSOR_TYPES: dict[str, SonarrSensorEntityDescription[Any]] = {
     "diskspace": SonarrSensorEntityDescription[list[Diskspace]](
         key="diskspace",
         translation_key="diskspace",
+        icon="mdi:harddisk",
         native_unit_of_measurement=UnitOfInformation.GIGABYTES,
         device_class=SensorDeviceClass.DATA_SIZE,
         entity_registry_enabled_default=False,
@@ -107,6 +108,7 @@ SENSOR_TYPES: dict[str, SonarrSensorEntityDescription[Any]] = {
     "queue": SonarrSensorEntityDescription[SonarrQueue](
         key="queue",
         translation_key="queue",
+        icon="mdi:download",
         native_unit_of_measurement="Episodes",
         entity_registry_enabled_default=False,
         value_fn=lambda data: data.totalRecords,
@@ -115,6 +117,7 @@ SENSOR_TYPES: dict[str, SonarrSensorEntityDescription[Any]] = {
     "series": SonarrSensorEntityDescription[list[SonarrSeries]](
         key="series",
         translation_key="series",
+        icon="mdi:television",
         native_unit_of_measurement="Series",
         entity_registry_enabled_default=False,
         value_fn=len,
@@ -128,6 +131,7 @@ SENSOR_TYPES: dict[str, SonarrSensorEntityDescription[Any]] = {
     "upcoming": SonarrSensorEntityDescription[list[SonarrCalendar]](
         key="upcoming",
         translation_key="upcoming",
+        icon="mdi:television",
         native_unit_of_measurement="Episodes",
         value_fn=len,
         attributes_fn=lambda data: {
@@ -137,6 +141,7 @@ SENSOR_TYPES: dict[str, SonarrSensorEntityDescription[Any]] = {
     "wanted": SonarrSensorEntityDescription[SonarrWantedMissing](
         key="wanted",
         translation_key="wanted",
+        icon="mdi:television",
         native_unit_of_measurement="Episodes",
         entity_registry_enabled_default=False,
         value_fn=lambda data: data.totalRecords,

@@ -1,5 +1,4 @@
 """Generic entity for the HomematicIP Cloud component."""
-
 from __future__ import annotations
 
 import logging
@@ -7,7 +6,6 @@ from typing import Any
 
 from homematicip.aio.device import AsyncDevice
 from homematicip.aio.group import AsyncGroup
-from homematicip.base.functionalChannels import FunctionalChannel
 
 from homeassistant.const import ATTR_ID
 from homeassistant.core import callback
@@ -92,7 +90,6 @@ class HomematicipGenericEntity(Entity):
         self._post = post
         self._channel = channel
         self._is_multi_channel = is_multi_channel
-        self.functional_channel = self.get_current_channel()
         # Marker showing that the HmIP device hase been removed.
         self.hmip_device_removed = False
         _LOGGER.info("Setting up %s (%s)", self.name, self._device.modelType)
@@ -178,9 +175,7 @@ class HomematicipGenericEntity(Entity):
         """Handle hmip device removal."""
         # Set marker showing that the HmIP device hase been removed.
         self.hmip_device_removed = True
-        self.hass.async_create_task(
-            self.async_remove(force_remove=True), eager_start=False
-        )
+        self.hass.async_create_task(self.async_remove(force_remove=True))
 
     @property
     def name(self) -> str:
@@ -253,14 +248,3 @@ class HomematicipGenericEntity(Entity):
             state_attr[ATTR_IS_GROUP] = True
 
         return state_attr
-
-    def get_current_channel(self) -> FunctionalChannel:
-        """Return the FunctionalChannel for device."""
-        if hasattr(self._device, "functionalChannels"):
-            if self._is_multi_channel:
-                return self._device.functionalChannels[self._channel]
-
-            if len(self._device.functionalChannels) > 1:
-                return self._device.functionalChannels[1]
-
-        return None

@@ -1,18 +1,14 @@
 """Support for ANEL PwrCtrl switches."""
-
 from __future__ import annotations
 
 from datetime import timedelta
 import logging
 from typing import Any
 
-from anel_pwrctrl import Device, DeviceMaster, Switch
+from anel_pwrctrl import DeviceMaster
 import voluptuous as vol
 
-from homeassistant.components.switch import (
-    PLATFORM_SCHEMA as SWITCH_PLATFORM_SCHEMA,
-    SwitchEntity,
-)
+from homeassistant.components.switch import PLATFORM_SCHEMA, SwitchEntity
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
@@ -27,7 +23,7 @@ CONF_PORT_SEND = "port_send"
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=5)
 
-PLATFORM_SCHEMA = SWITCH_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_PORT_RECV): cv.port,
         vol.Required(CONF_PORT_SEND): cv.port,
@@ -76,7 +72,7 @@ def setup_platform(
 class PwrCtrlSwitch(SwitchEntity):
     """Representation of a PwrCtrl switch."""
 
-    def __init__(self, port: Switch, parent_device: PwrCtrlDevice) -> None:
+    def __init__(self, port, parent_device):
         """Initialize the PwrCtrl switch."""
         self._port = port
         self._parent_device = parent_device
@@ -100,11 +96,11 @@ class PwrCtrlSwitch(SwitchEntity):
 class PwrCtrlDevice:
     """Device representation for per device throttling."""
 
-    def __init__(self, device: Device) -> None:
+    def __init__(self, device):
         """Initialize the PwrCtrl device."""
         self._device = device
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
-    def update(self) -> None:
+    def update(self):
         """Update the device and all its switches."""
         self._device.update()

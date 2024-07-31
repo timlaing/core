@@ -1,5 +1,4 @@
 """Entities and Devices queries for logbook."""
-
 from __future__ import annotations
 
 from collections.abc import Collection, Iterable
@@ -110,7 +109,7 @@ def entities_devices_stmt(
     json_quoted_device_ids: list[str],
 ) -> StatementLambdaElement:
     """Generate a logbook query for multiple entities."""
-    return lambda_stmt(
+    stmt = lambda_stmt(
         lambda: _apply_entities_devices_context_union(
             select_events_without_states(start_day, end_day, event_type_ids).where(
                 _apply_event_entity_id_device_id_matchers(
@@ -125,6 +124,7 @@ def entities_devices_stmt(
             json_quoted_device_ids,
         ).order_by(Events.time_fired_ts)
     )
+    return stmt
 
 
 def _apply_event_entity_id_device_id_matchers(

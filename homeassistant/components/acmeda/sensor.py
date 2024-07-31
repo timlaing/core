@@ -1,31 +1,31 @@
 """Support for Acmeda Roller Blind Batteries."""
-
 from __future__ import annotations
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import AcmedaConfigEntry
 from .base import AcmedaBase
-from .const import ACMEDA_HUB_UPDATE
+from .const import ACMEDA_HUB_UPDATE, DOMAIN
 from .helpers import async_add_acmeda_entities
+from .hub import PulseHub
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: AcmedaConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Acmeda Rollers from a config entry."""
-    hub = config_entry.runtime_data
+    hub: PulseHub = hass.data[DOMAIN][config_entry.entry_id]
 
     current: set[int] = set()
 
     @callback
-    def async_add_acmeda_sensors() -> None:
+    def async_add_acmeda_sensors():
         async_add_acmeda_entities(
             hass, AcmedaBattery, config_entry, current, async_add_entities
         )
@@ -48,4 +48,4 @@ class AcmedaBattery(AcmedaBase, SensorEntity):
     @property
     def native_value(self) -> float | int | None:
         """Return the state of the device."""
-        return self.roller.battery  # type: ignore[no-any-return]
+        return self.roller.battery

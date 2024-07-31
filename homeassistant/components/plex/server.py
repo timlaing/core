@@ -1,5 +1,4 @@
 """Shared class to maintain Plex server instances."""
-
 from __future__ import annotations
 
 import logging
@@ -97,7 +96,6 @@ class PlexServer:
             cooldown=DEBOUNCE_TIMEOUT,
             immediate=True,
             function=self._async_update_platforms,
-            background=True,
         ).async_call
         self.thumbnail_cache = {}
 
@@ -483,9 +481,9 @@ class PlexServer:
                     continue
 
                 process_device("session", player)
-                available_clients[player.machineIdentifier]["session"] = (
-                    self.active_sessions[unique_id]
-                )
+                available_clients[player.machineIdentifier][
+                    "session"
+                ] = self.active_sessions[unique_id]
 
         for device in devices:
             process_device("PMS", device)
@@ -571,7 +569,7 @@ class PlexServer:
     @property
     def url_in_use(self):
         """Return URL used for connected Plex server."""
-        return self._plex_server._baseurl  # noqa: SLF001
+        return self._plex_server._baseurl  # pylint: disable=protected-access
 
     @property
     def option_ignore_new_shared_users(self):

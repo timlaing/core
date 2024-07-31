@@ -1,5 +1,4 @@
 """The rpi_camera component."""
-
 import voluptuous as vol
 
 from homeassistant.const import CONF_FILE_PATH, CONF_NAME, Platform

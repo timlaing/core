@@ -1,5 +1,4 @@
 """Config flow to configure Xiaomi Miio."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -11,16 +10,12 @@ from micloud import MiCloud
 from micloud.micloudexception import MiCloudAccessDenied
 import voluptuous as vol
 
+from homeassistant import config_entries
 from homeassistant.components import zeroconf
-from homeassistant.config_entries import (
-    SOURCE_REAUTH,
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlow,
-)
-from homeassistant.const import CONF_DEVICE, CONF_HOST, CONF_MAC, CONF_MODEL, CONF_TOKEN
+from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntry
+from homeassistant.const import CONF_HOST, CONF_MODEL, CONF_TOKEN
 from homeassistant.core import callback
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.device_registry import format_mac
 
 from .const import (
@@ -28,8 +23,10 @@ from .const import (
     CONF_CLOUD_PASSWORD,
     CONF_CLOUD_SUBDEVICES,
     CONF_CLOUD_USERNAME,
+    CONF_DEVICE,
     CONF_FLOW_TYPE,
     CONF_GATEWAY,
+    CONF_MAC,
     CONF_MANUAL,
     DEFAULT_CLOUD_COUNTRY,
     DOMAIN,
@@ -61,16 +58,16 @@ DEVICE_CLOUD_CONFIG = vol.Schema(
 )
 
 
-class OptionsFlowHandler(OptionsFlow):
+class OptionsFlowHandler(config_entries.OptionsFlow):
     """Options for the component."""
 
-    def __init__(self, config_entry: ConfigEntry) -> None:
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Init object."""
         self.config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Manage the options."""
         errors = {}
         if user_input is not None:
@@ -109,7 +106,7 @@ class OptionsFlowHandler(OptionsFlow):
         )
 
 
-class XiaomiMiioFlowHandler(ConfigFlow, domain=DOMAIN):
+class XiaomiMiioFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a Xiaomi Miio config flow."""
 
     VERSION = 1
@@ -132,9 +129,7 @@ class XiaomiMiioFlowHandler(ConfigFlow, domain=DOMAIN):
         """Get the options flow."""
         return OptionsFlowHandler(config_entry)
 
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Perform reauth upon an authentication error or missing cloud credentials."""
         self.host = entry_data[CONF_HOST]
         self.token = entry_data[CONF_TOKEN]
@@ -144,7 +139,7 @@ class XiaomiMiioFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Dialog that informs the user that reauth is required."""
         if user_input is not None:
             return await self.async_step_cloud()
@@ -152,13 +147,13 @@ class XiaomiMiioFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow initialized by the user."""
         return await self.async_step_cloud()
 
     async def async_step_zeroconf(
         self, discovery_info: zeroconf.ZeroconfServiceInfo
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle zeroconf discovery."""
         name = discovery_info.name
         self.host = discovery_info.host
@@ -220,7 +215,7 @@ class XiaomiMiioFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_cloud(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Configure a xiaomi miio device through the Miio Cloud."""
         errors = {}
         if user_input is not None:
@@ -243,7 +238,7 @@ class XiaomiMiioFlowHandler(ConfigFlow, domain=DOMAIN):
                     errors["base"] = "cloud_login_error"
             except MiCloudAccessDenied:
                 errors["base"] = "cloud_login_error"
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception in Miio cloud login")
                 return self.async_abort(reason="unknown")
 
@@ -256,7 +251,7 @@ class XiaomiMiioFlowHandler(ConfigFlow, domain=DOMAIN):
                 devices_raw = await self.hass.async_add_executor_job(
                     miio_cloud.get_devices, cloud_country
                 )
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception in Miio cloud get devices")
                 return self.async_abort(reason="unknown")
 
@@ -297,7 +292,7 @@ class XiaomiMiioFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_select(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle multiple cloud devices found."""
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -315,7 +310,7 @@ class XiaomiMiioFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_manual(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Configure a xiaomi miio device Manually."""
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -334,7 +329,7 @@ class XiaomiMiioFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_connect(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Connect to a xiaomi miio device."""
         errors: dict[str, str] = {}
         if self.host is None or self.token is None:
@@ -353,7 +348,7 @@ class XiaomiMiioFlowHandler(ConfigFlow, domain=DOMAIN):
         except SetupException:
             if self.model is None:
                 errors["base"] = "cannot_connect"
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             _LOGGER.exception("Unexpected exception in connect Xiaomi device")
             return self.async_abort(reason="unknown")
 
@@ -389,7 +384,9 @@ class XiaomiMiioFlowHandler(ConfigFlow, domain=DOMAIN):
                 data[CONF_CLOUD_USERNAME] = self.cloud_username
                 data[CONF_CLOUD_PASSWORD] = self.cloud_password
                 data[CONF_CLOUD_COUNTRY] = self.cloud_country
-            return self.async_update_reload_and_abort(existing_entry, data=data)
+            if self.hass.config_entries.async_update_entry(existing_entry, data=data):
+                await self.hass.config_entries.async_reload(existing_entry.entry_id)
+            return self.async_abort(reason="reauth_successful")
 
         if self.name is None:
             self.name = self.model

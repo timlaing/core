@@ -1,9 +1,7 @@
 """Test the bluetooth config flow."""
-
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from bluetooth_adapters import DEFAULT_ADDRESS, AdapterDetails
-import pytest
 
 from homeassistant import config_entries
 from homeassistant.components.bluetooth.const import (
@@ -20,11 +18,12 @@ from tests.common import MockConfigEntry
 from tests.typing import WebSocketGenerator
 
 
-@pytest.mark.usefixtures(
-    "macos_adapter", "mock_bleak_scanner_start", "mock_bluetooth_adapters"
-)
 async def test_options_flow_disabled_not_setup(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    hass: HomeAssistant,
+    hass_ws_client: WebSocketGenerator,
+    mock_bleak_scanner_start: MagicMock,
+    mock_bluetooth_adapters: None,
+    macos_adapter: None,
 ) -> None:
     """Test options are disabled if the integration has not been setup."""
     await async_setup_component(hass, "config", {})
@@ -32,9 +31,6 @@ async def test_options_flow_disabled_not_setup(
         domain=DOMAIN, data={}, options={}, unique_id=DEFAULT_ADDRESS
     )
     entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
-
     ws_client = await hass_ws_client(hass)
 
     await ws_client.send_json(
@@ -49,105 +45,82 @@ async def test_options_flow_disabled_not_setup(
     await hass.config_entries.async_unload(entry.entry_id)
 
 
-@pytest.mark.usefixtures("macos_adapter")
-async def test_async_step_user_macos(hass: HomeAssistant) -> None:
+async def test_async_step_user_macos(hass: HomeAssistant, macos_adapter: None) -> None:
     """Test setting up manually with one adapter on MacOS."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
         data={},
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "single_adapter"
-    with (
-        patch("homeassistant.components.bluetooth.async_setup", return_value=True),
-        patch(
-            "homeassistant.components.bluetooth.async_setup_entry", return_value=True
-        ) as mock_setup_entry,
-    ):
+    with patch(
+        "homeassistant.components.bluetooth.async_setup", return_value=True
+    ), patch(
+        "homeassistant.components.bluetooth.async_setup_entry", return_value=True
+    ) as mock_setup_entry:
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
-    assert result2["title"] == "Apple Unknown MacOS Model (Core Bluetooth)"
+    assert result2["type"] == FlowResultType.CREATE_ENTRY
+    assert result2["title"] == "Core Bluetooth"
     assert result2["data"] == {}
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-@pytest.mark.usefixtures("one_adapter")
-async def test_async_step_user_linux_one_adapter(hass: HomeAssistant) -> None:
+async def test_async_step_user_linux_one_adapter(
+    hass: HomeAssistant, one_adapter: None
+) -> None:
     """Test setting up manually with one adapter on Linux."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
         data={},
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "single_adapter"
-    assert result["description_placeholders"] == {
-        "name": "hci0 (00:00:00:00:00:01)",
-        "model": "Bluetooth Adapter 5.0 (cc01:aa01)",
-        "manufacturer": "ACME",
-    }
-    with (
-        patch("homeassistant.components.bluetooth.async_setup", return_value=True),
-        patch(
-            "homeassistant.components.bluetooth.async_setup_entry", return_value=True
-        ) as mock_setup_entry,
-    ):
+    with patch(
+        "homeassistant.components.bluetooth.async_setup", return_value=True
+    ), patch(
+        "homeassistant.components.bluetooth.async_setup_entry", return_value=True
+    ) as mock_setup_entry:
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
-    assert result2["title"] == "ACME Bluetooth Adapter 5.0 (00:00:00:00:00:01)"
+    assert result2["type"] == FlowResultType.CREATE_ENTRY
+    assert result2["title"] == "00:00:00:00:00:01"
     assert result2["data"] == {}
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_async_step_user_linux_crashed_adapter(
-    hass: HomeAssistant, crashed_adapter: None
+async def test_async_step_user_linux_two_adapters(
+    hass: HomeAssistant, two_adapters: None
 ) -> None:
-    """Test setting up manually with one crashed adapter on Linux."""
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN,
-        context={"source": config_entries.SOURCE_USER},
-        data={},
-    )
-    assert result["type"] is FlowResultType.ABORT
-    assert result["reason"] == "no_adapters"
-
-
-@pytest.mark.usefixtures("two_adapters")
-async def test_async_step_user_linux_two_adapters(hass: HomeAssistant) -> None:
     """Test setting up manually with two adapters on Linux."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
         data={},
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "multiple_adapters"
-    assert result["data_schema"].schema["adapter"].container == {
-        "hci0": "hci0 (00:00:00:00:00:01) ACME Bluetooth Adapter 5.0 (cc01:aa01)",
-        "hci1": "hci1 (00:00:00:00:00:02) ACME Bluetooth Adapter 5.0 (cc01:aa01)",
-    }
-    with (
-        patch("homeassistant.components.bluetooth.async_setup", return_value=True),
-        patch(
-            "homeassistant.components.bluetooth.async_setup_entry", return_value=True
-        ) as mock_setup_entry,
-    ):
+    with patch(
+        "homeassistant.components.bluetooth.async_setup", return_value=True
+    ), patch(
+        "homeassistant.components.bluetooth.async_setup_entry", return_value=True
+    ) as mock_setup_entry:
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"], user_input={CONF_ADAPTER: "hci1"}
         )
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
-    assert result2["title"] == "ACME Bluetooth Adapter 5.0 (00:00:00:00:00:02)"
+    assert result2["type"] == FlowResultType.CREATE_ENTRY
+    assert result2["title"] == "00:00:00:00:00:02"
     assert result2["data"] == {}
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-@pytest.mark.usefixtures("macos_adapter")
-async def test_async_step_user_only_allows_one(hass: HomeAssistant) -> None:
+async def test_async_step_user_only_allows_one(
+    hass: HomeAssistant, macos_adapter: None
+) -> None:
     """Test setting up manually with an existing entry."""
     entry = MockConfigEntry(domain=DOMAIN, unique_id=DEFAULT_ADDRESS)
     entry.add_to_hass(hass)
@@ -156,7 +129,7 @@ async def test_async_step_user_only_allows_one(hass: HomeAssistant) -> None:
         context={"source": config_entries.SOURCE_USER},
         data={},
     )
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == FlowResultType.ABORT
     assert result["reason"] == "no_adapters"
 
 
@@ -175,31 +148,24 @@ async def test_async_step_integration_discovery(hass: HomeAssistant) -> None:
         context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
         data={CONF_ADAPTER: "hci0", CONF_DETAILS: details},
     )
-    assert result["type"] is FlowResultType.FORM
-    assert result["description_placeholders"] == {
-        "name": "hci0 (00:00:00:00:00:01)",
-        "model": "Unknown",
-        "manufacturer": "ACME",
-    }
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "single_adapter"
-    with (
-        patch("homeassistant.components.bluetooth.async_setup", return_value=True),
-        patch(
-            "homeassistant.components.bluetooth.async_setup_entry", return_value=True
-        ) as mock_setup_entry,
-    ):
+    with patch(
+        "homeassistant.components.bluetooth.async_setup", return_value=True
+    ), patch(
+        "homeassistant.components.bluetooth.async_setup_entry", return_value=True
+    ) as mock_setup_entry:
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
-    assert result2["title"] == "ACME Unknown (00:00:00:00:00:01)"
+    assert result2["type"] == FlowResultType.CREATE_ENTRY
+    assert result2["title"] == "00:00:00:00:00:01"
     assert result2["data"] == {}
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-@pytest.mark.usefixtures("one_adapter")
 async def test_async_step_integration_discovery_during_onboarding_one_adapter(
-    hass: HomeAssistant,
+    hass: HomeAssistant, one_adapter: None
 ) -> None:
     """Test setting up from integration discovery during onboarding."""
     details = AdapterDetails(
@@ -209,31 +175,28 @@ async def test_async_step_integration_discovery_during_onboarding_one_adapter(
         manufacturer="ACME",
     )
 
-    with (
-        patch("homeassistant.components.bluetooth.async_setup", return_value=True),
-        patch(
-            "homeassistant.components.bluetooth.async_setup_entry", return_value=True
-        ) as mock_setup_entry,
-        patch(
-            "homeassistant.components.onboarding.async_is_onboarded",
-            return_value=False,
-        ) as mock_onboarding,
-    ):
+    with patch(
+        "homeassistant.components.bluetooth.async_setup", return_value=True
+    ), patch(
+        "homeassistant.components.bluetooth.async_setup_entry", return_value=True
+    ) as mock_setup_entry, patch(
+        "homeassistant.components.onboarding.async_is_onboarded",
+        return_value=False,
+    ) as mock_onboarding:
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
             data={CONF_ADAPTER: "hci0", CONF_DETAILS: details},
         )
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"] == "ACME Unknown (00:00:00:00:00:01)"
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert result["title"] == "00:00:00:00:00:01"
     assert result["data"] == {}
     assert len(mock_setup_entry.mock_calls) == 1
     assert len(mock_onboarding.mock_calls) == 1
 
 
-@pytest.mark.usefixtures("two_adapters")
 async def test_async_step_integration_discovery_during_onboarding_two_adapters(
-    hass: HomeAssistant,
+    hass: HomeAssistant, two_adapters: None
 ) -> None:
     """Test setting up from integration discovery during onboarding."""
     details1 = AdapterDetails(
@@ -249,16 +212,14 @@ async def test_async_step_integration_discovery_during_onboarding_two_adapters(
         manufacturer="ACME",
     )
 
-    with (
-        patch("homeassistant.components.bluetooth.async_setup", return_value=True),
-        patch(
-            "homeassistant.components.bluetooth.async_setup_entry", return_value=True
-        ) as mock_setup_entry,
-        patch(
-            "homeassistant.components.onboarding.async_is_onboarded",
-            return_value=False,
-        ) as mock_onboarding,
-    ):
+    with patch(
+        "homeassistant.components.bluetooth.async_setup", return_value=True
+    ), patch(
+        "homeassistant.components.bluetooth.async_setup_entry", return_value=True
+    ) as mock_setup_entry, patch(
+        "homeassistant.components.onboarding.async_is_onboarded",
+        return_value=False,
+    ) as mock_onboarding:
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
@@ -269,21 +230,20 @@ async def test_async_step_integration_discovery_during_onboarding_two_adapters(
             context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
             data={CONF_ADAPTER: "hci1", CONF_DETAILS: details2},
         )
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"] == "ACME Unknown (00:00:00:00:00:01)"
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert result["title"] == "00:00:00:00:00:01"
     assert result["data"] == {}
 
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
-    assert result2["title"] == "ACME Unknown (00:00:00:00:00:02)"
+    assert result2["type"] == FlowResultType.CREATE_ENTRY
+    assert result2["title"] == "00:00:00:00:00:02"
     assert result2["data"] == {}
 
     assert len(mock_setup_entry.mock_calls) == 2
     assert len(mock_onboarding.mock_calls) == 2
 
 
-@pytest.mark.usefixtures("macos_adapter")
 async def test_async_step_integration_discovery_during_onboarding(
-    hass: HomeAssistant,
+    hass: HomeAssistant, macos_adapter: None
 ) -> None:
     """Test setting up from integration discovery during onboarding."""
     details = AdapterDetails(
@@ -293,23 +253,21 @@ async def test_async_step_integration_discovery_during_onboarding(
         manufacturer="ACME",
     )
 
-    with (
-        patch("homeassistant.components.bluetooth.async_setup", return_value=True),
-        patch(
-            "homeassistant.components.bluetooth.async_setup_entry", return_value=True
-        ) as mock_setup_entry,
-        patch(
-            "homeassistant.components.onboarding.async_is_onboarded",
-            return_value=False,
-        ) as mock_onboarding,
-    ):
+    with patch(
+        "homeassistant.components.bluetooth.async_setup", return_value=True
+    ), patch(
+        "homeassistant.components.bluetooth.async_setup_entry", return_value=True
+    ) as mock_setup_entry, patch(
+        "homeassistant.components.onboarding.async_is_onboarded",
+        return_value=False,
+    ) as mock_onboarding:
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
             data={CONF_ADAPTER: "Core Bluetooth", CONF_DETAILS: details},
         )
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"] == "ACME Unknown (Core Bluetooth)"
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert result["title"] == "Core Bluetooth"
     assert result["data"] == {}
     assert len(mock_setup_entry.mock_calls) == 1
     assert len(mock_onboarding.mock_calls) == 1
@@ -333,14 +291,16 @@ async def test_async_step_integration_discovery_already_exists(
         context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
         data={CONF_ADAPTER: "hci0", CONF_DETAILS: details},
     )
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
 
-@pytest.mark.usefixtures(
-    "one_adapter", "mock_bleak_scanner_start", "mock_bluetooth_adapters"
-)
-async def test_options_flow_linux(hass: HomeAssistant) -> None:
+async def test_options_flow_linux(
+    hass: HomeAssistant,
+    mock_bleak_scanner_start: MagicMock,
+    mock_bluetooth_adapters: None,
+    one_adapter: None,
+) -> None:
     """Test options on Linux."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -354,7 +314,7 @@ async def test_options_flow_linux(hass: HomeAssistant) -> None:
     await hass.async_block_till_done()
 
     result = await hass.config_entries.options.async_init(entry.entry_id)
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "init"
     assert result["errors"] is None
 
@@ -366,13 +326,13 @@ async def test_options_flow_linux(hass: HomeAssistant) -> None:
     )
     await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_PASSIVE] is True
 
     # Verify we can change it to False
 
     result = await hass.config_entries.options.async_init(entry.entry_id)
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "init"
     assert result["errors"] is None
 
@@ -384,16 +344,17 @@ async def test_options_flow_linux(hass: HomeAssistant) -> None:
     )
     await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_PASSIVE] is False
     await hass.config_entries.async_unload(entry.entry_id)
 
 
-@pytest.mark.usefixtures(
-    "macos_adapter", "mock_bleak_scanner_start", "mock_bluetooth_adapters"
-)
 async def test_options_flow_disabled_macos(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    hass: HomeAssistant,
+    hass_ws_client: WebSocketGenerator,
+    mock_bleak_scanner_start: MagicMock,
+    mock_bluetooth_adapters: None,
+    macos_adapter: None,
 ) -> None:
     """Test options are disabled on MacOS."""
     await async_setup_component(hass, "config", {})
@@ -418,11 +379,12 @@ async def test_options_flow_disabled_macos(
     await hass.config_entries.async_unload(entry.entry_id)
 
 
-@pytest.mark.usefixtures(
-    "one_adapter", "mock_bleak_scanner_start", "mock_bluetooth_adapters"
-)
 async def test_options_flow_enabled_linux(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    hass: HomeAssistant,
+    hass_ws_client: WebSocketGenerator,
+    mock_bleak_scanner_start: MagicMock,
+    mock_bluetooth_adapters: None,
+    one_adapter: None,
 ) -> None:
     """Test options are enabled on Linux."""
     await async_setup_component(hass, "config", {})
@@ -450,8 +412,9 @@ async def test_options_flow_enabled_linux(
     await hass.config_entries.async_unload(entry.entry_id)
 
 
-@pytest.mark.usefixtures("one_adapter")
-async def test_async_step_user_linux_adapter_is_ignored(hass: HomeAssistant) -> None:
+async def test_async_step_user_linux_adapter_is_ignored(
+    hass: HomeAssistant, one_adapter: None
+) -> None:
     """Test we give a hint that the adapter is ignored."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -464,6 +427,6 @@ async def test_async_step_user_linux_adapter_is_ignored(hass: HomeAssistant) -> 
         context={"source": config_entries.SOURCE_USER},
         data={},
     )
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == FlowResultType.ABORT
     assert result["reason"] == "no_adapters"
     assert result["description_placeholders"] == {"ignored_adapters": "1"}

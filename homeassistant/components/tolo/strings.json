@@ -61,13 +61,6 @@
           "automatic": "Automatic",
           "manual": "Manual"
         }
-      },
-      "aroma_therapy_slot": {
-        "name": "Aroma therapy slot",
-        "state": {
-          "a": "Slot A",
-          "b": "Slot B"
-        }
       }
     },
     "sensor": {
@@ -85,14 +78,6 @@
       },
       "fan_timer_remaining": {
         "name": "Fan timer"
-      }
-    },
-    "switch": {
-      "aroma_therapy_on": {
-        "name": "Aroma therapy"
-      },
-      "salt_bath_on": {
-        "name": "Salt bath"
       }
     }
   }

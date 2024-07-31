@@ -1,5 +1,4 @@
 """Auth provider that validates credentials via an external command."""
-
 from __future__ import annotations
 
 import asyncio
@@ -11,9 +10,10 @@ from typing import Any, cast
 import voluptuous as vol
 
 from homeassistant.const import CONF_COMMAND
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 
-from ..models import AuthFlowResult, Credentials, UserMeta
+from ..models import Credentials, UserMeta
 from . import AUTH_PROVIDER_SCHEMA, AUTH_PROVIDERS, AuthProvider, LoginFlow
 
 CONF_ARGS = "args"
@@ -44,11 +44,7 @@ class CommandLineAuthProvider(AuthProvider):
     DEFAULT_TITLE = "Command Line Authentication"
 
     # which keys to accept from a program's stdout
-    ALLOWED_META_KEYS = (
-        "name",
-        "group",
-        "local_only",
-    )
+    ALLOWED_META_KEYS = ("name",)
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Extend parent's __init__.
@@ -122,15 +118,10 @@ class CommandLineAuthProvider(AuthProvider):
     ) -> UserMeta:
         """Return extra user metadata for credentials.
 
-        Currently, supports name, group and local_only.
+        Currently, only name is supported.
         """
         meta = self._user_meta.get(credentials.data["username"], {})
-        return UserMeta(
-            name=meta.get("name"),
-            is_active=True,
-            group=meta.get("group"),
-            local_only=meta.get("local_only") == "true",
-        )
+        return UserMeta(name=meta.get("name"), is_active=True)
 
 
 class CommandLineLoginFlow(LoginFlow):
@@ -138,7 +129,7 @@ class CommandLineLoginFlow(LoginFlow):
 
     async def async_step_init(
         self, user_input: dict[str, str] | None = None
-    ) -> AuthFlowResult:
+    ) -> FlowResult:
         """Handle the step of the form."""
         errors = {}
 

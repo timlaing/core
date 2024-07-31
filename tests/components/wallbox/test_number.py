@@ -1,5 +1,4 @@
 """Test Wallbox Switch component."""
-
 import json
 
 import pytest
@@ -10,9 +9,9 @@ from homeassistant.components.wallbox.const import (
     CHARGER_ENERGY_PRICE_KEY,
     CHARGER_MAX_CHARGING_CURRENT_KEY,
 )
+from homeassistant.components.wallbox.coordinator import InvalidAuth
 from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
 
 from . import (
     authorisation_response,
@@ -44,7 +43,7 @@ async def test_wallbox_number_class(
             status_code=200,
         )
         state = hass.states.get(MOCK_NUMBER_ENTITY_ID)
-        assert state.attributes["min"] == 6
+        assert state.attributes["min"] == 0
         assert state.attributes["max"] == 25
 
         await hass.services.async_call(
@@ -187,7 +186,7 @@ async def test_wallbox_number_class_energy_price_auth_error(
             status_code=403,
         )
 
-        with pytest.raises(ConfigEntryAuthFailed):
+        with pytest.raises(InvalidAuth):
             await hass.services.async_call(
                 "number",
                 SERVICE_SET_VALUE,

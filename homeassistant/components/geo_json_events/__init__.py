@@ -1,5 +1,4 @@
 """The GeoJSON events component."""
-
 from __future__ import annotations
 
 import logging
@@ -7,7 +6,10 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.entity_registry import (
+    async_entries_for_config_entry,
+    async_get,
+)
 
 from .const import DOMAIN, PLATFORMS
 from .manager import GeoJsonFeedEntityManager
@@ -37,8 +39,8 @@ async def remove_orphaned_entities(hass: HomeAssistant, entry_id: str) -> None:
     has no previous data to compare against, and thus all entities managed by this
     integration are removed after startup.
     """
-    entity_registry = er.async_get(hass)
-    orphaned_entries = er.async_entries_for_config_entry(entity_registry, entry_id)
+    entity_registry = async_get(hass)
+    orphaned_entries = async_entries_for_config_entry(entity_registry, entry_id)
     if orphaned_entries is not None:
         for entry in orphaned_entries:
             if entry.domain == Platform.GEO_LOCATION:

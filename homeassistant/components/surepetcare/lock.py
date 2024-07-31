@@ -1,5 +1,4 @@
 """Support for Sure PetCare Flaps locks."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -13,8 +12,8 @@ from homeassistant.const import STATE_LOCKED, STATE_UNLOCKED
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from . import SurePetcareDataCoordinator
 from .const import DOMAIN
-from .coordinator import SurePetcareDataCoordinator
 from .entity import SurePetcareEntity
 
 
@@ -23,18 +22,25 @@ async def async_setup_entry(
 ) -> None:
     """Set up Sure PetCare locks on a config entry."""
 
+    entities: list[SurePetcareLock] = []
+
     coordinator: SurePetcareDataCoordinator = hass.data[DOMAIN][entry.entry_id]
 
-    async_add_entities(
-        SurePetcareLock(surepy_entity.id, coordinator, lock_state)
-        for surepy_entity in coordinator.data.values()
-        if surepy_entity.type in [EntityType.CAT_FLAP, EntityType.PET_FLAP]
+    for surepy_entity in coordinator.data.values():
+        if surepy_entity.type not in [
+            EntityType.CAT_FLAP,
+            EntityType.PET_FLAP,
+        ]:
+            continue
+
         for lock_state in (
             LockState.LOCKED_IN,
             LockState.LOCKED_OUT,
             LockState.LOCKED_ALL,
-        )
-    )
+        ):
+            entities.append(SurePetcareLock(surepy_entity.id, coordinator, lock_state))
+
+    async_add_entities(entities)
 
 
 class SurePetcareLock(SurePetcareEntity, LockEntity):

@@ -1,5 +1,4 @@
 """The youless integration."""
-
 from datetime import timedelta
 import logging
 from urllib.error import URLError

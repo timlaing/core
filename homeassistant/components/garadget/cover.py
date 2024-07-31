@@ -1,5 +1,4 @@
 """Platform for the Garadget cover component."""
-
 from __future__ import annotations
 
 import logging
@@ -9,7 +8,7 @@ import requests
 import voluptuous as vol
 
 from homeassistant.components.cover import (
-    PLATFORM_SCHEMA as COVER_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     CoverDeviceClass,
     CoverEntity,
 )
@@ -61,7 +60,7 @@ COVER_SCHEMA = vol.Schema(
     }
 )
 
-PLATFORM_SCHEMA = COVER_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {vol.Required(CONF_COVERS): cv.schema_with_slug_keys(COVER_SCHEMA)}
 )
 

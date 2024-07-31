@@ -1,25 +1,20 @@
 """Test process util."""
 
-from functools import partial
 import os
 import subprocess
 
 import pytest
 
-from homeassistant.core import HomeAssistant
 from homeassistant.util import process
 
 
-async def test_kill_process(hass: HomeAssistant) -> None:
+async def test_kill_process() -> None:
     """Test killing a process."""
-    sleeper = await hass.async_add_executor_job(
-        partial(  # noqa: S604 # shell by design
-            subprocess.Popen,
-            "sleep 1000",
-            shell=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
+    sleeper = subprocess.Popen(
+        "sleep 1000",
+        shell=True,  # noqa: S602 # shell by design
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
     pid = sleeper.pid
 

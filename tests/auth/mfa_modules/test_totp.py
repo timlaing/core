@@ -1,5 +1,4 @@
 """Test the Time-based One Time Password (MFA) auth module."""
-
 import asyncio
 from unittest.mock import patch
 
@@ -114,7 +113,7 @@ async def test_login_flow_validates_mfa(hass: HomeAssistant) -> None:
     )
     assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["step_id"] == "mfa"
-    assert result["data_schema"].schema.get("code") is str
+    assert result["data_schema"].schema.get("code") == str
 
     with patch("pyotp.TOTP.verify", return_value=False):
         result = await hass.auth.login_flow.async_configure(

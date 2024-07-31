@@ -1,5 +1,4 @@
 """Config flow for Tomorrow.io integration."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -14,13 +13,8 @@ from pytomorrowio.exceptions import (
 from pytomorrowio.pytomorrowio import TomorrowioV4
 import voluptuous as vol
 
+from homeassistant import config_entries, core
 from homeassistant.components.zone import async_active_zone
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlow,
-)
 from homeassistant.const import (
     CONF_API_KEY,
     CONF_FRIENDLY_NAME,
@@ -30,6 +24,7 @@ from homeassistant.const import (
     CONF_NAME,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import LocationSelector, LocationSelectorConfig
 
@@ -45,7 +40,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def _get_config_schema(
-    hass: HomeAssistant,
+    hass: core.HomeAssistant,
     source: str | None,
     input_dict: dict[str, Any] | None = None,
 ) -> vol.Schema:
@@ -61,12 +56,13 @@ def _get_config_schema(
         vol.Required(CONF_API_KEY, default=input_dict.get(CONF_API_KEY)): str,
     }
 
-    default_location = input_dict.get(
-        CONF_LOCATION,
-        {
+    default_location = (
+        input_dict[CONF_LOCATION]
+        if CONF_LOCATION in input_dict
+        else {
             CONF_LATITUDE: hass.config.latitude,
             CONF_LONGITUDE: hass.config.longitude,
-        },
+        }
     )
     return vol.Schema(
         {
@@ -88,16 +84,16 @@ def _get_unique_id(hass: HomeAssistant, input_dict: dict[str, Any]):
     )
 
 
-class TomorrowioOptionsConfigFlow(OptionsFlow):
+class TomorrowioOptionsConfigFlow(config_entries.OptionsFlow):
     """Handle Tomorrow.io options."""
 
-    def __init__(self, config_entry: ConfigEntry) -> None:
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize Tomorrow.io options flow."""
         self._config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Manage the Tomorrow.io options."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
@@ -114,7 +110,7 @@ class TomorrowioOptionsConfigFlow(OptionsFlow):
         )
 
 
-class TomorrowioConfigFlow(ConfigFlow, domain=DOMAIN):
+class TomorrowioConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Tomorrow.io Weather API."""
 
     VERSION = 1
@@ -122,14 +118,14 @@ class TomorrowioConfigFlow(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: ConfigEntry,
+        config_entry: config_entries.ConfigEntry,
     ) -> TomorrowioOptionsConfigFlow:
         """Get the options flow for this handler."""
         return TomorrowioOptionsConfigFlow(config_entry)
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         errors = {}
         if user_input is not None:
@@ -160,7 +156,7 @@ class TomorrowioConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors[CONF_API_KEY] = "invalid_api_key"
             except RateLimitedException:
                 errors[CONF_API_KEY] = "rate_limited"
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
 

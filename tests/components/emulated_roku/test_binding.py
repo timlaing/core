@@ -1,5 +1,4 @@
 """Tests for emulated_roku library bindings."""
-
 from unittest.mock import AsyncMock, Mock, patch
 
 from homeassistant.components.emulated_roku.binding import (

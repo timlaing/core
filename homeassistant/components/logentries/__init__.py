@@ -1,5 +1,4 @@
 """Support for sending data to Logentries webhook endpoint."""
-
 import json
 import logging
 
@@ -49,8 +48,8 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         try:
             payload = {"host": le_wh, "event": json_body}
             requests.post(le_wh, data=json.dumps(payload), timeout=10)
-        except requests.exceptions.RequestException:
-            _LOGGER.exception("Error sending to Logentries")
+        except requests.exceptions.RequestException as error:
+            _LOGGER.exception("Error sending to Logentries: %s", error)
 
     hass.bus.listen(EVENT_STATE_CHANGED, logentries_event_listener)
 

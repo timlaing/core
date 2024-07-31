@@ -1,5 +1,4 @@
 """The test for sensor helpers."""
-
 import pytest
 
 from homeassistant.components.sensor import SensorDeviceClass

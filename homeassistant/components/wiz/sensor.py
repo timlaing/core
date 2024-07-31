@@ -1,5 +1,4 @@
 """Support for WiZ sensors."""
-
 from __future__ import annotations
 
 from homeassistant.components.sensor import (
@@ -8,6 +7,7 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
     EntityCategory,
@@ -16,7 +16,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import WizConfigEntry
+from .const import DOMAIN
 from .entity import WizEntity
 from .models import WizData
 
@@ -44,18 +44,18 @@ POWER_SENSORS: tuple[SensorEntityDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: WizConfigEntry,
+    entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the wiz sensor."""
+    wiz_data: WizData = hass.data[DOMAIN][entry.entry_id]
     entities = [
-        WizSensor(entry.runtime_data, entry.title, description)
-        for description in SENSORS
+        WizSensor(wiz_data, entry.title, description) for description in SENSORS
     ]
-    if entry.runtime_data.coordinator.data is not None:
+    if wiz_data.coordinator.data is not None:
         entities.extend(
             [
-                WizPowerSensor(entry.runtime_data, entry.title, description)
+                WizPowerSensor(wiz_data, entry.title, description)
                 for description in POWER_SENSORS
             ]
         )

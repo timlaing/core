@@ -1,19 +1,11 @@
 """Support for Comelit."""
-
-from abc import abstractmethod
+import asyncio
 from datetime import timedelta
 from typing import Any
 
-from aiocomelit import (
-    ComeliteSerialBridgeApi,
-    ComelitSerialBridgeObject,
-    ComelitVedoApi,
-    ComelitVedoAreaObject,
-    ComelitVedoZoneObject,
-    exceptions,
-)
-from aiocomelit.api import ComelitCommonApi
-from aiocomelit.const import BRIDGE, VEDO
+from aiocomelit import ComeliteSerialBridgeApi, ComelitSerialBridgeObject
+from aiocomelit.const import BRIDGE
+import aiohttp
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -24,18 +16,19 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .const import _LOGGER, DOMAIN
 
 
-class ComelitBaseCoordinator(DataUpdateCoordinator[dict[str, Any]]):
-    """Base coordinator for Comelit Devices."""
+class ComelitSerialBridge(DataUpdateCoordinator):
+    """Queries Comelit Serial Bridge."""
 
-    _hw_version: str
     config_entry: ConfigEntry
-    api: ComelitCommonApi
 
-    def __init__(self, hass: HomeAssistant, device: str, host: str) -> None:
+    def __init__(self, hass: HomeAssistant, host: str, port: int, pin: int) -> None:
         """Initialize the scanner."""
 
-        self._device = device
         self._host = host
+        self._port = port
+        self._pin = pin
+
+        self.api = ComeliteSerialBridgeApi(host, port, pin)
 
         super().__init__(
             hass=hass,
@@ -47,78 +40,44 @@ class ComelitBaseCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         device_registry.async_get_or_create(
             config_entry_id=self.config_entry.entry_id,
             identifiers={(DOMAIN, self.config_entry.entry_id)},
-            model=device,
-            name=f"{device} ({self._host})",
-            manufacturer="Comelit",
-            hw_version=self._hw_version,
+            model=BRIDGE,
+            name=f"{BRIDGE} ({self.api.host})",
+            **self.basic_device_info,
         )
 
-    def platform_device_info(
-        self,
-        object_class: ComelitVedoZoneObject
-        | ComelitVedoAreaObject
-        | ComelitSerialBridgeObject,
-        object_type: str,
-    ) -> dr.DeviceInfo:
+    @property
+    def basic_device_info(self) -> dict:
+        """Set basic device info."""
+
+        return {
+            "manufacturer": "Comelit",
+            "hw_version": "20003101",
+        }
+
+    def platform_device_info(self, device: ComelitSerialBridgeObject) -> dr.DeviceInfo:
         """Set platform device info."""
 
         return dr.DeviceInfo(
             identifiers={
-                (
-                    DOMAIN,
-                    f"{self.config_entry.entry_id}-{object_type}-{object_class.index}",
-                )
+                (DOMAIN, f"{self.config_entry.entry_id}-{device.type}-{device.index}")
             },
             via_device=(DOMAIN, self.config_entry.entry_id),
-            name=object_class.name,
-            model=f"{self._device} {object_type}",
-            manufacturer="Comelit",
-            hw_version=self._hw_version,
+            name=device.name,
+            model=f"{BRIDGE} {device.type}",
+            **self.basic_device_info,
         )
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Update device data."""
-        _LOGGER.debug("Polling Comelit %s host: %s", self._device, self._host)
+        _LOGGER.debug("Polling Comelit Serial Bridge host: %s", self._host)
+        logged = False
         try:
-            await self.api.login()
-            return await self._async_update_system_data()
-        except (exceptions.CannotConnect, exceptions.CannotRetrieveData) as err:
-            raise UpdateFailed(repr(err)) from err
-        except exceptions.CannotAuthenticate as err:
-            raise ConfigEntryAuthFailed from err
+            logged = await self.api.login()
+        except (asyncio.exceptions.TimeoutError, aiohttp.ClientConnectorError) as err:
+            _LOGGER.warning("Connection error for %s", self._host)
+            raise UpdateFailed(f"Error fetching data: {repr(err)}") from err
+        finally:
+            if not logged:
+                raise ConfigEntryAuthFailed
 
-    @abstractmethod
-    async def _async_update_system_data(self) -> dict[str, Any]:
-        """Class method for updating data."""
-
-
-class ComelitSerialBridge(ComelitBaseCoordinator):
-    """Queries Comelit Serial Bridge."""
-
-    _hw_version = "20003101"
-    api: ComeliteSerialBridgeApi
-
-    def __init__(self, hass: HomeAssistant, host: str, port: int, pin: int) -> None:
-        """Initialize the scanner."""
-        self.api = ComeliteSerialBridgeApi(host, port, pin)
-        super().__init__(hass, BRIDGE, host)
-
-    async def _async_update_system_data(self) -> dict[str, Any]:
-        """Specific method for updating data."""
         return await self.api.get_all_devices()
-
-
-class ComelitVedoSystem(ComelitBaseCoordinator):
-    """Queries Comelit VEDO system."""
-
-    _hw_version = "VEDO IP"
-    api: ComelitVedoApi
-
-    def __init__(self, hass: HomeAssistant, host: str, port: int, pin: int) -> None:
-        """Initialize the scanner."""
-        self.api = ComelitVedoApi(host, port, pin)
-        super().__init__(hass, VEDO, host)
-
-    async def _async_update_system_data(self) -> dict[str, Any]:
-        """Specific method for updating data."""
-        return await self.api.get_all_areas_and_zones()

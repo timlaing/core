@@ -1,12 +1,10 @@
 """Helper functions for mysensors package."""
-
 from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Callable
 from enum import IntEnum
 import logging
-from typing import cast
 
 from mysensors import BaseAsyncGateway, Message
 from mysensors.sensor import ChildSensor
@@ -152,8 +150,8 @@ def get_child_schema(
 ) -> vol.Schema:
     """Return a child schema."""
     set_req = gateway.const.SetReq
-    child_schema = cast(vol.Schema, child.get_schema(gateway.protocol_version))
-    return child_schema.extend(
+    child_schema = child.get_schema(gateway.protocol_version)
+    schema = child_schema.extend(
         {
             vol.Required(
                 set_req[name].value, msg=invalid_msg(gateway, child, name)
@@ -162,6 +160,7 @@ def get_child_schema(
         },
         extra=vol.ALLOW_EXTRA,
     )
+    return schema
 
 
 def invalid_msg(

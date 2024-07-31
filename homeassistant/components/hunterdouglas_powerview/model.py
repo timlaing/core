@@ -1,19 +1,12 @@
 """Define Hunter Douglas data models."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from aiopvapi.helpers.aiorequest import AioRequest
-from aiopvapi.resources.room import Room
-from aiopvapi.resources.scene import Scene
-from aiopvapi.resources.shade import BaseShade
-
-from homeassistant.config_entries import ConfigEntry
 
 from .coordinator import PowerviewShadeUpdateCoordinator
-
-type PowerviewConfigEntry = ConfigEntry[PowerviewEntryData]
 
 
 @dataclass
@@ -21,9 +14,9 @@ class PowerviewEntryData:
     """Define class for main domain information."""
 
     api: AioRequest
-    room_data: dict[str, Room]
-    scene_data: dict[str, Scene]
-    shade_data: dict[str, BaseShade]
+    room_data: dict[str, Any]
+    scene_data: dict[str, Any]
+    shade_data: dict[str, Any]
     coordinator: PowerviewShadeUpdateCoordinator
     device_info: PowerviewDeviceInfo
 
@@ -35,6 +28,6 @@ class PowerviewDeviceInfo:
     name: str
     mac_address: str
     serial_number: str
-    firmware: str | None
+    firmware: dict[str, Any]
     model: str
     hub_address: str

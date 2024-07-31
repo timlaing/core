@@ -1,5 +1,4 @@
 """Tests for the link user flow."""
-
 from http import HTTPStatus
 from unittest.mock import patch
 

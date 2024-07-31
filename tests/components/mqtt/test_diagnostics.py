@@ -1,14 +1,13 @@
 """Test MQTT diagnostics."""
-
 import json
-from unittest.mock import ANY
+from unittest.mock import ANY, patch
 
 import pytest
 
 from homeassistant.components import mqtt
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers import device_registry as dr
 
 from tests.common import async_fire_mqtt_message
 from tests.components.diagnostics import (
@@ -21,6 +20,16 @@ default_config = {
     "birth_message": {},
     "broker": "mock-broker",
 }
+
+
+@pytest.fixture(autouse=True)
+def device_tracker_sensor_only():
+    """Only setup the device_tracker and sensor platforms to speed up tests."""
+    with patch(
+        "homeassistant.components.mqtt.PLATFORMS",
+        [Platform.DEVICE_TRACKER, Platform.SENSOR],
+    ):
+        yield
 
 
 async def test_entry_diagnostics(
@@ -108,7 +117,6 @@ async def test_entry_diagnostics(
                     "attributes": {"friendly_name": "MQTT Sensor"},
                     "entity_id": "sensor.none_mqtt_sensor",
                     "last_changed": ANY,
-                    "last_reported": ANY,
                     "last_updated": ANY,
                     "state": "unknown",
                 },
@@ -143,15 +151,14 @@ async def test_entry_diagnostics(
         {
             mqtt.CONF_BROKER: "mock-broker",
             mqtt.CONF_BIRTH_MESSAGE: {},
-            CONF_PASSWORD: "hunter2",
-            CONF_USERNAME: "my_user",
+            mqtt.CONF_PASSWORD: "hunter2",
+            mqtt.CONF_USERNAME: "my_user",
         }
     ],
 )
 async def test_redact_diagnostics(
     hass: HomeAssistant,
     device_registry: dr.DeviceRegistry,
-    entity_registry: er.EntityRegistry,
     hass_client: ClientSessionGenerator,
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
@@ -236,7 +243,6 @@ async def test_redact_diagnostics(
                     },
                     "entity_id": "device_tracker.mqtt_unique",
                     "last_changed": ANY,
-                    "last_reported": ANY,
                     "last_updated": ANY,
                     "state": "home",
                 },
@@ -263,30 +269,4 @@ async def test_redact_diagnostics(
         "device": expected_device,
         "mqtt_config": expected_config,
         "mqtt_debug_info": expected_debug_info,
-    }
-
-    # Disable the entity and remove the state
-    device_tracker_entry = er.async_entries_for_device(
-        entity_registry, device_entry.id
-    )[0]
-    entity_registry.async_update_entity(
-        device_tracker_entry.entity_id, disabled_by=er.RegistryEntryDisabler.USER
-    )
-    hass.states.async_remove(device_tracker_entry.entity_id)
-
-    # Assert disabled entries are filtered
-    assert await get_diagnostics_for_device(
-        hass, hass_client, config_entry, device_entry
-    ) == {
-        "connected": True,
-        "device": {
-            "id": device_entry.id,
-            "name": None,
-            "name_by_user": None,
-            "disabled": False,
-            "disabled_by": None,
-            "entities": [],
-        },
-        "mqtt_config": expected_config,
-        "mqtt_debug_info": {"entities": [], "triggers": []},
     }

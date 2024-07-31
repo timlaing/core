@@ -5,9 +5,6 @@
         "data": {
           "name": "[%key:common::config_flow::data::name%]",
           "host": "[%key:common::config_flow::data::host%]"
-        },
-        "data_description": {
-          "host": "The hostname or IP address of your myStrom device."
         }
       }
     },
@@ -16,13 +13,6 @@
     },
     "abort": {
       "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
-    }
-  },
-  "entity": {
-    "sensor": {
-      "avg_consumption": {
-        "name": "Average consumption"
-      }
     }
   }
 }

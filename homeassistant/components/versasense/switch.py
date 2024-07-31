@@ -1,5 +1,4 @@
 """Support for VersaSense actuator peripheral."""
-
 from __future__ import annotations
 
 import logging
@@ -33,7 +32,7 @@ async def async_setup_platform(
 ) -> None:
     """Set up actuator platform."""
     if discovery_info is None:
-        return
+        return None
 
     consumer = hass.data[DOMAIN][KEY_CONSUMER]
 

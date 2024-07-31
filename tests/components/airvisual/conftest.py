@@ -1,7 +1,6 @@
 """Define test fixtures for AirVisual."""
-
-from collections.abc import AsyncGenerator, Generator
-from typing import Any
+from collections.abc import Generator
+import json
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -21,10 +20,8 @@ from homeassistant.const import (
     CONF_SHOW_ON_MAP,
     CONF_STATE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.util.json import JsonObjectType
 
-from tests.common import MockConfigEntry, load_json_object_fixture
+from tests.common import MockConfigEntry, load_fixture
 
 TEST_API_KEY = "abcde12345"
 TEST_LATITUDE = 51.528308
@@ -57,7 +54,7 @@ NAME_CONFIG = {
 
 
 @pytest.fixture(name="cloud_api")
-def cloud_api_fixture(data_cloud: JsonObjectType) -> Mock:
+def cloud_api_fixture(data_cloud):
     """Define a mock CloudAPI object."""
     return Mock(
         air_quality=Mock(
@@ -68,12 +65,7 @@ def cloud_api_fixture(data_cloud: JsonObjectType) -> Mock:
 
 
 @pytest.fixture(name="config_entry")
-def config_entry_fixture(
-    hass: HomeAssistant,
-    config: dict[str, Any],
-    config_entry_version: int,
-    integration_type: str,
-) -> MockConfigEntry:
+def config_entry_fixture(hass, config, config_entry_version, integration_type):
     """Define a config entry fixture."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -88,63 +80,56 @@ def config_entry_fixture(
 
 
 @pytest.fixture(name="config_entry_version")
-def config_entry_version_fixture() -> int:
+def config_entry_version_fixture():
     """Define a config entry version fixture."""
     return 2
 
 
 @pytest.fixture(name="config")
-def config_fixture() -> dict[str, Any]:
+def config_fixture():
     """Define a config entry data fixture."""
     return COORDS_CONFIG
 
 
 @pytest.fixture(name="data_cloud", scope="package")
-def data_cloud_fixture() -> JsonObjectType:
+def data_cloud_fixture():
     """Define an update coordinator data example."""
-    return load_json_object_fixture("data.json", "airvisual")
+    return json.loads(load_fixture("data.json", "airvisual"))
 
 
 @pytest.fixture(name="data_pro", scope="package")
-def data_pro_fixture() -> JsonObjectType:
+def data_pro_fixture():
     """Define an update coordinator data example for the Pro."""
-    return load_json_object_fixture("data.json", "airvisual_pro")
+    return json.loads(load_fixture("data.json", "airvisual_pro"))
 
 
 @pytest.fixture(name="integration_type")
-def integration_type_fixture() -> str:
+def integration_type_fixture():
     """Define an integration type."""
     return INTEGRATION_TYPE_GEOGRAPHY_COORDS
 
 
 @pytest.fixture(name="mock_pyairvisual")
-async def mock_pyairvisual_fixture(
-    cloud_api: Mock, node_samba: Mock
-) -> AsyncGenerator[None]:
+async def mock_pyairvisual_fixture(cloud_api, node_samba):
     """Define a fixture to patch pyairvisual."""
-    with (
-        patch(
-            "homeassistant.components.airvisual.CloudAPI",
-            return_value=cloud_api,
-        ),
-        patch(
-            "homeassistant.components.airvisual.config_flow.CloudAPI",
-            return_value=cloud_api,
-        ),
-        patch(
-            "homeassistant.components.airvisual_pro.NodeSamba",
-            return_value=node_samba,
-        ),
-        patch(
-            "homeassistant.components.airvisual_pro.config_flow.NodeSamba",
-            return_value=node_samba,
-        ),
+    with patch(
+        "homeassistant.components.airvisual.CloudAPI",
+        return_value=cloud_api,
+    ), patch(
+        "homeassistant.components.airvisual.config_flow.CloudAPI",
+        return_value=cloud_api,
+    ), patch(
+        "homeassistant.components.airvisual_pro.NodeSamba",
+        return_value=node_samba,
+    ), patch(
+        "homeassistant.components.airvisual_pro.config_flow.NodeSamba",
+        return_value=node_samba,
     ):
         yield
 
 
 @pytest.fixture(name="node_samba")
-def node_samba_fixture(data_pro: JsonObjectType) -> Mock:
+def node_samba_fixture(data_pro):
     """Define a mock NodeSamba object."""
     return Mock(
         async_connect=AsyncMock(),
@@ -154,16 +139,14 @@ def node_samba_fixture(data_pro: JsonObjectType) -> Mock:
 
 
 @pytest.fixture(name="setup_config_entry")
-async def setup_config_entry_fixture(
-    hass: HomeAssistant, config_entry: MockConfigEntry, mock_pyairvisual: None
-) -> None:
+async def setup_config_entry_fixture(hass, config_entry, mock_pyairvisual):
     """Define a fixture to set up airvisual."""
     assert await hass.config_entries.async_setup(config_entry.entry_id)
     await hass.async_block_till_done()
 
 
 @pytest.fixture
-def mock_setup_entry() -> Generator[AsyncMock]:
+def mock_setup_entry() -> Generator[AsyncMock, None, None]:
     """Override async_setup_entry."""
     with patch(
         "homeassistant.components.airvisual.async_setup_entry", return_value=True

@@ -1,5 +1,4 @@
 """IoTaWatt DataUpdateCoordinator."""
-
 from __future__ import annotations
 
 from datetime import datetime, timedelta
@@ -63,7 +62,6 @@ class IotawattUpdater(DataUpdateCoordinator):
                 self.entry.data.get(CONF_USERNAME),
                 self.entry.data.get(CONF_PASSWORD),
                 integratedInterval="d",
-                includeNonTotalSensors=False,
             )
             try:
                 is_authenticated = await api.connect()

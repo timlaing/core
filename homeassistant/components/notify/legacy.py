@@ -1,5 +1,4 @@
 """Handle legacy notification platforms."""
-
 from __future__ import annotations
 
 import asyncio
@@ -7,22 +6,17 @@ from collections.abc import Callable, Coroutine, Mapping
 from functools import partial
 from typing import Any, Protocol, cast
 
-from homeassistant.config import config_per_platform
 from homeassistant.const import CONF_DESCRIPTION, CONF_NAME
 from homeassistant.core import HomeAssistant, ServiceCall, callback
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import discovery
+from homeassistant.helpers import config_per_platform, discovery
 from homeassistant.helpers.service import async_set_service_schema
 from homeassistant.helpers.template import Template
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.loader import async_get_integration, bind_hass
-from homeassistant.setup import (
-    SetupPhases,
-    async_prepare_setup_platform,
-    async_start_setup,
-)
+from homeassistant.setup import async_prepare_setup_platform, async_start_setup
 from homeassistant.util import slugify
-from homeassistant.util.yaml import load_yaml_dict
+from homeassistant.util.yaml import load_yaml
 
 from .const import (
     ATTR_DATA,
@@ -88,12 +82,7 @@ def async_setup_legacy(
 
         full_name = f"{DOMAIN}.{integration_name}"
         LOGGER.info("Setting up %s", full_name)
-        with async_start_setup(
-            hass,
-            integration=integration_name,
-            group=str(id(p_config)),
-            phase=SetupPhases.PLATFORM_SETUP,
-        ):
+        with async_start_setup(hass, [full_name]):
             notify_service: BaseNotificationService | None = None
             try:
                 if hasattr(platform, "async_get_service"):
@@ -117,7 +106,7 @@ def async_setup_legacy(
                         )
                     return
 
-            except Exception:  # noqa: BLE001
+            except Exception:  # pylint: disable=broad-except
                 LOGGER.exception("Error setting up platform %s", integration_name)
                 return
 
@@ -136,7 +125,7 @@ def async_setup_legacy(
             hass.data[NOTIFY_SERVICES].setdefault(integration_name, []).append(
                 notify_service
             )
-            hass.config.components.add(f"{integration_name}.{DOMAIN}")
+            hass.config.components.add(f"{DOMAIN}.{integration_name}")
 
     async def async_platform_discovered(
         platform: str, info: DiscoveryInfoType | None
@@ -241,7 +230,7 @@ class BaseNotificationService:
 
         kwargs can contain ATTR_TITLE to specify a title.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     async def async_send_message(self, message: str, **kwargs: Any) -> None:
         """Send a message.
@@ -290,8 +279,8 @@ class BaseNotificationService:
         # Load service descriptions from notify/services.yaml
         integration = await async_get_integration(hass, DOMAIN)
         services_yaml = integration.file_path / "services.yaml"
-        self.services_dict = await hass.async_add_executor_job(
-            load_yaml_dict, str(services_yaml)
+        self.services_dict = cast(
+            dict, await hass.async_add_executor_job(load_yaml, str(services_yaml))
         )
 
     async def async_register_services(self) -> None:

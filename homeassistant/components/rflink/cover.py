@@ -1,5 +1,4 @@
 """Support for Rflink Cover devices."""
-
 from __future__ import annotations
 
 import logging
@@ -7,10 +6,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.cover import (
-    PLATFORM_SCHEMA as COVER_PLATFORM_SCHEMA,
-    CoverEntity,
-)
+from homeassistant.components.cover import PLATFORM_SCHEMA, CoverEntity
 from homeassistant.const import CONF_DEVICES, CONF_NAME, CONF_TYPE, STATE_OPEN
 from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
@@ -37,7 +33,7 @@ PARALLEL_UPDATES = 0
 TYPE_STANDARD = "standard"
 TYPE_INVERTED = "inverted"
 
-PLATFORM_SCHEMA = COVER_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Optional(
             CONF_DEVICE_DEFAULTS, default=DEVICE_DEFAULTS_SCHEMA({})

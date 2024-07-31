@@ -18,7 +18,6 @@ LED_BLE_DISCOVERY_INFO = BluetoothServiceInfoBleak(
     advertisement=generate_advertisement_data(),
     time=0,
     connectable=True,
-    tx_power=-127,
 )
 
 UNSUPPORTED_LED_BLE_DISCOVERY_INFO = BluetoothServiceInfoBleak(
@@ -35,7 +34,6 @@ UNSUPPORTED_LED_BLE_DISCOVERY_INFO = BluetoothServiceInfoBleak(
     advertisement=generate_advertisement_data(),
     time=0,
     connectable=True,
-    tx_power=-127,
 )
 
 
@@ -54,5 +52,4 @@ NOT_LED_BLE_DISCOVERY_INFO = BluetoothServiceInfoBleak(
     advertisement=generate_advertisement_data(),
     time=0,
     connectable=True,
-    tx_power=-127,
 )

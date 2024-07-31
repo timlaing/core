@@ -1,5 +1,4 @@
 """Support for KNX/IP fans."""
-
 from __future__ import annotations
 
 import math
@@ -15,10 +14,10 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.util.percentage import (
+    int_states_in_range,
     percentage_to_ranged_value,
     ranged_value_to_percentage,
 )
-from homeassistant.util.scaling import int_states_in_range
 
 from .const import DATA_KNX_CONFIG, DOMAIN, KNX_ADDRESS
 from .knx_entity import KnxEntity
@@ -43,7 +42,6 @@ class KNXFan(KnxEntity, FanEntity):
     """Representation of a KNX fan."""
 
     _device: XknxFan
-    _enable_turn_on_off_backwards_compatibility = False
 
     def __init__(self, xknx: XKNX, config: ConfigType) -> None:
         """Initialize of KNX fan."""
@@ -80,11 +78,7 @@ class KNXFan(KnxEntity, FanEntity):
     @property
     def supported_features(self) -> FanEntityFeature:
         """Flag supported features."""
-        flags = (
-            FanEntityFeature.SET_SPEED
-            | FanEntityFeature.TURN_ON
-            | FanEntityFeature.TURN_OFF
-        )
+        flags = FanEntityFeature.SET_SPEED
 
         if self._device.supports_oscillation:
             flags |= FanEntityFeature.OSCILLATE

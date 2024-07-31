@@ -1,9 +1,9 @@
 """The BTHome Bluetooth integration."""
-
 from collections.abc import Callable
 from logging import Logger
+from typing import Any
 
-from bthome_ble import BTHomeBluetoothDeviceData, SensorUpdate
+from bthome_ble import BTHomeBluetoothDeviceData
 
 from homeassistant.components.bluetooth import (
     BluetoothScanningMode,
@@ -13,15 +13,13 @@ from homeassistant.components.bluetooth.passive_update_processor import (
     PassiveBluetoothDataProcessor,
     PassiveBluetoothProcessorCoordinator,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .const import CONF_SLEEPY_DEVICE
-from .types import BTHomeConfigEntry
 
 
-class BTHomePassiveBluetoothProcessorCoordinator(
-    PassiveBluetoothProcessorCoordinator[SensorUpdate]
-):
+class BTHomePassiveBluetoothProcessorCoordinator(PassiveBluetoothProcessorCoordinator):
     """Define a BTHome Bluetooth Passive Update Processor Coordinator."""
 
     def __init__(
@@ -30,15 +28,15 @@ class BTHomePassiveBluetoothProcessorCoordinator(
         logger: Logger,
         address: str,
         mode: BluetoothScanningMode,
-        update_method: Callable[[BluetoothServiceInfoBleak], SensorUpdate],
+        update_method: Callable[[BluetoothServiceInfoBleak], Any],
         device_data: BTHomeBluetoothDeviceData,
-        discovered_event_classes: set[str],
-        entry: BTHomeConfigEntry,
+        discovered_device_classes: set[str],
+        entry: ConfigEntry,
         connectable: bool = False,
     ) -> None:
         """Initialize the BTHome Bluetooth Passive Update Processor Coordinator."""
         super().__init__(hass, logger, address, mode, update_method, connectable)
-        self.discovered_event_classes = discovered_event_classes
+        self.discovered_device_classes = discovered_device_classes
         self.device_data = device_data
         self.entry = entry
 
@@ -48,9 +46,7 @@ class BTHomePassiveBluetoothProcessorCoordinator(
         return self.entry.data.get(CONF_SLEEPY_DEVICE, self.device_data.sleepy_device)
 
 
-class BTHomePassiveBluetoothDataProcessor[_T](
-    PassiveBluetoothDataProcessor[_T, SensorUpdate]
-):
+class BTHomePassiveBluetoothDataProcessor(PassiveBluetoothDataProcessor):
     """Define a BTHome Bluetooth Passive Update Data Processor."""
 
     coordinator: BTHomePassiveBluetoothProcessorCoordinator

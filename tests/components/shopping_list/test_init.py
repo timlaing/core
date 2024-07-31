@@ -1,5 +1,4 @@
 """Test shopping list component."""
-
 from http import HTTPStatus
 
 import pytest
@@ -15,7 +14,7 @@ from homeassistant.components.shopping_list.const import (
     SERVICE_REMOVE_ITEM,
     SERVICE_SORT,
 )
-from homeassistant.components.websocket_api import (
+from homeassistant.components.websocket_api.const import (
     ERR_INVALID_FORMAT,
     ERR_NOT_FOUND,
     TYPE_RESULT,

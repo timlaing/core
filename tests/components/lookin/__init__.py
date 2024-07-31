@@ -1,5 +1,4 @@
 """Tests for the lookin integration."""
-
 from __future__ import annotations
 
 from ipaddress import ip_address
@@ -31,11 +30,13 @@ ZEROCONF_DATA = ZeroconfServiceInfo(
 
 
 def _mocked_climate() -> Climate:
-    return MagicMock(auto_spec=Climate)
+    climate = MagicMock(auto_spec=Climate)
+    return climate
 
 
 def _mocked_remote() -> Remote:
-    return MagicMock(auto_spec=Remote)
+    remote = MagicMock(auto_spec=Remote)
+    return remote
 
 
 def _mocked_device() -> Device:

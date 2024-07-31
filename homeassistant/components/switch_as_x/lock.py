@@ -1,5 +1,4 @@
 """Lock support for switch entities."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -14,12 +13,13 @@ from homeassistant.const import (
     SERVICE_TURN_ON,
     STATE_ON,
 )
-from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.event import EventStateChangedData
+from homeassistant.helpers.typing import EventType
 
-from .const import CONF_INVERT
-from .entity import BaseInvertableEntity
+from .entity import BaseEntity
 
 
 async def async_setup_entry(
@@ -39,7 +39,6 @@ async def async_setup_entry(
                 hass,
                 config_entry.title,
                 LOCK_DOMAIN,
-                config_entry.options[CONF_INVERT],
                 entity_id,
                 config_entry.entry_id,
             )
@@ -47,14 +46,14 @@ async def async_setup_entry(
     )
 
 
-class LockSwitch(BaseInvertableEntity, LockEntity):
+class LockSwitch(BaseEntity, LockEntity):
     """Represents a Switch as a Lock."""
 
     async def async_lock(self, **kwargs: Any) -> None:
         """Lock the lock."""
         await self.hass.services.async_call(
             SWITCH_DOMAIN,
-            SERVICE_TURN_ON if self._invert_state else SERVICE_TURN_OFF,
+            SERVICE_TURN_OFF,
             {ATTR_ENTITY_ID: self._switch_entity_id},
             blocking=True,
             context=self._context,
@@ -64,7 +63,7 @@ class LockSwitch(BaseInvertableEntity, LockEntity):
         """Unlock the lock."""
         await self.hass.services.async_call(
             SWITCH_DOMAIN,
-            SERVICE_TURN_OFF if self._invert_state else SERVICE_TURN_ON,
+            SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: self._switch_entity_id},
             blocking=True,
             context=self._context,
@@ -72,7 +71,7 @@ class LockSwitch(BaseInvertableEntity, LockEntity):
 
     @callback
     def async_state_changed_listener(
-        self, event: Event[EventStateChangedData] | None = None
+        self, event: EventType[EventStateChangedData] | None = None
     ) -> None:
         """Handle child updates."""
         super().async_state_changed_listener(event)
@@ -84,7 +83,4 @@ class LockSwitch(BaseInvertableEntity, LockEntity):
 
         # Logic is the same as the lock device class for binary sensors
         # on means open (unlocked), off means closed (locked)
-        if self._invert_state:
-            self._attr_is_locked = state.state == STATE_ON
-        else:
-            self._attr_is_locked = state.state != STATE_ON
+        self._attr_is_locked = state.state != STATE_ON

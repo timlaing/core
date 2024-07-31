@@ -1,5 +1,4 @@
 """Support for the Dynalite devices as entities."""
-
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -31,7 +30,9 @@ def async_setup_entry_base(
     @callback
     def async_add_entities_platform(devices):
         # assumes it is called with a single platform
-        added_entities = [entity_from_device(device, bridge) for device in devices]
+        added_entities = []
+        for device in devices:
+            added_entities.append(entity_from_device(device, bridge))
         async_add_entities(added_entities)
 
     bridge.register_add_devices(platform, async_add_entities_platform)

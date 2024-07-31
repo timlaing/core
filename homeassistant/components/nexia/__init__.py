@@ -1,5 +1,5 @@
 """Support for Nexia / Trane XL Thermostats."""
-
+import asyncio
 import logging
 
 import aiohttp
@@ -7,6 +7,7 @@ from nexia.const import BRAND_NEXIA
 from nexia.home import NexiaHome
 from nexia.thermostat import NexiaThermostat
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
@@ -16,7 +17,6 @@ import homeassistant.helpers.config_validation as cv
 
 from .const import CONF_BRAND, DOMAIN, PLATFORMS
 from .coordinator import NexiaDataUpdateCoordinator
-from .types import NexiaConfigEntry
 from .util import is_invalid_auth_code
 
 _LOGGER = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ _LOGGER = logging.getLogger(__name__)
 CONFIG_SCHEMA = cv.removed(DOMAIN, raise_if_present=False)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: NexiaConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Configure the base Nexia device for Home Assistant."""
 
     conf = entry.data
@@ -45,7 +45,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: NexiaConfigEntry) -> boo
 
     try:
         await nexia_home.login()
-    except TimeoutError as ex:
+    except asyncio.TimeoutError as ex:
         raise ConfigEntryNotReady(
             f"Timed out trying to connect to Nexia service: {ex}"
         ) from ex
@@ -63,23 +63,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: NexiaConfigEntry) -> boo
 
     coordinator = NexiaDataUpdateCoordinator(hass, nexia_home)
     await coordinator.async_config_entry_first_refresh()
-    entry.runtime_data = coordinator
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: NexiaConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        hass.data[DOMAIN].pop(entry.entry_id)
+    return unload_ok
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, entry: NexiaConfigEntry, device_entry: dr.DeviceEntry
+    hass: HomeAssistant, config_entry: ConfigEntry, device_entry: dr.DeviceEntry
 ) -> bool:
     """Remove a nexia config entry from a device."""
-    coordinator = entry.runtime_data
-    nexia_home = coordinator.nexia_home
+    coordinator: NexiaDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
+    nexia_home: NexiaHome = coordinator.nexia_home
     dev_ids = {dev_id[1] for dev_id in device_entry.identifiers if dev_id[0] == DOMAIN}
     for thermostat_id in nexia_home.get_thermostat_ids():
         if thermostat_id in dev_ids:

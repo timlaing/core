@@ -1,11 +1,10 @@
 """Test the Wallbox config flow."""
-
 from http import HTTPStatus
 import json
 
 import requests_mock
 
-from homeassistant import config_entries
+from homeassistant import config_entries, data_entry_flow
 from homeassistant.components.wallbox import config_flow
 from homeassistant.components.wallbox.const import (
     CHARGER_ADDED_ENERGY_KEY,
@@ -17,9 +16,7 @@ from homeassistant.components.wallbox.const import (
     CHARGER_MAX_CHARGING_CURRENT_KEY,
     DOMAIN,
 )
-from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
 
 from . import (
     authorisation_response,
@@ -45,11 +42,11 @@ test_response = json.loads(
 
 async def test_show_set_form(hass: HomeAssistant) -> None:
     """Test that the setup form is served."""
-    flow = config_flow.WallboxConfigFlow()
+    flow = config_flow.ConfigFlow()
     flow.hass = hass
     result = await flow.async_step_user(user_input=None)
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["step_id"] == "user"
 
 
@@ -79,7 +76,7 @@ async def test_form_cannot_authenticate(hass: HomeAssistant) -> None:
             },
         )
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == "form"
     assert result2["errors"] == {"base": "invalid_auth"}
 
 
@@ -109,7 +106,7 @@ async def test_form_cannot_connect(hass: HomeAssistant) -> None:
             },
         )
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == "form"
     assert result2["errors"] == {"base": "cannot_connect"}
 
 
@@ -146,7 +143,7 @@ async def test_form_validate_input(hass: HomeAssistant) -> None:
 async def test_form_reauth(hass: HomeAssistant, entry: MockConfigEntry) -> None:
     """Test we handle reauth flow."""
     await setup_integration(hass, entry)
-    assert entry.state is ConfigEntryState.LOADED
+    assert entry.state == config_entries.ConfigEntryState.LOADED
 
     with requests_mock.Mocker() as mock_request:
         mock_request.get(
@@ -177,22 +174,21 @@ async def test_form_reauth(hass: HomeAssistant, entry: MockConfigEntry) -> None:
             },
         )
 
-    assert result2["type"] is FlowResultType.ABORT
+    assert result2["type"] == "abort"
     assert result2["reason"] == "reauth_successful"
 
-    await hass.async_block_till_done()
     await hass.config_entries.async_unload(entry.entry_id)
 
 
 async def test_form_reauth_invalid(hass: HomeAssistant, entry: MockConfigEntry) -> None:
     """Test we handle reauth invalid flow."""
     await setup_integration(hass, entry)
-    assert entry.state is ConfigEntryState.LOADED
+    assert entry.state == config_entries.ConfigEntryState.LOADED
 
     with requests_mock.Mocker() as mock_request:
         mock_request.get(
             "https://user-api.wall-box.com/users/signin",
-            text='{"jwt":"fakekeyhere","refresh_token": "refresh_fakekeyhere","user_id":12345,"ttl":145656758,"refresh_token_ttl":145756758,"error":false,"status":200}',
+            text='{"jwt":"fakekeyhere","user_id":12345,"ttl":145656758,"error":false,"status":200}',
             status_code=200,
         )
         mock_request.get(
@@ -218,7 +214,7 @@ async def test_form_reauth_invalid(hass: HomeAssistant, entry: MockConfigEntry) 
             },
         )
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == "form"
     assert result2["errors"] == {"base": "reauth_invalid"}
 
     await hass.config_entries.async_unload(entry.entry_id)

@@ -1,12 +1,9 @@
 """Test the ibeacon sensors."""
-
 from datetime import timedelta
 
 import pytest
 
-from homeassistant.components.bluetooth.const import (  # pylint: disable=hass-component-root-import
-    UNAVAILABLE_TRACK_SECONDS,
-)
+from homeassistant.components.bluetooth.const import UNAVAILABLE_TRACK_SECONDS
 from homeassistant.components.ibeacon.const import DOMAIN, UPDATE_INTERVAL
 from homeassistant.components.sensor import ATTR_STATE_CLASS
 from homeassistant.const import (
@@ -36,7 +33,7 @@ from tests.components.bluetooth import (
 
 
 @pytest.fixture(autouse=True)
-def mock_bluetooth(enable_bluetooth: None) -> None:
+def mock_bluetooth(enable_bluetooth):
     """Auto mock bluetooth."""
 
 

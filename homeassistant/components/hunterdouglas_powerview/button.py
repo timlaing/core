@@ -1,63 +1,54 @@
 """Buttons for Hunter Douglas Powerview advanced features."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, Final
 
-from aiopvapi.helpers.constants import (
-    ATTR_NAME,
-    MOTION_CALIBRATE,
-    MOTION_FAVORITE,
-    MOTION_JOG,
-)
-from aiopvapi.hub import Hub
-from aiopvapi.resources.shade import BaseShade
+from aiopvapi.resources.shade import BaseShade, factory as PvShade
 
 from homeassistant.components.button import (
     ButtonDeviceClass,
     ButtonEntity,
     ButtonEntityDescription,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from .const import DOMAIN, ROOM_ID_IN_SHADE, ROOM_NAME_UNICODE
 from .coordinator import PowerviewShadeUpdateCoordinator
 from .entity import ShadeEntity
-from .model import PowerviewConfigEntry, PowerviewDeviceInfo
+from .model import PowerviewDeviceInfo, PowerviewEntryData
 
 
-@dataclass(frozen=True)
+@dataclass
 class PowerviewButtonDescriptionMixin:
     """Mixin to describe a Button entity."""
 
-    press_action: Callable[[BaseShade | Hub], Any]
-    create_entity_fn: Callable[[BaseShade | Hub], bool]
+    press_action: Callable[[BaseShade], Any]
 
 
-@dataclass(frozen=True)
+@dataclass
 class PowerviewButtonDescription(
     ButtonEntityDescription, PowerviewButtonDescriptionMixin
 ):
     """Class to describe a Button entity."""
 
 
-BUTTONS_SHADE: Final = [
+BUTTONS: Final = [
     PowerviewButtonDescription(
         key="calibrate",
         translation_key="calibrate",
         icon="mdi:swap-vertical-circle-outline",
         entity_category=EntityCategory.DIAGNOSTIC,
-        create_entity_fn=lambda shade: shade.is_supported(MOTION_CALIBRATE),
         press_action=lambda shade: shade.calibrate(),
     ),
     PowerviewButtonDescription(
         key="identify",
         device_class=ButtonDeviceClass.IDENTIFY,
         entity_category=EntityCategory.DIAGNOSTIC,
-        create_entity_fn=lambda shade: shade.is_supported(MOTION_JOG),
         press_action=lambda shade: shade.jog(),
     ),
     PowerviewButtonDescription(
@@ -65,7 +56,6 @@ BUTTONS_SHADE: Final = [
         translation_key="favorite",
         icon="mdi:heart",
         entity_category=EntityCategory.DIAGNOSTIC,
-        create_entity_fn=lambda shade: shade.is_supported(MOTION_FAVORITE),
         press_action=lambda shade: shade.favorite(),
     ),
 ]
@@ -73,30 +63,36 @@ BUTTONS_SHADE: Final = [
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: PowerviewConfigEntry,
+    entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the hunter douglas advanced feature buttons."""
-    pv_entry = entry.runtime_data
+
+    pv_entry: PowerviewEntryData = hass.data[DOMAIN][entry.entry_id]
+
     entities: list[ButtonEntity] = []
-    for shade in pv_entry.shade_data.values():
-        room_name = getattr(pv_entry.room_data.get(shade.room_id), ATTR_NAME, "")
-        entities.extend(
-            PowerviewShadeButton(
-                pv_entry.coordinator,
-                pv_entry.device_info,
-                room_name,
-                shade,
-                shade.name,
-                description,
+    for raw_shade in pv_entry.shade_data.values():
+        shade: BaseShade = PvShade(raw_shade, pv_entry.api)
+        name_before_refresh = shade.name
+        room_id = shade.raw_data.get(ROOM_ID_IN_SHADE)
+        room_name = pv_entry.room_data.get(room_id, {}).get(ROOM_NAME_UNICODE, "")
+
+        for description in BUTTONS:
+            entities.append(
+                PowerviewButton(
+                    pv_entry.coordinator,
+                    pv_entry.device_info,
+                    room_name,
+                    shade,
+                    name_before_refresh,
+                    description,
+                )
             )
-            for description in BUTTONS_SHADE
-            if description.create_entity_fn(shade)
-        )
+
     async_add_entities(entities)
 
 
-class PowerviewShadeButton(ShadeEntity, ButtonEntity):
+class PowerviewButton(ShadeEntity, ButtonEntity):
     """Representation of an advanced feature button."""
 
     def __init__(
@@ -115,5 +111,4 @@ class PowerviewShadeButton(ShadeEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         """Handle the button press."""
-        async with self.coordinator.radio_operation_lock:
-            await self.entity_description.press_action(self._shade)
+        await self.entity_description.press_action(self._shade)

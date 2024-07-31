@@ -1,13 +1,12 @@
 """Support for KNX/IP time."""
-
 from __future__ import annotations
 
 from datetime import time as dt_time
+import time as time_time
 from typing import Final
 
 from xknx import XKNX
-from xknx.devices import TimeDevice as XknxTimeDevice
-from xknx.dpt.dpt_10 import KNXTime as XknxTime
+from xknx.devices import DateTime as XknxDateTime
 
 from homeassistant import config_entries
 from homeassistant.components.time import TimeEntity
@@ -45,14 +44,15 @@ async def async_setup_entry(
     xknx: XKNX = hass.data[DOMAIN].xknx
     config: list[ConfigType] = hass.data[DATA_KNX_CONFIG][Platform.TIME]
 
-    async_add_entities(KNXTimeEntity(xknx, entity_config) for entity_config in config)
+    async_add_entities(KNXTime(xknx, entity_config) for entity_config in config)
 
 
-def _create_xknx_device(xknx: XKNX, config: ConfigType) -> XknxTimeDevice:
+def _create_xknx_device(xknx: XKNX, config: ConfigType) -> XknxDateTime:
     """Return a XKNX DateTime object to be used within XKNX."""
-    return XknxTimeDevice(
+    return XknxDateTime(
         xknx,
         name=config[CONF_NAME],
+        broadcast_type="TIME",
         localtime=False,
         group_address=config[KNX_ADDRESS],
         group_address_state=config.get(CONF_STATE_ADDRESS),
@@ -61,10 +61,10 @@ def _create_xknx_device(xknx: XKNX, config: ConfigType) -> XknxTimeDevice:
     )
 
 
-class KNXTimeEntity(KnxEntity, TimeEntity, RestoreEntity):
+class KNXTime(KnxEntity, TimeEntity, RestoreEntity):
     """Representation of a KNX time."""
 
-    _device: XknxTimeDevice
+    _device: XknxDateTime
 
     def __init__(self, xknx: XKNX, config: ConfigType) -> None:
         """Initialize a KNX time."""
@@ -80,15 +80,25 @@ class KNXTimeEntity(KnxEntity, TimeEntity, RestoreEntity):
             and (last_state := await self.async_get_last_state()) is not None
             and last_state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE)
         ):
-            self._device.remote_value.value = XknxTime.from_time(
-                dt_time.fromisoformat(last_state.state)
+            self._device.remote_value.value = time_time.strptime(
+                last_state.state, _TIME_TRANSLATION_FORMAT
             )
 
     @property
     def native_value(self) -> dt_time | None:
         """Return the latest value."""
-        return self._device.value
+        if (time_struct := self._device.remote_value.value) is None:
+            return None
+        return dt_time(
+            hour=time_struct.tm_hour,
+            minute=time_struct.tm_min,
+            second=min(time_struct.tm_sec, 59),  # account for leap seconds
+        )
 
     async def async_set_value(self, value: dt_time) -> None:
         """Change the value."""
-        await self._device.set(value)
+        time_struct = time_time.strptime(
+            value.strftime(_TIME_TRANSLATION_FORMAT),
+            _TIME_TRANSLATION_FORMAT,
+        )
+        await self._device.set(time_struct)

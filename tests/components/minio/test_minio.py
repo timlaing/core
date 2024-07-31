@@ -1,5 +1,4 @@
 """Tests for Minio Hass related code."""
-
 import asyncio
 import json
 from unittest.mock import MagicMock, call, patch
@@ -76,6 +75,8 @@ async def test_minio_services(
     await hass.async_start()
     await hass.async_block_till_done()
 
+    assert "Setup of domain minio took" in caplog.text
+
     # Call services
     await hass.services.async_call(
         DOMAIN,
@@ -138,6 +139,8 @@ async def test_minio_listen(
 
     await hass.async_start()
     await hass.async_block_till_done()
+
+    assert "Setup of domain minio took" in caplog.text
 
     while not events:
         await asyncio.sleep(0)

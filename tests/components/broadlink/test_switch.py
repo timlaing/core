@@ -1,5 +1,4 @@
 """Tests for Broadlink switches."""
-
 from homeassistant.components.broadlink.const import DOMAIN
 from homeassistant.components.switch import (
     DOMAIN as SWITCH_DOMAIN,

@@ -1,5 +1,4 @@
 """Data coordinator for the qnap integration."""
-
 from __future__ import annotations
 
 from datetime import timedelta

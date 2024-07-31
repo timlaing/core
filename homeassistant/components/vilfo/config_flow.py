@@ -1,5 +1,4 @@
 """Config flow for Vilfo Router integration."""
-
 import logging
 
 from vilfo import Client as VilfoClient
@@ -9,10 +8,8 @@ from vilfo.exceptions import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow
+from homeassistant import config_entries, core, exceptions
 from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_ID, CONF_MAC
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
 from homeassistant.util.network import is_host_valid
 
 from .const import DOMAIN, ROUTER_DEFAULT_HOST
@@ -65,7 +62,7 @@ def _try_connect_and_fetch_basic_info(host, token):
     return result
 
 
-async def validate_input(hass: HomeAssistant, data):
+async def validate_input(hass: core.HomeAssistant, data):
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
@@ -94,7 +91,7 @@ async def validate_input(hass: HomeAssistant, data):
     return config
 
 
-class DomainConfigFlow(ConfigFlow, domain=DOMAIN):
+class DomainConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Vilfo Router."""
 
     VERSION = 1
@@ -111,7 +108,7 @@ class DomainConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
                 errors["base"] = "invalid_auth"
-            except Exception as err:  # noqa: BLE001
+            except Exception as err:  # pylint: disable=broad-except
                 _LOGGER.error("Unexpected exception: %s", err)
                 errors["base"] = "unknown"
             else:
@@ -125,13 +122,13 @@ class DomainConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(exceptions.HomeAssistantError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(exceptions.HomeAssistantError):
     """Error to indicate there is invalid auth."""
 
 
-class InvalidHost(HomeAssistantError):
+class InvalidHost(exceptions.HomeAssistantError):
     """Error to indicate that hostname/IP address is invalid."""

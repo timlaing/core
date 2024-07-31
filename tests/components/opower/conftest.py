@@ -1,5 +1,4 @@
 """Fixtures for the Opower integration tests."""
-
 import pytest
 
 from homeassistant.components.opower.const import DOMAIN

@@ -1,5 +1,4 @@
 """Sensor Entity Description for the Growatt integration."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -7,14 +6,14 @@ from dataclasses import dataclass
 from homeassistant.components.sensor import SensorEntityDescription
 
 
-@dataclass(frozen=True)
+@dataclass
 class GrowattRequiredKeysMixin:
     """Mixin for required keys."""
 
     api_key: str
 
 
-@dataclass(frozen=True)
+@dataclass
 class GrowattSensorEntityDescription(SensorEntityDescription, GrowattRequiredKeysMixin):
     """Describes Growatt sensor entity."""
 

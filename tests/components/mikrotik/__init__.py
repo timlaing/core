@@ -1,5 +1,4 @@
 """Tests for the Mikrotik component."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -176,12 +175,7 @@ async def setup_mikrotik_entry(hass: HomeAssistant, **kwargs: Any) -> None:
     wireless_data: list[dict[str, Any]] = kwargs.get("wireless_data", WIRELESS_DATA)
     wifiwave2_data: list[dict[str, Any]] = kwargs.get("wifiwave2_data", WIFIWAVE2_DATA)
 
-    def mock_command(
-        self,
-        cmd: str,
-        params: dict[str, Any] | None = None,
-        suppress_errors: bool = False,
-    ) -> Any:
+    def mock_command(self, cmd: str, params: dict[str, Any] | None = None) -> Any:
         if cmd == mikrotik.const.MIKROTIK_SERVICES[mikrotik.const.IS_WIRELESS]:
             return support_wireless
         if cmd == mikrotik.const.MIKROTIK_SERVICES[mikrotik.const.IS_WIFIWAVE2]:
@@ -208,9 +202,8 @@ async def setup_mikrotik_entry(hass: HomeAssistant, **kwargs: Any) -> None:
     )
     config_entry.add_to_hass(hass)
 
-    with (
-        patch("librouteros.connect"),
-        patch.object(mikrotik.coordinator.MikrotikData, "command", new=mock_command),
+    with patch("librouteros.connect"), patch.object(
+        mikrotik.hub.MikrotikData, "command", new=mock_command
     ):
         await hass.config_entries.async_setup(config_entry.entry_id)
         await hass.async_block_till_done()

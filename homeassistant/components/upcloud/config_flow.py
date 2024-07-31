@@ -9,21 +9,17 @@ import requests.exceptions
 import upcloud_api
 import voluptuous as vol
 
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlow,
-)
+from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD, CONF_SCAN_INTERVAL, CONF_USERNAME
 from homeassistant.core import callback
+from homeassistant.data_entry_flow import FlowResult
 
 from .const import DEFAULT_SCAN_INTERVAL, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class UpCloudConfigFlow(ConfigFlow, domain=DOMAIN):
+class UpCloudConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """UpCloud config flow."""
 
     VERSION = 1
@@ -33,7 +29,7 @@ class UpCloudConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle user initiated flow."""
         if user_input is None:
             return self._async_show_form(step_id="user")
@@ -70,7 +66,7 @@ class UpCloudConfigFlow(ConfigFlow, domain=DOMAIN):
         step_id: str,
         user_input: dict[str, Any] | None = None,
         errors: dict[str, str] | None = None,
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Show our form."""
         if user_input is None:
             user_input = {}
@@ -92,22 +88,22 @@ class UpCloudConfigFlow(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: ConfigEntry,
+        config_entry: config_entries.ConfigEntry,
     ) -> UpCloudOptionsFlow:
         """Get options flow."""
         return UpCloudOptionsFlow(config_entry)
 
 
-class UpCloudOptionsFlow(OptionsFlow):
+class UpCloudOptionsFlow(config_entries.OptionsFlow):
     """UpCloud options flow."""
 
-    def __init__(self, config_entry: ConfigEntry) -> None:
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         self.config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle options flow."""
 
         if user_input is not None:

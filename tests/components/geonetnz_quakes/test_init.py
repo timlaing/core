@@ -1,5 +1,4 @@
 """Define tests for the GeoNet NZ Quakes general setup."""
-
 from unittest.mock import patch
 
 from homeassistant.components.geonetnz_quakes import DOMAIN, FEED

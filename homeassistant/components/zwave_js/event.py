@@ -1,5 +1,4 @@
 """Support for Z-Wave controls using the event platform."""
-
 from __future__ import annotations
 
 from zwave_js_server.client import Client as ZwaveClient
@@ -25,7 +24,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Z-Wave Event entity from Config Entry."""
-    client: ZwaveClient = config_entry.runtime_data[DATA_CLIENT]
+    client: ZwaveClient = hass.data[DOMAIN][config_entry.entry_id][DATA_CLIENT]
 
     @callback
     def async_add_event(info: ZwaveDiscoveryInfo) -> None:

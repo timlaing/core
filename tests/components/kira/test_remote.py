@@ -1,5 +1,4 @@
 """The tests for Kira sensor platform."""
-
 from unittest.mock import MagicMock
 
 from homeassistant.components.kira import remote as kira
@@ -16,7 +15,8 @@ DEVICES = []
 
 def add_entities(devices):
     """Mock add devices."""
-    DEVICES.extend(devices)
+    for device in devices:
+        DEVICES.append(device)
 
 
 def test_service_call(hass: HomeAssistant) -> None:

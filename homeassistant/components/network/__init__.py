@@ -1,5 +1,4 @@
 """The Network Configuration integration."""
-
 from __future__ import annotations
 
 from ipaddress import IPv4Address, IPv6Address, ip_interface
@@ -131,8 +130,10 @@ async def async_get_announce_addresses(hass: HomeAssistant) -> list[str]:
     for adapter in adapters:
         if not adapter["enabled"]:
             continue
-        addresses.extend(str(IPv4Address(ips["address"])) for ips in adapter["ipv4"])
-        addresses.extend(str(IPv6Address(ips["address"])) for ips in adapter["ipv6"])
+        for ips in adapter["ipv4"]:
+            addresses.append(str(IPv4Address(ips["address"])))
+        for ips in adapter["ipv6"]:
+            addresses.append(str(IPv6Address(ips["address"])))
 
     # Puts the default IPv4 address first in the list to preserve compatibility,
     # because some mDNS implementations ignores anything but the first announced
@@ -140,7 +141,7 @@ async def async_get_announce_addresses(hass: HomeAssistant) -> list[str]:
     if default_ip := await async_get_source_ip(hass, target_ip=MDNS_TARGET_IP):
         if default_ip in addresses:
             addresses.remove(default_ip)
-        return [default_ip, *addresses]
+        return [default_ip] + list(addresses)
     return list(addresses)
 
 

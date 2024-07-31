@@ -1,10 +1,8 @@
 """System Bridge Media Source Implementation."""
-
 from __future__ import annotations
 
-from systembridgemodels.media_directories import MediaDirectory
-from systembridgemodels.media_files import MediaFile, MediaFiles
-from systembridgemodels.media_get_files import MediaGetFiles
+from systembridgeconnector.models.media_directories import MediaDirectories
+from systembridgeconnector.models.media_files import File as MediaFile, MediaFiles
 
 from homeassistant.components.media_player import MediaClass
 from homeassistant.components.media_source import MEDIA_CLASS_MAP, MEDIA_MIME_TYPES
@@ -15,7 +13,7 @@ from homeassistant.components.media_source.models import (
     PlayMedia,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TOKEN
+from homeassistant.const import CONF_API_KEY, CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
@@ -69,7 +67,7 @@ class SystemBridgeSource(MediaSource):
             coordinator: SystemBridgeDataUpdateCoordinator = self.hass.data[DOMAIN].get(
                 entry.entry_id
             )
-            directories = await coordinator.websocket_client.get_directories()
+            directories = await coordinator.async_get_media_directories()
             return _build_root_paths(entry, directories)
 
         entry_id, path = item.identifier.split("~~", 1)
@@ -81,32 +79,30 @@ class SystemBridgeSource(MediaSource):
 
         path_split = path.split("/", 1)
 
-        files = await coordinator.websocket_client.get_files(
-            MediaGetFiles(
-                base=path_split[0],
-                path=path_split[1] if len(path_split) > 1 else None,
-            )
+        files = await coordinator.async_get_media_files(
+            path_split[0], path_split[1] if len(path_split) > 1 else None
         )
 
         return _build_media_items(entry, files, path, item.identifier)
 
     def _build_bridges(self) -> BrowseMediaSource:
         """Build bridges for System Bridge media."""
-        children = [
-            BrowseMediaSource(
-                domain=DOMAIN,
-                identifier=entry.entry_id,
-                media_class=MediaClass.DIRECTORY,
-                media_content_type="",
-                title=entry.title,
-                can_play=False,
-                can_expand=True,
-                children=[],
-                children_media_class=MediaClass.DIRECTORY,
-            )
-            for entry in self.hass.config_entries.async_entries(DOMAIN)
-            if entry.entry_id is not None
-        ]
+        children = []
+        for entry in self.hass.config_entries.async_entries(DOMAIN):
+            if entry.entry_id is not None:
+                children.append(
+                    BrowseMediaSource(
+                        domain=DOMAIN,
+                        identifier=entry.entry_id,
+                        media_class=MediaClass.DIRECTORY,
+                        media_content_type="",
+                        title=entry.title,
+                        can_play=False,
+                        can_expand=True,
+                        children=[],
+                        children_media_class=MediaClass.DIRECTORY,
+                    )
+                )
 
         return BrowseMediaSource(
             domain=DOMAIN,
@@ -127,13 +123,13 @@ def _build_base_url(
     """Build base url for System Bridge media."""
     return (
         f"http://{entry.data[CONF_HOST]}:{entry.data[CONF_PORT]}"
-        f"/api/media/file/data?token={entry.data[CONF_TOKEN]}"
+        f"/api/media/file/data?apiKey={entry.data[CONF_API_KEY]}"
     )
 
 
 def _build_root_paths(
     entry: ConfigEntry,
-    media_directories: list[MediaDirectory],
+    media_directories: MediaDirectories,
 ) -> BrowseMediaSource:
     """Build base categories for System Bridge media."""
     return BrowseMediaSource(
@@ -156,7 +152,7 @@ def _build_root_paths(
                 children=[],
                 children_media_class=MediaClass.DIRECTORY,
             )
-            for directory in media_directories
+            for directory in media_directories.directories
         ],
         children_media_class=MediaClass.DIRECTORY,
     )

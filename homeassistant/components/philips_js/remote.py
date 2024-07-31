@@ -1,5 +1,4 @@
 """Remote control support for Apple TV."""
-
 from __future__ import annotations
 
 import asyncio
@@ -12,23 +11,24 @@ from homeassistant.components.remote import (
     DEFAULT_DELAY_SECS,
     RemoteEntity,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.trigger import PluggableAction
 
-from . import LOGGER, PhilipsTVConfigEntry
-from .coordinator import PhilipsTVDataUpdateCoordinator
+from . import LOGGER, PhilipsTVDataUpdateCoordinator
+from .const import DOMAIN
 from .entity import PhilipsJsEntity
 from .helpers import async_get_turn_on_trigger
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: PhilipsTVConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the configuration entry."""
-    coordinator = config_entry.runtime_data
+    coordinator = hass.data[DOMAIN][config_entry.entry_id]
     async_add_entities([PhilipsTVRemote(coordinator)])
 
 

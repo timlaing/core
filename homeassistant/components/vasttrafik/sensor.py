@@ -1,17 +1,13 @@
 """Support for Västtrafik public transport."""
-
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 import logging
 
 import vasttrafik
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
-    SensorEntity,
-)
+from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 from homeassistant.const import CONF_DELAY, CONF_NAME
 from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
@@ -26,9 +22,6 @@ ATTR_ACCESSIBILITY = "accessibility"
 ATTR_DIRECTION = "direction"
 ATTR_LINE = "line"
 ATTR_TRACK = "track"
-ATTR_FROM = "from"
-ATTR_TO = "to"
-ATTR_DELAY = "delay"
 
 CONF_DEPARTURES = "departures"
 CONF_FROM = "from"
@@ -39,9 +32,10 @@ CONF_SECRET = "secret"
 
 DEFAULT_DELAY = 0
 
+
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=120)
 
-PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_KEY): cv.string,
         vol.Required(CONF_SECRET): cv.string,
@@ -68,8 +62,10 @@ def setup_platform(
 ) -> None:
     """Set up the departure sensor."""
     planner = vasttrafik.JournyPlanner(config.get(CONF_KEY), config.get(CONF_SECRET))
-    add_entities(
-        (
+    sensors = []
+
+    for departure in config[CONF_DEPARTURES]:
+        sensors.append(
             VasttrafikDepartureSensor(
                 planner,
                 departure.get(CONF_NAME),
@@ -78,10 +74,8 @@ def setup_platform(
                 departure.get(CONF_LINES),
                 departure.get(CONF_DELAY),
             )
-            for departure in config[CONF_DEPARTURES]
-        ),
-        True,
-    )
+        )
+    add_entities(sensors, True)
 
 
 class VasttrafikDepartureSensor(SensorEntity):
@@ -107,7 +101,7 @@ class VasttrafikDepartureSensor(SensorEntity):
         if location.isdecimal():
             station_info = {"station_name": location, "station_id": location}
         else:
-            station_id = self._planner.location_name(location)[0]["gid"]
+            station_id = self._planner.location_name(location)[0]["id"]
             station_info = {"station_name": location, "station_id": station_id}
         return station_info
 
@@ -149,36 +143,20 @@ class VasttrafikDepartureSensor(SensorEntity):
             self._attributes = {}
         else:
             for departure in self._departureboard:
-                service_journey = departure.get("serviceJourney", {})
-                line = service_journey.get("line", {})
-
-                if departure.get("isCancelled"):
+                line = departure.get("sname")
+                if "cancelled" in departure:
                     continue
-                if not self._lines or line.get("shortName") in self._lines:
-                    if "estimatedOtherwisePlannedTime" in departure:
-                        try:
-                            self._state = datetime.fromisoformat(
-                                departure["estimatedOtherwisePlannedTime"]
-                            ).strftime("%H:%M")
-                        except ValueError:
-                            self._state = departure["estimatedOtherwisePlannedTime"]
+                if not self._lines or line in self._lines:
+                    if "rtTime" in departure:
+                        self._state = departure["rtTime"]
                     else:
-                        self._state = None
-
-                    stop_point = departure.get("stopPoint", {})
+                        self._state = departure["time"]
 
                     params = {
-                        ATTR_ACCESSIBILITY: "wheelChair"
-                        if line.get("isWheelchairAccessible")
-                        else None,
-                        ATTR_DIRECTION: service_journey.get("direction"),
-                        ATTR_LINE: line.get("shortName"),
-                        ATTR_TRACK: stop_point.get("platform"),
-                        ATTR_FROM: stop_point.get("name"),
-                        ATTR_TO: self._heading["station_name"]
-                        if self._heading
-                        else "ANY",
-                        ATTR_DELAY: self._delay.seconds // 60 % 60,
+                        ATTR_ACCESSIBILITY: departure.get("accessibility"),
+                        ATTR_DIRECTION: departure.get("direction"),
+                        ATTR_LINE: departure.get("sname"),
+                        ATTR_TRACK: departure.get("track"),
                     }
 
                     self._attributes = {k: v for k, v in params.items() if v}

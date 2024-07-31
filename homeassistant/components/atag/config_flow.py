@@ -1,11 +1,8 @@
 """Config flow for the Atag component."""
-
-from typing import Any
-
 import pyatag
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
@@ -17,14 +14,12 @@ DATA_SCHEMA = {
 }
 
 
-class AtagConfigFlow(ConfigFlow, domain=DOMAIN):
+class AtagConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for Atag."""
 
     VERSION = 1
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_user(self, user_input=None):
         """Handle a flow initialized by the user."""
 
         if not user_input:
@@ -44,9 +39,7 @@ class AtagConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_create_entry(title=atag.id, data=user_input)
 
-    async def _show_form(
-        self, errors: dict[str, str] | None = None
-    ) -> ConfigFlowResult:
+    async def _show_form(self, errors=None):
         """Show the form to the user."""
         return self.async_show_form(
             step_id="user",

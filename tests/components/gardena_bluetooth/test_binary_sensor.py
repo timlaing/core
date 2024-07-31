@@ -1,5 +1,6 @@
 """Test Gardena Bluetooth binary sensor."""
 
+
 from collections.abc import Awaitable, Callable
 
 from gardena_bluetooth.const import Valve

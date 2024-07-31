@@ -1,5 +1,4 @@
 """Representation of a sensorBinary."""
-
 from __future__ import annotations
 
 from zwave_me_ws import ZWaveMeData

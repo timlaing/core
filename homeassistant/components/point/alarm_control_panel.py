@@ -1,5 +1,4 @@
 """Support for Minut Point."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -55,7 +54,6 @@ class MinutPointAlarmControl(AlarmControlPanelEntity):
     """The platform class required by Home Assistant."""
 
     _attr_supported_features = AlarmControlPanelEntityFeature.ARM_AWAY
-    _attr_code_arm_required = False
 
     def __init__(self, point_client: MinutPointClient, home_id: str) -> None:
         """Initialize the entity."""

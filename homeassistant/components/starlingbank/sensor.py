@@ -1,5 +1,4 @@
 """Support for balance data via the Starling Bank API."""
-
 from __future__ import annotations
 
 from datetime import timedelta
@@ -9,10 +8,7 @@ import requests
 from starlingbank import StarlingAccount
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
-    SensorEntity,
-)
+from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 from homeassistant.const import CONF_ACCESS_TOKEN, CONF_NAME
 from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
@@ -44,7 +40,7 @@ ACCOUNT_SCHEMA = vol.Schema(
     }
 )
 
-PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {vol.Required(CONF_ACCOUNTS): vol.Schema([ACCOUNT_SCHEMA])}
 )
 
@@ -57,18 +53,18 @@ def setup_platform(
 ) -> None:
     """Set up the Sterling Bank sensor platform."""
 
-    sensors: list[StarlingBalanceSensor] = []
+    sensors = []
     for account in config[CONF_ACCOUNTS]:
         try:
             starling_account = StarlingAccount(
                 account[CONF_ACCESS_TOKEN], sandbox=account[CONF_SANDBOX]
             )
-            sensors.extend(
-                StarlingBalanceSensor(
-                    starling_account, account[CONF_NAME], balance_type
+            for balance_type in account[CONF_BALANCE_TYPES]:
+                sensors.append(
+                    StarlingBalanceSensor(
+                        starling_account, account[CONF_NAME], balance_type
+                    )
                 )
-                for balance_type in account[CONF_BALANCE_TYPES]
-            )
         except requests.exceptions.HTTPError as error:
             _LOGGER.error(
                 "Unable to set up Starling account '%s': %s", account[CONF_NAME], error

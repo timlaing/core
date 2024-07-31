@@ -1,5 +1,4 @@
 """Gather info for scaffolding."""
-
 import json
 
 from homeassistant.util import slugify

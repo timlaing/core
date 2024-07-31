@@ -1,5 +1,4 @@
 """SNMP constants."""
-
 CONF_ACCEPT_ERRORS = "accept_errors"
 CONF_AUTH_KEY = "auth_key"
 CONF_AUTH_PROTOCOL = "auth_protocol"

@@ -1,5 +1,4 @@
 """Support to control a Salda Smarty XP/XV ventilation unit."""
-
 from datetime import timedelta
 import ipaddress
 import logging

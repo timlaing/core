@@ -1,5 +1,4 @@
 """Test VoIP init."""
-
 from syrupy.assertion import SnapshotAssertion
 
 from homeassistant.core import HomeAssistant

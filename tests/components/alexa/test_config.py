@@ -1,5 +1,4 @@
 """Test config."""
-
 import asyncio
 from unittest.mock import patch
 

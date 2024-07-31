@@ -1,5 +1,4 @@
 """Support for button entities."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -17,7 +16,7 @@ from .const import DOMAIN
 from .coordinator import Coordinator, GardenaBluetoothDescriptorEntity
 
 
-@dataclass(frozen=True)
+@dataclass
 class GardenaBluetoothButtonEntityDescription(ButtonEntityDescription):
     """Description of entity."""
 

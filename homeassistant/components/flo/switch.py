@@ -1,5 +1,4 @@
 """Switch representing the shutoff valve for the Flo by Moen integration."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -14,7 +13,7 @@ from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN as FLO_DOMAIN
-from .coordinator import FloDeviceDataUpdateCoordinator
+from .device import FloDeviceDataUpdateCoordinator
 from .entity import FloEntity
 
 ATTR_REVERT_TO_MODE = "revert_to_mode"
@@ -34,10 +33,11 @@ async def async_setup_entry(
     devices: list[FloDeviceDataUpdateCoordinator] = hass.data[FLO_DOMAIN][
         config_entry.entry_id
     ]["devices"]
-
-    async_add_entities(
-        [FloSwitch(device) for device in devices if device.device_type != "puck_oem"]
-    )
+    entities = []
+    for device in devices:
+        if device.device_type != "puck_oem":
+            entities.append(FloSwitch(device))
+    async_add_entities(entities)
 
     platform = entity_platform.async_get_current_platform()
 
@@ -74,6 +74,13 @@ class FloSwitch(FloEntity, SwitchEntity):
         """Initialize the Flo switch."""
         super().__init__("shutoff_valve", device)
         self._attr_is_on = device.last_known_valve_state == "open"
+
+    @property
+    def icon(self):
+        """Return the icon to use for the valve."""
+        if self.is_on:
+            return "mdi:valve-open"
+        return "mdi:valve-closed"
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Open the valve."""

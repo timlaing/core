@@ -1,11 +1,11 @@
 """Config flow for google assistant component."""
 
-from homeassistant.config_entries import ConfigFlow
+from homeassistant import config_entries
 
 from .const import CONF_PROJECT_ID, DOMAIN
 
 
-class GoogleAssistantHandler(ConfigFlow, domain=DOMAIN):
+class GoogleAssistantHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow."""
 
     VERSION = 1

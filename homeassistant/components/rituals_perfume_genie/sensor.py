@@ -1,5 +1,4 @@
 """Support for Rituals Perfume Genie sensors."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -22,12 +21,20 @@ from .coordinator import RitualsDataUpdateCoordinator
 from .entity import DiffuserEntity
 
 
-@dataclass(frozen=True, kw_only=True)
-class RitualsSensorEntityDescription(SensorEntityDescription):
+@dataclass
+class RitualsEntityDescriptionMixin:
+    """Mixin values for Rituals entities."""
+
+    value_fn: Callable[[Diffuser], int | str]
+
+
+@dataclass
+class RitualsSensorEntityDescription(
+    SensorEntityDescription, RitualsEntityDescriptionMixin
+):
     """Class describing Rituals sensor entities."""
 
     has_fn: Callable[[Diffuser], bool] = lambda _: True
-    value_fn: Callable[[Diffuser], int | str]
 
 
 ENTITY_DESCRIPTIONS = (
@@ -41,16 +48,19 @@ ENTITY_DESCRIPTIONS = (
     RitualsSensorEntityDescription(
         key="fill",
         translation_key="fill",
+        icon="mdi:beaker",
         value_fn=lambda diffuser: diffuser.fill,
     ),
     RitualsSensorEntityDescription(
         key="perfume",
         translation_key="perfume",
+        icon="mdi:tag",
         value_fn=lambda diffuser: diffuser.perfume,
     ),
     RitualsSensorEntityDescription(
         key="wifi_percentage",
         translation_key="wifi_percentage",
+        icon="mdi:wifi",
         native_unit_of_measurement=PERCENTAGE,
         value_fn=lambda diffuser: diffuser.wifi_percentage,
     ),

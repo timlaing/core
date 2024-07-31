@@ -1,5 +1,4 @@
 """Support for Vilfo Router sensors."""
-
 from dataclasses import dataclass
 
 from homeassistant.components.sensor import (
@@ -25,11 +24,16 @@ from .const import (
 )
 
 
-@dataclass(frozen=True, kw_only=True)
-class VilfoSensorEntityDescription(SensorEntityDescription):
-    """Describes Vilfo sensor entity."""
+@dataclass
+class VilfoRequiredKeysMixin:
+    """Mixin for required keys."""
 
     api_key: str
+
+
+@dataclass
+class VilfoSensorEntityDescription(SensorEntityDescription, VilfoRequiredKeysMixin):
+    """Describes Vilfo sensor entity."""
 
 
 SENSOR_TYPES: tuple[VilfoSensorEntityDescription, ...] = (
@@ -37,11 +41,13 @@ SENSOR_TYPES: tuple[VilfoSensorEntityDescription, ...] = (
         key=ATTR_LOAD,
         translation_key=ATTR_LOAD,
         native_unit_of_measurement=PERCENTAGE,
+        icon="mdi:memory",
         api_key=ATTR_API_DATA_FIELD_LOAD,
     ),
     VilfoSensorEntityDescription(
         key=ATTR_BOOT_TIME,
         translation_key=ATTR_BOOT_TIME,
+        icon="mdi:timer-outline",
         api_key=ATTR_API_DATA_FIELD_BOOT_TIME,
         device_class=SensorDeviceClass.TIMESTAMP,
     ),

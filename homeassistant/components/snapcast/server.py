@@ -1,5 +1,4 @@
 """Snapcast Integration."""
-
 from __future__ import annotations
 
 import logging
@@ -66,7 +65,7 @@ class HomeAssistantSnapcast:
         self.server.set_on_connect_callback(None)
         self.server.set_on_disconnect_callback(None)
         self.server.set_new_client_callback(None)
-        self.server.stop()
+        await self.server.stop()
 
     def on_update(self) -> None:
         """Update all entities.
@@ -100,8 +99,8 @@ class HomeAssistantSnapcast:
         ]
         del_entities.extend([x for x in self.clients if x not in clients])
 
-        _LOGGER.debug("New clients: %s", str([c.name for c in new_clients]))
-        _LOGGER.debug("New groups: %s", str([g.name for g in new_groups]))
+        _LOGGER.debug("New clients: %s", str(new_clients))
+        _LOGGER.debug("New groups: %s", str(new_groups))
         _LOGGER.debug("Delete: %s", str(del_entities))
 
         ent_reg = er.async_get(self.hass)
@@ -135,7 +134,6 @@ class HomeAssistantSnapcast:
         ----------
         client : Snapclient
             Snapcast client to be added to HA.
-
         """
         if not self.hass_async_add_entities:
             return

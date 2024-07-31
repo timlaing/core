@@ -1,5 +1,4 @@
 """Models to represent various Plex objects used in the integration."""
-
 import logging
 
 from homeassistant.components.media_player import MediaType

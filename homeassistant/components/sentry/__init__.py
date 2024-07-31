@@ -1,5 +1,4 @@
 """The sentry integration."""
-
 from __future__ import annotations
 
 import re
@@ -21,7 +20,6 @@ from homeassistant.helpers import config_validation as cv, entity_platform, inst
 from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.system_info import async_get_system_info
 from homeassistant.loader import Integration, async_get_custom_components
-from homeassistant.setup import SetupPhases, async_pause_setup
 
 from .const import (
     CONF_DSN,
@@ -41,6 +39,7 @@ from .const import (
 )
 
 CONFIG_SCHEMA = cv.removed(DOMAIN, raise_if_present=False)
+
 
 LOGGER_INFO_REGEX = re.compile(r"^(\w+)\.?(\w+)?\.?(\w+)?\.?(\w+)?(?:\..*)?$")
 
@@ -81,33 +80,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             ),
         }
 
-    with async_pause_setup(hass, SetupPhases.WAIT_IMPORT_PACKAGES):
-        # sentry_sdk.init imports modules based on the selected integrations
-        def _init_sdk():
-            """Initialize the Sentry SDK."""
-            sentry_sdk.init(
-                dsn=entry.data[CONF_DSN],
-                environment=entry.options.get(CONF_ENVIRONMENT),
-                integrations=[
-                    sentry_logging,
-                    AioHttpIntegration(),
-                    SqlalchemyIntegration(),
-                ],
-                release=current_version,
-                before_send=lambda event, hint: process_before_send(
-                    hass,
-                    entry.options,
-                    channel,
-                    huuid,
-                    system_info,
-                    custom_components,
-                    event,
-                    hint,
-                ),
-                **tracing,
-            )
-
-        await hass.async_add_import_executor_job(_init_sdk)
+    sentry_sdk.init(
+        dsn=entry.data[CONF_DSN],
+        environment=entry.options.get(CONF_ENVIRONMENT),
+        integrations=[sentry_logging, AioHttpIntegration(), SqlalchemyIntegration()],
+        release=current_version,
+        before_send=lambda event, hint: process_before_send(
+            hass,
+            entry.options,
+            channel,
+            huuid,
+            system_info,
+            custom_components,
+            event,
+            hint,
+        ),
+        **tracing,
+    )
 
     async def update_system_info(now):
         nonlocal system_info

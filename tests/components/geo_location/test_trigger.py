@@ -1,5 +1,4 @@
 """The tests for the geolocation trigger."""
-
 import logging
 
 import pytest
@@ -11,7 +10,7 @@ from homeassistant.const import (
     SERVICE_TURN_OFF,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import Context, HomeAssistant, ServiceCall
+from homeassistant.core import Context, HomeAssistant
 from homeassistant.setup import async_setup_component
 
 from tests.common import async_mock_service, mock_component
@@ -23,13 +22,13 @@ def stub_blueprint_populate_autouse(stub_blueprint_populate: None) -> None:
 
 
 @pytest.fixture
-def calls(hass: HomeAssistant) -> list[ServiceCall]:
+def calls(hass):
     """Track calls to a mock service."""
     return async_mock_service(hass, "test", "automation")
 
 
 @pytest.fixture(autouse=True)
-def setup_comp(hass: HomeAssistant) -> None:
+def setup_comp(hass):
     """Initialize components."""
     mock_component(hass, "group")
     hass.loop.run_until_complete(
@@ -48,9 +47,7 @@ def setup_comp(hass: HomeAssistant) -> None:
     )
 
 
-async def test_if_fires_on_zone_enter(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
-) -> None:
+async def test_if_fires_on_zone_enter(hass: HomeAssistant, calls) -> None:
     """Test for firing on zone enter."""
     context = Context()
     hass.states.async_set(
@@ -74,13 +71,16 @@ async def test_if_fires_on_zone_enter(
                 "action": {
                     "service": "test.automation",
                     "data_template": {
-                        "some": (
-                            "{{ trigger.platform }}"
-                            " - {{ trigger.entity_id }}"
-                            " - {{ trigger.from_state.state }}"
-                            " - {{ trigger.to_state.state }}"
-                            " - {{ trigger.zone.name }}"
-                            " - {{ trigger.id }}"
+                        "some": "{{ trigger.%s }}"
+                        % "}} - {{ trigger.".join(
+                            (
+                                "platform",
+                                "entity_id",
+                                "from_state.state",
+                                "to_state.state",
+                                "zone.name",
+                                "id",
+                            )
                         )
                     },
                 },
@@ -96,10 +96,10 @@ async def test_if_fires_on_zone_enter(
     )
     await hass.async_block_till_done()
 
-    assert len(service_calls) == 1
-    assert service_calls[0].context.parent_id == context.id
+    assert len(calls) == 1
+    assert calls[0].context.parent_id == context.id
     assert (
-        service_calls[0].data["some"]
+        calls[0].data["some"]
         == "geo_location - geo_location.entity - hello - hello - test - 0"
     )
 
@@ -118,8 +118,6 @@ async def test_if_fires_on_zone_enter(
         blocking=True,
     )
 
-    assert len(service_calls) == 2
-
     hass.states.async_set(
         "geo_location.entity",
         "hello",
@@ -127,12 +125,10 @@ async def test_if_fires_on_zone_enter(
     )
     await hass.async_block_till_done()
 
-    assert len(service_calls) == 2
+    assert len(calls) == 1
 
 
-async def test_if_not_fires_for_enter_on_zone_leave(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
-) -> None:
+async def test_if_not_fires_for_enter_on_zone_leave(hass: HomeAssistant, calls) -> None:
     """Test for not firing on zone leave."""
     hass.states.async_set(
         "geo_location.entity",
@@ -164,12 +160,10 @@ async def test_if_not_fires_for_enter_on_zone_leave(
     )
     await hass.async_block_till_done()
 
-    assert len(service_calls) == 0
+    assert len(calls) == 0
 
 
-async def test_if_fires_on_zone_leave(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
-) -> None:
+async def test_if_fires_on_zone_leave(hass: HomeAssistant, calls) -> None:
     """Test for firing on zone leave."""
     hass.states.async_set(
         "geo_location.entity",
@@ -201,12 +195,10 @@ async def test_if_fires_on_zone_leave(
     )
     await hass.async_block_till_done()
 
-    assert len(service_calls) == 1
+    assert len(calls) == 1
 
 
-async def test_if_fires_on_zone_leave_2(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
-) -> None:
+async def test_if_fires_on_zone_leave_2(hass: HomeAssistant, calls) -> None:
     """Test for firing on zone leave for unavailable entity."""
     hass.states.async_set(
         "geo_location.entity",
@@ -238,12 +230,10 @@ async def test_if_fires_on_zone_leave_2(
     )
     await hass.async_block_till_done()
 
-    assert len(service_calls) == 0
+    assert len(calls) == 0
 
 
-async def test_if_not_fires_for_leave_on_zone_enter(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
-) -> None:
+async def test_if_not_fires_for_leave_on_zone_enter(hass: HomeAssistant, calls) -> None:
     """Test for not firing on zone enter."""
     hass.states.async_set(
         "geo_location.entity",
@@ -275,12 +265,10 @@ async def test_if_not_fires_for_leave_on_zone_enter(
     )
     await hass.async_block_till_done()
 
-    assert len(service_calls) == 0
+    assert len(calls) == 0
 
 
-async def test_if_fires_on_zone_appear(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
-) -> None:
+async def test_if_fires_on_zone_appear(hass: HomeAssistant, calls) -> None:
     """Test for firing if entity appears in zone."""
     assert await async_setup_component(
         hass,
@@ -296,12 +284,15 @@ async def test_if_fires_on_zone_appear(
                 "action": {
                     "service": "test.automation",
                     "data_template": {
-                        "some": (
-                            "{{ trigger.platform }}"
-                            " - {{ trigger.entity_id }}"
-                            " - {{ trigger.from_state.state }}"
-                            " - {{ trigger.to_state.state }}"
-                            " - {{ trigger.zone.name }}"
+                        "some": "{{ trigger.%s }}"
+                        % "}} - {{ trigger.".join(
+                            (
+                                "platform",
+                                "entity_id",
+                                "from_state.state",
+                                "to_state.state",
+                                "zone.name",
+                            )
                         )
                     },
                 },
@@ -319,17 +310,14 @@ async def test_if_fires_on_zone_appear(
     )
     await hass.async_block_till_done()
 
-    assert len(service_calls) == 1
-    assert service_calls[0].context.parent_id == context.id
+    assert len(calls) == 1
+    assert calls[0].context.parent_id == context.id
     assert (
-        service_calls[0].data["some"]
-        == "geo_location - geo_location.entity -  - hello - test"
+        calls[0].data["some"] == "geo_location - geo_location.entity -  - hello - test"
     )
 
 
-async def test_if_fires_on_zone_appear_2(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
-) -> None:
+async def test_if_fires_on_zone_appear_2(hass: HomeAssistant, calls) -> None:
     """Test for firing if entity appears in zone."""
     assert await async_setup_component(
         hass,
@@ -345,12 +333,15 @@ async def test_if_fires_on_zone_appear_2(
                 "action": {
                     "service": "test.automation",
                     "data_template": {
-                        "some": (
-                            "{{ trigger.platform }}"
-                            " - {{ trigger.entity_id }}"
-                            " - {{ trigger.from_state.state }}"
-                            " - {{ trigger.to_state.state }}"
-                            " - {{ trigger.zone.name }}"
+                        "some": "{{ trigger.%s }}"
+                        % "}} - {{ trigger.".join(
+                            (
+                                "platform",
+                                "entity_id",
+                                "from_state.state",
+                                "to_state.state",
+                                "zone.name",
+                            )
                         )
                     },
                 },
@@ -376,17 +367,15 @@ async def test_if_fires_on_zone_appear_2(
     )
     await hass.async_block_till_done()
 
-    assert len(service_calls) == 1
-    assert service_calls[0].context.parent_id == context.id
+    assert len(calls) == 1
+    assert calls[0].context.parent_id == context.id
     assert (
-        service_calls[0].data["some"]
+        calls[0].data["some"]
         == "geo_location - geo_location.entity - goodbye - hello - test"
     )
 
 
-async def test_if_fires_on_zone_disappear(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
-) -> None:
+async def test_if_fires_on_zone_disappear(hass: HomeAssistant, calls) -> None:
     """Test for firing if entity disappears from zone."""
     hass.states.async_set(
         "geo_location.entity",
@@ -409,12 +398,15 @@ async def test_if_fires_on_zone_disappear(
                 "action": {
                     "service": "test.automation",
                     "data_template": {
-                        "some": (
-                            "{{ trigger.platform }}"
-                            " - {{ trigger.entity_id }}"
-                            " - {{ trigger.from_state.state }}"
-                            " - {{ trigger.to_state.state }}"
-                            " - {{ trigger.zone.name }}"
+                        "some": "{{ trigger.%s }}"
+                        % "}} - {{ trigger.".join(
+                            (
+                                "platform",
+                                "entity_id",
+                                "from_state.state",
+                                "to_state.state",
+                                "zone.name",
+                            )
                         )
                     },
                 },
@@ -426,17 +418,14 @@ async def test_if_fires_on_zone_disappear(
     hass.states.async_remove("geo_location.entity")
     await hass.async_block_till_done()
 
-    assert len(service_calls) == 1
+    assert len(calls) == 1
     assert (
-        service_calls[0].data["some"]
-        == "geo_location - geo_location.entity - hello -  - test"
+        calls[0].data["some"] == "geo_location - geo_location.entity - hello -  - test"
     )
 
 
 async def test_zone_undefined(
-    hass: HomeAssistant,
-    service_calls: list[ServiceCall],
-    caplog: pytest.LogCaptureFixture,
+    hass: HomeAssistant, calls, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test for undefined zone."""
     hass.states.async_set(
@@ -472,7 +461,7 @@ async def test_zone_undefined(
     )
     await hass.async_block_till_done()
 
-    assert len(service_calls) == 0
+    assert len(calls) == 0
 
     assert (
         f"Unable to execute automation automation 0: Zone {zone_does_not_exist} not found"

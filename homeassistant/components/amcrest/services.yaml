@@ -3,59 +3,46 @@ enable_recording:
     entity_id:
       example: "camera.house_front"
       selector:
-        entity:
-          integration: amcrest
-          domain: camera
+        text:
 
 disable_recording:
   fields:
     entity_id:
       example: "camera.house_front"
       selector:
-        entity:
-          integration: amcrest
-          domain: camera
+        text:
 
 enable_audio:
   fields:
     entity_id:
       example: "camera.house_front"
       selector:
-        entity:
-          integration: amcrest
-          domain: camera
+        text:
 
 disable_audio:
   fields:
     entity_id:
       example: "camera.house_front"
       selector:
-        entity:
-          integration: amcrest
-          domain: camera
+        text:
 
 enable_motion_recording:
   fields:
     entity_id:
       example: "camera.house_front"
       selector:
-        entity:
-          integration: amcrest
-          domain: camera
+        text:
 
 disable_motion_recording:
   fields:
     entity_id:
       example: "camera.house_front"
       selector:
-        entity:
-          integration: amcrest
-          domain: camera
+        text:
 
 goto_preset:
   fields:
     entity_id:
-      example: "camera.house_front"
       selector:
         entity:
           integration: amcrest
@@ -72,9 +59,7 @@ set_color_bw:
     entity_id:
       example: "camera.house_front"
       selector:
-        entity:
-          integration: amcrest
-          domain: camera
+        text:
     color_bw:
       selector:
         select:
@@ -88,27 +73,21 @@ start_tour:
     entity_id:
       example: "camera.house_front"
       selector:
-        entity:
-          integration: amcrest
-          domain: camera
+        text:
 
 stop_tour:
   fields:
     entity_id:
       example: "camera.house_front"
       selector:
-        entity:
-          integration: amcrest
-          domain: camera
+        text:
 
 ptz_control:
   fields:
     entity_id:
       example: "camera.house_front"
       selector:
-        entity:
-          integration: amcrest
-          domain: camera
+        text:
     movement:
       required: true
       selector:

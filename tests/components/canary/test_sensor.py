@@ -1,5 +1,4 @@
 """The tests for the Canary sensor platform."""
-
 from datetime import timedelta
 from unittest.mock import patch
 

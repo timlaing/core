@@ -44,7 +44,6 @@ LANGUAGES = {
     "lb",
     "lt",
     "lv",
-    "mk",
     "ml",
     "nb",
     "nl",

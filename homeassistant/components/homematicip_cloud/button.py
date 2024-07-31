@@ -1,5 +1,4 @@
 """Support for HomematicIP Cloud button devices."""
-
 from __future__ import annotations
 
 from homematicip.aio.device import AsyncWallMountedGarageDoorController
@@ -20,12 +19,13 @@ async def async_setup_entry(
 ) -> None:
     """Set up the HomematicIP button from a config entry."""
     hap = hass.data[HMIPC_DOMAIN][config_entry.unique_id]
+    entities: list[HomematicipGenericEntity] = []
+    for device in hap.home.devices:
+        if isinstance(device, AsyncWallMountedGarageDoorController):
+            entities.append(HomematicipGarageDoorControllerButton(hap, device))
 
-    async_add_entities(
-        HomematicipGarageDoorControllerButton(hap, device)
-        for device in hap.home.devices
-        if isinstance(device, AsyncWallMountedGarageDoorController)
-    )
+    if entities:
+        async_add_entities(entities)
 
 
 class HomematicipGarageDoorControllerButton(HomematicipGenericEntity, ButtonEntity):

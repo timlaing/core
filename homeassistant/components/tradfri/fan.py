@@ -55,12 +55,7 @@ class TradfriAirPurifierFan(TradfriBaseEntity, FanEntity):
     """The platform class required by Home Assistant."""
 
     _attr_name = None
-    _attr_supported_features = (
-        FanEntityFeature.PRESET_MODE
-        | FanEntityFeature.SET_SPEED
-        | FanEntityFeature.TURN_ON
-        | FanEntityFeature.TURN_OFF
-    )
+    _attr_supported_features = FanEntityFeature.PRESET_MODE | FanEntityFeature.SET_SPEED
     _attr_preset_modes = [ATTR_AUTO]
     # These are the steps:
     # 0 = Off
@@ -69,7 +64,6 @@ class TradfriAirPurifierFan(TradfriBaseEntity, FanEntity):
     # ... with step size 1
     # 50 = Max
     _attr_speed_count = ATTR_MAX_FAN_STEPS
-    _enable_turn_on_off_backwards_compatibility = False
 
     def __init__(
         self,
@@ -125,7 +119,8 @@ class TradfriAirPurifierFan(TradfriBaseEntity, FanEntity):
         if not self._device_control:
             return
 
-        # Preset must be 'Auto'
+        if not preset_mode == ATTR_AUTO:
+            raise ValueError("Preset must be 'Auto'.")
 
         await self._api(self._device_control.turn_on_auto_mode())
 

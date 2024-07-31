@@ -1,7 +1,6 @@
 """Test the Google Maps Travel Time sensors."""
 
-from collections.abc import Generator
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -10,9 +9,8 @@ from homeassistant.components.google_travel_time.const import (
     CONF_ARRIVAL_TIME,
     CONF_DEPARTURE_TIME,
     DOMAIN,
-    UNITS_IMPERIAL,
-    UNITS_METRIC,
 )
+from homeassistant.const import CONF_UNIT_SYSTEM_IMPERIAL, CONF_UNIT_SYSTEM_METRIC
 from homeassistant.core import HomeAssistant
 from homeassistant.util.unit_system import (
     METRIC_SYSTEM,
@@ -26,14 +24,11 @@ from tests.common import MockConfigEntry
 
 
 @pytest.fixture(name="mock_update")
-def mock_update_fixture() -> Generator[MagicMock]:
+def mock_update_fixture():
     """Mock an update to the sensor."""
-    with (
-        patch("homeassistant.components.google_travel_time.sensor.Client"),
-        patch(
-            "homeassistant.components.google_travel_time.sensor.distance_matrix"
-        ) as distance_matrix_mock,
-    ):
+    with patch("homeassistant.components.google_travel_time.sensor.Client"), patch(
+        "homeassistant.components.google_travel_time.sensor.distance_matrix"
+    ) as distance_matrix_mock:
         distance_matrix_mock.return_value = {
             "rows": [
                 {
@@ -57,7 +52,7 @@ def mock_update_fixture() -> Generator[MagicMock]:
 
 
 @pytest.fixture(name="mock_update_duration")
-def mock_update_duration_fixture(mock_update: MagicMock) -> MagicMock:
+def mock_update_duration_fixture(mock_update):
     """Mock an update to the sensor returning no duration_in_traffic."""
     mock_update.return_value = {
         "rows": [
@@ -78,7 +73,7 @@ def mock_update_duration_fixture(mock_update: MagicMock) -> MagicMock:
 
 
 @pytest.fixture(name="mock_update_empty")
-def mock_update_empty_fixture(mock_update: MagicMock) -> MagicMock:
+def mock_update_empty_fixture(mock_update):
     """Mock an update to the sensor with an empty response."""
     mock_update.return_value = None
     return mock_update
@@ -210,8 +205,8 @@ async def test_sensor_arrival_time_custom_timestamp(hass: HomeAssistant) -> None
 @pytest.mark.parametrize(
     ("unit_system", "expected_unit_option"),
     [
-        (METRIC_SYSTEM, UNITS_METRIC),
-        (US_CUSTOMARY_SYSTEM, UNITS_IMPERIAL),
+        (METRIC_SYSTEM, CONF_UNIT_SYSTEM_METRIC),
+        (US_CUSTOMARY_SYSTEM, CONF_UNIT_SYSTEM_IMPERIAL),
     ],
 )
 async def test_sensor_unit_system(
@@ -229,12 +224,9 @@ async def test_sensor_unit_system(
         entry_id="test",
     )
     config_entry.add_to_hass(hass)
-    with (
-        patch("homeassistant.components.google_travel_time.sensor.Client"),
-        patch(
-            "homeassistant.components.google_travel_time.sensor.distance_matrix"
-        ) as distance_matrix_mock,
-    ):
+    with patch("homeassistant.components.google_travel_time.sensor.Client"), patch(
+        "homeassistant.components.google_travel_time.sensor.distance_matrix"
+    ) as distance_matrix_mock:
         await hass.config_entries.async_setup(config_entry.entry_id)
         await hass.async_block_till_done()
 

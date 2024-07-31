@@ -1,5 +1,4 @@
 """Common utilities for VeSync Component."""
-
 import logging
 from typing import Any
 
@@ -67,7 +66,7 @@ class VeSyncBaseEntity(Entity):
         # sensors. Maintaining base_unique_id allows us to group related
         # entities under a single device.
         if isinstance(self.device.sub_device_no, int):
-            return f"{self.device.cid}{self.device.sub_device_no!s}"
+            return f"{self.device.cid}{str(self.device.sub_device_no)}"
         return self.device.cid
 
     @property

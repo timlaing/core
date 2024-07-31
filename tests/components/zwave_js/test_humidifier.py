@@ -1,5 +1,4 @@
 """Test the Z-Wave JS humidifier platform."""
-
 from zwave_js_server.const import CommandClass
 from zwave_js_server.const.command_class.humidity_control import HumidityControlMode
 from zwave_js_server.event import Event

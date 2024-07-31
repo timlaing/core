@@ -1,5 +1,4 @@
 """Provides device automations for Cover."""
-
 from __future__ import annotations
 
 import voluptuous as vol
@@ -30,7 +29,13 @@ from homeassistant.helpers.entity import get_supported_features
 from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
 from homeassistant.helpers.typing import ConfigType
 
-from . import DOMAIN, CoverEntityFeature
+from . import (
+    DOMAIN,
+    SUPPORT_CLOSE,
+    SUPPORT_OPEN,
+    SUPPORT_SET_POSITION,
+    SUPPORT_SET_TILT_POSITION,
+)
 
 POSITION_TRIGGER_TYPES = {"position", "tilt_position"}
 STATE_TRIGGER_TYPES = {"opened", "closed", "opening", "closing"}
@@ -75,9 +80,7 @@ async def async_get_triggers(
             continue
 
         supported_features = get_supported_features(hass, entry.entity_id)
-        supports_open_close = supported_features & (
-            CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE
-        )
+        supports_open_close = supported_features & (SUPPORT_OPEN | SUPPORT_CLOSE)
 
         # Add triggers for each entity that belongs to this integration
         base_trigger = {
@@ -95,14 +98,14 @@ async def async_get_triggers(
                 }
                 for trigger in STATE_TRIGGER_TYPES
             ]
-        if supported_features & CoverEntityFeature.SET_POSITION:
+        if supported_features & SUPPORT_SET_POSITION:
             triggers.append(
                 {
                     **base_trigger,
                     CONF_TYPE: "position",
                 }
             )
-        if supported_features & CoverEntityFeature.SET_TILT_POSITION:
+        if supported_features & SUPPORT_SET_TILT_POSITION:
             triggers.append(
                 {
                     **base_trigger,

@@ -1,5 +1,4 @@
 """Support for the QNAP QSW buttons."""
-
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
@@ -23,11 +22,16 @@ from .coordinator import QswDataCoordinator
 from .entity import QswDataEntity
 
 
-@dataclass(frozen=True, kw_only=True)
-class QswButtonDescription(ButtonEntityDescription):
-    """Class to describe a Button entity."""
+@dataclass
+class QswButtonDescriptionMixin:
+    """Mixin to describe a Button entity."""
 
     press_action: Callable[[QnapQswApi], Awaitable[bool]]
+
+
+@dataclass
+class QswButtonDescription(ButtonEntityDescription, QswButtonDescriptionMixin):
+    """Class to describe a Button entity."""
 
 
 BUTTON_TYPES: Final[tuple[QswButtonDescription, ...]] = (

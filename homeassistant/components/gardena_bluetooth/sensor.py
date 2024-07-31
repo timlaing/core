@@ -1,5 +1,4 @@
 """Support for switch entities."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -28,7 +27,7 @@ from .coordinator import (
 )
 
 
-@dataclass(frozen=True)
+@dataclass
 class GardenaBluetoothSensorEntityDescription(SensorEntityDescription):
     """Description of entity."""
 
@@ -89,6 +88,7 @@ DESCRIPTIONS = (
     GardenaBluetoothSensorEntityDescription(
         key=Sensor.measurement_timestamp.uuid,
         translation_key="sensor_measurement_timestamp",
+        state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.TIMESTAMP,
         entity_category=EntityCategory.DIAGNOSTIC,
         char=Sensor.measurement_timestamp,
@@ -120,7 +120,9 @@ class GardenaBluetoothSensor(GardenaBluetoothDescriptorEntity, SensorEntity):
     def _handle_coordinator_update(self) -> None:
         value = self.coordinator.get_cached(self.entity_description.char)
         if isinstance(value, datetime):
-            value = value.replace(tzinfo=dt_util.get_default_time_zone())
+            value = value.replace(
+                tzinfo=dt_util.get_time_zone(self.hass.config.time_zone)
+            )
         self._attr_native_value = value
 
         if char := self.entity_description.connected_state:

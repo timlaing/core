@@ -1,10 +1,9 @@
 """The Xiaomi BLE integration."""
-
 from collections.abc import Callable, Coroutine
 from logging import Logger
 from typing import Any
 
-from xiaomi_ble import SensorUpdate, XiaomiBluetoothDeviceData
+from xiaomi_ble import XiaomiBluetoothDeviceData
 
 from homeassistant.components.bluetooth import (
     BluetoothScanningMode,
@@ -16,16 +15,14 @@ from homeassistant.components.bluetooth.active_update_processor import (
 from homeassistant.components.bluetooth.passive_update_processor import (
     PassiveBluetoothDataProcessor,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.debounce import Debouncer
 
 from .const import CONF_SLEEPY_DEVICE
-from .types import XiaomiBLEConfigEntry
 
 
-class XiaomiActiveBluetoothProcessorCoordinator(
-    ActiveBluetoothProcessorCoordinator[SensorUpdate]
-):
+class XiaomiActiveBluetoothProcessorCoordinator(ActiveBluetoothProcessorCoordinator):
     """Define a Xiaomi Bluetooth Active Update Processor Coordinator."""
 
     def __init__(
@@ -35,17 +32,17 @@ class XiaomiActiveBluetoothProcessorCoordinator(
         *,
         address: str,
         mode: BluetoothScanningMode,
-        update_method: Callable[[BluetoothServiceInfoBleak], SensorUpdate],
+        update_method: Callable[[BluetoothServiceInfoBleak], Any],
         needs_poll_method: Callable[[BluetoothServiceInfoBleak, float | None], bool],
         device_data: XiaomiBluetoothDeviceData,
-        discovered_event_classes: set[str],
+        discovered_device_classes: set[str],
         poll_method: Callable[
             [BluetoothServiceInfoBleak],
-            Coroutine[Any, Any, SensorUpdate],
+            Coroutine[Any, Any, Any],
         ]
         | None = None,
         poll_debouncer: Debouncer[Coroutine[Any, Any, None]] | None = None,
-        entry: XiaomiBLEConfigEntry,
+        entry: ConfigEntry,
         connectable: bool = True,
     ) -> None:
         """Initialize the Xiaomi Bluetooth Active Update Processor Coordinator."""
@@ -60,7 +57,7 @@ class XiaomiActiveBluetoothProcessorCoordinator(
             poll_debouncer=poll_debouncer,
             connectable=connectable,
         )
-        self.discovered_event_classes = discovered_event_classes
+        self.discovered_device_classes = discovered_device_classes
         self.device_data = device_data
         self.entry = entry
 
@@ -70,9 +67,7 @@ class XiaomiActiveBluetoothProcessorCoordinator(
         return self.entry.data.get(CONF_SLEEPY_DEVICE, self.device_data.sleepy_device)
 
 
-class XiaomiPassiveBluetoothDataProcessor[_T](
-    PassiveBluetoothDataProcessor[_T, SensorUpdate]
-):
+class XiaomiPassiveBluetoothDataProcessor(PassiveBluetoothDataProcessor):
     """Define a Xiaomi Bluetooth Passive Update Data Processor."""
 
     coordinator: XiaomiActiveBluetoothProcessorCoordinator

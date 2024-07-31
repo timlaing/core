@@ -1,5 +1,4 @@
 """Define ReCollect Waste utilities."""
-
 from aiorecollect.client import PickupType
 
 from homeassistant.config_entries import ConfigEntry

@@ -1,5 +1,4 @@
 """Component providing support for Reolink light entities."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -7,7 +6,6 @@ from dataclasses import dataclass
 from typing import Any
 
 from reolink_aio.api import Host
-from reolink_aio.exceptions import InvalidParameterError, ReolinkError
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
@@ -18,44 +16,58 @@ from homeassistant.components.light import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import ReolinkData
 from .const import DOMAIN
-from .entity import ReolinkChannelCoordinatorEntity, ReolinkChannelEntityDescription
+from .entity import ReolinkChannelCoordinatorEntity
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass
+class ReolinkLightEntityDescriptionMixin:
+    """Mixin values for Reolink light entities."""
+
+    is_on_fn: Callable[[Host, int], bool]
+    turn_on_off_fn: Callable[[Host, int, bool], Any]
+
+
+@dataclass
 class ReolinkLightEntityDescription(
-    LightEntityDescription,
-    ReolinkChannelEntityDescription,
+    LightEntityDescription, ReolinkLightEntityDescriptionMixin
 ):
     """A class that describes light entities."""
 
-    get_brightness_fn: Callable[[Host, int], int | None] | None = None
-    is_on_fn: Callable[[Host, int], bool]
-    set_brightness_fn: Callable[[Host, int, int], Any] | None = None
-    turn_on_off_fn: Callable[[Host, int, bool], Any]
+    supported_fn: Callable[[Host, int], bool] = lambda api, ch: True
+    get_brightness_fn: Callable[[Host, int], int] | None = None
+    set_brightness_fn: Callable[[Host, int, float], Any] | None = None
 
 
 LIGHT_ENTITIES = (
     ReolinkLightEntityDescription(
         key="floodlight",
-        cmd_key="GetWhiteLed",
         translation_key="floodlight",
-        supported=lambda api, ch: api.supported(ch, "floodLight"),
+        icon="mdi:spotlight-beam",
+        supported_fn=lambda api, ch: api.supported(ch, "floodLight"),
         is_on_fn=lambda api, ch: api.whiteled_state(ch),
         turn_on_off_fn=lambda api, ch, value: api.set_whiteled(ch, state=value),
         get_brightness_fn=lambda api, ch: api.whiteled_brightness(ch),
         set_brightness_fn=lambda api, ch, value: api.set_whiteled(ch, brightness=value),
     ),
     ReolinkLightEntityDescription(
-        key="status_led",
-        cmd_key="GetPowerLed",
-        translation_key="status_led",
+        key="ir_lights",
+        translation_key="ir_lights",
+        icon="mdi:led-off",
         entity_category=EntityCategory.CONFIG,
-        supported=lambda api, ch: api.supported(ch, "power_led"),
+        supported_fn=lambda api, ch: api.supported(ch, "ir_lights"),
+        is_on_fn=lambda api, ch: api.ir_enabled(ch),
+        turn_on_off_fn=lambda api, ch, value: api.set_ir_lights(ch, value),
+    ),
+    ReolinkLightEntityDescription(
+        key="status_led",
+        translation_key="status_led",
+        icon="mdi:lightning-bolt-circle",
+        entity_category=EntityCategory.CONFIG,
+        supported_fn=lambda api, ch: api.supported(ch, "power_led"),
         is_on_fn=lambda api, ch: api.status_led_enabled(ch),
         turn_on_off_fn=lambda api, ch, value: api.set_status_led(ch, value),
     ),
@@ -74,7 +86,7 @@ async def async_setup_entry(
         ReolinkLightEntity(reolink_data, channel, entity_description)
         for entity_description in LIGHT_ENTITIES
         for channel in reolink_data.host.api.channels
-        if entity_description.supported(reolink_data.host.api, channel)
+        if entity_description.supported_fn(reolink_data.host.api, channel)
     )
 
 
@@ -90,8 +102,12 @@ class ReolinkLightEntity(ReolinkChannelCoordinatorEntity, LightEntity):
         entity_description: ReolinkLightEntityDescription,
     ) -> None:
         """Initialize Reolink light entity."""
-        self.entity_description = entity_description
         super().__init__(reolink_data, channel)
+        self.entity_description = entity_description
+
+        self._attr_unique_id = (
+            f"{self._host.unique_id}_{channel}_{entity_description.key}"
+        )
 
         if entity_description.set_brightness_fn is None:
             self._attr_supported_color_modes = {ColorMode.ONOFF}
@@ -111,22 +127,19 @@ class ReolinkLightEntity(ReolinkChannelCoordinatorEntity, LightEntity):
         if self.entity_description.get_brightness_fn is None:
             return None
 
-        bright_pct = self.entity_description.get_brightness_fn(
-            self._host.api, self._channel
+        return round(
+            255
+            * (
+                self.entity_description.get_brightness_fn(self._host.api, self._channel)
+                / 100.0
+            )
         )
-        if bright_pct is None:
-            return None
-
-        return round(255 * bright_pct / 100.0)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn light off."""
-        try:
-            await self.entity_description.turn_on_off_fn(
-                self._host.api, self._channel, False
-            )
-        except ReolinkError as err:
-            raise HomeAssistantError(err) from err
+        await self.entity_description.turn_on_off_fn(
+            self._host.api, self._channel, False
+        )
         self.async_write_ha_state()
 
     async def async_turn_on(self, **kwargs: Any) -> None:
@@ -135,19 +148,11 @@ class ReolinkLightEntity(ReolinkChannelCoordinatorEntity, LightEntity):
             brightness := kwargs.get(ATTR_BRIGHTNESS)
         ) is not None and self.entity_description.set_brightness_fn is not None:
             brightness_pct = int(brightness / 255.0 * 100)
-            try:
-                await self.entity_description.set_brightness_fn(
-                    self._host.api, self._channel, brightness_pct
-                )
-            except InvalidParameterError as err:
-                raise ServiceValidationError(err) from err
-            except ReolinkError as err:
-                raise HomeAssistantError(err) from err
-
-        try:
-            await self.entity_description.turn_on_off_fn(
-                self._host.api, self._channel, True
+            await self.entity_description.set_brightness_fn(
+                self._host.api, self._channel, brightness_pct
             )
-        except ReolinkError as err:
-            raise HomeAssistantError(err) from err
+
+        await self.entity_description.turn_on_off_fn(
+            self._host.api, self._channel, True
+        )
         self.async_write_ha_state()

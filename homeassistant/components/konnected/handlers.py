@@ -1,5 +1,4 @@
 """Handle Konnected messages."""
-
 import logging
 
 from homeassistant.components.sensor import SensorDeviceClass

@@ -1,5 +1,4 @@
 """Support for Awair sensors."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -51,15 +50,21 @@ from .coordinator import AwairDataUpdateCoordinator, AwairResult
 DUST_ALIASES = [API_PM25, API_PM10]
 
 
-@dataclass(frozen=True, kw_only=True)
-class AwairSensorEntityDescription(SensorEntityDescription):
-    """Describes Awair sensor entity."""
+@dataclass
+class AwairRequiredKeysMixin:
+    """Mixin for required keys."""
 
     unique_id_tag: str
 
 
+@dataclass
+class AwairSensorEntityDescription(SensorEntityDescription, AwairRequiredKeysMixin):
+    """Describes Awair sensor entity."""
+
+
 SENSOR_TYPE_SCORE = AwairSensorEntityDescription(
     key=API_SCORE,
+    icon="mdi:blur",
     native_unit_of_measurement=PERCENTAGE,
     translation_key="score",
     unique_id_tag="score",  # matches legacy format
@@ -91,6 +96,7 @@ SENSOR_TYPES: tuple[AwairSensorEntityDescription, ...] = (
     ),
     AwairSensorEntityDescription(
         key=API_VOC,
+        icon="mdi:molecule",
         device_class=SensorDeviceClass.VOLATILE_ORGANIC_COMPOUNDS_PARTS,
         native_unit_of_measurement=CONCENTRATION_PARTS_PER_BILLION,
         unique_id_tag="VOC",  # matches legacy format

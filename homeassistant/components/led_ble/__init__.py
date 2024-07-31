@@ -1,5 +1,4 @@
 """The LED BLE integration."""
-
 from __future__ import annotations
 
 import asyncio
@@ -54,7 +53,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
     )
 
-    async def _async_update() -> None:
+    async def _async_update():
         """Update the device state."""
         try:
             await led_ble.update()
@@ -80,7 +79,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     try:
         async with asyncio.timeout(DEVICE_TIMEOUT):
             await startup_event.wait()
-    except TimeoutError as ex:
+    except asyncio.TimeoutError as ex:
         raise ConfigEntryNotReady(
             "Unable to communicate with the device; "
             f"Try moving the Bluetooth adapter closer to {led_ble.name}"

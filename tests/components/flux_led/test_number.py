@@ -1,6 +1,7 @@
 """Tests for the flux_led number platform."""
 
-from datetime import timedelta
+
+from unittest.mock import patch
 
 from flux_led.const import COLOR_MODE_RGB as FLUX_COLOR_MODE_RGB
 import pytest
@@ -21,10 +22,9 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.setup import async_setup_component
-import homeassistant.util.dt as dt_util
 
 from . import (
     DEFAULT_ENTRY_TITLE,
@@ -38,12 +38,10 @@ from . import (
     async_mock_effect_speed,
 )
 
-from tests.common import MockConfigEntry, async_fire_time_changed
+from tests.common import MockConfigEntry
 
 
-async def test_effects_speed_unique_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
-) -> None:
+async def test_effects_speed_unique_id(hass: HomeAssistant) -> None:
     """Test a number unique id."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -57,12 +55,11 @@ async def test_effects_speed_unique_id(
         await hass.async_block_till_done()
 
     entity_id = "number.bulb_rgbcw_ddeeff_effect_speed"
+    entity_registry = er.async_get(hass)
     assert entity_registry.async_get(entity_id).unique_id == MAC_ADDRESS
 
 
-async def test_effects_speed_unique_id_no_discovery(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
-) -> None:
+async def test_effects_speed_unique_id_no_discovery(hass: HomeAssistant) -> None:
     """Test a number unique id."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -75,6 +72,7 @@ async def test_effects_speed_unique_id_no_discovery(
         await hass.async_block_till_done()
 
     entity_id = "number.bulb_rgbcw_ddeeff_effect_speed"
+    entity_registry = er.async_get(hass)
     assert entity_registry.async_get(entity_id).unique_id == config_entry.entry_id
 
 
@@ -269,7 +267,9 @@ async def test_addressable_light_pixel_config(hass: HomeAssistant) -> None:
     )  # Original addressable model
     bulb.color_modes = {FLUX_COLOR_MODE_RGB}
     bulb.color_mode = FLUX_COLOR_MODE_RGB
-    with _patch_discovery(), _patch_wifibulb(device=bulb):
+    with patch.object(
+        flux_number, "DEBOUNCE_TIME", 0
+    ), _patch_discovery(), _patch_wifibulb(device=bulb):
         await async_setup_component(hass, flux_led.DOMAIN, {flux_led.DOMAIN: {}})
         await hass.async_block_till_done()
 
@@ -290,9 +290,8 @@ async def test_addressable_light_pixel_config(hass: HomeAssistant) -> None:
     music_segments_entity_id = "number.bulb_rgbcw_ddeeff_music_segments"
     state = hass.states.get(music_segments_entity_id)
     assert state.state == "4"
-    await hass.async_block_till_done(wait_background_tasks=True)
 
-    with pytest.raises(ServiceValidationError):
+    with pytest.raises(ValueError):
         await hass.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
@@ -306,15 +305,11 @@ async def test_addressable_light_pixel_config(hass: HomeAssistant) -> None:
         {ATTR_ENTITY_ID: pixels_per_segment_entity_id, ATTR_VALUE: 100},
         blocking=True,
     )
-    async_fire_time_changed(
-        hass, dt_util.utcnow() + timedelta(seconds=flux_number.DEBOUNCE_TIME)
-    )
-    await hass.async_block_till_done(wait_background_tasks=True)
-
+    await hass.async_block_till_done()
     bulb.async_set_device_config.assert_called_with(pixels_per_segment=100)
     bulb.async_set_device_config.reset_mock()
 
-    with pytest.raises(ServiceValidationError):
+    with pytest.raises(ValueError):
         await hass.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
@@ -328,14 +323,11 @@ async def test_addressable_light_pixel_config(hass: HomeAssistant) -> None:
         {ATTR_ENTITY_ID: music_pixels_per_segment_entity_id, ATTR_VALUE: 100},
         blocking=True,
     )
-    async_fire_time_changed(
-        hass, dt_util.utcnow() + timedelta(seconds=flux_number.DEBOUNCE_TIME)
-    )
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await hass.async_block_till_done()
     bulb.async_set_device_config.assert_called_with(music_pixels_per_segment=100)
     bulb.async_set_device_config.reset_mock()
 
-    with pytest.raises(ServiceValidationError):
+    with pytest.raises(ValueError):
         await hass.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
@@ -349,14 +341,11 @@ async def test_addressable_light_pixel_config(hass: HomeAssistant) -> None:
         {ATTR_ENTITY_ID: segments_entity_id, ATTR_VALUE: 5},
         blocking=True,
     )
-    async_fire_time_changed(
-        hass, dt_util.utcnow() + timedelta(seconds=flux_number.DEBOUNCE_TIME)
-    )
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await hass.async_block_till_done()
     bulb.async_set_device_config.assert_called_with(segments=5)
     bulb.async_set_device_config.reset_mock()
 
-    with pytest.raises(ServiceValidationError):
+    with pytest.raises(ValueError):
         await hass.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
@@ -370,10 +359,7 @@ async def test_addressable_light_pixel_config(hass: HomeAssistant) -> None:
         {ATTR_ENTITY_ID: music_segments_entity_id, ATTR_VALUE: 5},
         blocking=True,
     )
-    async_fire_time_changed(
-        hass, dt_util.utcnow() + timedelta(seconds=flux_number.DEBOUNCE_TIME)
-    )
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await hass.async_block_till_done()
     bulb.async_set_device_config.assert_called_with(music_segments=5)
     bulb.async_set_device_config.reset_mock()
 
@@ -398,7 +384,9 @@ async def test_addressable_light_pixel_config_music_disabled(
     )  # Original addressable model
     bulb.color_modes = {FLUX_COLOR_MODE_RGB}
     bulb.color_mode = FLUX_COLOR_MODE_RGB
-    with _patch_discovery(), _patch_wifibulb(device=bulb):
+    with patch.object(
+        flux_number, "DEBOUNCE_TIME", 0
+    ), _patch_discovery(), _patch_wifibulb(device=bulb):
         await async_setup_component(hass, flux_led.DOMAIN, {flux_led.DOMAIN: {}})
         await hass.async_block_till_done()
 

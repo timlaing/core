@@ -1,5 +1,4 @@
 """Data for the D-Link Power Plug integration."""
-
 from __future__ import annotations
 
 from datetime import datetime

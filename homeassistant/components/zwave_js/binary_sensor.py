@@ -1,5 +1,4 @@
 """Representation of Z-Wave binary sensors."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -51,7 +50,7 @@ NOTIFICATION_IRRIGATION = "17"
 NOTIFICATION_GAS = "18"
 
 
-@dataclass(frozen=True)
+@dataclass
 class NotificationZWaveJSEntityDescription(BinarySensorEntityDescription):
     """Represent a Z-Wave JS binary sensor entity description."""
 
@@ -59,11 +58,18 @@ class NotificationZWaveJSEntityDescription(BinarySensorEntityDescription):
     states: tuple[str, ...] | None = None
 
 
-@dataclass(frozen=True, kw_only=True)
-class PropertyZWaveJSEntityDescription(BinarySensorEntityDescription):
-    """Represent the entity description for property name sensors."""
+@dataclass
+class PropertyZWaveJSMixin:
+    """Represent the mixin for property sensor descriptions."""
 
     on_states: tuple[str, ...]
+
+
+@dataclass
+class PropertyZWaveJSEntityDescription(
+    BinarySensorEntityDescription, PropertyZWaveJSMixin
+):
+    """Represent the entity description for property name sensors."""
 
 
 # Mappings for Notification sensors
@@ -254,7 +260,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Z-Wave binary sensor from config entry."""
-    client: ZwaveClient = config_entry.runtime_data[DATA_CLIENT]
+    client: ZwaveClient = hass.data[DOMAIN][config_entry.entry_id][DATA_CLIENT]
 
     @callback
     def async_add_binary_sensor(info: ZwaveDiscoveryInfo) -> None:
@@ -270,9 +276,9 @@ async def async_setup_entry(
                 if state_key == "0":
                     continue
 
-                notification_description: (
-                    NotificationZWaveJSEntityDescription | None
-                ) = None
+                notification_description: NotificationZWaveJSEntityDescription | None = (
+                    None
+                )
 
                 for description in NOTIFICATION_SENSOR_MAPPINGS:
                     if (

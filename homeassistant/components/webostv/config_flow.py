@@ -1,5 +1,4 @@
 """Config flow to configure webostv component."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -11,15 +10,10 @@ from aiowebostv import WebOsTvPairError
 import voluptuous as vol
 
 from homeassistant.components import ssdp
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlow,
-)
+from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
 from homeassistant.const import CONF_CLIENT_SECRET, CONF_HOST, CONF_NAME
 from homeassistant.core import callback
-from homeassistant.data_entry_flow import AbortFlow
+from homeassistant.data_entry_flow import AbortFlow, FlowResult
 from homeassistant.helpers import config_validation as cv
 
 from . import async_control_connect, update_client_key
@@ -57,7 +51,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow initialized by the user."""
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -88,7 +82,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_pairing(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Display pairing form."""
         self._async_check_configured_entry()
 
@@ -113,9 +107,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(step_id="pairing", errors=errors)
 
-    async def async_step_ssdp(
-        self, discovery_info: ssdp.SsdpServiceInfo
-    ) -> ConfigFlowResult:
+    async def async_step_ssdp(self, discovery_info: ssdp.SsdpServiceInfo) -> FlowResult:
         """Handle a flow initialized by discovery."""
         assert discovery_info.ssdp_location
         host = urlparse(discovery_info.ssdp_location).hostname
@@ -137,9 +129,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
         self._uuid = uuid
         return await self.async_step_pairing()
 
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Perform reauth upon an WebOsTvPairError."""
         self._host = entry_data[CONF_HOST]
         self._entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
@@ -147,7 +137,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Dialog that informs the user that reauth is required."""
         assert self._entry is not None
 
@@ -178,7 +168,7 @@ class OptionsFlowHandler(OptionsFlow):
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Manage the options."""
         errors = {}
         if user_input is not None:

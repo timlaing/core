@@ -1,6 +1,4 @@
 """Test read only dictionary."""
-
-import copy
 import json
 
 import pytest
@@ -36,5 +34,3 @@ def test_read_only_dict() -> None:
     assert isinstance(data, dict)
     assert dict(data) == {"hello": "world"}
     assert json.dumps(data) == json.dumps({"hello": "world"})
-
-    assert copy.deepcopy(data) == {"hello": "world"}

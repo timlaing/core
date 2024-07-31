@@ -1,5 +1,4 @@
 """DataUpdateCoordinator for the airtouch integration."""
-
 import logging
 
 from airtouch4pyapi.airtouch import AirTouchStatus

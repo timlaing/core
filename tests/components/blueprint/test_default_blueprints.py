@@ -1,5 +1,4 @@
 """Test default blueprints."""
-
 import importlib
 import logging
 import pathlib

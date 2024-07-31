@@ -1,8 +1,6 @@
 """Support for Efergy sensors."""
-
 from __future__ import annotations
 
-import dataclasses
 from re import sub
 from typing import cast
 
@@ -15,13 +13,14 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfEnergy, UnitOfPower
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 
-from . import EfergyConfigEntry, EfergyEntity
-from .const import CONF_CURRENT_VALUES, LOGGER
+from . import EfergyEntity
+from .const import CONF_CURRENT_VALUES, DOMAIN, LOGGER
 
 SENSOR_TYPES: tuple[SensorEntityDescription, ...] = (
     SensorEntityDescription(
@@ -96,7 +95,7 @@ SENSOR_TYPES: tuple[SensorEntityDescription, ...] = (
     ),
     SensorEntityDescription(
         key=CONF_CURRENT_VALUES,
-        translation_key="power_usage",
+        name="Power Usage",
         device_class=SensorDeviceClass.POWER,
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
@@ -105,12 +104,10 @@ SENSOR_TYPES: tuple[SensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: EfergyConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up Efergy sensors."""
-    api = entry.runtime_data
+    api: Efergy = hass.data[DOMAIN][entry.entry_id]
     sensors = []
     for description in SENSOR_TYPES:
         if description.key != CONF_CURRENT_VALUES:
@@ -124,19 +121,16 @@ async def async_setup_entry(
                 )
             )
         else:
-            description = dataclasses.replace(
-                description,
-                entity_registry_enabled_default=len(api.sids) > 1,
-            )
-            sensors.extend(
-                EfergySensor(
-                    api,
-                    description,
-                    entry.entry_id,
-                    sid=sid,
+            description.entity_registry_enabled_default = len(api.sids) > 1
+            for sid in api.sids:
+                sensors.append(
+                    EfergySensor(
+                        api,
+                        description,
+                        entry.entry_id,
+                        sid=sid,
+                    )
                 )
-                for sid in api.sids
-            )
     async_add_entities(sensors, True)
 
 
@@ -158,8 +152,7 @@ class EfergySensor(EfergyEntity, SensorEntity):
         super().__init__(api, server_unique_id)
         self.entity_description = description
         if description.key == CONF_CURRENT_VALUES:
-            assert sid is not None
-            self._attr_translation_placeholders = {"sid": str(sid)}
+            self._attr_name = f"{description.name}_{'' if sid is None else sid}"
         self._attr_unique_id = (
             f"{server_unique_id}/{description.key}_{'' if sid is None else sid}"
         )

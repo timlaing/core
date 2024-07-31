@@ -1,5 +1,4 @@
 """Support for Overkiz sensors."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -45,7 +44,7 @@ from .coordinator import OverkizDataUpdateCoordinator
 from .entity import OverkizDescriptiveEntity, OverkizEntity
 
 
-@dataclass(frozen=True)
+@dataclass
 class OverkizSensorDescription(SensorEntityDescription):
     """Class to describe an Overkiz sensor."""
 
@@ -101,7 +100,7 @@ SENSOR_DESCRIPTIONS: list[OverkizSensorDescription] = [
         name="Water volume estimation at 40 °C",
         icon="mdi:water",
         native_unit_of_measurement=UnitOfVolume.LITERS,
-        device_class=SensorDeviceClass.VOLUME_STORAGE,
+        device_class=SensorDeviceClass.VOLUME,
         entity_registry_enabled_default=False,
         state_class=SensorStateClass.MEASUREMENT,
     ),
@@ -110,8 +109,8 @@ SENSOR_DESCRIPTIONS: list[OverkizSensorDescription] = [
         name="Water consumption",
         icon="mdi:water",
         native_unit_of_measurement=UnitOfVolume.LITERS,
-        device_class=SensorDeviceClass.WATER,
-        state_class=SensorStateClass.TOTAL_INCREASING,
+        device_class=SensorDeviceClass.VOLUME,
+        state_class=SensorStateClass.MEASUREMENT,
     ),
     OverkizSensorDescription(
         key=OverkizState.IO_OUTLET_ENGINE,
@@ -179,13 +178,6 @@ SENSOR_DESCRIPTIONS: list[OverkizSensorDescription] = [
         device_class=SensorDeviceClass.POWER,
         # core:MeasuredValueType = core:ElectricalEnergyInWh
         # (not for modbus:YutakiV2DHWElectricalEnergyConsumptionComponent)
-        native_unit_of_measurement=UnitOfPower.WATT,
-        state_class=SensorStateClass.MEASUREMENT,
-    ),
-    OverkizSensorDescription(
-        key=OverkizState.MODBUSLINK_POWER_HEAT_ELECTRICAL,
-        name="Electric power consumption",
-        device_class=SensorDeviceClass.POWER,
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
     ),
@@ -406,27 +398,6 @@ SENSOR_DESCRIPTIONS: list[OverkizSensorDescription] = [
         native_unit_of_measurement=UnitOfTime.SECONDS,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
-    OverkizSensorDescription(
-        key=OverkizState.CORE_BOTTOM_TANK_WATER_TEMPERATURE,
-        name="Bottom tank water temperature",
-        device_class=SensorDeviceClass.TEMPERATURE,
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-    ),
-    OverkizSensorDescription(
-        key=OverkizState.CORE_CONTROL_WATER_TARGET_TEMPERATURE,
-        name="Control water target temperature",
-        device_class=SensorDeviceClass.TEMPERATURE,
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-    ),
-    OverkizSensorDescription(
-        key=OverkizState.CORE_REMAINING_HOT_WATER,
-        name="Warm water remaining",
-        device_class=SensorDeviceClass.VOLUME,
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=UnitOfVolume.LITERS,
-    ),
     # Cover
     OverkizSensorDescription(
         key=OverkizState.CORE_TARGET_CLOSURE,
@@ -441,22 +412,6 @@ SENSOR_DESCRIPTIONS: list[OverkizSensorDescription] = [
         device_class=SensorDeviceClass.ENUM,
         options=["open", "tilt", "closed"],
         translation_key="three_way_handle_direction",
-    ),
-    # Hitachi air to air heatpump outdoor temperature sensors (HLRRWIFI protocol)
-    OverkizSensorDescription(
-        key=OverkizState.HLRRWIFI_OUTDOOR_TEMPERATURE,
-        name="Outdoor temperature",
-        device_class=SensorDeviceClass.TEMPERATURE,
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-    ),
-    # Hitachi air to air heatpump outdoor temperature sensors (OVP protocol)
-    OverkizSensorDescription(
-        key=OverkizState.OVP_OUTDOOR_TEMPERATURE,
-        name="Outdoor temperature",
-        device_class=SensorDeviceClass.TEMPERATURE,
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
     ),
 ]
 
@@ -487,15 +442,15 @@ async def async_setup_entry(
         ):
             continue
 
-        entities.extend(
-            OverkizStateSensor(
-                device.device_url,
-                data.coordinator,
-                description,
-            )
-            for state in device.definition.states
-            if (description := SUPPORTED_STATES.get(state.qualified_name))
-        )
+        for state in device.definition.states:
+            if description := SUPPORTED_STATES.get(state.qualified_name):
+                entities.append(
+                    OverkizStateSensor(
+                        device.device_url,
+                        data.coordinator,
+                        description,
+                    )
+                )
 
     async_add_entities(entities)
 
@@ -510,16 +465,7 @@ class OverkizStateSensor(OverkizDescriptiveEntity, SensorEntity):
         """Return the value of the sensor."""
         state = self.device.states.get(self.entity_description.key)
 
-        if (
-            state is None
-            or state.value is None
-            # It seems that in some cases we return `None` if state.value is falsy.
-            # This is probably incorrect and should be fixed in a follow up PR.
-            # To ensure measurement sensors do not get an `unknown` state on
-            # a falsy value (e.g. 0 or 0.0) we also check the state_class.
-            or self.state_class != SensorStateClass.MEASUREMENT
-            and not state.value
-        ):
+        if not state or not state.value:
             return None
 
         # Transform the value with a lambda function

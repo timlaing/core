@@ -1,47 +1,37 @@
-"""Demo notification entity."""
-
+"""Demo notification service."""
 from __future__ import annotations
 
-from homeassistant.components.notify import DOMAIN, NotifyEntity, NotifyEntityFeature
-from homeassistant.config_entries import ConfigEntry
+from typing import Any
+
+from homeassistant.components.notify import BaseNotificationService
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 EVENT_NOTIFY = "notify"
 
 
-async def async_setup_entry(
+def get_service(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
-) -> None:
-    """Set up the demo entity platform."""
-    async_add_entities([DemoNotifyEntity(unique_id="notify", device_name="Notifier")])
+    config: ConfigType,
+    discovery_info: DiscoveryInfoType | None = None,
+) -> BaseNotificationService:
+    """Get the demo notification service."""
+    return DemoNotificationService(hass)
 
 
-class DemoNotifyEntity(NotifyEntity):
-    """Implement demo notification platform."""
+class DemoNotificationService(BaseNotificationService):
+    """Implement demo notification service."""
 
-    _attr_has_entity_name = True
-    _attr_name = None
+    def __init__(self, hass: HomeAssistant) -> None:
+        """Initialize the service."""
+        self.hass = hass
 
-    def __init__(
-        self,
-        unique_id: str,
-        device_name: str,
-    ) -> None:
-        """Initialize the Demo button entity."""
-        self._attr_unique_id = unique_id
-        self._attr_supported_features = NotifyEntityFeature.TITLE
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, unique_id)},
-            name=device_name,
-        )
+    @property
+    def targets(self) -> dict[str, str]:
+        """Return a dictionary of registered targets."""
+        return {"test target name": "test target id"}
 
-    async def async_send_message(self, message: str, title: str | None = None) -> None:
+    def send_message(self, message: str = "", **kwargs: Any) -> None:
         """Send a message to a user."""
-        event_notification = {"message": message}
-        if title is not None:
-            event_notification["title"] = title
-        self.hass.bus.async_fire(EVENT_NOTIFY, event_notification)
+        kwargs["message"] = message
+        self.hass.bus.fire(EVENT_NOTIFY, kwargs)

@@ -1,5 +1,4 @@
 """Tests for the Android TV Remote integration."""
-
 from collections.abc import Callable
 from unittest.mock import AsyncMock, MagicMock
 

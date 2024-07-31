@@ -1,5 +1,4 @@
 """Constants for Google Assistant SDK integration."""
-
 from typing import Final
 
 DOMAIN: Final = "google_assistant_sdk"

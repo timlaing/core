@@ -1,5 +1,4 @@
 """Support for control of Elk-M1 connected thermostats."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -17,11 +16,14 @@ from homeassistant.components.climate import (
     ClimateEntityFeature,
     HVACMode,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PRECISION_WHOLE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import ElkEntity, ElkM1ConfigEntry, create_elk_entities
+from . import ElkEntity, create_elk_entities
+from .const import DOMAIN
+from .models import ELKM1Data
 
 SUPPORT_HVAC = [
     HVACMode.OFF,
@@ -56,11 +58,11 @@ ELK_TO_HASS_FAN_MODES = {
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ElkM1ConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Create the Elk-M1 thermostat platform."""
-    elk_data = config_entry.runtime_data
+    elk_data: ELKM1Data = hass.data[DOMAIN][config_entry.entry_id]
     elk = elk_data.elk
     entities: list[ElkEntity] = []
     create_elk_entities(
@@ -77,8 +79,6 @@ class ElkThermostat(ElkEntity, ClimateEntity):
         ClimateEntityFeature.FAN_MODE
         | ClimateEntityFeature.AUX_HEAT
         | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
-        | ClimateEntityFeature.TURN_OFF
-        | ClimateEntityFeature.TURN_ON
     )
     _attr_min_temp = 1
     _attr_max_temp = 99
@@ -87,7 +87,6 @@ class ElkThermostat(ElkEntity, ClimateEntity):
     _attr_target_temperature_step = 1
     _attr_fan_modes = [FAN_AUTO, FAN_ON]
     _element: Thermostat
-    _enable_turn_on_off_backwards_compatibility = False
 
     @property
     def temperature_unit(self) -> str:

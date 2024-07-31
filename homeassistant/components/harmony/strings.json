@@ -7,9 +7,6 @@
         "data": {
           "host": "[%key:common::config_flow::data::host%]",
           "name": "Hub Name"
-        },
-        "data_description": {
-          "host": "The hostname or IP address of your Logitech Harmony Hub."
         }
       },
       "link": {
@@ -39,7 +36,6 @@
   "entity": {
     "select": {
       "activities": {
-        "name": "Activities",
         "state": {
           "power_off": "Power Off"
         }

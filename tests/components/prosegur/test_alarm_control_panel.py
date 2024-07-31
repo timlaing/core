@@ -1,6 +1,4 @@
 """Tests for the Prosegur alarm control panel device."""
-
-from collections.abc import Generator
 from unittest.mock import AsyncMock, patch
 
 from pyprosegur.installation import Status
@@ -36,7 +34,7 @@ def mock_auth():
 
 
 @pytest.fixture(params=list(Status))
-def mock_status(request: pytest.FixtureRequest) -> Generator[None]:
+def mock_status(request):
     """Mock the status of the alarm."""
 
     install = AsyncMock()
@@ -48,13 +46,11 @@ def mock_status(request: pytest.FixtureRequest) -> Generator[None]:
 
 
 async def test_entity_registry(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-    init_integration,
-    mock_auth,
-    mock_status,
+    hass: HomeAssistant, init_integration, mock_auth, mock_status
 ) -> None:
     """Tests that the devices are registered in the entity registry."""
+    entity_registry = er.async_get(hass)
+
     entry = entity_registry.async_get(PROSEGUR_ALARM_ENTITY)
     # Prosegur alarm device unique_id is the contract id associated to the alarm account
     assert entry.unique_id == CONTRACT

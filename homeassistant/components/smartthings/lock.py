@@ -1,5 +1,4 @@
 """Support for locks through the SmartThings cloud API."""
-
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -34,9 +33,11 @@ async def async_setup_entry(
     """Add locks for a config entry."""
     broker = hass.data[DOMAIN][DATA_BROKERS][config_entry.entry_id]
     async_add_entities(
-        SmartThingsLock(device)
-        for device in broker.devices.values()
-        if broker.any_assigned(device.device_id, "lock")
+        [
+            SmartThingsLock(device)
+            for device in broker.devices.values()
+            if broker.any_assigned(device.device_id, "lock")
+        ]
     )
 
 

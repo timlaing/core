@@ -1,5 +1,4 @@
 """The tests for the Template fan platform."""
-
 import pytest
 import voluptuous as vol
 
@@ -13,10 +12,9 @@ from homeassistant.components.fan import (
     DIRECTION_REVERSE,
     DOMAIN,
     FanEntityFeature,
-    NotValidPresetModeError,
 )
 from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant
 
 from tests.common import assert_setup_component
 from tests.components.fan import common
@@ -105,6 +103,20 @@ async def test_missing_optional_config(hass: HomeAssistant, start_ha) -> None:
                 },
             }
         },
+        {
+            DOMAIN: {
+                "platform": "template",
+                "fans": {
+                    "platform": "template",
+                    "fans": {
+                        "test_fan": {
+                            "value_template": "{{ 'on' }}",
+                            "turn_on": {"service": "script.fan_on"},
+                        }
+                    },
+                },
+            }
+        },
     ],
 )
 async def test_wrong_template_config(hass: HomeAssistant, start_ha) -> None:
@@ -157,13 +169,13 @@ async def test_templates_with_entities(hass: HomeAssistant, start_ha) -> None:
     hass.states.async_set(_PERCENTAGE_INPUT_NUMBER, 66)
     hass.states.async_set(_OSC_INPUT, "True")
 
-    for set_state, set_value, value in (
+    for set_state, set_value, value in [
         (_DIRECTION_INPUT_SELECT, DIRECTION_FORWARD, 66),
         (_PERCENTAGE_INPUT_NUMBER, 33, 33),
         (_PERCENTAGE_INPUT_NUMBER, 66, 66),
         (_PERCENTAGE_INPUT_NUMBER, 100, 100),
         (_PERCENTAGE_INPUT_NUMBER, "dog", 0),
-    ):
+    ]:
         hass.states.async_set(set_state, set_value)
         await hass.async_block_till_done()
         _verify(hass, STATE_ON, value, True, DIRECTION_FORWARD, None)
@@ -266,7 +278,7 @@ async def test_availability_template_with_entities(
     hass: HomeAssistant, start_ha
 ) -> None:
     """Test availability tempalates with values from other entities."""
-    for state, test_assert in ((STATE_ON, True), (STATE_OFF, False)):
+    for state, test_assert in [(STATE_ON, True), (STATE_OFF, False)]:
         hass.states.async_set(_STATE_AVAILABILITY_BOOLEAN, state)
         await hass.async_block_till_done()
         assert (hass.states.get(_TEST_FAN).state != STATE_UNAVAILABLE) == test_assert
@@ -387,26 +399,26 @@ async def test_invalid_availability_template_keeps_component_available(
     assert "x" in caplog_setup_text
 
 
-async def test_on_off(hass: HomeAssistant, calls: list[ServiceCall]) -> None:
+async def test_on_off(hass: HomeAssistant, calls) -> None:
     """Test turn on and turn off."""
     await _register_components(hass)
+    expected_calls = 0
 
-    for expected_calls, (func, state, action) in enumerate(
-        [
-            (common.async_turn_on, STATE_ON, "turn_on"),
-            (common.async_turn_off, STATE_OFF, "turn_off"),
-        ]
-    ):
+    for func, state, action in [
+        (common.async_turn_on, STATE_ON, "turn_on"),
+        (common.async_turn_off, STATE_OFF, "turn_off"),
+    ]:
         await func(hass, _TEST_FAN)
         assert hass.states.get(_STATE_INPUT_BOOLEAN).state == state
         _verify(hass, state, 0, None, None, None)
-        assert len(calls) == expected_calls + 1
+        expected_calls += 1
+        assert len(calls) == expected_calls
         assert calls[-1].data["action"] == action
         assert calls[-1].data["caller"] == _TEST_FAN
 
 
 async def test_set_invalid_direction_from_initial_stage(
-    hass: HomeAssistant, calls: list[ServiceCall]
+    hass: HomeAssistant, calls
 ) -> None:
     """Test set invalid direction when fan is in initial state."""
     await _register_components(hass)
@@ -414,19 +426,18 @@ async def test_set_invalid_direction_from_initial_stage(
     await common.async_turn_on(hass, _TEST_FAN)
 
     await common.async_set_direction(hass, _TEST_FAN, "invalid")
-
     assert hass.states.get(_DIRECTION_INPUT_SELECT).state == ""
     _verify(hass, STATE_ON, 0, None, None, None)
 
 
-async def test_set_osc(hass: HomeAssistant, calls: list[ServiceCall]) -> None:
+async def test_set_osc(hass: HomeAssistant, calls) -> None:
     """Test set oscillating."""
     await _register_components(hass)
     expected_calls = 0
 
     await common.async_turn_on(hass, _TEST_FAN)
     expected_calls += 1
-    for state in (True, False):
+    for state in [True, False]:
         await common.async_oscillate(hass, _TEST_FAN, state)
         assert hass.states.get(_OSC_INPUT).state == str(state)
         _verify(hass, STATE_ON, 0, state, None, None)
@@ -437,14 +448,14 @@ async def test_set_osc(hass: HomeAssistant, calls: list[ServiceCall]) -> None:
         assert calls[-1].data["option"] == state
 
 
-async def test_set_direction(hass: HomeAssistant, calls: list[ServiceCall]) -> None:
+async def test_set_direction(hass: HomeAssistant, calls) -> None:
     """Test set valid direction."""
     await _register_components(hass)
     expected_calls = 0
 
     await common.async_turn_on(hass, _TEST_FAN)
     expected_calls += 1
-    for cmd in (DIRECTION_FORWARD, DIRECTION_REVERSE):
+    for cmd in [DIRECTION_FORWARD, DIRECTION_REVERSE]:
         await common.async_set_direction(hass, _TEST_FAN, cmd)
         assert hass.states.get(_DIRECTION_INPUT_SELECT).state == cmd
         _verify(hass, STATE_ON, 0, None, cmd, None)
@@ -455,36 +466,30 @@ async def test_set_direction(hass: HomeAssistant, calls: list[ServiceCall]) -> N
         assert calls[-1].data["option"] == cmd
 
 
-async def test_set_invalid_direction(
-    hass: HomeAssistant, calls: list[ServiceCall]
-) -> None:
+async def test_set_invalid_direction(hass: HomeAssistant, calls) -> None:
     """Test set invalid direction when fan has valid direction."""
     await _register_components(hass)
 
     await common.async_turn_on(hass, _TEST_FAN)
-    for cmd in (DIRECTION_FORWARD, "invalid"):
+    for cmd in [DIRECTION_FORWARD, "invalid"]:
         await common.async_set_direction(hass, _TEST_FAN, cmd)
         assert hass.states.get(_DIRECTION_INPUT_SELECT).state == DIRECTION_FORWARD
         _verify(hass, STATE_ON, 0, None, DIRECTION_FORWARD, None)
 
 
-async def test_preset_modes(hass: HomeAssistant, calls: list[ServiceCall]) -> None:
+async def test_preset_modes(hass: HomeAssistant, calls) -> None:
     """Test preset_modes."""
     await _register_components(
         hass, ["off", "low", "medium", "high", "auto", "smart"], ["auto", "smart"]
     )
 
     await common.async_turn_on(hass, _TEST_FAN)
-    for extra, state, expected_calls in (
+    for extra, state, expected_calls in [
         ("auto", "auto", 2),
         ("smart", "smart", 3),
         ("invalid", "smart", 3),
-    ):
-        if extra != state:
-            with pytest.raises(NotValidPresetModeError):
-                await common.async_set_preset_mode(hass, _TEST_FAN, extra)
-        else:
-            await common.async_set_preset_mode(hass, _TEST_FAN, extra)
+    ]:
+        await common.async_set_preset_mode(hass, _TEST_FAN, extra)
         assert hass.states.get(_PRESET_MODE_INPUT_SELECT).state == state
         assert len(calls) == expected_calls
         assert calls[-1].data["action"] == "set_preset_mode"
@@ -495,18 +500,18 @@ async def test_preset_modes(hass: HomeAssistant, calls: list[ServiceCall]) -> No
     assert hass.states.get(_PRESET_MODE_INPUT_SELECT).state == "auto"
 
 
-async def test_set_percentage(hass: HomeAssistant, calls: list[ServiceCall]) -> None:
+async def test_set_percentage(hass: HomeAssistant, calls) -> None:
     """Test set valid speed percentage."""
     await _register_components(hass)
     expected_calls = 0
 
     await common.async_turn_on(hass, _TEST_FAN)
     expected_calls += 1
-    for state, value in (
+    for state, value in [
         (STATE_ON, 100),
         (STATE_ON, 66),
         (STATE_ON, 0),
-    ):
+    ]:
         await common.async_set_percentage(hass, _TEST_FAN, value)
         assert int(float(hass.states.get(_PERCENTAGE_INPUT_NUMBER).state)) == value
         _verify(hass, state, value, None, None, None)
@@ -521,33 +526,30 @@ async def test_set_percentage(hass: HomeAssistant, calls: list[ServiceCall]) -> 
     _verify(hass, STATE_ON, 50, None, None, None)
 
 
-async def test_increase_decrease_speed(
-    hass: HomeAssistant, calls: list[ServiceCall]
-) -> None:
+async def test_increase_decrease_speed(hass: HomeAssistant, calls) -> None:
     """Test set valid increase and decrease speed."""
     await _register_components(hass, speed_count=3)
 
     await common.async_turn_on(hass, _TEST_FAN)
-    for func, extra, state, value in (
+    for func, extra, state, value in [
         (common.async_set_percentage, 100, STATE_ON, 100),
         (common.async_decrease_speed, None, STATE_ON, 66),
         (common.async_decrease_speed, None, STATE_ON, 33),
         (common.async_decrease_speed, None, STATE_ON, 0),
         (common.async_increase_speed, None, STATE_ON, 33),
-    ):
+    ]:
         await func(hass, _TEST_FAN, extra)
         assert int(float(hass.states.get(_PERCENTAGE_INPUT_NUMBER).state)) == value
         _verify(hass, state, value, None, None, None)
 
 
-async def test_no_value_template(hass: HomeAssistant, calls: list[ServiceCall]) -> None:
+async def test_no_value_template(hass: HomeAssistant, calls) -> None:
     """Test a fan without a value_template."""
     await _register_fan_sources(hass)
 
     with assert_setup_component(1, "fan"):
         test_fan_config = {
             "preset_mode_template": "{{ states('input_select.preset_mode') }}",
-            "preset_modes": ["auto"],
             "percentage_template": "{{ states('input_number.percentage') }}",
             "oscillating_template": "{{ states('input_select.osc') }}",
             "direction_template": "{{ states('input_select.direction') }}",
@@ -623,18 +625,18 @@ async def test_no_value_template(hass: HomeAssistant, calls: list[ServiceCall]) 
     await hass.async_block_till_done()
 
     await common.async_turn_on(hass, _TEST_FAN)
-    _verify(hass, STATE_ON, 0, None, None, "auto")
+    _verify(hass, STATE_ON, 0, None, None, None)
 
     await common.async_turn_off(hass, _TEST_FAN)
-    _verify(hass, STATE_OFF, 0, None, None, "auto")
+    _verify(hass, STATE_OFF, 0, None, None, None)
 
     percent = 100
     await common.async_set_percentage(hass, _TEST_FAN, percent)
     assert int(float(hass.states.get(_PERCENTAGE_INPUT_NUMBER).state)) == percent
-    _verify(hass, STATE_ON, percent, None, None, "auto")
+    _verify(hass, STATE_ON, percent, None, None, None)
 
     await common.async_turn_off(hass, _TEST_FAN)
-    _verify(hass, STATE_OFF, percent, None, None, "auto")
+    _verify(hass, STATE_OFF, percent, None, None, None)
 
     preset = "auto"
     await common.async_set_preset_mode(hass, _TEST_FAN, preset)
@@ -652,27 +654,25 @@ async def test_no_value_template(hass: HomeAssistant, calls: list[ServiceCall]) 
 
 
 async def test_increase_decrease_speed_default_speed_count(
-    hass: HomeAssistant, calls: list[ServiceCall]
+    hass: HomeAssistant, calls
 ) -> None:
     """Test set valid increase and decrease speed."""
     await _register_components(hass)
 
     await common.async_turn_on(hass, _TEST_FAN)
-    for func, extra, state, value in (
+    for func, extra, state, value in [
         (common.async_set_percentage, 100, STATE_ON, 100),
         (common.async_decrease_speed, None, STATE_ON, 99),
         (common.async_decrease_speed, None, STATE_ON, 98),
         (common.async_decrease_speed, 31, STATE_ON, 67),
         (common.async_decrease_speed, None, STATE_ON, 66),
-    ):
+    ]:
         await func(hass, _TEST_FAN, extra)
         assert int(float(hass.states.get(_PERCENTAGE_INPUT_NUMBER).state)) == value
         _verify(hass, state, value, None, None, None)
 
 
-async def test_set_invalid_osc_from_initial_state(
-    hass: HomeAssistant, calls: list[ServiceCall]
-) -> None:
+async def test_set_invalid_osc_from_initial_state(hass: HomeAssistant, calls) -> None:
     """Test set invalid oscillating when fan is in initial state."""
     await _register_components(hass)
 
@@ -683,7 +683,7 @@ async def test_set_invalid_osc_from_initial_state(
     _verify(hass, STATE_ON, 0, None, None, None)
 
 
-async def test_set_invalid_osc(hass: HomeAssistant, calls: list[ServiceCall]) -> None:
+async def test_set_invalid_osc(hass: HomeAssistant, calls) -> None:
     """Test set invalid oscillating when fan has valid osc."""
     await _register_components(hass)
 

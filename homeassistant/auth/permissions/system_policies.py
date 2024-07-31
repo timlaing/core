@@ -1,5 +1,4 @@
 """System policies."""
-
 from .const import CAT_ENTITIES, POLICY_READ, SUBCAT_ALL
 
 ADMIN_POLICY = {CAT_ENTITIES: True}

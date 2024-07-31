@@ -5,6 +5,7 @@
       'attribution': 'Data provided by Last.fm',
       'entity_picture': 'image',
       'friendly_name': 'LastFM testaccount1',
+      'icon': 'mdi:radio-fm',
       'last_played': 'artist - title',
       'play_count': 1,
       'top_played': 'artist - title',
@@ -12,7 +13,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.lastfm_testaccount1',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'artist - title',
   })
@@ -23,6 +23,7 @@
       'attribution': 'Data provided by Last.fm',
       'entity_picture': 'image',
       'friendly_name': 'LastFM testaccount1',
+      'icon': 'mdi:radio-fm',
       'last_played': None,
       'play_count': 0,
       'top_played': None,
@@ -30,7 +31,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.lastfm_testaccount1',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'Not Scrobbling',
   })

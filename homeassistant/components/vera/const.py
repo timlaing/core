@@ -1,5 +1,4 @@
 """Vera constants."""
-
 DOMAIN = "vera"
 
 CONF_CONTROLLER = "vera_controller_url"

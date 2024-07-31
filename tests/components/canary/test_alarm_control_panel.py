@@ -1,5 +1,4 @@
 """The tests for the Canary alarm_control_panel platform."""
-
 from unittest.mock import PropertyMock, patch
 
 from canary.const import LOCATION_MODE_AWAY, LOCATION_MODE_HOME, LOCATION_MODE_NIGHT

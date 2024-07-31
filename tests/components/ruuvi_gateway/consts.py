@@ -1,5 +1,4 @@
 """Constants for ruuvi_gateway tests."""
-
 from __future__ import annotations
 
 ASYNC_SETUP_ENTRY = "homeassistant.components.ruuvi_gateway.async_setup_entry"

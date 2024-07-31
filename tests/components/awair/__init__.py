@@ -1,5 +1,6 @@
 """Tests for the awair component."""
 
+
 from unittest.mock import patch
 
 from homeassistant.components.awair import DOMAIN

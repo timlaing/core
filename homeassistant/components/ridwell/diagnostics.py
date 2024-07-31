@@ -1,5 +1,4 @@
 """Diagnostics support for Ridwell."""
-
 from __future__ import annotations
 
 import dataclasses

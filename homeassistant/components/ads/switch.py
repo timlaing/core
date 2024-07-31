@@ -1,5 +1,4 @@
 """Support for ADS switch platform."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -7,10 +6,7 @@ from typing import Any
 import pyads
 import voluptuous as vol
 
-from homeassistant.components.switch import (
-    PLATFORM_SCHEMA as SWITCH_PLATFORM_SCHEMA,
-    SwitchEntity,
-)
+from homeassistant.components.switch import PLATFORM_SCHEMA, SwitchEntity
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
@@ -21,7 +17,7 @@ from . import CONF_ADS_VAR, DATA_ADS, STATE_KEY_STATE, AdsEntity
 
 DEFAULT_NAME = "ADS Switch"
 
-PLATFORM_SCHEMA = SWITCH_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_ADS_VAR): cv.string,
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,

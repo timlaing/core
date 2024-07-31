@@ -1,5 +1,4 @@
 """Constants for the schedule integration."""
-
 import logging
 from typing import Final
 

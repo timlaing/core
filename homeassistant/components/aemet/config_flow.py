@@ -1,14 +1,11 @@
 """Config flow for AEMET OpenData."""
-
 from __future__ import annotations
-
-from typing import Any
 
 from aemet_opendata.exceptions import AuthError
 from aemet_opendata.interface import AEMET, ConnectionOptions
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
+from homeassistant import config_entries
 from homeassistant.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE, CONF_NAME
 from homeassistant.core import callback
 from homeassistant.helpers import aiohttp_client, config_validation as cv
@@ -21,7 +18,7 @@ from .const import CONF_STATION_UPDATES, DEFAULT_NAME, DOMAIN
 
 OPTIONS_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_STATION_UPDATES, default=True): bool,
+        vol.Required(CONF_STATION_UPDATES): bool,
     }
 )
 OPTIONS_FLOW = {
@@ -29,12 +26,10 @@ OPTIONS_FLOW = {
 }
 
 
-class AemetConfigFlow(ConfigFlow, domain=DOMAIN):
+class AemetConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for AEMET OpenData."""
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_user(self, user_input=None):
         """Handle a flow initialized by the user."""
         errors = {}
 
@@ -45,7 +40,7 @@ class AemetConfigFlow(ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(f"{latitude}-{longitude}")
             self._abort_if_unique_id_configured()
 
-            options = ConnectionOptions(user_input[CONF_API_KEY], False)
+            options = ConnectionOptions(user_input[CONF_API_KEY], False, True)
             aemet = AEMET(aiohttp_client.async_get_clientsession(self.hass), options)
             try:
                 await aemet.select_coordinates(latitude, longitude)
@@ -75,7 +70,7 @@ class AemetConfigFlow(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: ConfigEntry,
+        config_entry: config_entries.ConfigEntry,
     ) -> SchemaOptionsFlowHandler:
         """Get the options flow for this handler."""
         return SchemaOptionsFlowHandler(config_entry, OPTIONS_FLOW)

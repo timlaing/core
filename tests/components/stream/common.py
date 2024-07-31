@@ -1,5 +1,4 @@
 """Collection of test helpers."""
-
 from fractions import Fraction
 import functools
 from functools import partial
@@ -59,7 +58,8 @@ def frame_image_data(frame_i, total_frames):
     img[:, :, 2] = 0.5 + 0.5 * np.sin(2 * np.pi * (2 / 3 + frame_i / total_frames))
 
     img = np.round(255 * img).astype(np.uint8)
-    return np.clip(img, 0, 255)
+    img = np.clip(img, 0, 255)
+    return img
 
 
 def generate_video(encoder, container_format, duration):

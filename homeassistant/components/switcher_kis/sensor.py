@@ -1,5 +1,4 @@
 """Switcher integration Sensor platform."""
-
 from __future__ import annotations
 
 from aioswitcher.device import DeviceCategory
@@ -20,8 +19,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from . import SwitcherDataUpdateCoordinator
 from .const import SIGNAL_DEVICE_ADD
-from .coordinator import SwitcherDataUpdateCoordinator
 
 POWER_SENSORS: list[SensorEntityDescription] = [
     SensorEntityDescription(
@@ -41,10 +40,12 @@ TIME_SENSORS: list[SensorEntityDescription] = [
     SensorEntityDescription(
         key="remaining_time",
         translation_key="remaining_time",
+        icon="mdi:av-timer",
     ),
     SensorEntityDescription(
         key="auto_off_set",
         translation_key="auto_shutdown",
+        icon="mdi:progress-clock",
         entity_registry_enabled_default=False,
     ),
 ]

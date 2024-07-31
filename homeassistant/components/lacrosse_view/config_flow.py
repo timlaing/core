@@ -1,5 +1,4 @@
 """Config flow for LaCrosse View integration."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -9,8 +8,9 @@ from typing import Any
 from lacrosse_view import LaCrosse, Location, LoginError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
+from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
@@ -45,7 +45,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> list[Loca
     return locations
 
 
-class LaCrosseViewConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for LaCrosse View."""
 
     VERSION = 1
@@ -54,11 +54,11 @@ class LaCrosseViewConfigFlow(ConfigFlow, domain=DOMAIN):
         """Initialize the config flow."""
         self.data: dict[str, str] = {}
         self.locations: list[Location] = []
-        self._reauth_entry: ConfigEntry | None = None
+        self._reauth_entry: config_entries.ConfigEntry | None = None
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         if user_input is None:
             _LOGGER.debug("Showing initial form")
@@ -75,7 +75,7 @@ class LaCrosseViewConfigFlow(ConfigFlow, domain=DOMAIN):
             errors["base"] = "invalid_auth"
         except NoLocations:
             errors["base"] = "no_locations"
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             _LOGGER.exception("Unexpected exception")
             errors["base"] = "unknown"
         else:
@@ -100,7 +100,7 @@ class LaCrosseViewConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_location(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the location step."""
 
         if not user_input:
@@ -135,9 +135,7 @@ class LaCrosseViewConfigFlow(ConfigFlow, domain=DOMAIN):
             },
         )
 
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Reauth in case of a password change or other error."""
         self._reauth_entry = self.hass.config_entries.async_get_entry(
             self.context["entry_id"]

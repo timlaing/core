@@ -14,7 +14,6 @@
     'description_placeholders': None,
     'flow_id': <ANY>,
     'handler': 'elgato',
-    'minor_version': 1,
     'options': dict({
     }),
     'result': ConfigEntrySnapshot({
@@ -26,7 +25,6 @@
       'disabled_by': None,
       'domain': 'elgato',
       'entry_id': <ANY>,
-      'minor_version': 1,
       'options': dict({
       }),
       'pref_disable_new_entities': False,
@@ -57,7 +55,6 @@
     'description_placeholders': None,
     'flow_id': <ANY>,
     'handler': 'elgato',
-    'minor_version': 1,
     'options': dict({
     }),
     'result': ConfigEntrySnapshot({
@@ -69,7 +66,6 @@
       'disabled_by': None,
       'domain': 'elgato',
       'entry_id': <ANY>,
-      'minor_version': 1,
       'options': dict({
       }),
       'pref_disable_new_entities': False,
@@ -99,7 +95,6 @@
     'description_placeholders': None,
     'flow_id': <ANY>,
     'handler': 'elgato',
-    'minor_version': 1,
     'options': dict({
     }),
     'result': ConfigEntrySnapshot({
@@ -111,7 +106,6 @@
       'disabled_by': None,
       'domain': 'elgato',
       'entry_id': <ANY>,
-      'minor_version': 1,
       'options': dict({
       }),
       'pref_disable_new_entities': False,

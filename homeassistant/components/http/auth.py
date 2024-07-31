@@ -1,5 +1,4 @@
 """Authentication for HTTP component."""
-
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
@@ -21,13 +20,12 @@ from homeassistant.auth.const import GROUP_ID_READ_ONLY
 from homeassistant.auth.models import User
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.http import current_request
 from homeassistant.helpers.json import json_bytes
-from homeassistant.helpers.network import is_cloud_connection
 from homeassistant.helpers.storage import Store
 from homeassistant.util.network import is_local
 
 from .const import KEY_AUTHENTICATED, KEY_HASS_REFRESH_TOKEN_ID, KEY_HASS_USER
+from .request_context import current_request
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -48,16 +46,13 @@ def async_sign_path(
     expiration: timedelta,
     *,
     refresh_token_id: str | None = None,
-    use_content_user: bool = False,
 ) -> str:
     """Sign a path for temporary access without auth header."""
     if (secret := hass.data.get(DATA_SIGN_SECRET)) is None:
         secret = hass.data[DATA_SIGN_SECRET] = secrets.token_hex()
 
     if refresh_token_id is None:
-        if use_content_user:
-            refresh_token_id = hass.data[STORAGE_KEY]
-        elif connection := websocket_api.current_connection.get():
+        if connection := websocket_api.current_connection.get():
             refresh_token_id = connection.refresh_token_id
         elif (
             request := current_request.get()
@@ -103,8 +98,12 @@ def async_user_not_allowed_do_auth(
     if not request:
         return "No request available to validate local access"
 
-    if is_cloud_connection(hass):
-        return "User is local only"
+    if "cloud" in hass.config.components:
+        # pylint: disable-next=import-outside-toplevel
+        from hass_nabucasa import remote
+
+        if remote.is_cloud_request.get():
+            return "User is local only"
 
     try:
         remote_address = ip_address(request.remote)  # type: ignore[arg-type]
@@ -117,10 +116,7 @@ def async_user_not_allowed_do_auth(
     return "User cannot authenticate remotely"
 
 
-async def async_setup_auth(
-    hass: HomeAssistant,
-    app: Application,
-) -> None:
+async def async_setup_auth(hass: HomeAssistant, app: Application) -> None:
     """Create auth middleware for the app."""
     store = Store[dict[str, Any]](hass, STORAGE_VERSION, STORAGE_KEY)
     if (data := await store.async_load()) is None:
@@ -142,8 +138,7 @@ async def async_setup_auth(
 
     hass.data[STORAGE_KEY] = refresh_token.id
 
-    @callback
-    def async_validate_auth_header(request: Request) -> bool:
+    async def async_validate_auth_header(request: Request) -> bool:
         """Test authorization header against access token.
 
         Basic auth_type is legacy code, should be removed with api_password.
@@ -159,7 +154,7 @@ async def async_setup_auth(
         if auth_type != "Bearer":
             return False
 
-        refresh_token = hass.auth.async_validate_access_token(auth_val)
+        refresh_token = await hass.auth.async_validate_access_token(auth_val)
 
         if refresh_token is None:
             return False
@@ -171,8 +166,7 @@ async def async_setup_auth(
         request[KEY_HASS_REFRESH_TOKEN_ID] = refresh_token.id
         return True
 
-    @callback
-    def async_validate_signed_request(request: Request) -> bool:
+    async def async_validate_signed_request(request: Request) -> bool:
         """Validate a signed request."""
         if (secret := hass.data.get(DATA_SIGN_SECRET)) is None:
             return False
@@ -198,7 +192,7 @@ async def async_setup_auth(
         if claims["params"] != params:
             return False
 
-        refresh_token = hass.auth.async_get_refresh_token(claims["iss"])
+        refresh_token = await hass.auth.async_get_refresh_token(claims["iss"])
 
         if refresh_token is None:
             return False
@@ -214,7 +208,7 @@ async def async_setup_auth(
         """Authenticate as middleware."""
         authenticated = False
 
-        if hdrs.AUTHORIZATION in request.headers and async_validate_auth_header(
+        if hdrs.AUTHORIZATION in request.headers and await async_validate_auth_header(
             request
         ):
             authenticated = True
@@ -225,7 +219,7 @@ async def async_setup_auth(
         elif (
             request.method == "GET"
             and SIGN_QUERY_PARAM in request.query_string
-            and async_validate_signed_request(request)
+            and await async_validate_signed_request(request)
         ):
             authenticated = True
             auth_type = "signed request"

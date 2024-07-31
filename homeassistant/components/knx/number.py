@@ -1,5 +1,4 @@
 """Support for KNX/IP numeric values."""
-
 from __future__ import annotations
 
 from typing import cast

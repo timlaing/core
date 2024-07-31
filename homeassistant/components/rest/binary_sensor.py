@@ -1,16 +1,14 @@
 """Support for RESTful binary sensors."""
-
 from __future__ import annotations
 
 import logging
 import ssl
-from xml.parsers.expat import ExpatError
 
 import voluptuous as vol
 
 from homeassistant.components.binary_sensor import (
     DOMAIN as BINARY_SENSOR_DOMAIN,
-    PLATFORM_SCHEMA as BINARY_SENSOR_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     BinarySensorEntity,
 )
 from homeassistant.const import (
@@ -44,9 +42,10 @@ from .schema import BINARY_SENSOR_SCHEMA, RESOURCE_SCHEMA
 
 _LOGGER = logging.getLogger(__name__)
 
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({**RESOURCE_SCHEMA, **BINARY_SENSOR_SCHEMA})
+
 PLATFORM_SCHEMA = vol.All(
-    BINARY_SENSOR_PLATFORM_SCHEMA.extend({**RESOURCE_SCHEMA, **BINARY_SENSOR_SCHEMA}),
-    cv.has_at_least_one_key(CONF_RESOURCE, CONF_RESOURCE_TEMPLATE),
+    cv.has_at_least_one_key(CONF_RESOURCE, CONF_RESOURCE_TEMPLATE), PLATFORM_SCHEMA
 )
 
 TRIGGER_ENTITY_OPTIONS = (
@@ -149,31 +148,24 @@ class RestBinarySensor(ManualTriggerEntity, RestEntity, BinarySensorEntity):
             self._attr_is_on = False
             return
 
-        try:
-            response = self.rest.data_without_xml()
-        except ExpatError as err:
-            self._attr_is_on = False
-            _LOGGER.warning(
-                "REST xml result could not be parsed and converted to JSON: %s", err
-            )
-            return
+        response = self.rest.data
 
         raw_value = response
 
-        if response is not None and self._value_template is not None:
+        if self._value_template is not None:
             response = self._value_template.async_render_with_possible_json_value(
-                response, False
+                self.rest.data, False
             )
 
         try:
-            self._attr_is_on = bool(int(str(response)))
+            self._attr_is_on = bool(int(response))
         except ValueError:
             self._attr_is_on = {
                 "true": True,
                 "on": True,
                 "open": True,
                 "yes": True,
-            }.get(str(response).lower(), False)
+            }.get(response.lower(), False)
 
         self._process_manual_data(raw_value)
         self.async_write_ha_state()

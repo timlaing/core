@@ -1,5 +1,4 @@
 """Config flow for pushover integration."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -8,9 +7,10 @@ from typing import Any
 from pushover_complete import BadAPIRequestError, PushoverAPI
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
+from homeassistant import config_entries
 from homeassistant.const import CONF_API_KEY, CONF_NAME
 from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResult
 
 from .const import CONF_USER_KEY, DEFAULT_NAME, DOMAIN
 
@@ -39,14 +39,12 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     return errors
 
 
-class PushBulletConfigFlow(ConfigFlow, domain=DOMAIN):
+class PushBulletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for pushover integration."""
 
-    _reauth_entry: ConfigEntry | None
+    _reauth_entry: config_entries.ConfigEntry | None
 
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Perform reauth upon an API authentication error."""
         self._reauth_entry = self.hass.config_entries.async_get_entry(
             self.context["entry_id"]
@@ -55,7 +53,7 @@ class PushBulletConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, str] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Confirm reauth dialog."""
         errors = {}
         if user_input is not None and self._reauth_entry:
@@ -86,7 +84,7 @@ class PushBulletConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         errors = {}
 

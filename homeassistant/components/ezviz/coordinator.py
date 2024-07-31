@@ -1,5 +1,4 @@
 """Provides the ezviz DataUpdateCoordinator."""
-
 import asyncio
 from datetime import timedelta
 import logging

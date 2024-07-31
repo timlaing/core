@@ -1,5 +1,4 @@
 """Representation of a switchBinary."""
-
 import logging
 from typing import Any
 

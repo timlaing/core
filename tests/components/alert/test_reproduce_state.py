@@ -1,5 +1,4 @@
 """Test reproduce state for Alert."""
-
 import pytest
 
 from homeassistant.core import HomeAssistant, State

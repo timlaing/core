@@ -1,5 +1,4 @@
 """The test for the version binary sensor platform."""
-
 from __future__ import annotations
 
 from homeassistant.components.version.const import DEFAULT_CONFIGURATION

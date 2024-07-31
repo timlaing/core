@@ -54,9 +54,3 @@ create:
       selector:
         entity:
           multiple: true
-
-delete:
-  target:
-    entity:
-      - integration: homeassistant
-        domain: scene

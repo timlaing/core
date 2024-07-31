@@ -1,5 +1,4 @@
 """Config flow for Plugwise integration."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -16,7 +15,7 @@ from plugwise.exceptions import (
 import voluptuous as vol
 
 from homeassistant.components.zeroconf import ZeroconfServiceInfo
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import ConfigFlow
 from homeassistant.const import (
     CONF_BASE,
     CONF_HOST,
@@ -26,6 +25,7 @@ from homeassistant.const import (
     CONF_USERNAME,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
@@ -89,7 +89,7 @@ class PlugwiseConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_zeroconf(
         self, discovery_info: ZeroconfServiceInfo
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Prepare configuration for a discovered Plugwise Smile."""
         self.discovery_info = discovery_info
         _properties = discovery_info.properties
@@ -106,7 +106,7 @@ class PlugwiseConfigFlow(ConfigFlow, domain=DOMAIN):
                         CONF_PASSWORD: config_entry.data[CONF_PASSWORD],
                     },
                 )
-            except Exception:  # noqa: BLE001
+            except Exception:  # pylint: disable=broad-except
                 self._abort_if_unique_id_configured()
             else:
                 self._abort_if_unique_id_configured(
@@ -166,7 +166,7 @@ class PlugwiseConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step when using network/gateway setups."""
         errors = {}
 
@@ -188,7 +188,7 @@ class PlugwiseConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors[CONF_BASE] = "response_error"
             except UnsupportedDeviceError:
                 errors[CONF_BASE] = "unsupported"
-            except Exception:  # noqa: BLE001
+            except Exception:  # pylint: disable=broad-except
                 errors[CONF_BASE] = "unknown"
             else:
                 await self.async_set_unique_id(

@@ -1,23 +1,22 @@
 """Support for the AEMET OpenData service."""
-
-from aemet_opendata.const import (
-    AOD_CONDITION,
-    AOD_FORECAST_DAILY,
-    AOD_FORECAST_HOURLY,
-    AOD_HUMIDITY,
-    AOD_PRESSURE,
-    AOD_TEMP,
-    AOD_WEATHER,
-    AOD_WIND_DIRECTION,
-    AOD_WIND_SPEED,
-    AOD_WIND_SPEED_MAX,
-)
+from typing import cast
 
 from homeassistant.components.weather import (
+    ATTR_FORECAST_CONDITION,
+    ATTR_FORECAST_NATIVE_PRECIPITATION,
+    ATTR_FORECAST_NATIVE_TEMP,
+    ATTR_FORECAST_NATIVE_TEMP_LOW,
+    ATTR_FORECAST_NATIVE_WIND_GUST_SPEED,
+    ATTR_FORECAST_NATIVE_WIND_SPEED,
+    ATTR_FORECAST_PRECIPITATION_PROBABILITY,
+    ATTR_FORECAST_TIME,
+    ATTR_FORECAST_WIND_BEARING,
+    DOMAIN as WEATHER_DOMAIN,
     Forecast,
     SingleCoordinatorWeatherEntity,
     WeatherEntityFeature,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     UnitOfPrecipitationDepth,
     UnitOfPressure,
@@ -25,36 +24,100 @@ from homeassistant.const import (
     UnitOfTemperature,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import AemetConfigEntry
-from .const import CONDITIONS_MAP
-from .coordinator import WeatherUpdateCoordinator
-from .entity import AemetEntity
+from .const import (
+    ATTR_API_CONDITION,
+    ATTR_API_FORECAST_CONDITION,
+    ATTR_API_FORECAST_PRECIPITATION,
+    ATTR_API_FORECAST_PRECIPITATION_PROBABILITY,
+    ATTR_API_FORECAST_TEMP,
+    ATTR_API_FORECAST_TEMP_LOW,
+    ATTR_API_FORECAST_TIME,
+    ATTR_API_FORECAST_WIND_BEARING,
+    ATTR_API_FORECAST_WIND_MAX_SPEED,
+    ATTR_API_FORECAST_WIND_SPEED,
+    ATTR_API_HUMIDITY,
+    ATTR_API_PRESSURE,
+    ATTR_API_TEMPERATURE,
+    ATTR_API_WIND_BEARING,
+    ATTR_API_WIND_MAX_SPEED,
+    ATTR_API_WIND_SPEED,
+    ATTRIBUTION,
+    DOMAIN,
+    ENTRY_NAME,
+    ENTRY_WEATHER_COORDINATOR,
+    FORECAST_MODE_ATTR_API,
+    FORECAST_MODE_DAILY,
+    FORECAST_MODE_HOURLY,
+    FORECAST_MODES,
+)
+from .weather_update_coordinator import WeatherUpdateCoordinator
+
+FORECAST_MAP = {
+    FORECAST_MODE_DAILY: {
+        ATTR_API_FORECAST_CONDITION: ATTR_FORECAST_CONDITION,
+        ATTR_API_FORECAST_PRECIPITATION_PROBABILITY: ATTR_FORECAST_PRECIPITATION_PROBABILITY,
+        ATTR_API_FORECAST_TEMP_LOW: ATTR_FORECAST_NATIVE_TEMP_LOW,
+        ATTR_API_FORECAST_TEMP: ATTR_FORECAST_NATIVE_TEMP,
+        ATTR_API_FORECAST_TIME: ATTR_FORECAST_TIME,
+        ATTR_API_FORECAST_WIND_BEARING: ATTR_FORECAST_WIND_BEARING,
+        ATTR_API_FORECAST_WIND_SPEED: ATTR_FORECAST_NATIVE_WIND_SPEED,
+    },
+    FORECAST_MODE_HOURLY: {
+        ATTR_API_FORECAST_CONDITION: ATTR_FORECAST_CONDITION,
+        ATTR_API_FORECAST_PRECIPITATION_PROBABILITY: ATTR_FORECAST_PRECIPITATION_PROBABILITY,
+        ATTR_API_FORECAST_PRECIPITATION: ATTR_FORECAST_NATIVE_PRECIPITATION,
+        ATTR_API_FORECAST_TEMP: ATTR_FORECAST_NATIVE_TEMP,
+        ATTR_API_FORECAST_TIME: ATTR_FORECAST_TIME,
+        ATTR_API_FORECAST_WIND_BEARING: ATTR_FORECAST_WIND_BEARING,
+        ATTR_API_FORECAST_WIND_MAX_SPEED: ATTR_FORECAST_NATIVE_WIND_GUST_SPEED,
+        ATTR_API_FORECAST_WIND_SPEED: ATTR_FORECAST_NATIVE_WIND_SPEED,
+    },
+}
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: AemetConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up AEMET OpenData weather entity based on a config entry."""
-    domain_data = config_entry.runtime_data
-    name = domain_data.name
-    weather_coordinator = domain_data.coordinator
+    domain_data = hass.data[DOMAIN][config_entry.entry_id]
+    weather_coordinator = domain_data[ENTRY_WEATHER_COORDINATOR]
 
-    unique_id = config_entry.unique_id
-    assert unique_id is not None
+    entities = []
+    entity_registry = er.async_get(hass)
 
-    async_add_entities([AemetWeather(name, unique_id, weather_coordinator)])
+    # Add daily + hourly entity for legacy config entries, only add daily for new
+    # config entries. This can be removed in HA Core 2024.3
+    if entity_registry.async_get_entity_id(
+        WEATHER_DOMAIN,
+        DOMAIN,
+        f"{config_entry.unique_id} {FORECAST_MODE_HOURLY}",
+    ):
+        for mode in FORECAST_MODES:
+            name = f"{domain_data[ENTRY_NAME]} {mode}"
+            unique_id = f"{config_entry.unique_id} {mode}"
+            entities.append(AemetWeather(name, unique_id, weather_coordinator, mode))
+    else:
+        entities.append(
+            AemetWeather(
+                domain_data[ENTRY_NAME],
+                config_entry.unique_id,
+                weather_coordinator,
+                FORECAST_MODE_DAILY,
+            )
+        )
+
+    async_add_entities(entities, False)
 
 
-class AemetWeather(
-    AemetEntity,
-    SingleCoordinatorWeatherEntity[WeatherUpdateCoordinator],
-):
-    """Implementation of an AEMET OpenData weather."""
+class AemetWeather(SingleCoordinatorWeatherEntity[WeatherUpdateCoordinator]):
+    """Implementation of an AEMET OpenData sensor."""
 
+    _attr_attribution = ATTRIBUTION
     _attr_native_precipitation_unit = UnitOfPrecipitationDepth.MILLIMETERS
     _attr_native_pressure_unit = UnitOfPressure.HPA
     _attr_native_temperature_unit = UnitOfTemperature.CELSIUS
@@ -62,60 +125,81 @@ class AemetWeather(
     _attr_supported_features = (
         WeatherEntityFeature.FORECAST_DAILY | WeatherEntityFeature.FORECAST_HOURLY
     )
-    _attr_name = None
 
     def __init__(
         self,
-        name: str,
-        unique_id: str,
+        name,
+        unique_id,
         coordinator: WeatherUpdateCoordinator,
+        forecast_mode,
     ) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator, name, unique_id)
+        super().__init__(coordinator)
+        self._forecast_mode = forecast_mode
+        self._attr_entity_registry_enabled_default = (
+            self._forecast_mode == FORECAST_MODE_DAILY
+        )
+        self._attr_name = name
         self._attr_unique_id = unique_id
 
     @property
     def condition(self):
         """Return the current condition."""
-        cond = self.get_aemet_value([AOD_WEATHER, AOD_CONDITION])
-        return CONDITIONS_MAP.get(cond)
+        return self.coordinator.data[ATTR_API_CONDITION]
+
+    def _forecast(self, forecast_mode: str) -> list[Forecast]:
+        """Return the forecast array."""
+        forecasts = self.coordinator.data[FORECAST_MODE_ATTR_API[forecast_mode]]
+        forecast_map = FORECAST_MAP[forecast_mode]
+        return cast(
+            list[Forecast],
+            [
+                {ha_key: forecast[api_key] for api_key, ha_key in forecast_map.items()}
+                for forecast in forecasts
+            ],
+        )
+
+    @property
+    def forecast(self) -> list[Forecast]:
+        """Return the forecast array."""
+        return self._forecast(self._forecast_mode)
 
     @callback
     def _async_forecast_daily(self) -> list[Forecast]:
         """Return the daily forecast in native units."""
-        return self.get_aemet_forecast(AOD_FORECAST_DAILY)
+        return self._forecast(FORECAST_MODE_DAILY)
 
     @callback
     def _async_forecast_hourly(self) -> list[Forecast]:
         """Return the hourly forecast in native units."""
-        return self.get_aemet_forecast(AOD_FORECAST_HOURLY)
+        return self._forecast(FORECAST_MODE_HOURLY)
 
     @property
     def humidity(self):
         """Return the humidity."""
-        return self.get_aemet_value([AOD_WEATHER, AOD_HUMIDITY])
+        return self.coordinator.data[ATTR_API_HUMIDITY]
 
     @property
     def native_pressure(self):
         """Return the pressure."""
-        return self.get_aemet_value([AOD_WEATHER, AOD_PRESSURE])
+        return self.coordinator.data[ATTR_API_PRESSURE]
 
     @property
     def native_temperature(self):
         """Return the temperature."""
-        return self.get_aemet_value([AOD_WEATHER, AOD_TEMP])
+        return self.coordinator.data[ATTR_API_TEMPERATURE]
 
     @property
     def wind_bearing(self):
         """Return the wind bearing."""
-        return self.get_aemet_value([AOD_WEATHER, AOD_WIND_DIRECTION])
+        return self.coordinator.data[ATTR_API_WIND_BEARING]
 
     @property
     def native_wind_gust_speed(self):
         """Return the wind gust speed in native units."""
-        return self.get_aemet_value([AOD_WEATHER, AOD_WIND_SPEED_MAX])
+        return self.coordinator.data[ATTR_API_WIND_MAX_SPEED]
 
     @property
     def native_wind_speed(self):
         """Return the wind speed."""
-        return self.get_aemet_value([AOD_WEATHER, AOD_WIND_SPEED])
+        return self.coordinator.data[ATTR_API_WIND_SPEED]

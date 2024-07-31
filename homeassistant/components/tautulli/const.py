@@ -1,5 +1,4 @@
 """Constants for the Tautulli integration."""
-
 from logging import Logger, getLogger
 
 ATTR_TOP_USER = "top_user"

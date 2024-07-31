@@ -1,29 +1,28 @@
 """Test init of AccuWeather integration."""
-
-from unittest.mock import AsyncMock
+from datetime import timedelta
+from unittest.mock import patch
 
 from accuweather import ApiError
-from freezegun.api import FrozenDateTimeFactory
 
-from homeassistant.components.accuweather.const import (
-    DOMAIN,
-    UPDATE_INTERVAL_DAILY_FORECAST,
-    UPDATE_INTERVAL_OBSERVATION,
-)
+from homeassistant.components.accuweather.const import DOMAIN
 from homeassistant.components.sensor import DOMAIN as SENSOR_PLATFORM
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
+from homeassistant.util.dt import utcnow
 
 from . import init_integration
 
-from tests.common import MockConfigEntry, async_fire_time_changed
+from tests.common import (
+    MockConfigEntry,
+    async_fire_time_changed,
+    load_json_array_fixture,
+    load_json_object_fixture,
+)
 
 
-async def test_async_setup_entry(
-    hass: HomeAssistant, mock_accuweather_client: AsyncMock
-) -> None:
+async def test_async_setup_entry(hass: HomeAssistant) -> None:
     """Test a successful setup entry."""
     await init_integration(hass)
 
@@ -33,9 +32,7 @@ async def test_async_setup_entry(
     assert state.state == "sunny"
 
 
-async def test_config_not_ready(
-    hass: HomeAssistant, mock_accuweather_client: AsyncMock
-) -> None:
+async def test_config_not_ready(hass: HomeAssistant) -> None:
     """Test for setup failure if connection to AccuWeather is missing."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -49,18 +46,16 @@ async def test_config_not_ready(
         },
     )
 
-    mock_accuweather_client.async_get_current_conditions.side_effect = ApiError(
-        "API Error"
-    )
+    with patch(
+        "homeassistant.components.accuweather.AccuWeather._async_get_data",
+        side_effect=ApiError("API Error"),
+    ):
+        entry.add_to_hass(hass)
+        await hass.config_entries.async_setup(entry.entry_id)
+        assert entry.state is ConfigEntryState.SETUP_RETRY
 
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    assert entry.state is ConfigEntryState.SETUP_RETRY
 
-
-async def test_unload_entry(
-    hass: HomeAssistant, mock_accuweather_client: AsyncMock
-) -> None:
+async def test_unload_entry(hass: HomeAssistant) -> None:
     """Test successful unload of entry."""
     entry = await init_integration(hass)
 
@@ -74,39 +69,59 @@ async def test_unload_entry(
     assert not hass.data.get(DOMAIN)
 
 
-async def test_update_interval(
-    hass: HomeAssistant,
-    mock_accuweather_client: AsyncMock,
-    freezer: FrozenDateTimeFactory,
-) -> None:
+async def test_update_interval(hass: HomeAssistant) -> None:
     """Test correct update interval."""
     entry = await init_integration(hass)
 
     assert entry.state is ConfigEntryState.LOADED
 
-    assert mock_accuweather_client.async_get_current_conditions.call_count == 1
-    assert mock_accuweather_client.async_get_daily_forecast.call_count == 1
+    current = load_json_object_fixture("accuweather/current_conditions_data.json")
+    future = utcnow() + timedelta(minutes=40)
 
-    freezer.tick(UPDATE_INTERVAL_OBSERVATION)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    with patch(
+        "homeassistant.components.accuweather.AccuWeather.async_get_current_conditions",
+        return_value=current,
+    ) as mock_current:
+        assert mock_current.call_count == 0
 
-    assert mock_accuweather_client.async_get_current_conditions.call_count == 2
+        async_fire_time_changed(hass, future)
+        await hass.async_block_till_done()
 
-    freezer.tick(UPDATE_INTERVAL_DAILY_FORECAST)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
-
-    assert mock_accuweather_client.async_get_daily_forecast.call_count == 2
+        assert mock_current.call_count == 1
 
 
-async def test_remove_ozone_sensors(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-    mock_accuweather_client: AsyncMock,
-) -> None:
+async def test_update_interval_forecast(hass: HomeAssistant) -> None:
+    """Test correct update interval when forecast is True."""
+    entry = await init_integration(hass, forecast=True)
+
+    assert entry.state is ConfigEntryState.LOADED
+
+    current = load_json_object_fixture("accuweather/current_conditions_data.json")
+    forecast = load_json_array_fixture("accuweather/forecast_data.json")
+    future = utcnow() + timedelta(minutes=80)
+
+    with patch(
+        "homeassistant.components.accuweather.AccuWeather.async_get_current_conditions",
+        return_value=current,
+    ) as mock_current, patch(
+        "homeassistant.components.accuweather.AccuWeather.async_get_daily_forecast",
+        return_value=forecast,
+    ) as mock_forecast:
+        assert mock_current.call_count == 0
+        assert mock_forecast.call_count == 0
+
+        async_fire_time_changed(hass, future)
+        await hass.async_block_till_done()
+
+        assert mock_current.call_count == 1
+        assert mock_forecast.call_count == 1
+
+
+async def test_remove_ozone_sensors(hass: HomeAssistant) -> None:
     """Test remove ozone sensors from registry."""
-    entity_registry.async_get_or_create(
+    registry = er.async_get(hass)
+
+    registry.async_get_or_create(
         SENSOR_PLATFORM,
         DOMAIN,
         "0123456-ozone-0",
@@ -116,5 +131,5 @@ async def test_remove_ozone_sensors(
 
     await init_integration(hass)
 
-    entry = entity_registry.async_get("sensor.home_ozone_0d")
+    entry = registry.async_get("sensor.home_ozone_0d")
     assert entry is None

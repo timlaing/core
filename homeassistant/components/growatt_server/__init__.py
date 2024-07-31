@@ -1,5 +1,4 @@
 """The Growatt server PV inverter sensor integration."""
-
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant

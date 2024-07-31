@@ -1,5 +1,4 @@
 """Test Dynalite light."""
-
 from unittest.mock import Mock, PropertyMock
 
 from dynalite_devices_lib.light import DynaliteChannelLightDevice

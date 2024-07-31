@@ -1,9 +1,7 @@
 """Provides device triggers for lutron caseta."""
-
 from __future__ import annotations
 
 import logging
-from typing import cast
 
 import voluptuous as vol
 
@@ -29,7 +27,7 @@ from .const import (
     DOMAIN,
     LUTRON_CASETA_BUTTON_EVENT,
 )
-from .models import LutronCasetaConfigEntry
+from .models import LutronCasetaData
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -380,6 +378,8 @@ async def async_get_triggers(
     hass: HomeAssistant, device_id: str
 ) -> list[dict[str, str]]:
     """List device triggers for lutron caseta devices."""
+    triggers = []
+
     # Check if device is a valid keypad.  Return empty if not.
     if not (data := get_lutron_data_by_dr_id(hass, device_id)) or not (
         keypad := data.keypad_data.dr_device_id_to_keypad.get(device_id)
@@ -394,17 +394,19 @@ async def async_get_triggers(
         keypad_button_names_to_leap[keypad["lutron_device_id"]],
     )
 
-    return [
-        {
-            CONF_PLATFORM: "device",
-            CONF_DEVICE_ID: device_id,
-            CONF_DOMAIN: DOMAIN,
-            CONF_TYPE: trigger,
-            CONF_SUBTYPE: subtype,
-        }
-        for trigger in SUPPORTED_INPUTS_EVENTS_TYPES
-        for subtype in valid_buttons
-    ]
+    for trigger in SUPPORTED_INPUTS_EVENTS_TYPES:
+        for subtype in valid_buttons:
+            triggers.append(
+                {
+                    CONF_PLATFORM: "device",
+                    CONF_DEVICE_ID: device_id,
+                    CONF_DOMAIN: DOMAIN,
+                    CONF_TYPE: trigger,
+                    CONF_SUBTYPE: subtype,
+                }
+            )
+
+    return triggers
 
 
 async def async_attach_trigger(
@@ -435,14 +437,11 @@ async def async_attach_trigger(
 
 def get_lutron_data_by_dr_id(hass: HomeAssistant, device_id: str):
     """Get a lutron integration data for the given device registry device id."""
-    entries = cast(
-        list[LutronCasetaConfigEntry],
-        hass.config_entries.async_entries(
-            DOMAIN, include_ignore=False, include_disabled=False
-        ),
-    )
-    for entry in entries:
-        if hasattr(entry, "runtime_data"):
-            if entry.runtime_data.keypad_data.dr_device_id_to_keypad.get(device_id):
-                return entry.runtime_data
+    if DOMAIN not in hass.data:
+        return None
+
+    for entry_id in hass.data[DOMAIN]:
+        data: LutronCasetaData = hass.data[DOMAIN][entry_id]
+        if data.keypad_data.dr_device_id_to_keypad.get(device_id):
+            return data
     return None

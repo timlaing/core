@@ -1,5 +1,4 @@
 """Support for moat ble sensors."""
-
 from __future__ import annotations
 
 from moat_ble import DeviceClass, DeviceKey, SensorUpdate, Units
@@ -121,9 +120,7 @@ async def async_setup_entry(
 
 
 class MoatBluetoothSensorEntity(
-    PassiveBluetoothProcessorEntity[
-        PassiveBluetoothDataProcessor[float | int | None, SensorUpdate]
-    ],
+    PassiveBluetoothProcessorEntity[PassiveBluetoothDataProcessor[float | int | None]],
     SensorEntity,
 ):
     """Representation of a moat ble sensor."""

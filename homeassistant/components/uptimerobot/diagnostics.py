@@ -1,5 +1,4 @@
 """Diagnostics support for UptimeRobot."""
-
 from __future__ import annotations
 
 from typing import Any

@@ -1,5 +1,4 @@
 """Support for Velbus select."""
-
 from velbusaio.channels import SelectedProgram
 
 from homeassistant.components.select import SelectEntity

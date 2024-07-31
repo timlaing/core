@@ -1,5 +1,4 @@
 """Constants for the Nibe Heat Pump integration."""
-
 import logging
 
 DOMAIN = "nibe_heatpump"

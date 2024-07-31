@@ -1,5 +1,4 @@
 """The tests for reproduction of state."""
-
 import pytest
 
 from homeassistant.components.media_player import (

@@ -1,5 +1,4 @@
 """Entity representing a Sonos power sensor."""
-
 from __future__ import annotations
 
 import logging
@@ -11,7 +10,7 @@ from homeassistant.components.binary_sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -32,14 +31,12 @@ async def async_setup_entry(
 ) -> None:
     """Set up Sonos from a config entry."""
 
-    @callback
-    def _async_create_battery_entity(speaker: SonosSpeaker) -> None:
+    async def _async_create_battery_entity(speaker: SonosSpeaker) -> None:
         _LOGGER.debug("Creating battery binary_sensor on %s", speaker.zone_name)
         entity = SonosPowerEntity(speaker)
         async_add_entities([entity])
 
-    @callback
-    def _async_create_mic_entity(speaker: SonosSpeaker) -> None:
+    async def _async_create_mic_entity(speaker: SonosSpeaker) -> None:
         _LOGGER.debug("Creating microphone binary_sensor on %s", speaker.zone_name)
         async_add_entities([SonosMicrophoneSensorEntity(speaker)])
 
@@ -93,6 +90,7 @@ class SonosMicrophoneSensorEntity(SonosEntity, BinarySensorEntity):
     """Representation of a Sonos microphone sensor entity."""
 
     _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_icon = "mdi:microphone"
     _attr_translation_key = "microphone"
 
     def __init__(self, speaker: SonosSpeaker) -> None:

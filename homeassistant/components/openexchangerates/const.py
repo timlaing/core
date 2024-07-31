@@ -1,5 +1,4 @@
 """Provide common constants for Open Exchange Rates."""
-
 from datetime import timedelta
 import logging
 

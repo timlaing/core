@@ -18,9 +18,7 @@
         "data": {
           "host": "[%key:common::config_flow::data::host%]"
         },
-        "data_description": {
-          "host": "Hostname or IP address to Tellstick Net or Tellstick ZNet for Local API."
-        }
+        "title": "Pick endpoint."
       }
     }
   },

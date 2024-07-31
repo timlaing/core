@@ -1,5 +1,4 @@
 """Test Dynalite cover."""
-
 from unittest.mock import Mock
 
 from dynalite_devices_lib.cover import DynaliteTimeCoverWithTiltDevice

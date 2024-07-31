@@ -1,15 +1,12 @@
 """Tests for the dnsip integration."""
-
 from __future__ import annotations
 
 
 class QueryResult:
     """Return Query results."""
 
-    def __init__(self, ip="1.2.3.4", ttl=60) -> None:
-        """Initialize QueryResult class."""
-        self.host = ip
-        self.ttl = ttl
+    host = "1.2.3.4"
+    ttl = 60
 
 
 class RetrieveDNS:
@@ -24,20 +21,11 @@ class RetrieveDNS:
         self._nameservers = ["1.2.3.4"]
         self.error = error
 
-    async def query(self, hostname, qtype) -> list[QueryResult]:
+    async def query(self, hostname, qtype) -> dict[str, str]:
         """Return information."""
         if self.error:
             raise self.error
-        if qtype == "AAAA":
-            results = [
-                QueryResult("2001:db8:77::face:b00c"),
-                QueryResult("2001:db8:77::dead:beef"),
-                QueryResult("2001:db8::77:dead:beef"),
-                QueryResult("2001:db8:66::dead:beef"),
-            ]
-        else:
-            results = [QueryResult("1.2.3.4"), QueryResult("1.1.1.1")]
-        return results
+        return [QueryResult]
 
     @property
     def nameservers(self) -> list[str]:

@@ -1,5 +1,4 @@
 """Base entity for the wallbox integration."""
-
 from __future__ import annotations
 
 from homeassistant.helpers.device_registry import DeviceInfo

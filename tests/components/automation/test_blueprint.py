@@ -1,33 +1,25 @@
 """Test built-in blueprints."""
-
 import asyncio
-from collections.abc import Iterator
 import contextlib
 from datetime import timedelta
-from os import PathLike
 import pathlib
-from typing import Any
 from unittest.mock import patch
 
 import pytest
 
 from homeassistant.components import automation
 from homeassistant.components.blueprint import models
-from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
 from homeassistant.setup import async_setup_component
 from homeassistant.util import dt as dt_util, yaml
 
-from tests.common import MockConfigEntry, async_fire_time_changed, async_mock_service
+from tests.common import async_fire_time_changed, async_mock_service
 
 BUILTIN_BLUEPRINT_FOLDER = pathlib.Path(automation.__file__).parent / "blueprints"
 
 
 @contextlib.contextmanager
-def patch_blueprint(
-    blueprint_path: str, data_path: str | PathLike[str]
-) -> Iterator[None]:
+def patch_blueprint(blueprint_path: str, data_path):
     """Patch blueprint loading from a different source."""
     orig_load = models.DomainBlueprints._load_blueprint
 
@@ -48,25 +40,15 @@ def patch_blueprint(
         yield
 
 
-async def test_notify_leaving_zone(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
-) -> None:
+async def test_notify_leaving_zone(hass: HomeAssistant) -> None:
     """Test notifying leaving a zone blueprint."""
-    config_entry = MockConfigEntry(domain="fake_integration", data={})
-    config_entry.mock_state(hass, ConfigEntryState.LOADED)
-    config_entry.add_to_hass(hass)
 
-    device = device_registry.async_get_or_create(
-        config_entry_id=config_entry.entry_id,
-        connections={(dr.CONNECTION_NETWORK_MAC, "00:00:00:00:00:01")},
-    )
-
-    def set_person_state(state: str, extra: dict[str, Any]) -> None:
+    def set_person_state(state, extra={}):
         hass.states.async_set(
             "person.test_person", state, {"friendly_name": "Paulus", **extra}
         )
 
-    set_person_state("School", {})
+    set_person_state("School")
 
     assert await async_setup_component(
         hass, "zone", {"zone": {"name": "School", "latitude": 1, "longitude": 2}}
@@ -86,7 +68,7 @@ async def test_notify_leaving_zone(
                         "input": {
                             "person_entity": "person.test_person",
                             "zone_entity": "zone.school",
-                            "notify_device": device.id,
+                            "notify_device": "abcdefgh",
                         },
                     }
                 }
@@ -97,7 +79,7 @@ async def test_notify_leaving_zone(
         "homeassistant.components.mobile_app.device_action.async_call_action_from_config"
     ) as mock_call_action:
         # Leaving zone to no zone
-        set_person_state("not_home", {})
+        set_person_state("not_home")
         await hass.async_block_till_done()
 
         assert len(mock_call_action.mock_calls) == 1
@@ -107,19 +89,19 @@ async def test_notify_leaving_zone(
             "alias": "Notify that a person has left the zone",
             "domain": "mobile_app",
             "type": "notify",
-            "device_id": device.id,
+            "device_id": "abcdefgh",
         }
         message_tpl.hass = hass
         assert message_tpl.async_render(variables) == "Paulus has left School"
 
         # Should not increase when we go to another zone
-        set_person_state("bla", {})
+        set_person_state("bla")
         await hass.async_block_till_done()
 
         assert len(mock_call_action.mock_calls) == 1
 
         # Should not increase when we go into the zone
-        set_person_state("School", {})
+        set_person_state("School")
         await hass.async_block_till_done()
 
         assert len(mock_call_action.mock_calls) == 1
@@ -131,7 +113,7 @@ async def test_notify_leaving_zone(
         assert len(mock_call_action.mock_calls) == 1
 
         # Should increase when leaving zone for another zone
-        set_person_state("Just Outside School", {})
+        set_person_state("Just Outside School")
         await hass.async_block_till_done()
 
         assert len(mock_call_action.mock_calls) == 2

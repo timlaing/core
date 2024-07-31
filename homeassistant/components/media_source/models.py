@@ -1,5 +1,4 @@
 """Media Source models."""
-
 from __future__ import annotations
 
 from abc import ABC

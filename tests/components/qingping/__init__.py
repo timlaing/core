@@ -1,5 +1,6 @@
 """Tests for the Qingping integration."""
 
+
 from homeassistant.helpers.service_info.bluetooth import BluetoothServiceInfo
 
 NOT_QINGPING_SERVICE_INFO = BluetoothServiceInfo(

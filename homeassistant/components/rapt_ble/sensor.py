@@ -1,5 +1,4 @@
 """Support for RAPT Pill hydrometers."""
-
 from __future__ import annotations
 
 from rapt_ble import DeviceClass, DeviceKey, SensorUpdate, Units
@@ -115,9 +114,7 @@ async def async_setup_entry(
 
 
 class RAPTPillBluetoothSensorEntity(
-    PassiveBluetoothProcessorEntity[
-        PassiveBluetoothDataProcessor[float | int | None, SensorUpdate]
-    ],
+    PassiveBluetoothProcessorEntity[PassiveBluetoothDataProcessor[float | int | None]],
     SensorEntity,
 ):
     """Representation of a RAPT Pill BLE sensor."""

@@ -1,5 +1,4 @@
 """Constants for the Renault component."""
-
 from homeassistant.const import Platform
 
 DOMAIN = "renault"

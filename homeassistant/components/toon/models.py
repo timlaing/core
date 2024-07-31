@@ -1,5 +1,4 @@
 """DataUpdate Coordinator, and base Entity and Device models for Toon."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -152,7 +151,7 @@ class ToonBoilerDeviceEntity(ToonEntity):
         )
 
 
-@dataclass(frozen=True)
+@dataclass
 class ToonRequiredKeysMixin:
     """Mixin for required keys."""
 

@@ -1,5 +1,4 @@
 """Config flow for OctoPrint integration."""
-
 from __future__ import annotations
 
 import asyncio
@@ -12,8 +11,8 @@ from pyoctoprintapi import ApiError, OctoprintClient, OctoprintException
 import voluptuous as vol
 from yarl import URL
 
+from homeassistant import config_entries, data_entry_flow, exceptions
 from homeassistant.components import ssdp, zeroconf
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import (
     CONF_API_KEY,
     CONF_HOST,
@@ -23,10 +22,8 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.data_entry_flow import FlowResult
 import homeassistant.helpers.config_validation as cv
-from homeassistant.util.ssl import get_default_context, get_default_no_verify_context
 
 from .const import DOMAIN
 
@@ -49,18 +46,18 @@ def _schema_with_defaults(
     )
 
 
-class OctoPrintConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for OctoPrint."""
 
     VERSION = 1
 
     api_key_task: asyncio.Task[None] | None = None
-    discovery_schema: vol.Schema | None = None
     _reauth_data: dict[str, Any] | None = None
-    _user_input: dict[str, Any] | None = None
 
     def __init__(self) -> None:
         """Handle a config flow for OctoPrint."""
+        self.discovery_schema = None
+        self._user_input = None
         self._sessions: list[aiohttp.ClientSession] = []
 
     async def async_step_user(self, user_input=None):
@@ -78,11 +75,11 @@ class OctoPrintConfigFlow(ConfigFlow, domain=DOMAIN):
             errors = {}
             try:
                 return await self._finish_config(user_input)
-            except AbortFlow as err:
+            except data_entry_flow.AbortFlow as err:
                 raise err from None
             except CannotConnect:
                 errors["base"] = "cannot_connect"
-            except Exception:  # noqa: BLE001
+            except Exception:  # pylint: disable=broad-except
                 errors["base"] = "unknown"
 
             if errors:
@@ -99,33 +96,30 @@ class OctoPrintConfigFlow(ConfigFlow, domain=DOMAIN):
                     ),
                 )
 
-        self._user_input = user_input
-        return await self.async_step_get_api_key()
+        self.api_key_task = None
+        return await self.async_step_get_api_key(user_input)
 
-    async def async_step_get_api_key(self, user_input=None):
+    async def async_step_get_api_key(self, user_input):
         """Get an Application Api Key."""
         if not self.api_key_task:
             self.api_key_task = self.hass.async_create_task(
-                self._async_get_auth_key(), eager_start=False
+                self._async_get_auth_key(user_input)
             )
-        if not self.api_key_task.done():
             return self.async_show_progress(
-                step_id="get_api_key",
-                progress_action="get_api_key",
-                progress_task=self.api_key_task,
+                step_id="get_api_key", progress_action="get_api_key"
             )
 
         try:
             await self.api_key_task
-        except OctoprintException:
-            _LOGGER.exception("Failed to get an application key")
+        except OctoprintException as err:
+            _LOGGER.exception("Failed to get an application key: %s", err)
             return self.async_show_progress_done(next_step_id="auth_failed")
-        except Exception:
-            _LOGGER.exception("Failed to get an application key")
+        except Exception as err:  # pylint: disable=broad-except
+            _LOGGER.exception("Failed to get an application key : %s", err)
             return self.async_show_progress_done(next_step_id="auth_failed")
-        finally:
-            self.api_key_task = None
 
+        # store this off here to pick back up in the user step
+        self._user_input = user_input
         return self.async_show_progress_done(next_step_id="user")
 
     async def _finish_config(self, user_input: dict):
@@ -135,7 +129,7 @@ class OctoPrintConfigFlow(ConfigFlow, domain=DOMAIN):
             self.hass.config_entries.async_update_entry(existing_entry, data=user_input)
             # Reload the config entry otherwise devices will remain unavailable
             self.hass.async_create_task(
-                self.hass.config_entries.async_reload(existing_entry.entry_id),
+                self.hass.config_entries.async_reload(existing_entry.entry_id)
             )
 
             return self.async_abort(reason="reauth_successful")
@@ -164,7 +158,7 @@ class OctoPrintConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_zeroconf(
         self, discovery_info: zeroconf.ZeroconfServiceInfo
-    ) -> ConfigFlowResult:
+    ) -> data_entry_flow.FlowResult:
         """Handle discovery flow."""
         uuid = discovery_info.properties["uuid"]
         await self.async_set_unique_id(uuid)
@@ -190,7 +184,7 @@ class OctoPrintConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_ssdp(
         self, discovery_info: ssdp.SsdpServiceInfo
-    ) -> ConfigFlowResult:
+    ) -> data_entry_flow.FlowResult:
         """Handle ssdp discovery flow."""
         uuid = discovery_info.upnp["UDN"][5:]
         await self.async_set_unique_id(uuid)
@@ -213,7 +207,7 @@ class OctoPrintConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return await self.async_step_user()
 
-    async def async_step_reauth(self, config: Mapping[str, Any]) -> ConfigFlowResult:
+    async def async_step_reauth(self, config: Mapping[str, Any]) -> FlowResult:
         """Handle reauthorization request from Octoprint."""
         self._reauth_data = dict(config)
 
@@ -227,7 +221,7 @@ class OctoPrintConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle reauthorization flow."""
         assert self._reauth_data is not None
 
@@ -243,18 +237,26 @@ class OctoPrintConfigFlow(ConfigFlow, domain=DOMAIN):
                 ),
             )
 
+        self.api_key_task = None
         self._reauth_data[CONF_USERNAME] = user_input[CONF_USERNAME]
 
-        self._user_input = self._reauth_data
-        return await self.async_step_get_api_key()
+        return await self.async_step_get_api_key(self._reauth_data)
 
-    async def _async_get_auth_key(self):
+    async def _async_get_auth_key(self, user_input: dict):
         """Get application api key."""
-        octoprint = self._get_octoprint_client(self._user_input)
+        octoprint = self._get_octoprint_client(user_input)
 
-        self._user_input[CONF_API_KEY] = await octoprint.request_app_key(
-            "Home Assistant", self._user_input[CONF_USERNAME], 300
-        )
+        try:
+            user_input[CONF_API_KEY] = await octoprint.request_app_key(
+                "Home Assistant", user_input[CONF_USERNAME], 300
+            )
+        finally:
+            # Continue the flow after show progress when the task is done.
+            self.hass.async_create_task(
+                self.hass.config_entries.flow.async_configure(
+                    flow_id=self.flow_id, user_input=user_input
+                )
+            )
 
     def _get_octoprint_client(self, user_input: dict) -> OctoprintClient:
         """Build an octoprint client from the user_input."""
@@ -262,9 +264,7 @@ class OctoPrintConfigFlow(ConfigFlow, domain=DOMAIN):
 
         connector = aiohttp.TCPConnector(
             force_close=True,
-            ssl=get_default_no_verify_context()
-            if not verify_ssl
-            else get_default_context(),
+            ssl=False if not verify_ssl else None,
         )
         session = aiohttp.ClientSession(connector=connector)
         self._sessions.append(session)
@@ -283,5 +283,5 @@ class OctoPrintConfigFlow(ConfigFlow, domain=DOMAIN):
             session.detach()
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(exceptions.HomeAssistantError):
     """Error to indicate we cannot connect."""

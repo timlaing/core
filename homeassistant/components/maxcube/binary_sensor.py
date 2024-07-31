@@ -1,5 +1,4 @@
 """Support for MAX! binary sensors via MAX! Cube."""
-
 from __future__ import annotations
 
 from homeassistant.components.binary_sensor import (

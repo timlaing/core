@@ -1,10 +1,8 @@
 """Test blueprint importing."""
-
 import json
 from pathlib import Path
 
 import pytest
-from syrupy import SnapshotAssertion
 
 from homeassistant.components.blueprint import importer
 from homeassistant.core import HomeAssistant
@@ -14,7 +12,7 @@ from tests.common import load_fixture
 from tests.test_util.aiohttp import AiohttpClientMocker
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def community_post():
     """Topic JSON with a codeblock marked as auto syntax."""
     return load_fixture("blueprint/community_post.json")
@@ -54,9 +52,7 @@ def test_get_github_import_url() -> None:
     )
 
 
-def test_extract_blueprint_from_community_topic(
-    community_post, snapshot: SnapshotAssertion
-) -> None:
+def test_extract_blueprint_from_community_topic(community_post, snapshot) -> None:
     """Test extracting blueprint."""
     imported_blueprint = importer._extract_blueprint_from_community_topic(
         "http://example.com", json.loads(community_post)
@@ -97,10 +93,7 @@ def test_extract_blueprint_from_community_topic_wrong_lang() -> None:
 
 
 async def test_fetch_blueprint_from_community_url(
-    hass: HomeAssistant,
-    aioclient_mock: AiohttpClientMocker,
-    community_post,
-    snapshot: SnapshotAssertion,
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, community_post, snapshot
 ) -> None:
     """Test fetching blueprint from url."""
     aioclient_mock.get(
@@ -125,10 +118,10 @@ async def test_fetch_blueprint_from_community_url(
 
 @pytest.mark.parametrize(
     "url",
-    [
+    (
         "https://raw.githubusercontent.com/balloob/home-assistant-config/main/blueprints/automation/motion_light.yaml",
         "https://github.com/balloob/home-assistant-config/blob/main/blueprints/automation/motion_light.yaml",
-    ],
+    ),
 )
 async def test_fetch_blueprint_from_github_url(
     hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, url: str
@@ -138,7 +131,7 @@ async def test_fetch_blueprint_from_github_url(
         "https://raw.githubusercontent.com/balloob/home-assistant-config/main/blueprints/automation/motion_light.yaml",
         text=Path(
             hass.config.path("blueprints/automation/test_event_service.yaml")
-        ).read_text(encoding="utf8"),
+        ).read_text(),
     )
 
     imported_blueprint = await importer.fetch_blueprint_from_url(hass, url)
@@ -154,9 +147,7 @@ async def test_fetch_blueprint_from_github_url(
 
 
 async def test_fetch_blueprint_from_github_gist_url(
-    hass: HomeAssistant,
-    aioclient_mock: AiohttpClientMocker,
-    snapshot: SnapshotAssertion,
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, snapshot
 ) -> None:
     """Test fetching blueprint from url."""
     aioclient_mock.get(
@@ -181,7 +172,7 @@ async def test_fetch_blueprint_from_website_url(
         "https://www.home-assistant.io/blueprints/awesome.yaml",
         text=Path(
             hass.config.path("blueprints/automation/test_event_service.yaml")
-        ).read_text(encoding="utf8"),
+        ).read_text(),
     )
 
     url = "https://www.home-assistant.io/blueprints/awesome.yaml"
@@ -192,28 +183,9 @@ async def test_fetch_blueprint_from_website_url(
     assert imported_blueprint.blueprint.metadata["source_url"] == url
 
 
-async def test_fetch_blueprint_from_generic_url(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
-) -> None:
-    """Test fetching blueprint from url."""
-    aioclient_mock.get(
-        "https://example.org/path/someblueprint.yaml",
-        text=Path(
-            hass.config.path("blueprints/automation/test_event_service.yaml")
-        ).read_text(encoding="utf8"),
-    )
+async def test_fetch_blueprint_from_unsupported_url(hass: HomeAssistant) -> None:
+    """Test fetching blueprint from an unsupported URL."""
+    url = "https://example.com/unsupported.yaml"
 
-    url = "https://example.org/path/someblueprint.yaml"
-    imported_blueprint = await importer.fetch_blueprint_from_url(hass, url)
-    assert isinstance(imported_blueprint, importer.ImportedBlueprint)
-    assert imported_blueprint.blueprint.domain == "automation"
-    assert imported_blueprint.suggested_filename == "example.org/someblueprint"
-    assert imported_blueprint.blueprint.metadata["source_url"] == url
-
-
-def test_generic_importer_last() -> None:
-    """Test that generic importer is always the last one."""
-    assert (
-        importer.FETCH_FUNCTIONS.count(importer.fetch_blueprint_from_generic_url) == 1
-    )
-    assert importer.FETCH_FUNCTIONS[-1] == importer.fetch_blueprint_from_generic_url
+    with pytest.raises(HomeAssistantError, match=r"^Unsupported URL$"):
+        await importer.fetch_blueprint_from_url(hass, url)

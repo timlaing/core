@@ -1,5 +1,4 @@
 """Support for binary sensors using Tellstick Net."""
-
 from homeassistant.components import binary_sensor
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry

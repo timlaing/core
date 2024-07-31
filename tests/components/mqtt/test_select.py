@@ -1,9 +1,7 @@
 """The tests for mqtt select component."""
-
 from collections.abc import Generator
 import copy
 import json
-import logging
 from typing import Any
 from unittest.mock import patch
 
@@ -17,7 +15,12 @@ from homeassistant.components.select import (
     DOMAIN as SELECT_DOMAIN,
     SERVICE_SELECT_OPTION,
 )
-from homeassistant.const import ATTR_ASSUMED_STATE, ATTR_ENTITY_ID, STATE_UNKNOWN
+from homeassistant.const import (
+    ATTR_ASSUMED_STATE,
+    ATTR_ENTITY_ID,
+    STATE_UNKNOWN,
+    Platform,
+)
 from homeassistant.core import HomeAssistant, State
 from homeassistant.helpers.typing import ConfigType
 
@@ -67,7 +70,16 @@ DEFAULT_CONFIG = {
 }
 
 
-def _test_run_select_setup_params(topic: str) -> Generator[tuple[ConfigType, str]]:
+@pytest.fixture(autouse=True)
+def select_platform_only():
+    """Only setup the select platform to speed up tests."""
+    with patch("homeassistant.components.mqtt.PLATFORMS", [Platform.SELECT]):
+        yield
+
+
+def _test_run_select_setup_params(
+    topic: str,
+) -> Generator[tuple[ConfigType, str], None]:
     yield (
         {
             mqtt.DOMAIN: {
@@ -90,14 +102,10 @@ def _test_run_select_setup_params(topic: str) -> Generator[tuple[ConfigType, str
 async def test_run_select_setup(
     hass: HomeAssistant,
     mqtt_mock_entry: MqttMockHAClientGenerator,
-    caplog: pytest.LogCaptureFixture,
     topic: str,
 ) -> None:
     """Test that it fetches the given payload."""
     await mqtt_mock_entry()
-
-    state = hass.states.get("select.test_select")
-    assert state.state == STATE_UNKNOWN
 
     async_fire_mqtt_message(hass, topic, "milk")
 
@@ -109,15 +117,6 @@ async def test_run_select_setup(
     async_fire_mqtt_message(hass, topic, "beer")
 
     await hass.async_block_till_done()
-
-    state = hass.states.get("select.test_select")
-    assert state.state == "beer"
-
-    if caplog.at_level(logging.DEBUG):
-        async_fire_mqtt_message(hass, topic, "")
-        await hass.async_block_till_done()
-
-        assert "Ignoring empty payload" in caplog.text
 
     state = hass.states.get("select.test_select")
     assert state.state == "beer"
@@ -405,7 +404,11 @@ async def test_update_with_json_attrs_not_dict(
 ) -> None:
     """Test attributes get extracted from a JSON result."""
     await help_test_update_with_json_attrs_not_dict(
-        hass, mqtt_mock_entry, caplog, select.DOMAIN, DEFAULT_CONFIG
+        hass,
+        mqtt_mock_entry,
+        caplog,
+        select.DOMAIN,
+        DEFAULT_CONFIG,
     )
 
 
@@ -425,11 +428,17 @@ async def test_update_with_json_attrs_bad_json(
 
 
 async def test_discovery_update_attr(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    hass: HomeAssistant,
+    mqtt_mock_entry: MqttMockHAClientGenerator,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test update of discovered MQTTAttributes."""
     await help_test_discovery_update_attr(
-        hass, mqtt_mock_entry, select.DOMAIN, DEFAULT_CONFIG
+        hass,
+        mqtt_mock_entry,
+        caplog,
+        select.DOMAIN,
+        DEFAULT_CONFIG,
     )
 
 
@@ -466,15 +475,21 @@ async def test_unique_id(
 
 
 async def test_discovery_removal_select(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    hass: HomeAssistant,
+    mqtt_mock_entry: MqttMockHAClientGenerator,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test removal of discovered select."""
     data = json.dumps(DEFAULT_CONFIG[mqtt.DOMAIN][select.DOMAIN])
-    await help_test_discovery_removal(hass, mqtt_mock_entry, select.DOMAIN, data)
+    await help_test_discovery_removal(
+        hass, mqtt_mock_entry, caplog, select.DOMAIN, data
+    )
 
 
 async def test_discovery_update_select(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    hass: HomeAssistant,
+    mqtt_mock_entry: MqttMockHAClientGenerator,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test update of discovered select."""
     config1 = {
@@ -491,12 +506,14 @@ async def test_discovery_update_select(
     }
 
     await help_test_discovery_update(
-        hass, mqtt_mock_entry, select.DOMAIN, config1, config2
+        hass, mqtt_mock_entry, caplog, select.DOMAIN, config1, config2
     )
 
 
 async def test_discovery_update_unchanged_select(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    hass: HomeAssistant,
+    mqtt_mock_entry: MqttMockHAClientGenerator,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test update of discovered select."""
     data1 = '{ "name": "Beer", "state_topic": "test-topic", "command_topic": "test-topic", "options": ["milk", "beer"]}'
@@ -504,19 +521,28 @@ async def test_discovery_update_unchanged_select(
         "homeassistant.components.mqtt.select.MqttSelect.discovery_update"
     ) as discovery_update:
         await help_test_discovery_update_unchanged(
-            hass, mqtt_mock_entry, select.DOMAIN, data1, discovery_update
+            hass,
+            mqtt_mock_entry,
+            caplog,
+            select.DOMAIN,
+            data1,
+            discovery_update,
         )
 
 
 @pytest.mark.no_fail_on_log_exception
 async def test_discovery_broken(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    hass: HomeAssistant,
+    mqtt_mock_entry: MqttMockHAClientGenerator,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test handling of bad discovery message."""
     data1 = '{ "name": "Beer" }'
     data2 = '{ "name": "Milk", "state_topic": "test-topic", "command_topic": "test-topic", "options": ["milk", "beer"]}'
 
-    await help_test_discovery_broken(hass, mqtt_mock_entry, select.DOMAIN, data1, data2)
+    await help_test_discovery_broken(
+        hass, mqtt_mock_entry, caplog, select.DOMAIN, data1, data2
+    )
 
 
 async def test_entity_device_info_with_connection(
@@ -591,7 +617,7 @@ async def test_entity_debug_info_message(
 
 def _test_options_attributes_options_config(
     request: tuple[list[str]],
-) -> Generator[tuple[ConfigType, list[str]]]:
+) -> Generator[tuple[ConfigType, list[str]], None]:
     for option in request:
         yield (
             {
@@ -613,7 +639,9 @@ def _test_options_attributes_options_config(
     _test_options_attributes_options_config((["milk", "beer"], ["milk"], [])),
 )
 async def test_options_attributes(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator, options: list[str]
+    hass: HomeAssistant,
+    mqtt_mock_entry: MqttMockHAClientGenerator,
+    options: list[str],
 ) -> None:
     """Test options attribute."""
     await mqtt_mock_entry()
@@ -679,7 +707,7 @@ async def test_publishing_with_custom_encoding(
 ) -> None:
     """Test publishing MQTT payload with different encoding."""
     domain = select.DOMAIN
-    config = copy.deepcopy(DEFAULT_CONFIG)
+    config = DEFAULT_CONFIG
     config[mqtt.DOMAIN][domain]["options"] = ["milk", "beer"]
 
     await help_test_publishing_with_custom_encoding(
@@ -697,7 +725,8 @@ async def test_publishing_with_custom_encoding(
 
 
 async def test_reloadable(
-    hass: HomeAssistant, mqtt_client_mock: MqttMockPahoClient
+    hass: HomeAssistant,
+    mqtt_client_mock: MqttMockPahoClient,
 ) -> None:
     """Test reloading the MQTT platform."""
     domain = select.DOMAIN
@@ -750,7 +779,8 @@ async def test_setup_manual_entity_from_yaml(
 
 
 async def test_unload_entry(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    hass: HomeAssistant,
+    mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
     """Test unloading the config entry."""
     domain = select.DOMAIN
@@ -818,32 +848,3 @@ async def test_skipped_async_ha_write_state(
     """Test a write state command is only called when there is change."""
     await mqtt_mock_entry()
     await help_test_skipped_async_ha_write_state(hass, topic, payload1, payload2)
-
-
-@pytest.mark.parametrize(
-    "hass_config",
-    [
-        help_custom_config(
-            select.DOMAIN,
-            DEFAULT_CONFIG,
-            (
-                {
-                    "state_topic": "test-topic",
-                    "value_template": "{{ value_json.some_var * 1 }}",
-                },
-            ),
-        )
-    ],
-)
-async def test_value_template_fails(
-    hass: HomeAssistant,
-    mqtt_mock_entry: MqttMockHAClientGenerator,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    """Test the rendering of MQTT value template fails."""
-    await mqtt_mock_entry()
-    async_fire_mqtt_message(hass, "test-topic", '{"some_var": null }')
-    assert (
-        "TypeError: unsupported operand type(s) for *: 'NoneType' and 'int' rendering template"
-        in caplog.text
-    )

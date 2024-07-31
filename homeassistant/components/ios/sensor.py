@@ -1,8 +1,5 @@
 """Support for Home Assistant iOS app sensors."""
-
 from __future__ import annotations
-
-from typing import Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -53,11 +50,13 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up iOS from a config entry."""
-    async_add_entities(
+    entities = [
         IOSSensor(device_name, device, description)
         for device_name, device in ios.devices(hass).items()
         for description in SENSOR_TYPES
-    )
+    ]
+
+    async_add_entities(entities, True)
 
 
 class IOSSensor(SensorEntity):
@@ -67,10 +66,7 @@ class IOSSensor(SensorEntity):
     _attr_has_entity_name = True
 
     def __init__(
-        self,
-        device_name: str,
-        device: dict[str, Any],
-        description: SensorEntityDescription,
+        self, device_name, device, description: SensorEntityDescription
     ) -> None:
         """Initialize the sensor."""
         self.entity_description = description
@@ -96,7 +92,7 @@ class IOSSensor(SensorEntity):
         )
 
     @property
-    def extra_state_attributes(self) -> dict[str, Any]:
+    def extra_state_attributes(self):
         """Return the device state attributes."""
         device = self._device[ios.ATTR_DEVICE]
         device_battery = self._device[ios.ATTR_BATTERY]
@@ -109,7 +105,7 @@ class IOSSensor(SensorEntity):
         }
 
     @property
-    def icon(self) -> str:
+    def icon(self):
         """Return the icon to use in the frontend, if any."""
         device_battery = self._device[ios.ATTR_BATTERY]
         battery_state = device_battery[ios.ATTR_BATTERY_STATE]
@@ -132,7 +128,7 @@ class IOSSensor(SensorEntity):
         return icon_for_battery_level(battery_level=battery_level, charging=charging)
 
     @callback
-    def _update(self, device: dict[str, Any]) -> None:
+    def _update(self, device):
         """Get the latest state of the sensor."""
         self._device = device
         self._attr_native_value = self._device[ios.ATTR_BATTERY][

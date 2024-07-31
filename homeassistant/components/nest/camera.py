@@ -1,5 +1,4 @@
 """Support for Google Nest SDM Cameras."""
-
 from __future__ import annotations
 
 import asyncio
@@ -48,12 +47,14 @@ async def async_setup_entry(
     device_manager: DeviceManager = hass.data[DOMAIN][entry.entry_id][
         DATA_DEVICE_MANAGER
     ]
-    async_add_entities(
-        NestCamera(device)
-        for device in device_manager.devices.values()
-        if CameraImageTrait.NAME in device.traits
-        or CameraLiveStreamTrait.NAME in device.traits
-    )
+    entities = []
+    for device in device_manager.devices.values():
+        if (
+            CameraImageTrait.NAME in device.traits
+            or CameraLiveStreamTrait.NAME in device.traits
+        ):
+            entities.append(NestCamera(device))
+    async_add_entities(entities)
 
 
 class NestCamera(Camera):

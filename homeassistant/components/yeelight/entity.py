@@ -1,5 +1,4 @@
 """Support for Xiaomi Yeelight WiFi color bulb."""
-
 from __future__ import annotations
 
 from homeassistant.config_entries import ConfigEntry

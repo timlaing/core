@@ -1,5 +1,4 @@
 """Test reproduce state for input boolean."""
-
 from homeassistant.core import HomeAssistant, State
 from homeassistant.helpers.state import async_reproduce_state
 from homeassistant.setup import async_setup_component

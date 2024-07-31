@@ -1,5 +1,4 @@
 """Tests for the diagnostics data provided by the RDW integration."""
-
 from syrupy import SnapshotAssertion
 
 from homeassistant.core import HomeAssistant

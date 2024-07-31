@@ -1,5 +1,4 @@
 """Exceptions specific to volvooncall."""
-
 from homeassistant.exceptions import HomeAssistantError
 
 

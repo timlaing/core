@@ -1,15 +1,12 @@
 """Interfaces with Egardia/Woonveilig alarm control panel."""
-
 from __future__ import annotations
 
 import logging
 
 import requests
 
-from homeassistant.components.alarm_control_panel import (
-    AlarmControlPanelEntity,
-    AlarmControlPanelEntityFeature,
-)
+import homeassistant.components.alarm_control_panel as alarm
+from homeassistant.components.alarm_control_panel import AlarmControlPanelEntityFeature
 from homeassistant.const import (
     STATE_ALARM_ARMED_AWAY,
     STATE_ALARM_ARMED_HOME,
@@ -63,11 +60,10 @@ def setup_platform(
     add_entities([device], True)
 
 
-class EgardiaAlarm(AlarmControlPanelEntity):
+class EgardiaAlarm(alarm.AlarmControlPanelEntity):
     """Representation of a Egardia alarm."""
 
     _attr_state: str | None
-    _attr_code_arm_required = False
     _attr_supported_features = (
         AlarmControlPanelEntityFeature.ARM_HOME
         | AlarmControlPanelEntityFeature.ARM_AWAY
@@ -105,7 +101,7 @@ class EgardiaAlarm(AlarmControlPanelEntity):
 
     def lookupstatusfromcode(self, statuscode):
         """Look at the rs_codes and returns the status from the code."""
-        return next(
+        status = next(
             (
                 status_group.upper()
                 for status_group, codes in self._rs_codes.items()
@@ -114,6 +110,7 @@ class EgardiaAlarm(AlarmControlPanelEntity):
             ),
             "UNKNOWN",
         )
+        return status
 
     def parsestatus(self, status):
         """Parse the status."""

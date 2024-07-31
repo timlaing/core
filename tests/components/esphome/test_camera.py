@@ -1,5 +1,4 @@
 """Test ESPHome cameras."""
-
 from collections.abc import Awaitable, Callable
 
 from aioesphomeapi import (
@@ -57,7 +56,7 @@ async def test_camera_single_image(
     assert state is not None
     assert state.state == STATE_IDLE
 
-    def _mock_camera_image():
+    async def _mock_camera_image():
         mock_device.set_state(CameraState(key=1, data=SMALLEST_VALID_JPEG_BYTES))
 
     mock_client.request_single_image = _mock_camera_image
@@ -146,8 +145,8 @@ async def test_camera_single_image_unavailable_during_request(
     assert state is not None
     assert state.state == STATE_IDLE
 
-    def _mock_camera_image():
-        hass.async_create_task(mock_device.mock_disconnect(False))
+    async def _mock_camera_image():
+        await mock_device.mock_disconnect(False)
 
     mock_client.request_single_image = _mock_camera_image
 
@@ -192,7 +191,7 @@ async def test_camera_stream(
     assert state.state == STATE_IDLE
     remaining_responses = 3
 
-    def _mock_camera_image():
+    async def _mock_camera_image():
         nonlocal remaining_responses
         if remaining_responses == 0:
             return
@@ -292,12 +291,12 @@ async def test_camera_stream_with_disconnection(
     assert state.state == STATE_IDLE
     remaining_responses = 3
 
-    def _mock_camera_image():
+    async def _mock_camera_image():
         nonlocal remaining_responses
         if remaining_responses == 0:
             return
         if remaining_responses == 2:
-            hass.async_create_task(mock_device.mock_disconnect(False))
+            await mock_device.mock_disconnect(False)
         remaining_responses -= 1
         mock_device.set_state(CameraState(key=1, data=SMALLEST_VALID_JPEG_BYTES))
 

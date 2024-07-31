@@ -1,9 +1,8 @@
 """Config flow for Flux LED/MagicLight."""
-
 from __future__ import annotations
 
 import contextlib
-from typing import Any, cast
+from typing import Any, Final, cast
 
 from flux_led.const import (
     ATTR_ID,
@@ -16,18 +15,11 @@ from flux_led.const import (
 from flux_led.scanner import FluxLEDDiscovery
 import voluptuous as vol
 
+from homeassistant import config_entries
 from homeassistant.components import dhcp
-from homeassistant.config_entries import (
-    SOURCE_IGNORE,
-    ConfigEntry,
-    ConfigEntryState,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlow,
-)
-from homeassistant.const import CONF_DEVICE, CONF_HOST
+from homeassistant.const import CONF_HOST
 from homeassistant.core import callback
-from homeassistant.data_entry_flow import AbortFlow
+from homeassistant.data_entry_flow import AbortFlow, FlowResult
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.typing import DiscoveryInfoType
@@ -55,8 +47,10 @@ from .discovery import (
 )
 from .util import format_as_flux_mac, mac_matches_by_one
 
+CONF_DEVICE: Final = "device"
 
-class FluxLedConfigFlow(ConfigFlow, domain=DOMAIN):
+
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Magic Home Integration."""
 
     VERSION = 1
@@ -69,13 +63,11 @@ class FluxLedConfigFlow(ConfigFlow, domain=DOMAIN):
 
     @staticmethod
     @callback
-    def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
+    def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> OptionsFlow:
         """Get the options flow for the Flux LED component."""
-        return FluxLedOptionsFlow(config_entry)
+        return OptionsFlow(config_entry)
 
-    async def async_step_dhcp(
-        self, discovery_info: dhcp.DhcpServiceInfo
-    ) -> ConfigFlowResult:
+    async def async_step_dhcp(self, discovery_info: dhcp.DhcpServiceInfo) -> FlowResult:
         """Handle discovery via dhcp."""
         self._discovered_device = FluxLEDDiscovery(
             ipaddr=discovery_info.ip,
@@ -94,7 +86,7 @@ class FluxLedConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_integration_discovery(
         self, discovery_info: DiscoveryInfoType
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle integration discovery."""
         self._allow_update_mac = True
         self._discovered_device = cast(FluxLEDDiscovery, discovery_info)
@@ -123,7 +115,7 @@ class FluxLedConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
             ):
                 continue
-            if entry.source == SOURCE_IGNORE:
+            if entry.source == config_entries.SOURCE_IGNORE:
                 raise AbortFlow("already_configured")
             if (
                 async_update_entry_from_discovery(
@@ -131,11 +123,13 @@ class FluxLedConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
                 and entry.state
                 not in (
-                    ConfigEntryState.SETUP_IN_PROGRESS,
-                    ConfigEntryState.NOT_LOADED,
+                    config_entries.ConfigEntryState.SETUP_IN_PROGRESS,
+                    config_entries.ConfigEntryState.NOT_LOADED,
                 )
-            ) or entry.state == ConfigEntryState.SETUP_RETRY:
-                self.hass.config_entries.async_schedule_reload(entry.entry_id)
+            ) or entry.state == config_entries.ConfigEntryState.SETUP_RETRY:
+                self.hass.async_create_task(
+                    self.hass.config_entries.async_reload(entry.entry_id)
+                )
             else:
                 async_dispatcher_send(
                     self.hass,
@@ -143,7 +137,7 @@ class FluxLedConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
             raise AbortFlow("already_configured")
 
-    async def _async_handle_discovery(self) -> ConfigFlowResult:
+    async def _async_handle_discovery(self) -> FlowResult:
         """Handle any discovery."""
         device = self._discovered_device
         assert device is not None
@@ -175,7 +169,7 @@ class FluxLedConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_discovery_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Confirm discovery."""
         assert self._discovered_device is not None
         device = self._discovered_device
@@ -196,9 +190,7 @@ class FluxLedConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
     @callback
-    def _async_create_entry_from_device(
-        self, device: FluxLEDDiscovery
-    ) -> ConfigFlowResult:
+    def _async_create_entry_from_device(self, device: FluxLEDDiscovery) -> FlowResult:
         """Create a config entry from a device."""
         self._async_abort_entries_match({CONF_HOST: device[ATTR_IPADDR]})
         name = async_name_from_discovery(device)
@@ -211,7 +203,7 @@ class FluxLedConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         errors = {}
         if user_input is not None:
@@ -237,7 +229,7 @@ class FluxLedConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_pick_device(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the step to pick discovered device."""
         if user_input is not None:
             mac = user_input[CONF_DEVICE]
@@ -310,16 +302,16 @@ class FluxLedConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class FluxLedOptionsFlow(OptionsFlow):
+class OptionsFlow(config_entries.OptionsFlow):
     """Handle flux_led options."""
 
-    def __init__(self, config_entry: ConfigEntry) -> None:
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize the flux_led options flow."""
         self._config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Configure the options."""
         errors: dict[str, str] = {}
         if user_input is not None:

@@ -1,5 +1,4 @@
 """Base entity for the LaMetric integration."""
-
 from __future__ import annotations
 
 from homeassistant.helpers.device_registry import (
@@ -27,7 +26,7 @@ class LaMetricEntity(CoordinatorEntity[LaMetricDataUpdateCoordinator]):
             },
             identifiers={(DOMAIN, coordinator.data.serial_number)},
             manufacturer="LaMetric Inc.",
-            model_id=coordinator.data.model,
+            model=coordinator.data.model,
             name=coordinator.data.name,
             sw_version=coordinator.data.os_version,
         )

@@ -1,5 +1,4 @@
 """Tests for the IoTaWatt integration."""
-
 from iotawattpy.sensor import Sensor
 
 INPUT_SENSOR = Sensor(

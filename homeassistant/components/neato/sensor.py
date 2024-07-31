@@ -1,5 +1,4 @@
 """Support for Neato sensors."""
-
 from __future__ import annotations
 
 from datetime import timedelta
@@ -30,8 +29,10 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up the Neato sensor using config entry."""
+    dev = []
     neato: NeatoHub = hass.data[NEATO_LOGIN]
-    dev = [NeatoSensor(neato, robot) for robot in hass.data[NEATO_ROBOTS]]
+    for robot in hass.data[NEATO_ROBOTS]:
+        dev.append(NeatoSensor(neato, robot))
 
     if not dev:
         return

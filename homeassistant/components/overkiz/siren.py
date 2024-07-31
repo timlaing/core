@@ -1,5 +1,4 @@
 """Support for Overkiz sirens."""
-
 from typing import Any
 
 from pyoverkiz.enums import OverkizState

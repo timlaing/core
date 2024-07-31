@@ -1,15 +1,17 @@
 """The lawn mower integration."""
-
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import timedelta
-from functools import cached_property
 import logging
 from typing import final
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.config_validation import (  # noqa: F401
+    PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA_BASE,
+)
 from homeassistant.helpers.entity import Entity, EntityDescription
 from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.helpers.typing import ConfigType
@@ -23,11 +25,9 @@ from .const import (
     LawnMowerEntityFeature,
 )
 
-_LOGGER = logging.getLogger(__name__)
-
-PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA
-PLATFORM_SCHEMA_BASE = cv.PLATFORM_SCHEMA_BASE
 SCAN_INTERVAL = timedelta(seconds=60)
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -65,17 +65,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return await component.async_unload_entry(entry)
 
 
-class LawnMowerEntityEntityDescription(EntityDescription, frozen_or_thawed=True):
+@dataclass
+class LawnMowerEntityEntityDescription(EntityDescription):
     """A class that describes lawn mower entities."""
 
 
-CACHED_PROPERTIES_WITH_ATTR_ = {
-    "activity",
-    "supported_features",
-}
-
-
-class LawnMowerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
+class LawnMowerEntity(Entity):
     """Base class for lawn mower entities."""
 
     entity_description: LawnMowerEntityEntityDescription
@@ -90,19 +85,19 @@ class LawnMowerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
             return None
         return str(activity)
 
-    @cached_property
+    @property
     def activity(self) -> LawnMowerActivity | None:
         """Return the current lawn mower activity."""
         return self._attr_activity
 
-    @cached_property
+    @property
     def supported_features(self) -> LawnMowerEntityFeature:
         """Flag lawn mower features that are supported."""
         return self._attr_supported_features
 
     def start_mowing(self) -> None:
         """Start or resume mowing."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
     async def async_start_mowing(self) -> None:
         """Start or resume mowing."""
@@ -110,7 +105,7 @@ class LawnMowerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     def dock(self) -> None:
         """Dock the mower."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
     async def async_dock(self) -> None:
         """Dock the mower."""
@@ -118,7 +113,7 @@ class LawnMowerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     def pause(self) -> None:
         """Pause the lawn mower."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
     async def async_pause(self) -> None:
         """Pause the lawn mower."""

@@ -16,7 +16,6 @@ LD2410_BLE_DISCOVERY_INFO = BluetoothServiceInfoBleak(
     advertisement=generate_advertisement_data(),
     time=0,
     connectable=True,
-    tx_power=-127,
 )
 
 NOT_LD2410_BLE_DISCOVERY_INFO = BluetoothServiceInfoBleak(
@@ -34,5 +33,4 @@ NOT_LD2410_BLE_DISCOVERY_INFO = BluetoothServiceInfoBleak(
     advertisement=generate_advertisement_data(),
     time=0,
     connectable=True,
-    tx_power=-127,
 )

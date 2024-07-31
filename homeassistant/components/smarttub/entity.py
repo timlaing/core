@@ -1,5 +1,4 @@
 """Base classes for SmartTub entities."""
-
 import smarttub
 
 from homeassistant.helpers.device_registry import DeviceInfo

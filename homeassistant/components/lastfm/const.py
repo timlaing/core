@@ -1,5 +1,4 @@
 """Constants for LastFM."""
-
 import logging
 from typing import Final
 

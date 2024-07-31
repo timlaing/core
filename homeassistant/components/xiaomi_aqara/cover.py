@@ -1,5 +1,4 @@
 """Support for Xiaomi curtain."""
-
 from typing import Any
 
 from homeassistant.components.cover import ATTR_POSITION, CoverEntity

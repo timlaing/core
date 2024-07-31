@@ -1,5 +1,4 @@
 """Support for Broadlink lights."""
-
 import logging
 from typing import Any
 

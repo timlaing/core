@@ -1,5 +1,4 @@
 """The Airzone integration."""
-
 from __future__ import annotations
 
 from asyncio import timeout

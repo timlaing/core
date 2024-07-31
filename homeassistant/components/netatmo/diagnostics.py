@@ -1,5 +1,4 @@
 """Diagnostics support for Netatmo."""
-
 from __future__ import annotations
 
 from typing import Any

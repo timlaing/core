@@ -1,10 +1,10 @@
 """Tests for the AndroidTV config flow."""
-
 from typing import Any
 from unittest.mock import patch
 
 import pytest
 
+from homeassistant import data_entry_flow
 from homeassistant.components.androidtv.config_flow import (
     APPS_NEW_ID,
     CONF_APP_DELETE,
@@ -36,7 +36,6 @@ from homeassistant.components.androidtv.const import (
 from homeassistant.config_entries import SOURCE_USER
 from homeassistant.const import CONF_DEVICE_CLASS, CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
 
 from .patchers import PATCH_ACCESS, PATCH_ISFILE, PATCH_SETUP_ENTRY
 
@@ -104,23 +103,20 @@ async def test_user(
     flow_result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER, "show_advanced_options": True}
     )
-    assert flow_result["type"] is FlowResultType.FORM
+    assert flow_result["type"] == data_entry_flow.FlowResultType.FORM
     assert flow_result["step_id"] == "user"
 
     # test with all provided
-    with (
-        patch(
-            CONNECT_METHOD,
-            return_value=(MockConfigDevice(eth_mac, wifi_mac), None),
-        ),
-        PATCH_SETUP_ENTRY as mock_setup_entry,
-    ):
+    with patch(
+        CONNECT_METHOD,
+        return_value=(MockConfigDevice(eth_mac, wifi_mac), None),
+    ), PATCH_SETUP_ENTRY as mock_setup_entry:
         result = await hass.config_entries.flow.async_configure(
             flow_result["flow_id"], user_input=config
         )
         await hass.async_block_till_done()
 
-        assert result["type"] is FlowResultType.CREATE_ENTRY
+        assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
         assert result["title"] == HOST
         assert result["data"] == config
 
@@ -132,15 +128,10 @@ async def test_user_adbkey(hass: HomeAssistant) -> None:
     config_data = CONFIG_PYTHON_ADB.copy()
     config_data[CONF_ADBKEY] = ADBKEY
 
-    with (
-        patch(
-            CONNECT_METHOD,
-            return_value=(MockConfigDevice(), None),
-        ),
-        PATCH_ISFILE,
-        PATCH_ACCESS,
-        PATCH_SETUP_ENTRY as mock_setup_entry,
-    ):
+    with patch(
+        CONNECT_METHOD,
+        return_value=(MockConfigDevice(), None),
+    ), PATCH_ISFILE, PATCH_ACCESS, PATCH_SETUP_ENTRY as mock_setup_entry:
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_USER, "show_advanced_options": True},
@@ -148,7 +139,7 @@ async def test_user_adbkey(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-        assert result["type"] is FlowResultType.CREATE_ENTRY
+        assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
         assert result["title"] == HOST
         assert result["data"] == config_data
 
@@ -166,22 +157,19 @@ async def test_error_both_key_server(hass: HomeAssistant) -> None:
         data=config_data,
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["errors"] == {"base": "key_and_server"}
 
-    with (
-        patch(
-            CONNECT_METHOD,
-            return_value=(MockConfigDevice(), None),
-        ),
-        PATCH_SETUP_ENTRY,
-    ):
+    with patch(
+        CONNECT_METHOD,
+        return_value=(MockConfigDevice(), None),
+    ), PATCH_SETUP_ENTRY:
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"], user_input=CONFIG_ADB_SERVER
         )
         await hass.async_block_till_done()
 
-        assert result2["type"] is FlowResultType.CREATE_ENTRY
+        assert result2["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
         assert result2["title"] == HOST
         assert result2["data"] == CONFIG_ADB_SERVER
 
@@ -196,22 +184,19 @@ async def test_error_invalid_key(hass: HomeAssistant) -> None:
         data=config_data,
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["errors"] == {"base": "adbkey_not_file"}
 
-    with (
-        patch(
-            CONNECT_METHOD,
-            return_value=(MockConfigDevice(), None),
-        ),
-        PATCH_SETUP_ENTRY,
-    ):
+    with patch(
+        CONNECT_METHOD,
+        return_value=(MockConfigDevice(), None),
+    ), PATCH_SETUP_ENTRY:
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"], user_input=CONFIG_ADB_SERVER
         )
         await hass.async_block_till_done()
 
-        assert result2["type"] is FlowResultType.CREATE_ENTRY
+        assert result2["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
         assert result2["title"] == HOST
         assert result2["data"] == CONFIG_ADB_SERVER
 
@@ -244,7 +229,7 @@ async def test_invalid_mac(
             data=config,
         )
 
-        assert result["type"] is FlowResultType.ABORT
+        assert result["type"] == data_entry_flow.FlowResultType.ABORT
         assert result["reason"] == "invalid_unique_id"
 
 
@@ -262,7 +247,7 @@ async def test_abort_if_host_exist(hass: HomeAssistant) -> None:
         data=config_data,
     )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == data_entry_flow.FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
 
@@ -285,7 +270,7 @@ async def test_abort_if_unique_exist(hass: HomeAssistant) -> None:
             data=CONFIG_ADB_SERVER,
         )
 
-        assert result["type"] is FlowResultType.ABORT
+        assert result["type"] == data_entry_flow.FlowResultType.ABORT
         assert result["reason"] == "already_configured"
 
 
@@ -300,7 +285,7 @@ async def test_on_connect_failed(hass: HomeAssistant) -> None:
         result = await hass.config_entries.flow.async_configure(
             flow_result["flow_id"], user_input=CONFIG_ADB_SERVER
         )
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == data_entry_flow.FlowResultType.FORM
         assert result["errors"] == {"base": "cannot_connect"}
 
     with patch(
@@ -310,22 +295,19 @@ async def test_on_connect_failed(hass: HomeAssistant) -> None:
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"], user_input=CONFIG_ADB_SERVER
         )
-        assert result2["type"] is FlowResultType.FORM
+        assert result2["type"] == data_entry_flow.FlowResultType.FORM
         assert result2["errors"] == {"base": "unknown"}
 
-    with (
-        patch(
-            CONNECT_METHOD,
-            return_value=(MockConfigDevice(), None),
-        ),
-        PATCH_SETUP_ENTRY,
-    ):
+    with patch(
+        CONNECT_METHOD,
+        return_value=(MockConfigDevice(), None),
+    ), PATCH_SETUP_ENTRY:
         result3 = await hass.config_entries.flow.async_configure(
             result2["flow_id"], user_input=CONFIG_ADB_SERVER
         )
         await hass.async_block_till_done()
 
-        assert result3["type"] is FlowResultType.CREATE_ENTRY
+        assert result3["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
         assert result3["title"] == HOST
         assert result3["data"] == CONFIG_ADB_SERVER
 
@@ -348,7 +330,7 @@ async def test_options_flow(hass: HomeAssistant) -> None:
         await hass.async_block_till_done()
         result = await hass.config_entries.options.async_init(config_entry.entry_id)
 
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == data_entry_flow.FlowResultType.FORM
         assert result["step_id"] == "init"
 
         # test app form with existing app
@@ -358,7 +340,7 @@ async def test_options_flow(hass: HomeAssistant) -> None:
                 CONF_APPS: "app1",
             },
         )
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == data_entry_flow.FlowResultType.FORM
         assert result["step_id"] == "apps"
 
         # test change value in apps form
@@ -368,7 +350,7 @@ async def test_options_flow(hass: HomeAssistant) -> None:
                 CONF_APP_NAME: "Appl1",
             },
         )
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == data_entry_flow.FlowResultType.FORM
         assert result["step_id"] == "init"
 
         # test app form with new app
@@ -378,7 +360,7 @@ async def test_options_flow(hass: HomeAssistant) -> None:
                 CONF_APPS: APPS_NEW_ID,
             },
         )
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == data_entry_flow.FlowResultType.FORM
         assert result["step_id"] == "apps"
 
         # test save value for new app
@@ -389,7 +371,7 @@ async def test_options_flow(hass: HomeAssistant) -> None:
                 CONF_APP_NAME: "Appl2",
             },
         )
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == data_entry_flow.FlowResultType.FORM
         assert result["step_id"] == "init"
 
         # test app form for delete
@@ -399,7 +381,7 @@ async def test_options_flow(hass: HomeAssistant) -> None:
                 CONF_APPS: "app1",
             },
         )
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == data_entry_flow.FlowResultType.FORM
         assert result["step_id"] == "apps"
 
         # test delete app1
@@ -410,7 +392,7 @@ async def test_options_flow(hass: HomeAssistant) -> None:
                 CONF_APP_DELETE: True,
             },
         )
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == data_entry_flow.FlowResultType.FORM
         assert result["step_id"] == "init"
 
         # test rules form with existing rule
@@ -420,7 +402,7 @@ async def test_options_flow(hass: HomeAssistant) -> None:
                 CONF_STATE_DETECTION_RULES: "com.plexapp.android",
             },
         )
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == data_entry_flow.FlowResultType.FORM
         assert result["step_id"] == "rules"
 
         # test change value in rule form with invalid json rule
@@ -430,7 +412,7 @@ async def test_options_flow(hass: HomeAssistant) -> None:
                 CONF_RULE_VALUES: "a",
             },
         )
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == data_entry_flow.FlowResultType.FORM
         assert result["step_id"] == "rules"
         assert result["errors"] == {"base": "invalid_det_rules"}
 
@@ -441,7 +423,7 @@ async def test_options_flow(hass: HomeAssistant) -> None:
                 CONF_RULE_VALUES: {"a": "b"},
             },
         )
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == data_entry_flow.FlowResultType.FORM
         assert result["step_id"] == "rules"
         assert result["errors"] == {"base": "invalid_det_rules"}
 
@@ -452,7 +434,7 @@ async def test_options_flow(hass: HomeAssistant) -> None:
                 CONF_RULE_VALUES: ["standby"],
             },
         )
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == data_entry_flow.FlowResultType.FORM
         assert result["step_id"] == "init"
 
         # test rule form with new rule
@@ -462,7 +444,7 @@ async def test_options_flow(hass: HomeAssistant) -> None:
                 CONF_STATE_DETECTION_RULES: RULES_NEW_ID,
             },
         )
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == data_entry_flow.FlowResultType.FORM
         assert result["step_id"] == "rules"
 
         # test save value for new rule
@@ -473,7 +455,7 @@ async def test_options_flow(hass: HomeAssistant) -> None:
                 CONF_RULE_VALUES: VALID_DETECT_RULE,
             },
         )
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == data_entry_flow.FlowResultType.FORM
         assert result["step_id"] == "init"
 
         # test rules form with delete existing rule
@@ -483,7 +465,7 @@ async def test_options_flow(hass: HomeAssistant) -> None:
                 CONF_STATE_DETECTION_RULES: "com.plexapp.android",
             },
         )
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == data_entry_flow.FlowResultType.FORM
         assert result["step_id"] == "rules"
 
         # test delete rule
@@ -493,7 +475,7 @@ async def test_options_flow(hass: HomeAssistant) -> None:
                 CONF_RULE_DELETE: True,
             },
         )
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == data_entry_flow.FlowResultType.FORM
         assert result["step_id"] == "init"
 
         result = await hass.config_entries.options.async_configure(
@@ -507,7 +489,7 @@ async def test_options_flow(hass: HomeAssistant) -> None:
             },
         )
 
-        assert result["type"] is FlowResultType.CREATE_ENTRY
+        assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
 
         apps_options = config_entry.options[CONF_APPS]
         assert apps_options.get("app1") is None

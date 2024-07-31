@@ -1,5 +1,4 @@
 """Platform for the iZone AC."""
-
 import voluptuous as vol
 
 from homeassistant import config_entries

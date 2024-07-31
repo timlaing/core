@@ -1,5 +1,6 @@
 """Test ESPHome buttones."""
 
+
 from unittest.mock import call
 
 from aioesphomeapi import APIClient, ButtonInfo

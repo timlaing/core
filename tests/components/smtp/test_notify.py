@@ -1,18 +1,15 @@
 """The tests for the notify smtp platform."""
-
-from pathlib import Path
 import re
 from unittest.mock import patch
 
 import pytest
 
 from homeassistant import config as hass_config
-from homeassistant.components import notify
+import homeassistant.components.notify as notify
 from homeassistant.components.smtp.const import DOMAIN
 from homeassistant.components.smtp.notify import MailNotificationService
 from homeassistant.const import SERVICE_RELOAD
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
 from homeassistant.setup import async_setup_component
 
 from tests.common import get_fixture_path
@@ -51,11 +48,8 @@ async def test_reload_notify(hass: HomeAssistant) -> None:
     assert hass.services.has_service(notify.DOMAIN, DOMAIN)
 
     yaml_path = get_fixture_path("configuration.yaml", "smtp")
-    with (
-        patch.object(hass_config, "YAML_CONFIG_FILE", yaml_path),
-        patch(
-            "homeassistant.components.smtp.notify.MailNotificationService.connection_is_valid"
-        ),
+    with patch.object(hass_config, "YAML_CONFIG_FILE", yaml_path), patch(
+        "homeassistant.components.smtp.notify.MailNotificationService.connection_is_valid"
     ):
         await hass.services.async_call(
             DOMAIN,
@@ -72,7 +66,7 @@ async def test_reload_notify(hass: HomeAssistant) -> None:
 @pytest.fixture
 def message():
     """Return MockSMTP object with test data."""
-    return MockSMTP(
+    mailer = MockSMTP(
         "localhost",
         25,
         5,
@@ -85,6 +79,7 @@ def message():
         0,
         True,
     )
+    return mailer
 
 
 HTML = """
@@ -106,7 +101,7 @@ EMAIL_DATA = [
     (
         "Test msg",
         {"images": ["tests/testing_config/notify/test.jpg"]},
-        "Content-Type: multipart/mixed",
+        "Content-Type: multipart/related",
     ),
     (
         "Test msg",
@@ -115,7 +110,7 @@ EMAIL_DATA = [
     ),
     (
         "Test msg",
-        {"html": HTML, "images": ["tests/testing_config/notify/test_not_exists.jpg"]},
+        {"html": HTML, "images": ["test.jpg"]},
         "Content-Type: multipart/related",
     ),
     (
@@ -137,50 +132,13 @@ EMAIL_DATA = [
     ],
 )
 def test_send_message(
-    hass: HomeAssistant, message_data, data, content_type, message
+    message_data, data, content_type, hass: HomeAssistant, message
 ) -> None:
     """Verify if we can send messages of all types correctly."""
     sample_email = "<mock@mock>"
-    message.hass = hass
-    hass.config.allowlist_external_dirs.add(Path("tests/testing_config").resolve())
     with patch("email.utils.make_msgid", return_value=sample_email):
         result, _ = message.send_message(message_data, data=data)
         assert content_type in result
-
-
-@pytest.mark.parametrize(
-    ("message_data", "data", "content_type"),
-    [
-        (
-            "Test msg",
-            {"images": ["tests/testing_config/notify/test.jpg"]},
-            "Content-Type: multipart/mixed",
-        ),
-    ],
-)
-def test_sending_insecure_files_fails(
-    hass: HomeAssistant,
-    message_data,
-    data,
-    content_type,
-    message,
-) -> None:
-    """Verify if we cannot send messages with insecure attachments."""
-    sample_email = "<mock@mock>"
-    message.hass = hass
-    with (
-        patch("email.utils.make_msgid", return_value=sample_email),
-        pytest.raises(ServiceValidationError) as exc,
-    ):
-        result, _ = message.send_message(message_data, data=data)
-    assert exc.value.translation_key == "remote_path_not_allowed"
-    assert exc.value.translation_domain == DOMAIN
-    assert (
-        str(exc.value.translation_placeholders["file_path"])
-        == "tests/testing_config/notify"
-    )
-    assert exc.value.translation_placeholders["url"]
-    assert exc.value.translation_placeholders["file_name"] == "test.jpg"
 
 
 def test_send_text_message(hass: HomeAssistant, message) -> None:

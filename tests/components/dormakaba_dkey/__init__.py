@@ -18,7 +18,6 @@ DKEY_DISCOVERY_INFO = BluetoothServiceInfoBleak(
     ),
     time=0,
     connectable=True,
-    tx_power=-127,
 )
 
 
@@ -37,5 +36,4 @@ NOT_DKEY_DISCOVERY_INFO = BluetoothServiceInfoBleak(
     advertisement=generate_advertisement_data(),
     time=0,
     connectable=True,
-    tx_power=-127,
 )

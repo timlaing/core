@@ -1,13 +1,12 @@
 """The tests for Alarm control panel device actions."""
-
 import pytest
 from pytest_unordered import unordered
 
-from homeassistant.components import automation
 from homeassistant.components.alarm_control_panel import (
     DOMAIN,
     AlarmControlPanelEntityFeature,
 )
+import homeassistant.components.automation as automation
 from homeassistant.components.device_automation import DeviceAutomationType
 from homeassistant.const import (
     CONF_PLATFORM,
@@ -24,13 +23,10 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.setup import async_setup_component
 
-from .common import MockAlarm
-
 from tests.common import (
     MockConfigEntry,
     async_get_device_automation_capabilities,
     async_get_device_automations,
-    setup_test_component_platform,
 )
 
 
@@ -135,12 +131,12 @@ async def test_get_actions(
 
 @pytest.mark.parametrize(
     ("hidden_by", "entity_category"),
-    [
+    (
         (er.RegistryEntryHider.INTEGRATION, None),
         (er.RegistryEntryHider.USER, None),
         (None, EntityCategory.CONFIG),
         (None, EntityCategory.DIAGNOSTIC),
-    ],
+    ),
 )
 async def test_get_actions_hidden_auxiliary(
     hass: HomeAssistant,
@@ -174,7 +170,7 @@ async def test_get_actions_hidden_auxiliary(
             "entity_id": entity_entry.id,
             "metadata": {"secondary": True},
         }
-        for action in ("disarm", "arm_away")
+        for action in ["disarm", "arm_away"]
     ]
     actions = await async_get_device_automations(
         hass, DeviceAutomationType.ACTION, device_entry.id
@@ -226,12 +222,11 @@ async def test_get_action_capabilities(
     hass: HomeAssistant,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
-    mock_alarm_control_panel_entities: dict[str, MockAlarm],
+    enable_custom_integrations: None,
 ) -> None:
     """Test we get the expected capabilities from a sensor trigger."""
-    setup_test_component_platform(
-        hass, DOMAIN, mock_alarm_control_panel_entities.values()
-    )
+    platform = getattr(hass.components, f"test.{DOMAIN}")
+    platform.init()
     assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
     await hass.async_block_till_done()
 
@@ -244,7 +239,7 @@ async def test_get_action_capabilities(
     entity_registry.async_get_or_create(
         DOMAIN,
         "test",
-        mock_alarm_control_panel_entities["no_arm_code"].unique_id,
+        platform.ENTITIES["no_arm_code"].unique_id,
         device_id=device_entry.id,
     )
 
@@ -274,12 +269,11 @@ async def test_get_action_capabilities_legacy(
     hass: HomeAssistant,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
-    mock_alarm_control_panel_entities: dict[str, MockAlarm],
+    enable_custom_integrations: None,
 ) -> None:
     """Test we get the expected capabilities from a sensor trigger."""
-    setup_test_component_platform(
-        hass, DOMAIN, mock_alarm_control_panel_entities.values()
-    )
+    platform = getattr(hass.components, f"test.{DOMAIN}")
+    platform.init()
     assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
     await hass.async_block_till_done()
 
@@ -292,7 +286,7 @@ async def test_get_action_capabilities_legacy(
     entity_registry.async_get_or_create(
         DOMAIN,
         "test",
-        mock_alarm_control_panel_entities["no_arm_code"].unique_id,
+        platform.ENTITIES["no_arm_code"].unique_id,
         device_id=device_entry.id,
     )
 
@@ -323,12 +317,11 @@ async def test_get_action_capabilities_arm_code(
     hass: HomeAssistant,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
-    mock_alarm_control_panel_entities: dict[str, MockAlarm],
+    enable_custom_integrations: None,
 ) -> None:
     """Test we get the expected capabilities from a sensor trigger."""
-    setup_test_component_platform(
-        hass, DOMAIN, mock_alarm_control_panel_entities.values()
-    )
+    platform = getattr(hass.components, f"test.{DOMAIN}")
+    platform.init()
     assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
     await hass.async_block_till_done()
 
@@ -341,7 +334,7 @@ async def test_get_action_capabilities_arm_code(
     entity_registry.async_get_or_create(
         DOMAIN,
         "test",
-        mock_alarm_control_panel_entities["arm_code"].unique_id,
+        platform.ENTITIES["arm_code"].unique_id,
         device_id=device_entry.id,
     )
 
@@ -379,12 +372,11 @@ async def test_get_action_capabilities_arm_code_legacy(
     hass: HomeAssistant,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
-    mock_alarm_control_panel_entities: dict[str, MockAlarm],
+    enable_custom_integrations: None,
 ) -> None:
     """Test we get the expected capabilities from a sensor trigger."""
-    setup_test_component_platform(
-        hass, DOMAIN, mock_alarm_control_panel_entities.values()
-    )
+    platform = getattr(hass.components, f"test.{DOMAIN}")
+    platform.init()
     assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
     await hass.async_block_till_done()
 
@@ -397,7 +389,7 @@ async def test_get_action_capabilities_arm_code_legacy(
     entity_registry.async_get_or_create(
         DOMAIN,
         "test",
-        mock_alarm_control_panel_entities["arm_code"].unique_id,
+        platform.ENTITIES["arm_code"].unique_id,
         device_id=device_entry.id,
     )
 
@@ -434,26 +426,17 @@ async def test_get_action_capabilities_arm_code_legacy(
 
 async def test_action(
     hass: HomeAssistant,
-    device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
-    mock_alarm_control_panel_entities: dict[str, MockAlarm],
+    enable_custom_integrations: None,
 ) -> None:
     """Test for turn_on and turn_off actions."""
-    setup_test_component_platform(
-        hass, DOMAIN, mock_alarm_control_panel_entities.values()
-    )
+    platform = getattr(hass.components, f"test.{DOMAIN}")
+    platform.init()
 
-    config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
-    device_entry = device_registry.async_get_or_create(
-        config_entry_id=config_entry.entry_id,
-        connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
-    )
     entity_entry = entity_registry.async_get_or_create(
         DOMAIN,
         "test",
-        mock_alarm_control_panel_entities["no_arm_code"].unique_id,
-        device_id=device_entry.id,
+        platform.ENTITIES["no_arm_code"].unique_id,
     )
 
     assert await async_setup_component(
@@ -468,7 +451,7 @@ async def test_action(
                     },
                     "action": {
                         "domain": DOMAIN,
-                        "device_id": device_entry.id,
+                        "device_id": "abcdefgh",
                         "entity_id": entity_entry.id,
                         "type": "arm_away",
                     },
@@ -480,7 +463,7 @@ async def test_action(
                     },
                     "action": {
                         "domain": DOMAIN,
-                        "device_id": device_entry.id,
+                        "device_id": "abcdefgh",
                         "entity_id": entity_entry.id,
                         "type": "arm_home",
                     },
@@ -492,7 +475,7 @@ async def test_action(
                     },
                     "action": {
                         "domain": DOMAIN,
-                        "device_id": device_entry.id,
+                        "device_id": "abcdefgh",
                         "entity_id": entity_entry.id,
                         "type": "arm_night",
                     },
@@ -504,7 +487,7 @@ async def test_action(
                     },
                     "action": {
                         "domain": DOMAIN,
-                        "device_id": device_entry.id,
+                        "device_id": "abcdefgh",
                         "entity_id": entity_entry.id,
                         "type": "arm_vacation",
                     },
@@ -513,7 +496,7 @@ async def test_action(
                     "trigger": {"platform": "event", "event_type": "test_event_disarm"},
                     "action": {
                         "domain": DOMAIN,
-                        "device_id": device_entry.id,
+                        "device_id": "abcdefgh",
                         "entity_id": entity_entry.id,
                         "type": "disarm",
                         "code": "1234",
@@ -526,7 +509,7 @@ async def test_action(
                     },
                     "action": {
                         "domain": DOMAIN,
-                        "device_id": device_entry.id,
+                        "device_id": "abcdefgh",
                         "entity_id": entity_entry.id,
                         "type": "trigger",
                     },
@@ -566,26 +549,17 @@ async def test_action(
 
 async def test_action_legacy(
     hass: HomeAssistant,
-    device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
-    mock_alarm_control_panel_entities: dict[str, MockAlarm],
+    enable_custom_integrations: None,
 ) -> None:
     """Test for turn_on and turn_off actions."""
-    setup_test_component_platform(
-        hass, DOMAIN, mock_alarm_control_panel_entities.values()
-    )
+    platform = getattr(hass.components, f"test.{DOMAIN}")
+    platform.init()
 
-    config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
-    device_entry = device_registry.async_get_or_create(
-        config_entry_id=config_entry.entry_id,
-        connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
-    )
     entity_entry = entity_registry.async_get_or_create(
         DOMAIN,
         "test",
-        mock_alarm_control_panel_entities["no_arm_code"].unique_id,
-        device_id=device_entry.id,
+        platform.ENTITIES["no_arm_code"].unique_id,
     )
 
     assert await async_setup_component(
@@ -600,7 +574,7 @@ async def test_action_legacy(
                     },
                     "action": {
                         "domain": DOMAIN,
-                        "device_id": device_entry.id,
+                        "device_id": "abcdefgh",
                         "entity_id": entity_entry.entity_id,
                         "type": "arm_away",
                     },

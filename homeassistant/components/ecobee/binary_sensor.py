@@ -1,5 +1,4 @@
 """Support for Ecobee binary sensors."""
-
 from __future__ import annotations
 
 from homeassistant.components.binary_sensor import (
@@ -42,11 +41,11 @@ class EcobeeBinarySensor(BinarySensorEntity):
     def __init__(self, data, sensor_name, sensor_index):
         """Initialize the Ecobee sensor."""
         self.data = data
-        self.sensor_name = sensor_name
+        self.sensor_name = sensor_name.rstrip()
         self.index = sensor_index
 
     @property
-    def unique_id(self) -> str | None:
+    def unique_id(self):
         """Return a unique identifier for this sensor."""
         for sensor in self.data.ecobee.get_remote_sensors(self.index):
             if sensor["name"] == self.sensor_name:
@@ -54,7 +53,6 @@ class EcobeeBinarySensor(BinarySensorEntity):
                     return f"{sensor['code']}-{self.device_class}"
                 thermostat = self.data.ecobee.get_thermostat(self.index)
                 return f"{thermostat['identifier']}-{sensor['id']}-{self.device_class}"
-        return None
 
     @property
     def device_info(self) -> DeviceInfo | None:

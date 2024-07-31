@@ -1,5 +1,4 @@
 """The tests for frontend storage."""
-
 from typing import Any
 
 import pytest
@@ -13,13 +12,15 @@ from tests.typing import WebSocketGenerator
 
 
 @pytest.fixture(autouse=True)
-def setup_frontend(hass: HomeAssistant) -> None:
+def setup_frontend(hass):
     """Fixture to setup the frontend."""
     hass.loop.run_until_complete(async_setup_component(hass, "frontend", {}))
 
 
 async def test_get_user_data_empty(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    hass: HomeAssistant,
+    hass_ws_client: WebSocketGenerator,
+    hass_storage: dict[str, Any],
 ) -> None:
     """Test get_user_data command."""
     client = await hass_ws_client(hass)
@@ -80,7 +81,9 @@ async def test_get_user_data(
 
 
 async def test_set_user_data_empty(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    hass: HomeAssistant,
+    hass_ws_client: WebSocketGenerator,
+    hass_storage: dict[str, Any],
 ) -> None:
     """Test set_user_data command."""
     client = await hass_ws_client(hass)

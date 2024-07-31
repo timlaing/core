@@ -1,5 +1,4 @@
 """Diagnostics support for the BMW Connected Drive integration."""
-
 from __future__ import annotations
 
 from dataclasses import asdict
@@ -9,16 +8,17 @@ from typing import TYPE_CHECKING, Any
 from bimmer_connected.utils import MyBMWJSONEncoder
 
 from homeassistant.components.diagnostics.util import async_redact_data
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntry
 
-from . import BMWConfigEntry
-from .const import CONF_REFRESH_TOKEN
+from .const import CONF_REFRESH_TOKEN, DOMAIN
 
 if TYPE_CHECKING:
     from bimmer_connected.vehicle import MyBMWVehicle
 
+    from .coordinator import BMWDataUpdateCoordinator
 
 TO_REDACT_INFO = [CONF_USERNAME, CONF_PASSWORD, CONF_REFRESH_TOKEN]
 TO_REDACT_DATA = [
@@ -46,10 +46,10 @@ def vehicle_to_dict(vehicle: MyBMWVehicle | None) -> dict:
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: BMWConfigEntry
+    hass: HomeAssistant, config_entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    coordinator = config_entry.runtime_data.coordinator
+    coordinator: BMWDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
 
     coordinator.account.config.log_responses = True
     await coordinator.account.get_vehicles(force_init=True)
@@ -72,10 +72,10 @@ async def async_get_config_entry_diagnostics(
 
 
 async def async_get_device_diagnostics(
-    hass: HomeAssistant, config_entry: BMWConfigEntry, device: DeviceEntry
+    hass: HomeAssistant, config_entry: ConfigEntry, device: DeviceEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a device."""
-    coordinator = config_entry.runtime_data.coordinator
+    coordinator: BMWDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
 
     coordinator.account.config.log_responses = True
     await coordinator.account.get_vehicles(force_init=True)

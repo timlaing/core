@@ -1,5 +1,4 @@
 """Platform for UPB link integration."""
-
 from typing import Any
 
 from homeassistant.components.scene import Scene

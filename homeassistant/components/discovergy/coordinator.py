@@ -1,5 +1,4 @@
 """DataUpdateCoordinator for the Discovergy integration."""
-
 from __future__ import annotations
 
 from datetime import timedelta
@@ -13,11 +12,16 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
+from .const import DOMAIN
+
 _LOGGER = logging.getLogger(__name__)
 
 
 class DiscovergyUpdateCoordinator(DataUpdateCoordinator[Reading]):
     """The Discovergy update coordinator."""
+
+    discovergy_client: Discovergy
+    meter: Meter
 
     def __init__(
         self,
@@ -32,16 +36,14 @@ class DiscovergyUpdateCoordinator(DataUpdateCoordinator[Reading]):
         super().__init__(
             hass,
             _LOGGER,
-            name=f"Discovergy meter {meter.meter_id}",
+            name=DOMAIN,
             update_interval=timedelta(seconds=30),
         )
 
     async def _async_update_data(self) -> Reading:
         """Get last reading for meter."""
         try:
-            return await self.discovergy_client.meter_last_reading(
-                meter_id=self.meter.meter_id
-            )
+            return await self.discovergy_client.meter_last_reading(self.meter.meter_id)
         except InvalidLogin as err:
             raise ConfigEntryAuthFailed(
                 f"Auth expired while fetching last reading for meter {self.meter.meter_id}"

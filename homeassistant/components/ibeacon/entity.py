@@ -1,5 +1,4 @@
 """Support for iBeacon device sensors."""
-
 from __future__ import annotations
 
 from abc import abstractmethod

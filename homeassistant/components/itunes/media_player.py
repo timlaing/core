@@ -1,5 +1,4 @@
 """Support for interfacing to iTunes API."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -8,7 +7,7 @@ import requests
 import voluptuous as vol
 
 from homeassistant.components.media_player import (
-    PLATFORM_SCHEMA as MEDIA_PLAYER_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
@@ -27,7 +26,7 @@ DEFAULT_TIMEOUT = 10
 DOMAIN = "itunes"
 
 
-PLATFORM_SCHEMA = MEDIA_PLAYER_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_HOST): cv.string,
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
@@ -66,7 +65,9 @@ class Itunes:
         try:
             if method == "GET":
                 response = requests.get(url, timeout=DEFAULT_TIMEOUT)
-            elif method in ("POST", "PUT"):
+            elif method == "POST":
+                response = requests.put(url, params, timeout=DEFAULT_TIMEOUT)
+            elif method == "PUT":
                 response = requests.put(url, params, timeout=DEFAULT_TIMEOUT)
             elif method == "DELETE":
                 response = requests.delete(url, timeout=DEFAULT_TIMEOUT)

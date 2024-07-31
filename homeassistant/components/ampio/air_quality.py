@@ -1,5 +1,4 @@
 """Support for Ampio Air Quality data."""
-
 from __future__ import annotations
 
 import logging
@@ -9,7 +8,7 @@ from asmog import AmpioSmog
 import voluptuous as vol
 
 from homeassistant.components.air_quality import (
-    PLATFORM_SCHEMA as AIR_QUALITY_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA as BASE_PLATFORM_SCHEMA,
     AirQualityEntity,
 )
 from homeassistant.const import CONF_NAME
@@ -24,7 +23,7 @@ from .const import CONF_STATION_ID, SCAN_INTERVAL
 
 _LOGGER: Final = logging.getLogger(__name__)
 
-PLATFORM_SCHEMA: Final = AIR_QUALITY_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA: Final = BASE_PLATFORM_SCHEMA.extend(
     {vol.Required(CONF_STATION_ID): cv.string, vol.Optional(CONF_NAME): cv.string}
 )
 

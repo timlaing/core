@@ -1,5 +1,4 @@
 """Support for Pocket Casts."""
-
 from __future__ import annotations
 
 from datetime import timedelta
@@ -8,10 +7,7 @@ import logging
 from pycketcasts import pocketcasts
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
-    SensorEntity,
-)
+from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
@@ -25,7 +21,7 @@ SENSOR_NAME = "Pocketcasts unlistened episodes"
 
 SCAN_INTERVAL = timedelta(minutes=5)
 
-PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {vol.Required(CONF_PASSWORD): cv.string, vol.Required(CONF_USERNAME): cv.string}
 )
 

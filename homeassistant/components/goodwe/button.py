@@ -1,5 +1,4 @@
 """GoodWe PV inverter selection settings entities."""
-
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -19,16 +18,24 @@ from .const import DOMAIN, KEY_DEVICE_INFO, KEY_INVERTER
 _LOGGER = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True, kw_only=True)
-class GoodweButtonEntityDescription(ButtonEntityDescription):
-    """Class describing Goodwe button entities."""
+@dataclass
+class GoodweButtonEntityDescriptionRequired:
+    """Required attributes of GoodweButtonEntityDescription."""
 
     action: Callable[[Inverter], Awaitable[None]]
+
+
+@dataclass
+class GoodweButtonEntityDescription(
+    ButtonEntityDescription, GoodweButtonEntityDescriptionRequired
+):
+    """Class describing Goodwe button entities."""
 
 
 SYNCHRONIZE_CLOCK = GoodweButtonEntityDescription(
     key="synchronize_clock",
     translation_key="synchronize_clock",
+    icon="mdi:clock-check-outline",
     entity_category=EntityCategory.CONFIG,
     action=lambda inv: inv.write_setting("time", datetime.now()),
 )

@@ -1,5 +1,4 @@
 """The notify_events component."""
-
 import voluptuous as vol
 
 from homeassistant.const import CONF_TOKEN, Platform

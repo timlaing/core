@@ -1,5 +1,4 @@
 """Tests for the EnergyZero integration."""
-
 from unittest.mock import MagicMock, patch
 
 from energyzero import EnergyZeroConnectionError

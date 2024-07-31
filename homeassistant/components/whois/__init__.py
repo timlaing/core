@@ -1,5 +1,4 @@
 """The Whois integration."""
-
 from __future__ import annotations
 
 from whois import Domain, query as whois_query

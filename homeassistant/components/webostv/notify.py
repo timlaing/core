@@ -1,5 +1,4 @@
 """Support for LG WebOS TV notification service."""
-
 from __future__ import annotations
 
 import logging

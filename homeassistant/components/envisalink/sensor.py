@@ -1,5 +1,4 @@
 """Support for Envisalink sensors (shows panel info)."""
-
 from __future__ import annotations
 
 import logging

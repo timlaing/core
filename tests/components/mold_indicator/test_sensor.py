@@ -1,12 +1,11 @@
 """The tests for the MoldIndicator sensor."""
-
 import pytest
 
-from homeassistant.components import sensor
 from homeassistant.components.mold_indicator.sensor import (
     ATTR_CRITICAL_TEMP,
     ATTR_DEWPOINT,
 )
+import homeassistant.components.sensor as sensor
 from homeassistant.const import (
     ATTR_UNIT_OF_MEASUREMENT,
     PERCENTAGE,
@@ -18,7 +17,7 @@ from homeassistant.setup import async_setup_component
 
 
 @pytest.fixture(autouse=True)
-def init_sensors_fixture(hass: HomeAssistant) -> None:
+def init_sensors_fixture(hass):
     """Set up things to be run when tests are started."""
     hass.states.async_set(
         "test.indoortemp", "20", {ATTR_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS}

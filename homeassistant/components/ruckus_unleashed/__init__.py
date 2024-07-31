@@ -1,5 +1,4 @@
 """The Ruckus Unleashed integration."""
-
 import logging
 
 from aioruckus import AjaxSession

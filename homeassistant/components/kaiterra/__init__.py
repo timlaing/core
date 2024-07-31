@@ -1,5 +1,4 @@
 """Support for Kaiterra devices."""
-
 import voluptuous as vol
 
 from homeassistant.const import (

@@ -1,5 +1,4 @@
 """Plugwise Sensor component for Home Assistant."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -12,6 +11,7 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     LIGHT_LUX,
     PERCENTAGE,
@@ -24,15 +24,15 @@ from homeassistant.const import (
     UnitOfVolume,
     UnitOfVolumeFlowRate,
 )
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import PlugwiseConfigEntry
+from .const import DOMAIN
 from .coordinator import PlugwiseDataUpdateCoordinator
 from .entity import PlugwiseEntity
 
 
-@dataclass(frozen=True)
+@dataclass
 class PlugwiseSensorEntityDescription(SensorEntityDescription):
     """Describes Plugwise sensor entity."""
 
@@ -315,6 +315,7 @@ SENSORS: tuple[PlugwiseSensorEntityDescription, ...] = (
     PlugwiseSensorEntityDescription(
         key="gas_consumed_interval",
         translation_key="gas_consumed_interval",
+        icon="mdi:meter-gas",
         native_unit_of_measurement=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR,
         state_class=SensorStateClass.MEASUREMENT,
     ),
@@ -356,6 +357,7 @@ SENSORS: tuple[PlugwiseSensorEntityDescription, ...] = (
     PlugwiseSensorEntityDescription(
         key="modulation_level",
         translation_key="modulation_level",
+        icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         entity_category=EntityCategory.DIAGNOSTIC,
         state_class=SensorStateClass.MEASUREMENT,
@@ -363,6 +365,7 @@ SENSORS: tuple[PlugwiseSensorEntityDescription, ...] = (
     PlugwiseSensorEntityDescription(
         key="valve_position",
         translation_key="valve_position",
+        icon="mdi:valve",
         entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -402,28 +405,29 @@ SENSORS: tuple[PlugwiseSensorEntityDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: PlugwiseConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Smile sensors from a config entry."""
-    coordinator = entry.runtime_data
+    coordinator = hass.data[DOMAIN][config_entry.entry_id]
 
-    @callback
-    def _add_entities() -> None:
-        """Add Entities."""
-        if not coordinator.new_devices:
-            return
+    entities: list[PlugwiseSensorEntity] = []
+    for device_id, device in coordinator.data.devices.items():
+        if not (sensors := device.get("sensors")):
+            continue
+        for description in SENSORS:
+            if description.key not in sensors:
+                continue
 
-        async_add_entities(
-            PlugwiseSensorEntity(coordinator, device_id, description)
-            for device_id in coordinator.new_devices
-            if (sensors := coordinator.data.devices[device_id].get("sensors"))
-            for description in SENSORS
-            if description.key in sensors
-        )
+            entities.append(
+                PlugwiseSensorEntity(
+                    coordinator,
+                    device_id,
+                    description,
+                )
+            )
 
-    _add_entities()
-    entry.async_on_unload(coordinator.async_add_listener(_add_entities))
+    async_add_entities(entities)
 
 
 class PlugwiseSensorEntity(PlugwiseEntity, SensorEntity):

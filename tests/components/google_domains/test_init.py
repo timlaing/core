@@ -1,5 +1,4 @@
 """Test the Google Domains component."""
-
 from datetime import timedelta
 
 import pytest
@@ -20,9 +19,7 @@ UPDATE_URL = f"https://{USERNAME}:{PASSWORD}@domains.google.com/nic/update"
 
 
 @pytest.fixture
-def setup_google_domains(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
-) -> None:
+def setup_google_domains(hass, aioclient_mock):
     """Fixture that sets up NamecheapDNS."""
     aioclient_mock.get(UPDATE_URL, params={"hostname": DOMAIN}, text="ok 0.0.0.0")
 

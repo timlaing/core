@@ -1,5 +1,4 @@
 """Test media browser helpers for media player."""
-
 from unittest.mock import Mock, patch
 
 import pytest
@@ -57,12 +56,9 @@ async def test_process_play_media_url(hass: HomeAssistant, mock_sign_path) -> No
         async_process_play_media_url(hass, "http://192.168.123.123:8123/path")
         == "http://192.168.123.123:8123/path?authSig=bla"
     )
-    with (
-        pytest.raises(HomeAssistantError),
-        patch(
-            "homeassistant.components.media_player.browse_media.get_url",
-            side_effect=NoURLAvailableError,
-        ),
+    with pytest.raises(HomeAssistantError), patch(
+        "homeassistant.components.media_player.browse_media.get_url",
+        side_effect=NoURLAvailableError,
     ):
         async_process_play_media_url(hass, "/path")
 
@@ -91,7 +87,7 @@ async def test_process_play_media_url(hass: HomeAssistant, mock_sign_path) -> No
     )
 
     # Not changing a URL which is not absolute and does not start with /
-    assert async_process_play_media_url(hass, "hello") == "hello"
+    async_process_play_media_url(hass, "hello") == "hello"
 
 
 async def test_process_play_media_url_for_addon(

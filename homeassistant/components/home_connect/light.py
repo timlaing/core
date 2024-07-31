@@ -1,5 +1,4 @@
 """Provides a light for Home Connect."""
-
 import logging
 from math import ceil
 from typing import Any

@@ -1,16 +1,17 @@
 """The NEW_NAME integration."""
-
 from __future__ import annotations
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
+from .const import DOMAIN
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up NEW_NAME from a config entry."""
     # TODO Optionally store an object for your platforms to access
-    # entry.runtime_data = ...
+    # hass.data[DOMAIN][entry.entry_id] = ...
 
     # TODO Optionally validate config entry options before setting up platform
 
@@ -30,4 +31,9 @@ async def config_entry_update_listener(hass: HomeAssistant, entry: ConfigEntry) 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, (Platform.SENSOR,))
+    if unload_ok := await hass.config_entries.async_unload_platforms(
+        entry, (Platform.SENSOR,)
+    ):
+        hass.data[DOMAIN].pop(entry.entry_id)
+
+    return unload_ok

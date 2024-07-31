@@ -1,5 +1,4 @@
 """ESPHome constants."""
-
 from awesomeversion import AwesomeVersion
 
 DOMAIN = "esphome"

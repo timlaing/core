@@ -1,5 +1,4 @@
 """Support for WiLight Fan."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -56,14 +55,9 @@ class WiLightFan(WiLightDevice, FanEntity):
     """Representation of a WiLights fan."""
 
     _attr_name = None
+    _attr_icon = "mdi:fan"
     _attr_speed_count = len(ORDERED_NAMED_FAN_SPEEDS)
-    _attr_supported_features = (
-        FanEntityFeature.SET_SPEED
-        | FanEntityFeature.DIRECTION
-        | FanEntityFeature.TURN_ON
-        | FanEntityFeature.TURN_OFF
-    )
-    _enable_turn_on_off_backwards_compatibility = False
+    _attr_supported_features = FanEntityFeature.SET_SPEED | FanEntityFeature.DIRECTION
 
     def __init__(self, api_device: PyWiLightDevice, index: str, item_name: str) -> None:
         """Initialize the device."""

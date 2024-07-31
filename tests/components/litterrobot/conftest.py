@@ -1,5 +1,4 @@
 """Configure pytest for Litter-Robot tests."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -124,15 +123,11 @@ async def setup_integration(
     )
     entry.add_to_hass(hass)
 
-    with (
-        patch(
-            "homeassistant.components.litterrobot.hub.Account",
-            return_value=mock_account,
-        ),
-        patch(
-            "homeassistant.components.litterrobot.PLATFORMS_BY_TYPE",
-            {Robot: (platform_domain,)} if platform_domain else {},
-        ),
+    with patch(
+        "homeassistant.components.litterrobot.hub.Account", return_value=mock_account
+    ), patch(
+        "homeassistant.components.litterrobot.PLATFORMS_BY_TYPE",
+        {Robot: (platform_domain,)} if platform_domain else {},
     ):
         await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()

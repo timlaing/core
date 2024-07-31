@@ -1,5 +1,4 @@
 """The Fjäråskupan data update coordinator."""
-
 from __future__ import annotations
 
 from collections.abc import AsyncIterator

@@ -1,5 +1,4 @@
 """The test for the random number sensor platform."""
-
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 

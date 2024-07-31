@@ -1,5 +1,4 @@
 """Helpers for mobile_app."""
-
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
@@ -37,49 +36,45 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
-def setup_decrypt(
-    key_encoder: type[RawEncoder | HexEncoder],
-) -> Callable[[bytes, bytes], bytes]:
+def setup_decrypt(key_encoder) -> tuple[int, Callable]:
     """Return decryption function and length of key.
 
     Async friendly.
     """
 
-    def decrypt(ciphertext: bytes, key: bytes) -> bytes:
+    def decrypt(ciphertext, key):
         """Decrypt ciphertext using key."""
         return SecretBox(key, encoder=key_encoder).decrypt(
             ciphertext, encoder=Base64Encoder
         )
 
-    return decrypt
+    return (SecretBox.KEY_SIZE, decrypt)
 
 
-def setup_encrypt(
-    key_encoder: type[RawEncoder | HexEncoder],
-) -> Callable[[bytes, bytes], bytes]:
+def setup_encrypt(key_encoder) -> tuple[int, Callable]:
     """Return encryption function and length of key.
 
     Async friendly.
     """
 
-    def encrypt(ciphertext: bytes, key: bytes) -> bytes:
+    def encrypt(ciphertext, key):
         """Encrypt ciphertext using key."""
         return SecretBox(key, encoder=key_encoder).encrypt(
             ciphertext, encoder=Base64Encoder
         )
 
-    return encrypt
+    return (SecretBox.KEY_SIZE, encrypt)
 
 
 def _decrypt_payload_helper(
-    key: str | bytes,
-    ciphertext: bytes,
-    key_bytes: bytes,
-    key_encoder: type[RawEncoder | HexEncoder],
+    key: str | None,
+    ciphertext: str,
+    get_key_bytes: Callable[[str, int], str | bytes],
+    key_encoder,
 ) -> JsonValueType | None:
     """Decrypt encrypted payload."""
     try:
-        decrypt = setup_decrypt(key_encoder)
+        keylen, decrypt = setup_decrypt(key_encoder)
     except OSError:
         _LOGGER.warning("Ignoring encrypted payload because libsodium not installed")
         return None
@@ -88,30 +83,33 @@ def _decrypt_payload_helper(
         _LOGGER.warning("Ignoring encrypted payload because no decryption key known")
         return None
 
+    key_bytes = get_key_bytes(key, keylen)
+
     msg_bytes = decrypt(ciphertext, key_bytes)
     message = json_loads(msg_bytes)
     _LOGGER.debug("Successfully decrypted mobile_app payload")
     return message
 
 
-def decrypt_payload(key: str, ciphertext: bytes) -> JsonValueType | None:
+def decrypt_payload(key: str | None, ciphertext: str) -> JsonValueType | None:
     """Decrypt encrypted payload."""
-    return _decrypt_payload_helper(key, ciphertext, key.encode("utf-8"), HexEncoder)
+
+    def get_key_bytes(key: str, keylen: int) -> str:
+        return key
+
+    return _decrypt_payload_helper(key, ciphertext, get_key_bytes, HexEncoder)
 
 
-def _convert_legacy_encryption_key(key: str) -> bytes:
-    """Convert legacy encryption key."""
-    keylen = SecretBox.KEY_SIZE
-    key_bytes = key.encode("utf-8")
-    key_bytes = key_bytes[:keylen]
-    return key_bytes.ljust(keylen, b"\0")
-
-
-def decrypt_payload_legacy(key: str, ciphertext: bytes) -> JsonValueType | None:
+def decrypt_payload_legacy(key: str | None, ciphertext: str) -> JsonValueType | None:
     """Decrypt encrypted payload."""
-    return _decrypt_payload_helper(
-        key, ciphertext, _convert_legacy_encryption_key(key), RawEncoder
-    )
+
+    def get_key_bytes(key: str, keylen: int) -> bytes:
+        key_bytes = key.encode("utf-8")
+        key_bytes = key_bytes[:keylen]
+        key_bytes = key_bytes.ljust(keylen, b"\0")
+        return key_bytes
+
+    return _decrypt_payload_helper(key, ciphertext, get_key_bytes, RawEncoder)
 
 
 def registration_context(registration: Mapping[str, Any]) -> Context:
@@ -140,6 +138,16 @@ def error_response(
         status=status,
         headers=headers,
     )
+
+
+def supports_encryption() -> bool:
+    """Test if we support encryption."""
+    try:
+        import nacl  # noqa: F401 pylint: disable=import-outside-toplevel
+
+        return True
+    except OSError:
+        return False
 
 
 def safe_registration(registration: dict) -> dict:
@@ -176,14 +184,16 @@ def webhook_response(
     json_data = json_bytes(data)
 
     if registration[ATTR_SUPPORTS_ENCRYPTION]:
-        encrypt = setup_encrypt(
+        keylen, encrypt = setup_encrypt(
             HexEncoder if ATTR_NO_LEGACY_ENCRYPTION in registration else RawEncoder
         )
 
         if ATTR_NO_LEGACY_ENCRYPTION in registration:
             key: bytes = registration[CONF_SECRET]
         else:
-            key = _convert_legacy_encryption_key(registration[CONF_SECRET])
+            key = registration[CONF_SECRET].encode("utf-8")
+            key = key[:keylen]
+            key = key.ljust(keylen, b"\0")
 
         enc_data = encrypt(json_data, key).decode("utf-8")
         json_data = json_bytes({"encrypted": True, "encrypted_data": enc_data})

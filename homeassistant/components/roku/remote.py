@@ -1,5 +1,4 @@
 """Support for the Roku remote."""
-
 from __future__ import annotations
 
 from collections.abc import Iterable

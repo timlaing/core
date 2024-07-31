@@ -1,10 +1,8 @@
 """Class to hold all thermostat accessories."""
-
 import logging
 from typing import Any
 
 from pyhap.const import CATEGORY_HUMIDIFIER
-from pyhap.util import callback as pyhap_callback
 
 from homeassistant.components.humidifier import (
     ATTR_CURRENT_HUMIDITY,
@@ -25,14 +23,12 @@ from homeassistant.const import (
     SERVICE_TURN_ON,
     STATE_ON,
 )
-from homeassistant.core import (
-    Event,
+from homeassistant.core import State, callback
+from homeassistant.helpers.event import (
     EventStateChangedData,
-    HassJobType,
-    State,
-    callback,
+    async_track_state_change_event,
 )
-from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.typing import EventType
 
 from .accessories import TYPES, HomeAccessory
 from .const import (
@@ -177,9 +173,7 @@ class HumidifierDehumidifier(HomeAccessory):
             if humidity_state := states.get(self.linked_humidity_sensor):
                 self._async_update_current_humidity(humidity_state)
 
-    @callback
-    @pyhap_callback  # type: ignore[misc]
-    def run(self) -> None:
+    async def run(self) -> None:
         """Handle accessory driver started event.
 
         Run inside the Home Assistant event loop.
@@ -190,15 +184,14 @@ class HumidifierDehumidifier(HomeAccessory):
                     self.hass,
                     [self.linked_humidity_sensor],
                     self.async_update_current_humidity_event,
-                    job_type=HassJobType.Callback,
                 )
             )
 
-        super().run()
+        await super().run()
 
     @callback
     def async_update_current_humidity_event(
-        self, event: Event[EventStateChangedData]
+        self, event: EventType[EventStateChangedData]
     ) -> None:
         """Handle state change event listener callback."""
         self._async_update_current_humidity(event.data["new_state"])

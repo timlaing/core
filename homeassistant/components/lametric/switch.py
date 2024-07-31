@@ -1,5 +1,4 @@
 """Support for LaMetric switches."""
-
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
@@ -20,19 +19,28 @@ from .entity import LaMetricEntity
 from .helpers import lametric_exception_handler
 
 
-@dataclass(frozen=True, kw_only=True)
-class LaMetricSwitchEntityDescription(SwitchEntityDescription):
+@dataclass
+class LaMetricEntityDescriptionMixin:
+    """Mixin values for LaMetric entities."""
+
+    is_on_fn: Callable[[Device], bool]
+    set_fn: Callable[[LaMetricDevice, bool], Awaitable[Any]]
+
+
+@dataclass
+class LaMetricSwitchEntityDescription(
+    SwitchEntityDescription, LaMetricEntityDescriptionMixin
+):
     """Class describing LaMetric switch entities."""
 
     available_fn: Callable[[Device], bool] = lambda device: True
-    is_on_fn: Callable[[Device], bool]
-    set_fn: Callable[[LaMetricDevice, bool], Awaitable[Any]]
 
 
 SWITCHES = [
     LaMetricSwitchEntityDescription(
         key="bluetooth",
         translation_key="bluetooth",
+        icon="mdi:bluetooth",
         entity_category=EntityCategory.CONFIG,
         available_fn=lambda device: device.bluetooth.available,
         is_on_fn=lambda device: device.bluetooth.active,

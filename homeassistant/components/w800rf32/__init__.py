@@ -1,5 +1,4 @@
 """Support for w800rf32 devices."""
-
 import logging
 
 import voluptuous as vol

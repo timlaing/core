@@ -1,5 +1,4 @@
 """The IntelliFire Light."""
-
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
@@ -23,7 +22,7 @@ from .coordinator import IntellifireDataUpdateCoordinator
 from .entity import IntellifireEntity
 
 
-@dataclass(frozen=True)
+@dataclass
 class IntellifireLightRequiredKeysMixin:
     """Required keys for fan entity."""
 
@@ -31,7 +30,7 @@ class IntellifireLightRequiredKeysMixin:
     value_fn: Callable[[IntellifirePollData], bool]
 
 
-@dataclass(frozen=True)
+@dataclass
 class IntellifireLightEntityDescription(
     LightEntityDescription, IntellifireLightRequiredKeysMixin
 ):

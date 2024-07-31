@@ -1,5 +1,4 @@
 """Tests for the CPU Speed integration."""
-
 from unittest.mock import MagicMock
 
 import pytest

@@ -1,5 +1,4 @@
 """The yale_smart_alarm component."""
-
 from __future__ import annotations
 
 from homeassistant.components.lock import CONF_DEFAULT_CODE, DOMAIN as LOCK_DOMAIN
@@ -9,13 +8,11 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import entity_registry as er
 
-from .const import LOGGER, PLATFORMS
+from .const import COORDINATOR, DOMAIN, LOGGER, PLATFORMS
 from .coordinator import YaleDataUpdateCoordinator
 
-type YaleConfigEntry = ConfigEntry[YaleDataUpdateCoordinator]
 
-
-async def async_setup_entry(hass: HomeAssistant, entry: YaleConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Yale from a config entry."""
 
     coordinator = YaleDataUpdateCoordinator(hass, entry)
@@ -23,7 +20,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: YaleConfigEntry) -> bool
         raise ConfigEntryAuthFailed
 
     await coordinator.async_config_entry_first_refresh()
-    entry.runtime_data = coordinator
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
+        COORDINATOR: coordinator,
+    }
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(update_listener))
@@ -38,7 +37,11 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+    if await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        hass.data[DOMAIN].pop(entry.entry_id)
+        return True
+    return False
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -61,7 +64,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
             hass.config_entries.async_update_entry(entry, options=new_options)
 
-        hass.config_entries.async_update_entry(entry, version=2)
+        entry.version = 2
 
     LOGGER.info("Migration to version %s successful", entry.version)
 

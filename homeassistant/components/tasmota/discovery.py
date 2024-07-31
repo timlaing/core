@@ -1,5 +1,4 @@
 """Support for Tasmota device discovery."""
-
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
@@ -45,7 +44,7 @@ TASMOTA_DISCOVERY_INSTANCE = "tasmota_discovery_instance"
 
 MQTT_TOPIC_URL = "https://tasmota.github.io/docs/Home-Assistant/#tasmota-integration"
 
-type SetupDeviceCallback = Callable[[TasmotaDeviceConfig, str], Awaitable[None]]
+SetupDeviceCallback = Callable[[TasmotaDeviceConfig, str], Awaitable[None]]
 
 
 def clear_discovery_hash(
@@ -248,7 +247,6 @@ async def async_start(  # noqa: C901
 
         if not payload:
             return
-        assert isinstance(command_topic, str)
 
         # Warn and add issues if there are duplicated topics
         if warn_if_topic_duplicated(hass, command_topic, mac, tasmota_device_config):

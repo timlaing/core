@@ -1,5 +1,4 @@
 """Tests for the SMHI component."""
-
 ENTITY_ID = "weather.smhi_test"
 TEST_CONFIG = {
     "name": "test",

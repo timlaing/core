@@ -1,5 +1,4 @@
 """Support for Rituals Perfume Genie binary sensors."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -22,12 +21,19 @@ from .coordinator import RitualsDataUpdateCoordinator
 from .entity import DiffuserEntity
 
 
-@dataclass(frozen=True, kw_only=True)
-class RitualsBinarySensorEntityDescription(BinarySensorEntityDescription):
-    """Class describing Rituals binary sensor entities."""
+@dataclass
+class RitualsentityDescriptionMixin:
+    """Mixin values for Rituals entities."""
 
     is_on_fn: Callable[[Diffuser], bool]
     has_fn: Callable[[Diffuser], bool]
+
+
+@dataclass
+class RitualsBinarySensorEntityDescription(
+    BinarySensorEntityDescription, RitualsentityDescriptionMixin
+):
+    """Class describing Rituals binary sensor entities."""
 
 
 ENTITY_DESCRIPTIONS = (

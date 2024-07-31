@@ -1,5 +1,4 @@
 """Diagnostics support for Sensor.Community."""
-
 from __future__ import annotations
 
 from typing import Any

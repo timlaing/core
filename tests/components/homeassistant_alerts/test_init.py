@@ -1,5 +1,4 @@
 """Test creating repairs from alerts."""
-
 from __future__ import annotations
 
 from datetime import timedelta
@@ -10,7 +9,7 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from pytest_unordered import unordered
 
-from homeassistant.components.homeassistant_alerts.const import (
+from homeassistant.components.homeassistant_alerts import (
     COMPONENT_LOADED_COOLDOWN,
     DOMAIN,
     UPDATE_INTERVAL,
@@ -26,7 +25,7 @@ from tests.test_util.aiohttp import AiohttpClientMocker
 from tests.typing import WebSocketGenerator
 
 
-def stub_alert(aioclient_mock: AiohttpClientMocker, alert_id) -> None:
+def stub_alert(aioclient_mock, alert_id):
     """Stub an alert."""
     aioclient_mock.get(
         f"https://alerts.home-assistant.io/alerts/{alert_id}.json",
@@ -35,14 +34,14 @@ def stub_alert(aioclient_mock: AiohttpClientMocker, alert_id) -> None:
 
 
 @pytest.fixture(autouse=True)
-async def setup_repairs(hass: HomeAssistant) -> None:
+async def setup_repairs(hass):
     """Set up the repairs integration."""
     assert await async_setup_component(hass, REPAIRS_DOMAIN, {REPAIRS_DOMAIN: {}})
 
 
 @pytest.mark.parametrize(
     ("ha_version", "supervisor_info", "expected_alerts"),
-    [
+    (
         (
             "2022.7.0",
             {"version": "2022.11.0"},
@@ -93,15 +92,15 @@ async def setup_repairs(hass: HomeAssistant) -> None:
                 ("sochain", "sochain"),
             ],
         ),
-    ],
+    ),
 )
 async def test_alerts(
     hass: HomeAssistant,
     hass_ws_client: WebSocketGenerator,
     aioclient_mock: AiohttpClientMocker,
-    ha_version: str,
-    supervisor_info: dict[str, str] | None,
-    expected_alerts: list[tuple[str, str]],
+    ha_version,
+    supervisor_info,
+    expected_alerts,
 ) -> None:
     """Test creating issues based on alerts."""
 
@@ -132,19 +131,15 @@ async def test_alerts(
     if supervisor_info is not None:
         hass.config.components.add("hassio")
 
-    with (
-        patch(
-            "homeassistant.components.homeassistant_alerts.coordinator.__version__",
-            ha_version,
-        ),
-        patch(
-            "homeassistant.components.homeassistant_alerts.coordinator.is_hassio",
-            return_value=supervisor_info is not None,
-        ),
-        patch(
-            "homeassistant.components.homeassistant_alerts.coordinator.get_supervisor_info",
-            return_value=supervisor_info,
-        ),
+    with patch(
+        "homeassistant.components.homeassistant_alerts.__version__",
+        ha_version,
+    ), patch(
+        "homeassistant.components.homeassistant_alerts.is_hassio",
+        return_value=supervisor_info is not None,
+    ), patch(
+        "homeassistant.components.homeassistant_alerts.get_supervisor_info",
+        return_value=supervisor_info,
     ):
         assert await async_setup_component(hass, DOMAIN, {})
 
@@ -186,7 +181,7 @@ async def test_alerts(
         "initial_alerts",
         "late_alerts",
     ),
-    [
+    (
         (
             "2022.7.0",
             {"version": "2022.11.0"},
@@ -286,18 +281,18 @@ async def test_alerts(
                 ("sochain", "sochain"),
             ],
         ),
-    ],
+    ),
 )
 async def test_alerts_refreshed_on_component_load(
     hass: HomeAssistant,
     hass_ws_client: WebSocketGenerator,
     aioclient_mock: AiohttpClientMocker,
-    ha_version: str,
-    supervisor_info: dict[str, str] | None,
-    initial_components: list[str],
-    late_components: list[str],
-    initial_alerts: list[tuple[str, str]],
-    late_alerts: list[tuple[str, str]],
+    ha_version,
+    supervisor_info,
+    initial_components,
+    late_components,
+    initial_alerts,
+    late_alerts,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test alerts are refreshed when components are loaded."""
@@ -315,63 +310,55 @@ async def test_alerts_refreshed_on_component_load(
     for domain in initial_components:
         hass.config.components.add(domain)
 
-    with (
-        patch(
-            "homeassistant.components.homeassistant_alerts.coordinator.__version__",
-            ha_version,
-        ),
-        patch(
-            "homeassistant.components.homeassistant_alerts.coordinator.is_hassio",
-            return_value=supervisor_info is not None,
-        ),
-        patch(
-            "homeassistant.components.homeassistant_alerts.coordinator.get_supervisor_info",
-            return_value=supervisor_info,
-        ),
+    with patch(
+        "homeassistant.components.homeassistant_alerts.__version__",
+        ha_version,
+    ), patch(
+        "homeassistant.components.homeassistant_alerts.is_hassio",
+        return_value=supervisor_info is not None,
+    ), patch(
+        "homeassistant.components.homeassistant_alerts.get_supervisor_info",
+        return_value=supervisor_info,
     ):
         assert await async_setup_component(hass, DOMAIN, {})
 
-        client = await hass_ws_client(hass)
+    client = await hass_ws_client(hass)
 
-        await client.send_json({"id": 1, "type": "repairs/list_issues"})
-        msg = await client.receive_json()
-        assert msg["success"]
-        assert msg["result"] == {
-            "issues": [
-                {
-                    "breaks_in_ha_version": None,
-                    "created": ANY,
-                    "dismissed_version": None,
-                    "domain": "homeassistant_alerts",
-                    "ignored": False,
-                    "is_fixable": False,
-                    "issue_id": f"{alert}.markdown_{integration}",
-                    "issue_domain": integration,
-                    "learn_more_url": None,
-                    "severity": "warning",
-                    "translation_key": "alert",
-                    "translation_placeholders": {
-                        "title": f"Title for {alert}",
-                        "description": f"Content for {alert}",
-                    },
-                }
-                for alert, integration in initial_alerts
-            ]
-        }
+    await client.send_json({"id": 1, "type": "repairs/list_issues"})
+    msg = await client.receive_json()
+    assert msg["success"]
+    assert msg["result"] == {
+        "issues": [
+            {
+                "breaks_in_ha_version": None,
+                "created": ANY,
+                "dismissed_version": None,
+                "domain": "homeassistant_alerts",
+                "ignored": False,
+                "is_fixable": False,
+                "issue_id": f"{alert}.markdown_{integration}",
+                "issue_domain": integration,
+                "learn_more_url": None,
+                "severity": "warning",
+                "translation_key": "alert",
+                "translation_placeholders": {
+                    "title": f"Title for {alert}",
+                    "description": f"Content for {alert}",
+                },
+            }
+            for alert, integration in initial_alerts
+        ]
+    }
 
-    with (
-        patch(
-            "homeassistant.components.homeassistant_alerts.coordinator.__version__",
-            ha_version,
-        ),
-        patch(
-            "homeassistant.components.homeassistant_alerts.coordinator.is_hassio",
-            return_value=supervisor_info is not None,
-        ),
-        patch(
-            "homeassistant.components.homeassistant_alerts.coordinator.get_supervisor_info",
-            return_value=supervisor_info,
-        ),
+    with patch(
+        "homeassistant.components.homeassistant_alerts.__version__",
+        ha_version,
+    ), patch(
+        "homeassistant.components.homeassistant_alerts.is_hassio",
+        return_value=supervisor_info is not None,
+    ), patch(
+        "homeassistant.components.homeassistant_alerts.get_supervisor_info",
+        return_value=supervisor_info,
     ):
         # Fake component_loaded events and wait for debounce
         for domain in late_components:
@@ -380,38 +367,38 @@ async def test_alerts_refreshed_on_component_load(
         freezer.tick(COMPONENT_LOADED_COOLDOWN + 1)
         await hass.async_block_till_done()
 
-        client = await hass_ws_client(hass)
+    client = await hass_ws_client(hass)
 
-        await client.send_json({"id": 2, "type": "repairs/list_issues"})
-        msg = await client.receive_json()
-        assert msg["success"]
-        assert msg["result"] == {
-            "issues": [
-                {
-                    "breaks_in_ha_version": None,
-                    "created": ANY,
-                    "dismissed_version": None,
-                    "domain": "homeassistant_alerts",
-                    "ignored": False,
-                    "is_fixable": False,
-                    "issue_id": f"{alert}.markdown_{integration}",
-                    "issue_domain": integration,
-                    "learn_more_url": None,
-                    "severity": "warning",
-                    "translation_key": "alert",
-                    "translation_placeholders": {
-                        "title": f"Title for {alert}",
-                        "description": f"Content for {alert}",
-                    },
-                }
-                for alert, integration in late_alerts
-            ]
-        }
+    await client.send_json({"id": 2, "type": "repairs/list_issues"})
+    msg = await client.receive_json()
+    assert msg["success"]
+    assert msg["result"] == {
+        "issues": [
+            {
+                "breaks_in_ha_version": None,
+                "created": ANY,
+                "dismissed_version": None,
+                "domain": "homeassistant_alerts",
+                "ignored": False,
+                "is_fixable": False,
+                "issue_id": f"{alert}.markdown_{integration}",
+                "issue_domain": integration,
+                "learn_more_url": None,
+                "severity": "warning",
+                "translation_key": "alert",
+                "translation_placeholders": {
+                    "title": f"Title for {alert}",
+                    "description": f"Content for {alert}",
+                },
+            }
+            for alert, integration in late_alerts
+        ]
+    }
 
 
 @pytest.mark.parametrize(
     ("ha_version", "fixture", "expected_alerts"),
-    [
+    (
         (
             "2022.7.0",
             "alerts_no_integrations.json",
@@ -427,15 +414,15 @@ async def test_alerts_refreshed_on_component_load(
                 ("hikvision", "hikvision"),
             ],
         ),
-    ],
+    ),
 )
 async def test_bad_alerts(
     hass: HomeAssistant,
     hass_ws_client: WebSocketGenerator,
     aioclient_mock: AiohttpClientMocker,
-    ha_version: str,
-    fixture: str,
-    expected_alerts: list[tuple[str, str]],
+    ha_version,
+    fixture,
+    expected_alerts,
 ) -> None:
     """Test creating issues based on alerts."""
     fixture_content = load_fixture(fixture, "homeassistant_alerts")
@@ -456,7 +443,7 @@ async def test_bad_alerts(
         hass.config.components.add(domain)
 
     with patch(
-        "homeassistant.components.homeassistant_alerts.coordinator.__version__",
+        "homeassistant.components.homeassistant_alerts.__version__",
         ha_version,
     ):
         assert await async_setup_component(hass, DOMAIN, {})
@@ -515,7 +502,7 @@ async def test_no_alerts(
 
 @pytest.mark.parametrize(
     ("ha_version", "fixture_1", "expected_alerts_1", "fixture_2", "expected_alerts_2"),
-    [
+    (
         (
             "2022.7.0",
             "alerts_1.json",
@@ -576,17 +563,17 @@ async def test_no_alerts(
                 ("sochain", "sochain"),
             ],
         ),
-    ],
+    ),
 )
 async def test_alerts_change(
     hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    hass_ws_client,
     aioclient_mock: AiohttpClientMocker,
     ha_version: str,
     fixture_1: str,
-    expected_alerts_1: list[tuple[str, str]],
+    expected_alerts_1: list[tuple(str, str)],
     fixture_2: str,
-    expected_alerts_2: list[tuple[str, str]],
+    expected_alerts_2: list[tuple(str, str)],
 ) -> None:
     """Test creating issues based on alerts."""
     fixture_1_content = load_fixture(fixture_1, "homeassistant_alerts")
@@ -615,7 +602,7 @@ async def test_alerts_change(
         hass.config.components.add(domain)
 
     with patch(
-        "homeassistant.components.homeassistant_alerts.coordinator.__version__",
+        "homeassistant.components.homeassistant_alerts.__version__",
         ha_version,
     ):
         assert await async_setup_component(hass, DOMAIN, {})

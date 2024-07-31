@@ -1,5 +1,4 @@
 """Support for SleepIQ sensors."""
-
 from asyncsleepiq import SleepIQBed, SleepIQSleeper
 
 from homeassistant.components.binary_sensor import (

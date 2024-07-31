@@ -1,5 +1,4 @@
 """Provides device actions for Select."""
-
 from __future__ import annotations
 
 from contextlib import suppress

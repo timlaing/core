@@ -1,6 +1,4 @@
 """Support for EcoNet products."""
-
-import asyncio
 from datetime import timedelta
 import logging
 
@@ -28,8 +26,8 @@ from .const import API_CLIENT, DOMAIN, EQUIPMENT
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = [
-    Platform.BINARY_SENSOR,
     Platform.CLIMATE,
+    Platform.BINARY_SENSOR,
     Platform.SENSOR,
     Platform.WATER_HEATER,
 ]
@@ -82,11 +80,14 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         await hass.async_add_executor_job(api.unsubscribe)
         api.subscribe()
 
-        # Refresh values
-        await asyncio.sleep(60)
+    async def fetch_update(now):
+        """Fetch the latest changes from the API."""
         await api.refresh_equipment()
 
     config_entry.async_on_unload(async_track_time_interval(hass, resubscribe, INTERVAL))
+    config_entry.async_on_unload(
+        async_track_time_interval(hass, fetch_update, INTERVAL + timedelta(minutes=1))
+    )
 
     return True
 

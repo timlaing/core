@@ -1,30 +1,28 @@
 """Define fixtures available for all tests."""
-
-from collections.abc import Generator
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
-from . import get_mock_client
+from . import _get_mock_cfupdate
 
 
 @pytest.fixture
-def cfupdate() -> Generator[MagicMock]:
+def cfupdate(hass):
     """Mock the CloudflareUpdater for easier testing."""
-    mock_cfupdate = get_mock_client()
+    mock_cfupdate = _get_mock_cfupdate()
     with patch(
-        "homeassistant.components.cloudflare.pycfdns.Client",
+        "homeassistant.components.cloudflare.CloudflareUpdater",
         return_value=mock_cfupdate,
     ) as mock_api:
         yield mock_api
 
 
 @pytest.fixture
-def cfupdate_flow() -> Generator[MagicMock]:
+def cfupdate_flow(hass):
     """Mock the CloudflareUpdater for easier config flow testing."""
-    mock_cfupdate = get_mock_client()
+    mock_cfupdate = _get_mock_cfupdate()
     with patch(
-        "homeassistant.components.cloudflare.config_flow.pycfdns.Client",
+        "homeassistant.components.cloudflare.config_flow.CloudflareUpdater",
         return_value=mock_cfupdate,
     ) as mock_api:
         yield mock_api

@@ -1,5 +1,4 @@
 """Update the IP addresses of your Route53 DNS records."""
-
 from __future__ import annotations
 
 from datetime import timedelta

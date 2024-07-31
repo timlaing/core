@@ -1,5 +1,4 @@
 """Constants for Foscam component."""
-
 import logging
 
 LOGGER = logging.getLogger(__package__)

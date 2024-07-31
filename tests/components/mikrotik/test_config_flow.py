@@ -1,11 +1,10 @@
 """Test Mikrotik setup process."""
-
 from unittest.mock import patch
 
 import librouteros
 import pytest
 
-from homeassistant import config_entries
+from homeassistant import config_entries, data_entry_flow
 from homeassistant.components.mikrotik.const import (
     CONF_ARP_PING,
     CONF_DETECTION_TIME,
@@ -20,7 +19,6 @@ from homeassistant.const import (
     CONF_VERIFY_SSL,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -76,14 +74,14 @@ async def test_flow_works(hass: HomeAssistant, api) -> None:
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["step_id"] == "user"
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input=DEMO_USER_INPUT
     )
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
     assert result["title"] == "Mikrotik (0.0.0.0)"
     assert result["data"][CONF_HOST] == "0.0.0.0"
     assert result["data"][CONF_USERNAME] == "username"
@@ -101,7 +99,7 @@ async def test_options(hass: HomeAssistant, api) -> None:
 
     result = await hass.config_entries.options.async_init(entry.entry_id)
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["step_id"] == "device_tracker"
 
     result = await hass.config_entries.options.async_configure(
@@ -113,7 +111,7 @@ async def test_options(hass: HomeAssistant, api) -> None:
         },
     )
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
     assert result["data"] == {
         CONF_DETECTION_TIME: 30,
         CONF_ARP_PING: True,
@@ -133,7 +131,7 @@ async def test_host_already_configured(hass: HomeAssistant, auth_error) -> None:
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input=DEMO_USER_INPUT
     )
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "already_configured"
 
 
@@ -146,7 +144,7 @@ async def test_connection_error(hass: HomeAssistant, conn_error) -> None:
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input=DEMO_USER_INPUT
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["errors"] == {"base": "cannot_connect"}
 
 
@@ -160,7 +158,7 @@ async def test_wrong_credentials(hass: HomeAssistant, auth_error) -> None:
         result["flow_id"], user_input=DEMO_USER_INPUT
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["errors"] == {
         CONF_USERNAME: "invalid_auth",
         CONF_PASSWORD: "invalid_auth",
@@ -184,7 +182,7 @@ async def test_reauth_success(hass: HomeAssistant, api) -> None:
         data=DEMO_USER_INPUT,
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "reauth_confirm"
     assert result["description_placeholders"] == {CONF_USERNAME: "username"}
 
@@ -195,7 +193,7 @@ async def test_reauth_success(hass: HomeAssistant, api) -> None:
         },
     )
 
-    assert result2["type"] is FlowResultType.ABORT
+    assert result2["type"] == "abort"
     assert result2["reason"] == "reauth_successful"
 
 
@@ -216,7 +214,7 @@ async def test_reauth_failed(hass: HomeAssistant, auth_error) -> None:
         data=DEMO_USER_INPUT,
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "reauth_confirm"
 
     result2 = await hass.config_entries.flow.async_configure(
@@ -226,7 +224,7 @@ async def test_reauth_failed(hass: HomeAssistant, auth_error) -> None:
         },
     )
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == "form"
     assert result2["errors"] == {
         CONF_PASSWORD: "invalid_auth",
     }
@@ -249,7 +247,7 @@ async def test_reauth_failed_conn_error(hass: HomeAssistant, conn_error) -> None
         data=DEMO_USER_INPUT,
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "reauth_confirm"
 
     result2 = await hass.config_entries.flow.async_configure(
@@ -259,5 +257,5 @@ async def test_reauth_failed_conn_error(hass: HomeAssistant, conn_error) -> None
         },
     )
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == "form"
     assert result2["errors"] == {"base": "cannot_connect"}

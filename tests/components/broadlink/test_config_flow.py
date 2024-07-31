@@ -1,5 +1,4 @@
 """Test the Broadlink config flow."""
-
 import errno
 import socket
 from unittest.mock import call, patch
@@ -11,7 +10,7 @@ from homeassistant import config_entries
 from homeassistant.components import dhcp
 from homeassistant.components.broadlink.const import DOMAIN
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.helpers import device_registry as dr
 
 from . import get_device
 
@@ -22,12 +21,9 @@ DEVICE_FACTORY = "homeassistant.components.broadlink.config_flow.blk.gendevice"
 @pytest.fixture(autouse=True)
 def broadlink_setup_fixture():
     """Mock broadlink entry setup."""
-    with (
-        patch("homeassistant.components.broadlink.async_setup", return_value=True),
-        patch(
-            "homeassistant.components.broadlink.async_setup_entry", return_value=True
-        ),
-    ):
+    with patch(
+        "homeassistant.components.broadlink.async_setup", return_value=True
+    ), patch("homeassistant.components.broadlink.async_setup_entry", return_value=True):
         yield
 
 
@@ -43,7 +39,7 @@ async def test_flow_user_works(hass: HomeAssistant) -> None:
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
@@ -53,7 +49,7 @@ async def test_flow_user_works(hass: HomeAssistant) -> None:
             {"host": device.host, "timeout": device.timeout},
         )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "finish"
     assert result["errors"] == {}
 
@@ -62,7 +58,7 @@ async def test_flow_user_works(hass: HomeAssistant) -> None:
         {"name": device.name},
     )
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == "create_entry"
     assert result["title"] == device.name
     assert result["data"] == device.get_entry_data()
 
@@ -94,7 +90,7 @@ async def test_flow_user_already_in_progress(hass: HomeAssistant) -> None:
             {"host": device.host, "timeout": device.timeout},
         )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "already_in_progress"
 
 
@@ -121,7 +117,7 @@ async def test_flow_user_mac_already_configured(hass: HomeAssistant) -> None:
             {"host": device.host, "timeout": device.timeout},
         )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "already_configured"
 
     assert dict(mock_entry.data) == device.get_entry_data()
@@ -140,7 +136,7 @@ async def test_flow_user_invalid_ip_address(hass: HomeAssistant) -> None:
             {"host": "0.0.0.1"},
         )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "user"
     assert result["errors"] == {"base": "invalid_host"}
 
@@ -157,7 +153,7 @@ async def test_flow_user_invalid_hostname(hass: HomeAssistant) -> None:
             {"host": "pancakemaster.local"},
         )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "user"
     assert result["errors"] == {"base": "invalid_host"}
 
@@ -176,7 +172,7 @@ async def test_flow_user_device_not_found(hass: HomeAssistant) -> None:
             {"host": device.host},
         )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "user"
     assert result["errors"] == {"base": "cannot_connect"}
 
@@ -196,7 +192,7 @@ async def test_flow_user_device_not_supported(hass: HomeAssistant) -> None:
             {"host": device.host},
         )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "not_supported"
 
 
@@ -212,7 +208,7 @@ async def test_flow_user_network_unreachable(hass: HomeAssistant) -> None:
             {"host": "192.168.1.32"},
         )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "user"
     assert result["errors"] == {"base": "cannot_connect"}
 
@@ -229,7 +225,7 @@ async def test_flow_user_os_error(hass: HomeAssistant) -> None:
             {"host": "192.168.1.32"},
         )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "user"
     assert result["errors"] == {"base": "unknown"}
 
@@ -250,7 +246,7 @@ async def test_flow_auth_authentication_error(hass: HomeAssistant) -> None:
             {"host": device.host, "timeout": device.timeout},
         )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "reset"
     assert result["errors"] == {"base": "invalid_auth"}
 
@@ -271,7 +267,7 @@ async def test_flow_auth_network_timeout(hass: HomeAssistant) -> None:
             {"host": device.host},
         )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "auth"
     assert result["errors"] == {"base": "cannot_connect"}
 
@@ -292,7 +288,7 @@ async def test_flow_auth_firmware_error(hass: HomeAssistant) -> None:
             {"host": device.host},
         )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "auth"
     assert result["errors"] == {"base": "unknown"}
 
@@ -313,7 +309,7 @@ async def test_flow_auth_network_unreachable(hass: HomeAssistant) -> None:
             {"host": device.host},
         )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "auth"
     assert result["errors"] == {"base": "cannot_connect"}
 
@@ -334,7 +330,7 @@ async def test_flow_auth_os_error(hass: HomeAssistant) -> None:
             {"host": device.host},
         )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "auth"
     assert result["errors"] == {"base": "unknown"}
 
@@ -366,7 +362,7 @@ async def test_flow_reset_works(hass: HomeAssistant) -> None:
         {"name": device.name},
     )
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == "create_entry"
     assert result["title"] == device.name
     assert result["data"] == device.get_entry_data()
 
@@ -387,7 +383,7 @@ async def test_flow_unlock_works(hass: HomeAssistant) -> None:
             {"host": device.host, "timeout": device.timeout},
         )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "unlock"
     assert result["errors"] == {}
 
@@ -401,7 +397,7 @@ async def test_flow_unlock_works(hass: HomeAssistant) -> None:
         {"name": device.name},
     )
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == "create_entry"
     assert result["title"] == device.name
     assert result["data"] == device.get_entry_data()
 
@@ -431,7 +427,7 @@ async def test_flow_unlock_network_timeout(hass: HomeAssistant) -> None:
         {"unlock": True},
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "unlock"
     assert result["errors"] == {"base": "cannot_connect"}
 
@@ -458,7 +454,7 @@ async def test_flow_unlock_firmware_error(hass: HomeAssistant) -> None:
         {"unlock": True},
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "unlock"
     assert result["errors"] == {"base": "unknown"}
 
@@ -485,7 +481,7 @@ async def test_flow_unlock_network_unreachable(hass: HomeAssistant) -> None:
         {"unlock": True},
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "unlock"
     assert result["errors"] == {"base": "cannot_connect"}
 
@@ -512,7 +508,7 @@ async def test_flow_unlock_os_error(hass: HomeAssistant) -> None:
         {"unlock": True},
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "unlock"
     assert result["errors"] == {"base": "unknown"}
 
@@ -543,7 +539,7 @@ async def test_flow_do_not_unlock(hass: HomeAssistant) -> None:
         {"name": device.name},
     )
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == "create_entry"
     assert result["title"] == device.name
     assert result["data"] == device.get_entry_data()
 
@@ -562,7 +558,7 @@ async def test_flow_import_works(hass: HomeAssistant) -> None:
             data={"host": device.host},
         )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "finish"
     assert result["errors"] == {}
 
@@ -571,7 +567,7 @@ async def test_flow_import_works(hass: HomeAssistant) -> None:
         {"name": device.name},
     )
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == "create_entry"
     assert result["title"] == device.name
     assert result["data"]["host"] == device.host
     assert result["data"]["mac"] == device.mac
@@ -596,7 +592,7 @@ async def test_flow_import_already_in_progress(hass: HomeAssistant) -> None:
             DOMAIN, context={"source": config_entries.SOURCE_IMPORT}, data=data
         )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "already_in_progress"
 
 
@@ -614,7 +610,7 @@ async def test_flow_import_host_already_configured(hass: HomeAssistant) -> None:
             data={"host": device.host},
         )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "already_configured"
 
 
@@ -637,7 +633,7 @@ async def test_flow_import_mac_already_configured(hass: HomeAssistant) -> None:
             data={"host": device.host},
         )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "already_configured"
 
     assert mock_entry.data["host"] == device.host
@@ -655,7 +651,7 @@ async def test_flow_import_device_not_found(hass: HomeAssistant) -> None:
             data={"host": "192.168.1.32"},
         )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "cannot_connect"
 
 
@@ -671,7 +667,7 @@ async def test_flow_import_device_not_supported(hass: HomeAssistant) -> None:
             data={"host": device.host},
         )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "not_supported"
 
 
@@ -684,7 +680,7 @@ async def test_flow_import_invalid_ip_address(hass: HomeAssistant) -> None:
             data={"host": "0.0.0.1"},
         )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "invalid_host"
 
 
@@ -697,7 +693,7 @@ async def test_flow_import_invalid_hostname(hass: HomeAssistant) -> None:
             data={"host": "hotdog.local"},
         )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "invalid_host"
 
 
@@ -710,7 +706,7 @@ async def test_flow_import_network_unreachable(hass: HomeAssistant) -> None:
             data={"host": "192.168.1.64"},
         )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "cannot_connect"
 
 
@@ -723,7 +719,7 @@ async def test_flow_import_os_error(hass: HomeAssistant) -> None:
             data={"host": "192.168.1.64"},
         )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "unknown"
 
 
@@ -741,7 +737,7 @@ async def test_flow_reauth_works(hass: HomeAssistant) -> None:
             DOMAIN, context={"source": config_entries.SOURCE_REAUTH}, data=data
         )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "reset"
 
     mock_api = device.get_mock_api()
@@ -752,7 +748,7 @@ async def test_flow_reauth_works(hass: HomeAssistant) -> None:
             {"host": device.host, "timeout": device.timeout},
         )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "already_configured"
 
     assert dict(mock_entry.data) == device.get_entry_data()
@@ -786,7 +782,7 @@ async def test_flow_reauth_invalid_host(hass: HomeAssistant) -> None:
             {"host": device.host, "timeout": device.timeout},
         )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "user"
     assert result["errors"] == {"base": "invalid_host"}
 
@@ -820,7 +816,7 @@ async def test_flow_reauth_valid_host(hass: HomeAssistant) -> None:
             {"host": device.host, "timeout": device.timeout},
         )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "already_configured"
 
     assert mock_entry.data["host"] == device.host
@@ -842,12 +838,12 @@ async def test_dhcp_can_finish(hass: HomeAssistant) -> None:
             data=dhcp.DhcpServiceInfo(
                 hostname="broadlink",
                 ip="1.2.3.4",
-                macaddress=device.mac,
+                macaddress=dr.format_mac(device.mac),
             ),
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["step_id"] == "finish"
 
     result2 = await hass.config_entries.flow.async_configure(
@@ -856,7 +852,7 @@ async def test_dhcp_can_finish(hass: HomeAssistant) -> None:
     )
     await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
+    assert result2["type"] == "create_entry"
     assert result2["title"] == "Living Room"
     assert result2["data"] == {
         "host": "1.2.3.4",
@@ -876,12 +872,12 @@ async def test_dhcp_fails_to_connect(hass: HomeAssistant) -> None:
             data=dhcp.DhcpServiceInfo(
                 hostname="broadlink",
                 ip="1.2.3.4",
-                macaddress="34ea34b43b5a",
+                macaddress="34:ea:34:b4:3b:5a",
             ),
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "cannot_connect"
 
 
@@ -895,12 +891,12 @@ async def test_dhcp_unreachable(hass: HomeAssistant) -> None:
             data=dhcp.DhcpServiceInfo(
                 hostname="broadlink",
                 ip="1.2.3.4",
-                macaddress="34ea34b43b5a",
+                macaddress="34:ea:34:b4:3b:5a",
             ),
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "cannot_connect"
 
 
@@ -914,12 +910,12 @@ async def test_dhcp_connect_unknown_error(hass: HomeAssistant) -> None:
             data=dhcp.DhcpServiceInfo(
                 hostname="broadlink",
                 ip="1.2.3.4",
-                macaddress="34ea34b43b5a",
+                macaddress="34:ea:34:b4:3b:5a",
             ),
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "unknown"
 
 
@@ -936,11 +932,11 @@ async def test_dhcp_device_not_supported(hass: HomeAssistant) -> None:
             data=dhcp.DhcpServiceInfo(
                 hostname="broadlink",
                 ip=device.host,
-                macaddress=device.mac,
+                macaddress=dr.format_mac(device.mac),
             ),
         )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "not_supported"
 
 
@@ -960,12 +956,12 @@ async def test_dhcp_already_exists(hass: HomeAssistant) -> None:
             data=dhcp.DhcpServiceInfo(
                 hostname="broadlink",
                 ip="1.2.3.4",
-                macaddress="34ea34b43b5a",
+                macaddress="34:ea:34:b4:3b:5a",
             ),
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "already_configured"
 
 
@@ -985,11 +981,11 @@ async def test_dhcp_updates_host(hass: HomeAssistant) -> None:
             data=dhcp.DhcpServiceInfo(
                 hostname="broadlink",
                 ip="4.5.6.7",
-                macaddress="34ea34b43b5a",
+                macaddress="34:ea:34:b4:3b:5a",
             ),
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "already_configured"
     assert mock_entry.data["host"] == "4.5.6.7"

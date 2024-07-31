@@ -1,5 +1,4 @@
 """Support for Nest devices."""
-
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -34,10 +33,9 @@ from homeassistant.const import (
     CONF_MONITORED_CONDITIONS,
     CONF_SENSORS,
     CONF_STRUCTURE,
-    EVENT_HOMEASSISTANT_STOP,
     Platform,
 )
-from homeassistant.core import Event, HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryNotReady,
@@ -97,7 +95,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 # Platforms for SDM API
-PLATFORMS = [Platform.CAMERA, Platform.CLIMATE, Platform.SENSOR]
+PLATFORMS = [Platform.SENSOR, Platform.CAMERA, Platform.CLIMATE]
 
 # Fetch media events with a disk backed cache, with a limit for each camera
 # device. The largest media items are mp4 clips at ~120kb each, and we target
@@ -197,13 +195,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def async_config_reload() -> None:
         await hass.config_entries.async_reload(entry.entry_id)
 
-    update_callback = SignalUpdateCallback(hass, async_config_reload)
-    subscriber.set_update_callback(update_callback.async_handle_event)
+    callback = SignalUpdateCallback(hass, async_config_reload)
+    subscriber.set_update_callback(callback.async_handle_event)
     try:
         await subscriber.start_async()
     except AuthException as err:
         raise ConfigEntryAuthFailed(
-            f"Subscriber authentication error: {err!s}"
+            f"Subscriber authentication error: {str(err)}"
         ) from err
     except ConfigurationException as err:
         _LOGGER.error("Configuration error: %s", err)
@@ -211,22 +209,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return False
     except SubscriberException as err:
         subscriber.stop_async()
-        raise ConfigEntryNotReady(f"Subscriber error: {err!s}") from err
+        raise ConfigEntryNotReady(f"Subscriber error: {str(err)}") from err
 
     try:
         device_manager = await subscriber.async_get_device_manager()
     except ApiException as err:
         subscriber.stop_async()
-        raise ConfigEntryNotReady(f"Device manager error: {err!s}") from err
-
-    @callback
-    def on_hass_stop(_: Event) -> None:
-        """Close connection when hass stops."""
-        subscriber.stop_async()
-
-    entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, on_hass_stop)
-    )
+        raise ConfigEntryNotReady(f"Device manager error: {str(err)}") from err
 
     hass.data[DOMAIN][entry.entry_id] = {
         DATA_SUBSCRIBER: subscriber,

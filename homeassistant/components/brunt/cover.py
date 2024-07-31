@@ -1,5 +1,4 @@
 """Support for Brunt Blind Engine covers."""
-
 from __future__ import annotations
 
 from typing import Any

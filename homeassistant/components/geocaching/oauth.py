@@ -1,5 +1,4 @@
 """oAuth2 functions and classes for Geocaching API integration."""
-
 from __future__ import annotations
 
 from typing import Any

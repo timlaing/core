@@ -1,5 +1,4 @@
 """Support for sensors."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -23,7 +22,7 @@ from . import async_setup_entry_platform
 from .coordinator import FjaraskupanCoordinator
 
 
-@dataclass(frozen=True)
+@dataclass
 class EntityDescription(BinarySensorEntityDescription):
     """Entity description."""
 

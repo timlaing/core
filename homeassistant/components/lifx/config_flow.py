@@ -1,7 +1,7 @@
 """Config flow flow LIFX."""
-
 from __future__ import annotations
 
+import asyncio
 import socket
 from typing import Any
 
@@ -9,11 +9,12 @@ from aiolifx.aiolifx import Light
 from aiolifx.connection import LIFXConnection
 import voluptuous as vol
 
+from homeassistant import config_entries
 from homeassistant.components import zeroconf
 from homeassistant.components.dhcp import DhcpServiceInfo
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_DEVICE, CONF_HOST
 from homeassistant.core import callback
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.typing import DiscoveryInfoType
 
@@ -36,7 +37,7 @@ from .util import (
 )
 
 
-class LifXConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for LIFX."""
 
     VERSION = 1
@@ -46,9 +47,7 @@ class LifXConfigFlow(ConfigFlow, domain=DOMAIN):
         self._discovered_devices: dict[str, Light] = {}
         self._discovered_device: Light | None = None
 
-    async def async_step_dhcp(
-        self, discovery_info: DhcpServiceInfo
-    ) -> ConfigFlowResult:
+    async def async_step_dhcp(self, discovery_info: DhcpServiceInfo) -> FlowResult:
         """Handle discovery via DHCP."""
         mac = discovery_info.macaddress
         host = discovery_info.ip
@@ -71,13 +70,13 @@ class LifXConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_homekit(
         self, discovery_info: zeroconf.ZeroconfServiceInfo
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle HomeKit discovery."""
         return await self._async_handle_discovery(host=discovery_info.host)
 
     async def async_step_integration_discovery(
         self, discovery_info: DiscoveryInfoType
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle LIFX UDP broadcast discovery."""
         serial = discovery_info[CONF_SERIAL]
         host = discovery_info[CONF_HOST]
@@ -87,7 +86,7 @@ class LifXConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _async_handle_discovery(
         self, host: str, serial: str | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle any discovery."""
         self._async_abort_entries_match({CONF_HOST: host})
         self.context[CONF_HOST] = host
@@ -122,7 +121,7 @@ class LifXConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_discovery_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Confirm discovery."""
         assert self._discovered_device is not None
         discovered = self._discovered_device
@@ -148,7 +147,7 @@ class LifXConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         errors = {}
         if user_input is not None:
@@ -170,7 +169,7 @@ class LifXConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_pick_device(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the step to pick discovered device."""
         if user_input is not None:
             serial = user_input[CONF_DEVICE]
@@ -209,7 +208,7 @@ class LifXConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
     @callback
-    def _async_create_entry_from_device(self, device: Light) -> ConfigFlowResult:
+    def _async_create_entry_from_device(self, device: Light) -> FlowResult:
         """Create a config entry from a smart device."""
         self._abort_if_unique_id_configured(updates={CONF_HOST: device.ip_addr})
         return self.async_create_entry(
@@ -243,7 +242,7 @@ class LifXConfigFlow(ConfigFlow, domain=DOMAIN):
                 DEFAULT_ATTEMPTS,
                 OVERALL_TIMEOUT,
             )
-        except TimeoutError:
+        except asyncio.TimeoutError:
             return None
         finally:
             connection.async_stop()

@@ -1,5 +1,4 @@
 """Define test fixtures for OpenUV."""
-
 from collections.abc import Generator
 import json
 from unittest.mock import AsyncMock, Mock, patch
@@ -23,7 +22,7 @@ TEST_LONGITUDE = -0.3817765
 
 
 @pytest.fixture
-def mock_setup_entry() -> Generator[AsyncMock]:
+def mock_setup_entry() -> Generator[AsyncMock, None, None]:
     """Override async_setup_entry."""
     with patch(
         "homeassistant.components.openuv.async_setup_entry", return_value=True
@@ -79,12 +78,9 @@ def data_uv_index_fixture():
 @pytest.fixture(name="mock_pyopenuv")
 async def mock_pyopenuv_fixture(client):
     """Define a fixture to patch pyopenuv."""
-    with (
-        patch(
-            "homeassistant.components.openuv.config_flow.Client", return_value=client
-        ),
-        patch("homeassistant.components.openuv.Client", return_value=client),
-    ):
+    with patch(
+        "homeassistant.components.openuv.config_flow.Client", return_value=client
+    ), patch("homeassistant.components.openuv.Client", return_value=client):
         yield
 
 

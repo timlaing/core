@@ -1,5 +1,4 @@
 """The tests for the london_underground platform."""
-
 from london_tube_status import API_URL
 
 from homeassistant.components.london_underground.const import CONF_LINE

@@ -1,5 +1,4 @@
 """Tests for the RDW integration."""
-
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from homeassistant.components.rdw.const import DOMAIN

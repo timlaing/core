@@ -1,5 +1,4 @@
 """Platform for sensor integration."""
-
 from __future__ import annotations
 
 from datetime import timedelta
@@ -9,7 +8,7 @@ from oru import Meter, MeterError
 import voluptuous as vol
 
 from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
 )
@@ -25,9 +24,7 @@ CONF_METER_NUMBER = "meter_number"
 
 SCAN_INTERVAL = timedelta(minutes=15)
 
-PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
-    {vol.Required(CONF_METER_NUMBER): cv.string}
-)
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({vol.Required(CONF_METER_NUMBER): cv.string})
 
 
 def setup_platform(

@@ -1,5 +1,4 @@
 """Entity classes for the QNAP QSW integration."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -84,14 +83,13 @@ class QswDataEntity(CoordinatorEntity[QswDataCoordinator]):
         return value
 
 
-@dataclass(frozen=True)
+@dataclass
 class QswEntityDescriptionMixin:
     """Mixin to describe a QSW entity."""
 
     subkey: str
 
 
-@dataclass(frozen=True)
 class QswEntityDescription(EntityDescription, QswEntityDescriptionMixin):
     """Class to describe a QSW entity."""
 

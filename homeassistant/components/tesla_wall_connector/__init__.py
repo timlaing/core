@@ -1,5 +1,4 @@
 """The Tesla Wall Connector integration."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -153,7 +152,7 @@ class WallConnectorEntity(CoordinatorEntity):
         )
 
 
-@dataclass(frozen=True)
+@dataclass()
 class WallConnectorLambdaValueGetterMixin:
     """Mixin with a function pointer for getting sensor value."""
 

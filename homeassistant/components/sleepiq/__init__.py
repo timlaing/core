@@ -1,5 +1,4 @@
 """Support for SleepIQ from SleepNumber."""
-
 from __future__ import annotations
 
 import logging

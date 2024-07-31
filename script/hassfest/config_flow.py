@@ -1,5 +1,4 @@
 """Generate config flow file."""
-
 from __future__ import annotations
 
 import json
@@ -191,11 +190,6 @@ def _generate_integrations(
                 metadata["config_flow"] = integration.config_flow
                 if integration.iot_class:
                     metadata["iot_class"] = integration.iot_class
-
-                if single_config_entry := integration.manifest.get(
-                    "single_config_entry"
-                ):
-                    metadata["single_config_entry"] = single_config_entry
 
             if integration.integration_type == "helper":
                 result["helper"][domain] = metadata

@@ -1,5 +1,4 @@
 """Cover Platform for the Somfy MyLink component."""
-
 import logging
 from typing import Any
 

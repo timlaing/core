@@ -1,5 +1,4 @@
 """Test the entity values helper."""
-
 from collections import OrderedDict
 
 from homeassistant.helpers.entity_values import EntityValues as EV

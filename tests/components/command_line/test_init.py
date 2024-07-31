@@ -1,5 +1,4 @@
 """Test Command line component setup process."""
-
 from __future__ import annotations
 
 from datetime import timedelta
@@ -20,7 +19,7 @@ async def test_setup_config(hass: HomeAssistant, load_yaml_integration: None) ->
     """Test setup from yaml."""
 
     async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=10))
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await hass.async_block_till_done()
 
     state_binary_sensor = hass.states.get("binary_sensor.test")
     state_sensor = hass.states.get("sensor.test")

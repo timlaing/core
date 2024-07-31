@@ -1,17 +1,15 @@
 """Support for Aruba Access Points."""
-
 from __future__ import annotations
 
 import logging
 import re
-from typing import Any
 
 import pexpect
 import voluptuous as vol
 
 from homeassistant.components.device_tracker import (
     DOMAIN,
-    PLATFORM_SCHEMA as DEVICE_TRACKER_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA as PARENT_PLATFORM_SCHEMA,
     DeviceScanner,
 )
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
@@ -23,11 +21,11 @@ _LOGGER = logging.getLogger(__name__)
 
 _DEVICES_REGEX = re.compile(
     r"(?P<name>([^\s]+)?)\s+"
-    r"(?P<ip>([0-9]{1,3}[\.]){3}[0-9]{1,3})\s+"
-    r"(?P<mac>([0-9a-f]{2}[:-]){5}([0-9a-f]{2}))\s+"
+    + r"(?P<ip>([0-9]{1,3}[\.]){3}[0-9]{1,3})\s+"
+    + r"(?P<mac>([0-9a-f]{2}[:-]){5}([0-9a-f]{2}))\s+"
 )
 
-PLATFORM_SCHEMA = DEVICE_TRACKER_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PARENT_PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_HOST): cv.string,
         vol.Required(CONF_PASSWORD): cv.string,
@@ -46,33 +44,33 @@ def get_scanner(hass: HomeAssistant, config: ConfigType) -> ArubaDeviceScanner |
 class ArubaDeviceScanner(DeviceScanner):
     """Class which queries a Aruba Access Point for connected devices."""
 
-    def __init__(self, config: dict[str, Any]) -> None:
+    def __init__(self, config):
         """Initialize the scanner."""
-        self.host: str = config[CONF_HOST]
-        self.username: str = config[CONF_USERNAME]
-        self.password: str = config[CONF_PASSWORD]
+        self.host = config[CONF_HOST]
+        self.username = config[CONF_USERNAME]
+        self.password = config[CONF_PASSWORD]
 
-        self.last_results: dict[str, dict[str, str]] = {}
+        self.last_results = {}
 
         # Test the router is accessible.
         data = self.get_aruba_data()
         self.success_init = data is not None
 
-    def scan_devices(self) -> list[str]:
+    def scan_devices(self):
         """Scan for new devices and return a list with found device IDs."""
         self._update_info()
-        return [client["mac"] for client in self.last_results.values()]
+        return [client["mac"] for client in self.last_results]
 
-    def get_device_name(self, device: str) -> str | None:
+    def get_device_name(self, device):
         """Return the name of the given device or None if we don't know."""
         if not self.last_results:
             return None
-        for client in self.last_results.values():
+        for client in self.last_results:
             if client["mac"] == device:
                 return client["name"]
         return None
 
-    def _update_info(self) -> bool:
+    def _update_info(self):
         """Ensure the information from the Aruba Access Point is up to date.
 
         Return boolean if scanning successful.
@@ -83,10 +81,10 @@ class ArubaDeviceScanner(DeviceScanner):
         if not (data := self.get_aruba_data()):
             return False
 
-        self.last_results = data
+        self.last_results = data.values()
         return True
 
-    def get_aruba_data(self) -> dict[str, dict[str, str]] | None:
+    def get_aruba_data(self):
         """Retrieve data from Aruba Access Point and return parsed result."""
 
         connect = f"ssh {self.username}@{self.host} -o HostKeyAlgorithms=ssh-rsa"
@@ -105,22 +103,22 @@ class ArubaDeviceScanner(DeviceScanner):
         )
         if query == 1:
             _LOGGER.error("Timeout")
-            return None
+            return
         if query == 2:
             _LOGGER.error("Unexpected response from router")
-            return None
+            return
         if query == 3:
             ssh.sendline("yes")
             ssh.expect("password:")
         elif query == 4:
             _LOGGER.error("Host key changed")
-            return None
+            return
         elif query == 5:
             _LOGGER.error("Connection refused by server")
-            return None
+            return
         elif query == 6:
             _LOGGER.error("Connection timed out")
-            return None
+            return
         ssh.sendline(self.password)
         ssh.expect("#")
         ssh.sendline("show clients")
@@ -128,7 +126,7 @@ class ArubaDeviceScanner(DeviceScanner):
         devices_result = ssh.before.split(b"\r\n")
         ssh.sendline("exit")
 
-        devices: dict[str, dict[str, str]] = {}
+        devices = {}
         for device in devices_result:
             if match := _DEVICES_REGEX.search(device.decode("utf-8")):
                 devices[match.group("ip")] = {

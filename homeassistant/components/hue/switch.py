@@ -1,5 +1,4 @@
 """Support for switch platform for Hue resources (V2 only)."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -58,7 +57,7 @@ async def async_setup_entry(
             event_type: EventType, resource: BehaviorInstance | LightLevel | Motion
         ) -> None:
             """Add entity from Hue resource."""
-            async_add_entities([switch_class(bridge, controller, resource)])
+            async_add_entities([switch_class(bridge, api.sensors.motion, resource)])
 
         # add all current items in controller
         for item in controller:

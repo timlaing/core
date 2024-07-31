@@ -1,7 +1,6 @@
 """Test Home Assistant package util methods."""
-
 import asyncio
-from importlib.metadata import metadata
+from importlib.metadata import PackageNotFoundError, metadata
 import logging
 import os
 from subprocess import PIPE
@@ -10,7 +9,7 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 
-from homeassistant.util import package
+import homeassistant.util.package as package
 
 RESOURCE_DIR = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "resources")
@@ -218,7 +217,7 @@ async def test_async_get_user_site(mock_env_copy) -> None:
     assert ret == os.path.join(deps_dir, "lib_dir")
 
 
-def test_check_package_global(caplog: pytest.LogCaptureFixture) -> None:
+def test_check_package_global() -> None:
     """Test for an installed package."""
     pkg = metadata("homeassistant")
     installed_package = pkg["name"]
@@ -230,32 +229,27 @@ def test_check_package_global(caplog: pytest.LogCaptureFixture) -> None:
     assert package.is_installed(f"{installed_package}<={installed_version}")
     assert not package.is_installed(f"{installed_package}<{installed_version}")
 
-    assert package.is_installed("-1 invalid_package") is False
-    assert "Invalid requirement '-1 invalid_package'" in caplog.text
 
-
-def test_check_package_fragment(caplog: pytest.LogCaptureFixture) -> None:
-    """Test for an installed package with a fragment."""
+def test_check_package_zip() -> None:
+    """Test for an installed zip package."""
     assert not package.is_installed(TEST_ZIP_REQ)
-    assert package.is_installed("git+https://github.com/pypa/pip#pip>=1")
-    assert not package.is_installed("git+https://github.com/pypa/pip#-1 invalid")
-    assert (
-        "Invalid requirement 'git+https://github.com/pypa/pip#-1 invalid'"
-        in caplog.text
-    )
 
 
-def test_get_is_installed() -> None:
-    """Test is_installed can parse complex requirements."""
+def test_get_distribution_falls_back_to_version() -> None:
+    """Test for get_distribution failing and fallback to version."""
     pkg = metadata("homeassistant")
     installed_package = pkg["name"]
     installed_version = pkg["version"]
 
-    assert package.is_installed(installed_package)
-    assert package.is_installed(f"{installed_package}=={installed_version}")
-    assert package.is_installed(f"{installed_package}>={installed_version}")
-    assert package.is_installed(f"{installed_package}<={installed_version}")
-    assert not package.is_installed(f"{installed_package}<{installed_version}")
+    with patch(
+        "homeassistant.util.package.distribution",
+        side_effect=PackageNotFoundError,
+    ):
+        assert package.is_installed(installed_package)
+        assert package.is_installed(f"{installed_package}=={installed_version}")
+        assert package.is_installed(f"{installed_package}>={installed_version}")
+        assert package.is_installed(f"{installed_package}<={installed_version}")
+        assert not package.is_installed(f"{installed_package}<{installed_version}")
 
 
 def test_check_package_previous_failed_install() -> None:
@@ -264,6 +258,9 @@ def test_check_package_previous_failed_install() -> None:
     installed_package = pkg["name"]
     installed_version = pkg["version"]
 
-    with patch("homeassistant.util.package.version", return_value=None):
+    with patch(
+        "homeassistant.util.package.distribution",
+        side_effect=PackageNotFoundError,
+    ), patch("homeassistant.util.package.version", return_value=None):
         assert not package.is_installed(installed_package)
         assert not package.is_installed(f"{installed_package}=={installed_version}")

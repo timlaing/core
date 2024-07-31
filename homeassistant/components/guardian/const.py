@@ -1,5 +1,4 @@
 """Constants for the Elexa Guardian integration."""
-
 import logging
 
 DOMAIN = "guardian"

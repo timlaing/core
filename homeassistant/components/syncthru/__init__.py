@@ -1,5 +1,4 @@
 """The syncthru component."""
-
 from __future__ import annotations
 
 import asyncio
@@ -42,7 +41,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 printer.url,
                 exc_info=api_error,
             )
-            raise
+            raise api_error
 
         # if the printer is offline, we raise an UpdateFailed
         if printer.is_unknown_state():

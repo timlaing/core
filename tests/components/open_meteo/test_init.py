@@ -1,5 +1,4 @@
 """Tests for the Open-Meteo integration."""
-
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from open_meteo import OpenMeteoConnectionError

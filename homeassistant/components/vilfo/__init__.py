@@ -1,5 +1,4 @@
 """The Vilfo Router integration."""
-
 from datetime import timedelta
 import logging
 

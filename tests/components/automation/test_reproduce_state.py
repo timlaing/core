@@ -1,5 +1,4 @@
 """Test reproduce state for Automation."""
-
 import pytest
 
 from homeassistant.core import HomeAssistant, State

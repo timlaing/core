@@ -1,5 +1,4 @@
 """Support for controlling GPIO pins of a Numato Labs USB GPIO expander."""
-
 import logging
 
 import numato_gpio as gpio

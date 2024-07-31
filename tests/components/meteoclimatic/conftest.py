@@ -1,5 +1,4 @@
 """Meteoclimatic generic test utils."""
-
 from unittest.mock import patch
 
 import pytest

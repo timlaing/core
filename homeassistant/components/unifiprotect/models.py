@@ -1,28 +1,31 @@
 """The unifiprotect integration models."""
-
 from __future__ import annotations
 
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass
 from enum import Enum
-from functools import partial
 import logging
-from operator import attrgetter
-from typing import Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
-from uiprotect import make_enabled_getter, make_required_getter, make_value_getter
-from uiprotect.data import (
-    NVR,
-    Event,
-    ProtectAdoptableDeviceModel,
-    SmartDetectObjectType,
-)
+from pyunifiprotect.data import NVR, Event, ProtectAdoptableDeviceModel
 
 from homeassistant.helpers.entity import EntityDescription
+from homeassistant.util import dt as dt_util
+
+from .utils import get_nested_attr
 
 _LOGGER = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=ProtectAdoptableDeviceModel | NVR)
+
+
+def split_tuple(value: tuple[str, ...] | str | None) -> tuple[str, ...] | None:
+    """Split string to tuple."""
+    if value is None:
+        return None
+    if TYPE_CHECKING:
+        assert isinstance(value, str)
+    return tuple(value.split("."))
 
 
 class PermRequired(int, Enum):
@@ -33,71 +36,97 @@ class PermRequired(int, Enum):
     DELETE = 3
 
 
-@dataclass(frozen=True, kw_only=True)
-class ProtectEntityDescription(EntityDescription, Generic[T]):
-    """Base class for protect entity descriptions."""
+@dataclass
+class ProtectRequiredKeysMixin(EntityDescription, Generic[T]):
+    """Mixin for required keys."""
 
-    ufp_required_field: str | None = None
-    ufp_value: str | None = None
+    # `ufp_required_field`, `ufp_value`, and `ufp_enabled` are defined as
+    # a `str` in the dataclass, but `__post_init__` converts it to a
+    # `tuple[str, ...]` to avoid doing it at run time in `get_nested_attr`
+    # which is usually called millions of times per day.
+    ufp_required_field: tuple[str, ...] | str | None = None
+    ufp_value: tuple[str, ...] | str | None = None
     ufp_value_fn: Callable[[T], Any] | None = None
-    ufp_enabled: str | None = None
+    ufp_enabled: tuple[str, ...] | str | None = None
     ufp_perm: PermRequired | None = None
 
-    # The below are set in __post_init__
-    has_required: Callable[[T], bool] = bool
-    get_ufp_enabled: Callable[[T], bool] | None = None
+    def __post_init__(self) -> None:
+        """Pre-convert strings to tuples for faster get_nested_attr."""
+        self.ufp_required_field = split_tuple(self.ufp_required_field)
+        self.ufp_value = split_tuple(self.ufp_value)
+        self.ufp_enabled = split_tuple(self.ufp_enabled)
 
     def get_ufp_value(self, obj: T) -> Any:
-        """Return value from UniFi Protect device; overridden in __post_init__."""
-        # ufp_value or ufp_value_fn are required, the
-        # RuntimeError is to catch any issues in the code
-        # with new descriptions.
+        """Return value from UniFi Protect device."""
+        if (ufp_value := self.ufp_value) is not None:
+            if TYPE_CHECKING:
+                # `ufp_value` is defined as a `str` in the dataclass, but
+                # `__post_init__` converts it to a `tuple[str, ...]` to avoid
+                # doing it at run time in `get_nested_attr` which is usually called
+                # millions of times per day. This tells mypy that it's a tuple.
+                assert isinstance(ufp_value, tuple)
+            return get_nested_attr(obj, ufp_value)
+        if (ufp_value_fn := self.ufp_value_fn) is not None:
+            return ufp_value_fn(obj)
+
+        # reminder for future that one is required
         raise RuntimeError(  # pragma: no cover
-            f"`ufp_value` or `ufp_value_fn` is required for {self}"
+            "`ufp_value` or `ufp_value_fn` is required"
         )
 
-    def __post_init__(self) -> None:
-        """Override get_ufp_value, has_required, and get_ufp_enabled if required."""
-        _setter = partial(object.__setattr__, self)
-
-        if (ufp_value := self.ufp_value) is not None:
-            _setter("get_ufp_value", make_value_getter(ufp_value))
-        elif (ufp_value_fn := self.ufp_value_fn) is not None:
-            _setter("get_ufp_value", ufp_value_fn)
-
+    def get_ufp_enabled(self, obj: T) -> bool:
+        """Return value from UniFi Protect device."""
         if (ufp_enabled := self.ufp_enabled) is not None:
-            _setter("get_ufp_enabled", make_enabled_getter(ufp_enabled))
+            if TYPE_CHECKING:
+                # `ufp_enabled` is defined as a `str` in the dataclass, but
+                # `__post_init__` converts it to a `tuple[str, ...]` to avoid
+                # doing it at run time in `get_nested_attr` which is usually called
+                # millions of times per day. This tells mypy that it's a tuple.
+                assert isinstance(ufp_enabled, tuple)
+            return bool(get_nested_attr(obj, ufp_enabled))
+        return True
 
-        if (ufp_required_field := self.ufp_required_field) is not None:
-            _setter("has_required", make_required_getter(ufp_required_field))
+    def has_required(self, obj: T) -> bool:
+        """Return if has required field."""
+        if (ufp_required_field := self.ufp_required_field) is None:
+            return True
+        if TYPE_CHECKING:
+            # `ufp_required_field` is defined as a `str` in the dataclass, but
+            # `__post_init__` converts it to a `tuple[str, ...]` to avoid
+            # doing it at run time in `get_nested_attr` which is usually called
+            # millions of times per day. This tells mypy that it's a tuple.
+            assert isinstance(ufp_required_field, tuple)
+        return bool(get_nested_attr(obj, ufp_required_field))
 
 
-@dataclass(frozen=True, kw_only=True)
-class ProtectEventMixin(ProtectEntityDescription[T]):
+@dataclass
+class ProtectEventMixin(ProtectRequiredKeysMixin[T]):
     """Mixin for events."""
 
     ufp_event_obj: str | None = None
-    ufp_obj_type: SmartDetectObjectType | None = None
 
     def get_event_obj(self, obj: T) -> Event | None:
         """Return value from UniFi Protect device."""
+
+        if self.ufp_event_obj is not None:
+            return cast(Event, getattr(obj, self.ufp_event_obj, None))
         return None
 
-    def has_matching_smart(self, event: Event) -> bool:
-        """Determine if the detection type is a match."""
-        return (
-            not (obj_type := self.ufp_obj_type) or obj_type in event.smart_detect_types
-        )
+    def get_is_on(self, event: Event | None) -> bool:
+        """Return value if event is active."""
+        if event is None:
+            return False
 
-    def __post_init__(self) -> None:
-        """Override get_event_obj if ufp_event_obj is set."""
-        if (_ufp_event_obj := self.ufp_event_obj) is not None:
-            object.__setattr__(self, "get_event_obj", attrgetter(_ufp_event_obj))
-        super().__post_init__()
+        now = dt_util.utcnow()
+        value = now > event.start
+        if value and event.end is not None and now > event.end:
+            value = False
+
+        return value
 
 
-@dataclass(frozen=True, kw_only=True)
-class ProtectSetableKeysMixin(ProtectEntityDescription[T]):
+@dataclass
+class ProtectSetableKeysMixin(ProtectRequiredKeysMixin[T]):
     """Mixin for settable values."""
 
     ufp_set_method: str | None = None

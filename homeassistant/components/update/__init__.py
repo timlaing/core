@@ -1,10 +1,10 @@
 """Component to allow for providing device or service updates."""
-
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import timedelta
 from enum import StrEnum
-from functools import cached_property, lru_cache
+from functools import lru_cache
 import logging
 from typing import Any, Final, final
 
@@ -17,7 +17,11 @@ from homeassistant.const import ATTR_ENTITY_PICTURE, STATE_OFF, STATE_ON, Entity
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity import ABCCachedProperties, EntityDescription
+from homeassistant.helpers.config_validation import (
+    PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA_BASE,
+)
+from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.typing import ConfigType
@@ -39,12 +43,11 @@ from .const import (
     UpdateEntityFeature,
 )
 
-_LOGGER = logging.getLogger(__name__)
+SCAN_INTERVAL = timedelta(minutes=15)
 
 ENTITY_ID_FORMAT: Final = DOMAIN + ".{}"
-PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA
-PLATFORM_SCHEMA_BASE = cv.PLATFORM_SCHEMA_BASE
-SCAN_INTERVAL = timedelta(minutes=15)
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class UpdateDeviceClass(StrEnum):
@@ -133,7 +136,7 @@ async def async_install(entity: UpdateEntity, service_call: ServiceCall) -> None
     # If version is specified, but not supported by the entity.
     if (
         version is not None
-        and UpdateEntityFeature.SPECIFIC_VERSION not in entity.supported_features_compat
+        and not entity.supported_features & UpdateEntityFeature.SPECIFIC_VERSION
     ):
         raise HomeAssistantError(
             f"Installing a specific version is not supported for {entity.entity_id}"
@@ -142,7 +145,7 @@ async def async_install(entity: UpdateEntity, service_call: ServiceCall) -> None
     # If backup is requested, but not supported by the entity.
     if (
         backup := service_call.data[ATTR_BACKUP]
-    ) and UpdateEntityFeature.BACKUP not in entity.supported_features_compat:
+    ) and not entity.supported_features & UpdateEntityFeature.BACKUP:
         raise HomeAssistantError(f"Backup is not supported for {entity.entity_id}")
 
     # Update is already in progress.
@@ -172,7 +175,8 @@ async def async_clear_skipped(entity: UpdateEntity, service_call: ServiceCall) -
     await entity.async_clear_skipped()
 
 
-class UpdateEntityDescription(EntityDescription, frozen_or_thawed=True):
+@dataclass
+class UpdateEntityDescription(EntityDescription):
     """A class that describes update entities."""
 
     device_class: UpdateDeviceClass | None = None
@@ -185,24 +189,7 @@ def _version_is_newer(latest_version: str, installed_version: str) -> bool:
     return AwesomeVersion(latest_version) > installed_version
 
 
-CACHED_PROPERTIES_WITH_ATTR_ = {
-    "auto_update",
-    "installed_version",
-    "device_class",
-    "in_progress",
-    "latest_version",
-    "release_summary",
-    "release_url",
-    "supported_features",
-    "title",
-}
-
-
-class UpdateEntity(
-    RestoreEntity,
-    metaclass=ABCCachedProperties,
-    cached_properties=CACHED_PROPERTIES_WITH_ATTR_,
-):
+class UpdateEntity(RestoreEntity):
     """Representation of an update entity."""
 
     _entity_component_unrecorded_attributes = frozenset(
@@ -223,12 +210,12 @@ class UpdateEntity(
     __skipped_version: str | None = None
     __in_progress: bool = False
 
-    @cached_property
+    @property
     def auto_update(self) -> bool:
         """Indicate if the device or service has auto update enabled."""
         return self._attr_auto_update
 
-    @cached_property
+    @property
     def installed_version(self) -> str | None:
         """Version installed and in use."""
         return self._attr_installed_version
@@ -240,7 +227,7 @@ class UpdateEntity(
         """
         return self.device_class is not None
 
-    @cached_property
+    @property
     def device_class(self) -> UpdateDeviceClass | None:
         """Return the class of this entity."""
         if hasattr(self, "_attr_device_class"):
@@ -256,7 +243,7 @@ class UpdateEntity(
             return self._attr_entity_category
         if hasattr(self, "entity_description"):
             return self.entity_description.entity_category
-        if UpdateEntityFeature.INSTALL in self.supported_features_compat:
+        if self.supported_features & UpdateEntityFeature.INSTALL:
             return EntityCategory.CONFIG
         return EntityCategory.DIAGNOSTIC
 
@@ -271,7 +258,7 @@ class UpdateEntity(
             f"https://brands.home-assistant.io/_/{self.platform.platform_name}/icon.png"
         )
 
-    @cached_property
+    @property
     def in_progress(self) -> bool | int | None:
         """Update installation progress.
 
@@ -282,12 +269,12 @@ class UpdateEntity(
         """
         return self._attr_in_progress
 
-    @cached_property
+    @property
     def latest_version(self) -> str | None:
         """Latest version available for install."""
         return self._attr_latest_version
 
-    @cached_property
+    @property
     def release_summary(self) -> str | None:
         """Summary of the release notes or changelog.
 
@@ -296,17 +283,17 @@ class UpdateEntity(
         """
         return self._attr_release_summary
 
-    @cached_property
+    @property
     def release_url(self) -> str | None:
         """URL to the full release notes of the latest version available."""
         return self._attr_release_url
 
-    @cached_property
+    @property
     def supported_features(self) -> UpdateEntityFeature:
         """Flag supported features."""
         return self._attr_supported_features
 
-    @cached_property
+    @property
     def title(self) -> str | None:
         """Title of the software.
 
@@ -314,19 +301,6 @@ class UpdateEntity(
         versus the title of the software installed.
         """
         return self._attr_title
-
-    @property
-    def supported_features_compat(self) -> UpdateEntityFeature:
-        """Return the supported features as UpdateEntityFeature.
-
-        Remove this compatibility shim in 2025.1 or later.
-        """
-        features = self.supported_features
-        if type(features) is int:  # noqa: E721
-            new_features = UpdateEntityFeature(features)
-            self._report_deprecated_supported_features_values(new_features)
-            return new_features
-        return features
 
     @final
     async def async_skip(self) -> None:
@@ -366,7 +340,7 @@ class UpdateEntity(
         The backup parameter indicates a backup should be taken before
         installing the update.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     async def async_release_notes(self) -> str | None:
         """Return full release notes.
@@ -382,7 +356,7 @@ class UpdateEntity(
         This is suitable for a long changelog that does not fit in the release_summary
         property. The returned string can contain markdown.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @property
     @final
@@ -400,10 +374,10 @@ class UpdateEntity(
 
         try:
             newer = _version_is_newer(latest_version, installed_version)
+            return STATE_ON if newer else STATE_OFF
         except AwesomeVersionCompareException:
             # Can't compare versions, already tried exact match
             return STATE_ON
-        return STATE_ON if newer else STATE_OFF
 
     @final
     @property
@@ -414,7 +388,7 @@ class UpdateEntity(
 
         # If entity supports progress, return the in_progress value.
         # Otherwise, we use the internal progress value.
-        if UpdateEntityFeature.PROGRESS in self.supported_features_compat:
+        if self.supported_features & UpdateEntityFeature.PROGRESS:
             in_progress = self.in_progress
         else:
             in_progress = self.__in_progress
@@ -450,7 +424,7 @@ class UpdateEntity(
         Handles setting the in_progress state in case the entity doesn't
         support it natively.
         """
-        if UpdateEntityFeature.PROGRESS not in self.supported_features_compat:
+        if not self.supported_features & UpdateEntityFeature.PROGRESS:
             self.__in_progress = True
             self.async_write_ha_state()
 
@@ -492,14 +466,14 @@ async def websocket_release_notes(
 
     if entity is None:
         connection.send_error(
-            msg["id"], websocket_api.ERR_NOT_FOUND, "Entity not found"
+            msg["id"], websocket_api.const.ERR_NOT_FOUND, "Entity not found"
         )
         return
 
-    if UpdateEntityFeature.RELEASE_NOTES not in entity.supported_features_compat:
+    if not entity.supported_features & UpdateEntityFeature.RELEASE_NOTES:
         connection.send_error(
             msg["id"],
-            websocket_api.ERR_NOT_SUPPORTED,
+            websocket_api.const.ERR_NOT_SUPPORTED,
             "Entity does not support release notes",
         )
         return

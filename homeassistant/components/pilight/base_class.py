@@ -1,5 +1,4 @@
 """Base class for pilight."""
-
 import voluptuous as vol
 
 from homeassistant.const import (

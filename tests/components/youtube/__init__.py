@@ -1,5 +1,4 @@
 """Tests for the YouTube integration."""
-
 from collections.abc import AsyncGenerator
 import json
 
@@ -19,7 +18,7 @@ class MockYouTube:
         channel_fixture: str = "youtube/get_channel.json",
         playlist_items_fixture: str = "youtube/get_playlist_items.json",
         subscriptions_fixture: str = "youtube/get_subscriptions.json",
-    ) -> None:
+    ):
         """Initialize mock service."""
         self._channel_fixture = channel_fixture
         self._playlist_items_fixture = playlist_items_fixture
@@ -30,7 +29,7 @@ class MockYouTube:
     ) -> None:
         """Authenticate the user."""
 
-    async def get_user_channels(self) -> AsyncGenerator[YouTubeChannel]:
+    async def get_user_channels(self) -> AsyncGenerator[YouTubeChannel, None]:
         """Get channels for authenticated user."""
         channels = json.loads(load_fixture(self._channel_fixture))
         for item in channels["items"]:
@@ -38,7 +37,7 @@ class MockYouTube:
 
     async def get_channels(
         self, channel_ids: list[str]
-    ) -> AsyncGenerator[YouTubeChannel]:
+    ) -> AsyncGenerator[YouTubeChannel, None]:
         """Get channels."""
         if self._thrown_error is not None:
             raise self._thrown_error
@@ -48,13 +47,13 @@ class MockYouTube:
 
     async def get_playlist_items(
         self, playlist_id: str, amount: int
-    ) -> AsyncGenerator[YouTubePlaylistItem]:
+    ) -> AsyncGenerator[YouTubePlaylistItem, None]:
         """Get channels."""
         channels = json.loads(load_fixture(self._playlist_items_fixture))
         for item in channels["items"]:
             yield YouTubePlaylistItem(**item)
 
-    async def get_user_subscriptions(self) -> AsyncGenerator[YouTubeSubscription]:
+    async def get_user_subscriptions(self) -> AsyncGenerator[YouTubeSubscription, None]:
         """Get channels for authenticated user."""
         channels = json.loads(load_fixture(self._subscriptions_fixture))
         for item in channels["items"]:

@@ -1,5 +1,4 @@
 """Support for Join notifications."""
-
 from __future__ import annotations
 
 import logging
@@ -11,7 +10,7 @@ from homeassistant.components.notify import (
     ATTR_DATA,
     ATTR_TITLE,
     ATTR_TITLE_DEFAULT,
-    PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     BaseNotificationService,
 )
 from homeassistant.const import CONF_API_KEY, CONF_DEVICE_ID
@@ -24,7 +23,7 @@ _LOGGER = logging.getLogger(__name__)
 CONF_DEVICE_IDS = "device_ids"
 CONF_DEVICE_NAMES = "device_names"
 
-PLATFORM_SCHEMA = NOTIFY_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_API_KEY): cv.string,
         vol.Optional(CONF_DEVICE_ID): cv.string,

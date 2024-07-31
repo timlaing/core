@@ -1,5 +1,4 @@
 """Constants for the Ruckus Unleashed integration."""
-
 from homeassistant.const import Platform
 
 DOMAIN = "ruckus_unleashed"

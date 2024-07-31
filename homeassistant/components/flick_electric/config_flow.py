@@ -1,5 +1,4 @@
 """Config Flow for Flick Electric integration."""
-
 import asyncio
 import logging
 
@@ -7,14 +6,13 @@ from pyflick.authentication import AuthException, SimpleFlickAuth
 from pyflick.const import DEFAULT_CLIENT_ID, DEFAULT_CLIENT_SECRET
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow
+from homeassistant import config_entries, exceptions
 from homeassistant.const import (
     CONF_CLIENT_ID,
     CONF_CLIENT_SECRET,
     CONF_PASSWORD,
     CONF_USERNAME,
 )
-from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import aiohttp_client
 
 from .const import DOMAIN
@@ -31,7 +29,7 @@ DATA_SCHEMA = vol.Schema(
 )
 
 
-class FlickConfigFlow(ConfigFlow, domain=DOMAIN):
+class FlickConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Flick config flow."""
 
     VERSION = 1
@@ -48,10 +46,10 @@ class FlickConfigFlow(ConfigFlow, domain=DOMAIN):
         try:
             async with asyncio.timeout(60):
                 token = await auth.async_get_access_token()
-        except TimeoutError as err:
-            raise CannotConnect from err
+        except asyncio.TimeoutError as err:
+            raise CannotConnect() from err
         except AuthException as err:
-            raise InvalidAuth from err
+            raise InvalidAuth() from err
 
         return token is not None
 
@@ -65,7 +63,7 @@ class FlickConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
                 errors["base"] = "invalid_auth"
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
@@ -84,9 +82,9 @@ class FlickConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(exceptions.HomeAssistantError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(exceptions.HomeAssistantError):
     """Error to indicate there is invalid auth."""

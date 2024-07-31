@@ -1,11 +1,10 @@
 """Implement the Google Smart Home traits."""
-
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 import logging
-from typing import Any
+from typing import Any, TypeVar
 
 from homeassistant.components import (
     alarm_control_panel,
@@ -30,8 +29,6 @@ from homeassistant.components import (
     sensor,
     switch,
     vacuum,
-    valve,
-    water_heater,
 )
 from homeassistant.components.alarm_control_panel import AlarmControlPanelEntityFeature
 from homeassistant.components.camera import CameraEntityFeature
@@ -43,8 +40,6 @@ from homeassistant.components.light import LightEntityFeature
 from homeassistant.components.lock import STATE_JAMMED, STATE_UNLOCKING
 from homeassistant.components.media_player import MediaPlayerEntityFeature, MediaType
 from homeassistant.components.vacuum import VacuumEntityFeature
-from homeassistant.components.valve import ValveEntityFeature
-from homeassistant.components.water_heater import WaterHeaterEntityFeature
 from homeassistant.const import (
     ATTR_ASSUMED_STATE,
     ATTR_BATTERY_LEVEL,
@@ -81,7 +76,7 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     UnitOfTemperature,
 )
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant
+from homeassistant.core import DOMAIN as HA_DOMAIN, HomeAssistant
 from homeassistant.helpers.network import get_url
 from homeassistant.util import color as color_util, dt as dt_util
 from homeassistant.util.dt import utcnow
@@ -144,7 +139,6 @@ COMMAND_PAUSEUNPAUSE = f"{PREFIX_COMMANDS}PauseUnpause"
 COMMAND_BRIGHTNESS_ABSOLUTE = f"{PREFIX_COMMANDS}BrightnessAbsolute"
 COMMAND_COLOR_ABSOLUTE = f"{PREFIX_COMMANDS}ColorAbsolute"
 COMMAND_ACTIVATE_SCENE = f"{PREFIX_COMMANDS}ActivateScene"
-COMMAND_SET_TEMPERATURE = f"{PREFIX_COMMANDS}SetTemperature"
 COMMAND_THERMOSTAT_TEMPERATURE_SETPOINT = (
     f"{PREFIX_COMMANDS}ThermostatTemperatureSetpoint"
 )
@@ -183,67 +177,10 @@ TRAITS: list[type[_Trait]] = []
 
 FAN_SPEED_MAX_SPEED_COUNT = 5
 
-COVER_VALVE_STATES = {
-    cover.DOMAIN: {
-        "closed": cover.STATE_CLOSED,
-        "closing": cover.STATE_CLOSING,
-        "open": cover.STATE_OPEN,
-        "opening": cover.STATE_OPENING,
-    },
-    valve.DOMAIN: {
-        "closed": valve.STATE_CLOSED,
-        "closing": valve.STATE_CLOSING,
-        "open": valve.STATE_OPEN,
-        "opening": valve.STATE_OPENING,
-    },
-}
-
-SERVICE_STOP_COVER_VALVE = {
-    cover.DOMAIN: cover.SERVICE_STOP_COVER,
-    valve.DOMAIN: valve.SERVICE_STOP_VALVE,
-}
-SERVICE_OPEN_COVER_VALVE = {
-    cover.DOMAIN: cover.SERVICE_OPEN_COVER,
-    valve.DOMAIN: valve.SERVICE_OPEN_VALVE,
-}
-SERVICE_CLOSE_COVER_VALVE = {
-    cover.DOMAIN: cover.SERVICE_CLOSE_COVER,
-    valve.DOMAIN: valve.SERVICE_CLOSE_VALVE,
-}
-SERVICE_TOGGLE_COVER_VALVE = {
-    cover.DOMAIN: cover.SERVICE_TOGGLE,
-    valve.DOMAIN: valve.SERVICE_TOGGLE,
-}
-SERVICE_SET_POSITION_COVER_VALVE = {
-    cover.DOMAIN: cover.SERVICE_SET_COVER_POSITION,
-    valve.DOMAIN: valve.SERVICE_SET_VALVE_POSITION,
-}
-
-COVER_VALVE_CURRENT_POSITION = {
-    cover.DOMAIN: cover.ATTR_CURRENT_POSITION,
-    valve.DOMAIN: valve.ATTR_CURRENT_POSITION,
-}
-
-COVER_VALVE_POSITION = {
-    cover.DOMAIN: cover.ATTR_POSITION,
-    valve.DOMAIN: valve.ATTR_POSITION,
-}
-
-COVER_VALVE_SET_POSITION_FEATURE = {
-    cover.DOMAIN: CoverEntityFeature.SET_POSITION,
-    valve.DOMAIN: ValveEntityFeature.SET_POSITION,
-}
-COVER_VALVE_STOP_FEATURE = {
-    cover.DOMAIN: CoverEntityFeature.STOP,
-    valve.DOMAIN: ValveEntityFeature.STOP,
-}
-
-COVER_VALVE_DOMAINS = {cover.DOMAIN, valve.DOMAIN}
-
-FRIENDLY_DOMAIN = {cover.DOMAIN: "Cover", valve.DOMAIN: "Valve"}
+_TraitT = TypeVar("_TraitT", bound="_Trait")
 
 
-def register_trait[_TraitT: _Trait](trait: type[_TraitT]) -> type[_TraitT]:
+def register_trait(trait: type[_TraitT]) -> type[_TraitT]:
     """Decorate a class to register a trait."""
     TRAITS.append(trait)
     return trait
@@ -257,7 +194,7 @@ def _google_temp_unit(units):
 
 
 def _next_selected(items: list[str], selected: str | None) -> str | None:
-    """Return the next item in an item list starting at given value.
+    """Return the next item in a item list starting at given value.
 
     If selected is missing in items, None is returned
     """
@@ -480,14 +417,6 @@ class OnOffTrait(_Trait):
     @staticmethod
     def supported(domain, features, device_class, _):
         """Test if state is supported."""
-        if domain == water_heater.DOMAIN and features & WaterHeaterEntityFeature.ON_OFF:
-            return True
-
-        if domain == climate.DOMAIN and features & (
-            ClimateEntityFeature.TURN_OFF | ClimateEntityFeature.TURN_ON
-        ):
-            return True
-
         return domain in (
             group.DOMAIN,
             input_boolean.DOMAIN,
@@ -511,7 +440,7 @@ class OnOffTrait(_Trait):
     async def execute(self, command, data, params, challenge):
         """Execute an OnOff command."""
         if (domain := self.state.domain) == group.DOMAIN:
-            service_domain = HOMEASSISTANT_DOMAIN
+            service_domain = HA_DOMAIN
             service = SERVICE_TURN_ON if params["on"] else SERVICE_TURN_OFF
 
         else:
@@ -858,10 +787,7 @@ class StartStopTrait(_Trait):
         if domain == vacuum.DOMAIN:
             return True
 
-        if (
-            domain in COVER_VALVE_DOMAINS
-            and features & COVER_VALVE_STOP_FEATURE[domain]
-        ):
+        if domain == cover.DOMAIN and features & CoverEntityFeature.STOP:
             return True
 
         return False
@@ -875,7 +801,7 @@ class StartStopTrait(_Trait):
                 & VacuumEntityFeature.PAUSE
                 != 0
             }
-        if domain in COVER_VALVE_DOMAINS:
+        if domain == cover.DOMAIN:
             return {}
 
     def query_attributes(self):
@@ -889,22 +815,16 @@ class StartStopTrait(_Trait):
                 "isPaused": state == vacuum.STATE_PAUSED,
             }
 
-        if domain in COVER_VALVE_DOMAINS:
-            return {
-                "isRunning": state
-                in (
-                    COVER_VALVE_STATES[domain]["closing"],
-                    COVER_VALVE_STATES[domain]["opening"],
-                )
-            }
+        if domain == cover.DOMAIN:
+            return {"isRunning": state in (cover.STATE_CLOSING, cover.STATE_OPENING)}
 
     async def execute(self, command, data, params, challenge):
         """Execute a StartStop command."""
         domain = self.state.domain
         if domain == vacuum.DOMAIN:
             return await self._execute_vacuum(command, data, params, challenge)
-        if domain in COVER_VALVE_DOMAINS:
-            return await self._execute_cover_or_valve(command, data, params, challenge)
+        if domain == cover.DOMAIN:
+            return await self._execute_cover(command, data, params, challenge)
 
     async def _execute_vacuum(self, command, data, params, challenge):
         """Execute a StartStop command."""
@@ -943,34 +863,28 @@ class StartStopTrait(_Trait):
                     context=data.context,
                 )
 
-    async def _execute_cover_or_valve(self, command, data, params, challenge):
+    async def _execute_cover(self, command, data, params, challenge):
         """Execute a StartStop command."""
-        domain = self.state.domain
         if command == COMMAND_STARTSTOP:
             if params["start"] is False:
                 if self.state.state in (
-                    COVER_VALVE_STATES[domain]["closing"],
-                    COVER_VALVE_STATES[domain]["opening"],
+                    cover.STATE_CLOSING,
+                    cover.STATE_OPENING,
                 ) or self.state.attributes.get(ATTR_ASSUMED_STATE):
                     await self.hass.services.async_call(
-                        domain,
-                        SERVICE_STOP_COVER_VALVE[domain],
+                        self.state.domain,
+                        cover.SERVICE_STOP_COVER,
                         {ATTR_ENTITY_ID: self.state.entity_id},
                         blocking=not self.config.should_report_state,
                         context=data.context,
                     )
                 else:
                     raise SmartHomeError(
-                        ERR_ALREADY_STOPPED,
-                        f"{FRIENDLY_DOMAIN[domain]} is already stopped",
+                        ERR_ALREADY_STOPPED, "Cover is already stopped"
                     )
             else:
-                await self.hass.services.async_call(
-                    domain,
-                    SERVICE_TOGGLE_COVER_VALVE[domain],
-                    {ATTR_ENTITY_ID: self.state.entity_id},
-                    blocking=not self.config.should_report_state,
-                    context=data.context,
+                raise SmartHomeError(
+                    ERR_NOT_SUPPORTED, "Starting a cover is not supported"
                 )
         else:
             raise SmartHomeError(
@@ -980,97 +894,38 @@ class StartStopTrait(_Trait):
 
 @register_trait
 class TemperatureControlTrait(_Trait):
-    """Trait for devices (other than thermostats) that support controlling temperature.
-
-    Control the target temperature of water heaters.
-    Offers a workaround for Temperature sensors by setting queryOnlyTemperatureControl
-    in the response.
+    """Trait for devices (other than thermostats) that support controlling temperature. Workaround for Temperature sensors.
 
     https://developers.google.com/assistant/smarthome/traits/temperaturecontrol
     """
 
     name = TRAIT_TEMPERATURE_CONTROL
 
-    commands = [
-        COMMAND_SET_TEMPERATURE,
-    ]
-
     @staticmethod
     def supported(domain, features, device_class, _):
         """Test if state is supported."""
         return (
-            domain == water_heater.DOMAIN
-            and features & WaterHeaterEntityFeature.TARGET_TEMPERATURE
-        ) or (
             domain == sensor.DOMAIN
             and device_class == sensor.SensorDeviceClass.TEMPERATURE
         )
 
     def sync_attributes(self):
         """Return temperature attributes for a sync request."""
-        response = {}
-        domain = self.state.domain
-        attrs = self.state.attributes
-        unit = self.hass.config.units.temperature_unit
-        response["temperatureUnitForUX"] = _google_temp_unit(unit)
-
-        if domain == water_heater.DOMAIN:
-            min_temp = round(
-                TemperatureConverter.convert(
-                    float(attrs[water_heater.ATTR_MIN_TEMP]),
-                    unit,
-                    UnitOfTemperature.CELSIUS,
-                )
-            )
-            max_temp = round(
-                TemperatureConverter.convert(
-                    float(attrs[water_heater.ATTR_MAX_TEMP]),
-                    unit,
-                    UnitOfTemperature.CELSIUS,
-                )
-            )
-            response["temperatureRange"] = {
-                "minThresholdCelsius": min_temp,
-                "maxThresholdCelsius": max_temp,
-            }
-        else:
-            response["queryOnlyTemperatureControl"] = True
-            response["temperatureRange"] = {
+        return {
+            "temperatureUnitForUX": _google_temp_unit(
+                self.hass.config.units.temperature_unit
+            ),
+            "queryOnlyTemperatureControl": True,
+            "temperatureRange": {
                 "minThresholdCelsius": -100,
                 "maxThresholdCelsius": 100,
-            }
-
-        return response
+            },
+        }
 
     def query_attributes(self):
         """Return temperature states."""
         response = {}
-        domain = self.state.domain
         unit = self.hass.config.units.temperature_unit
-        if domain == water_heater.DOMAIN:
-            target_temp = self.state.attributes[water_heater.ATTR_TEMPERATURE]
-            current_temp = self.state.attributes[water_heater.ATTR_CURRENT_TEMPERATURE]
-            if target_temp not in (STATE_UNKNOWN, STATE_UNAVAILABLE):
-                response["temperatureSetpointCelsius"] = round(
-                    TemperatureConverter.convert(
-                        float(target_temp),
-                        unit,
-                        UnitOfTemperature.CELSIUS,
-                    ),
-                    1,
-                )
-            if current_temp is not None:
-                response["temperatureAmbientCelsius"] = round(
-                    TemperatureConverter.convert(
-                        float(current_temp),
-                        unit,
-                        UnitOfTemperature.CELSIUS,
-                    ),
-                    1,
-                )
-            return response
-
-        # domain == sensor.DOMAIN
         current_temp = self.state.state
         if current_temp not in (STATE_UNKNOWN, STATE_UNAVAILABLE):
             temp = round(
@@ -1085,35 +940,8 @@ class TemperatureControlTrait(_Trait):
         return response
 
     async def execute(self, command, data, params, challenge):
-        """Execute a temperature point or mode command."""
-        # All sent in temperatures are always in Celsius
-        domain = self.state.domain
-        unit = self.hass.config.units.temperature_unit
-
-        if domain == water_heater.DOMAIN and command == COMMAND_SET_TEMPERATURE:
-            min_temp = self.state.attributes[water_heater.ATTR_MIN_TEMP]
-            max_temp = self.state.attributes[water_heater.ATTR_MAX_TEMP]
-            temp = TemperatureConverter.convert(
-                params["temperature"], UnitOfTemperature.CELSIUS, unit
-            )
-            if unit == UnitOfTemperature.FAHRENHEIT:
-                temp = round(temp)
-            if temp < min_temp or temp > max_temp:
-                raise SmartHomeError(
-                    ERR_VALUE_OUT_OF_RANGE,
-                    f"Temperature should be between {min_temp} and {max_temp}",
-                )
-
-            await self.hass.services.async_call(
-                water_heater.DOMAIN,
-                water_heater.SERVICE_SET_TEMPERATURE,
-                {ATTR_ENTITY_ID: self.state.entity_id, ATTR_TEMPERATURE: temp},
-                blocking=not self.config.should_report_state,
-                context=data.context,
-            )
-            return
-
-        raise SmartHomeError(ERR_NOT_SUPPORTED, f"Execute is not supported by {domain}")
+        """Unsupported."""
+        raise SmartHomeError(ERR_NOT_SUPPORTED, "Execute is not supported by sensor")
 
 
 @register_trait
@@ -1156,12 +984,12 @@ class TemperatureSettingTrait(_Trait):
         modes = []
         attrs = self.state.attributes
 
-        for mode in attrs.get(climate.ATTR_HVAC_MODES) or []:
+        for mode in attrs.get(climate.ATTR_HVAC_MODES, []):
             google_mode = self.hvac_to_google.get(mode)
             if google_mode and google_mode not in modes:
                 modes.append(google_mode)
 
-        for preset in attrs.get(climate.ATTR_PRESET_MODES) or []:
+        for preset in attrs.get(climate.ATTR_PRESET_MODES, []):
             google_mode = self.preset_to_google.get(preset)
             if google_mode and google_mode not in modes:
                 modes.append(google_mode)
@@ -1553,20 +1381,19 @@ class ArmDisArmTrait(_Trait):
 
     state_to_service = {
         STATE_ALARM_ARMED_HOME: SERVICE_ALARM_ARM_HOME,
-        STATE_ALARM_ARMED_NIGHT: SERVICE_ALARM_ARM_NIGHT,
         STATE_ALARM_ARMED_AWAY: SERVICE_ALARM_ARM_AWAY,
+        STATE_ALARM_ARMED_NIGHT: SERVICE_ALARM_ARM_NIGHT,
         STATE_ALARM_ARMED_CUSTOM_BYPASS: SERVICE_ALARM_ARM_CUSTOM_BYPASS,
         STATE_ALARM_TRIGGERED: SERVICE_ALARM_TRIGGER,
     }
 
     state_to_support = {
         STATE_ALARM_ARMED_HOME: AlarmControlPanelEntityFeature.ARM_HOME,
-        STATE_ALARM_ARMED_NIGHT: AlarmControlPanelEntityFeature.ARM_NIGHT,
         STATE_ALARM_ARMED_AWAY: AlarmControlPanelEntityFeature.ARM_AWAY,
+        STATE_ALARM_ARMED_NIGHT: AlarmControlPanelEntityFeature.ARM_NIGHT,
         STATE_ALARM_ARMED_CUSTOM_BYPASS: AlarmControlPanelEntityFeature.ARM_CUSTOM_BYPASS,
         STATE_ALARM_TRIGGERED: AlarmControlPanelEntityFeature.TRIGGER,
     }
-    """The list of states to support in increasing security state."""
 
     @staticmethod
     def supported(domain, features, device_class, _):
@@ -1587,17 +1414,6 @@ class ArmDisArmTrait(_Trait):
             if features & required_feature != 0
         ]
 
-    def _default_arm_state(self):
-        states = self._supported_states()
-
-        if STATE_ALARM_TRIGGERED in states:
-            states.remove(STATE_ALARM_TRIGGERED)
-
-        if not states:
-            raise SmartHomeError(ERR_NOT_SUPPORTED, "ArmLevel missing")
-
-        return states[0]
-
     def sync_attributes(self):
         """Return ArmDisarm attributes for a sync request."""
         response = {}
@@ -1615,27 +1431,32 @@ class ArmDisArmTrait(_Trait):
             }
             levels.append(level)
 
-        response["availableArmLevels"] = {"levels": levels, "ordered": True}
+        response["availableArmLevels"] = {"levels": levels, "ordered": False}
         return response
 
     def query_attributes(self):
         """Return ArmDisarm query attributes."""
         armed_state = self.state.attributes.get("next_state", self.state.state)
-
-        if armed_state in self.state_to_service:
-            return {"isArmed": True, "currentArmLevel": armed_state}
-        return {
-            "isArmed": False,
-            "currentArmLevel": self._default_arm_state(),
-        }
+        response = {"isArmed": armed_state in self.state_to_service}
+        if response["isArmed"]:
+            response.update({"currentArmLevel": armed_state})
+        return response
 
     async def execute(self, command, data, params, challenge):
         """Execute an ArmDisarm command."""
         if params["arm"] and not params.get("cancel"):
-            # If no arm level given, we we arm the first supported
-            # level in state_to_support.
+            # If no arm level given, we can only arm it if there is
+            # only one supported arm type. We never default to triggered.
             if not (arm_level := params.get("armLevel")):
-                arm_level = self._default_arm_state()
+                states = self._supported_states()
+
+                if STATE_ALARM_TRIGGERED in states:
+                    states.remove(STATE_ALARM_TRIGGERED)
+
+                if len(states) != 1:
+                    raise SmartHomeError(ERR_NOT_SUPPORTED, "ArmLevel missing")
+
+                arm_level = states[0]
 
             if self.state.state == arm_level:
                 raise SmartHomeError(ERR_ALREADY_ARMED, "System is already armed")
@@ -1875,12 +1696,6 @@ class ModesTrait(_Trait):
         if domain == light.DOMAIN and features & LightEntityFeature.EFFECT:
             return True
 
-        if (
-            domain == water_heater.DOMAIN
-            and features & WaterHeaterEntityFeature.OPERATION_MODE
-        ):
-            return True
-
         if domain != media_player.DOMAIN:
             return False
 
@@ -1921,7 +1736,6 @@ class ModesTrait(_Trait):
             (select.DOMAIN, select.ATTR_OPTIONS, "option"),
             (humidifier.DOMAIN, humidifier.ATTR_AVAILABLE_MODES, "mode"),
             (light.DOMAIN, light.ATTR_EFFECT_LIST, "effect"),
-            (water_heater.DOMAIN, water_heater.ATTR_OPERATION_LIST, "operation mode"),
         ):
             if self.state.domain != domain:
                 continue
@@ -1932,7 +1746,9 @@ class ModesTrait(_Trait):
             # Shortcut since all domains are currently unique
             break
 
-        return {"availableModes": modes}
+        payload = {"availableModes": modes}
+
+        return payload
 
     def query_attributes(self):
         """Return current modes."""
@@ -1946,16 +1762,13 @@ class ModesTrait(_Trait):
         elif self.state.domain == media_player.DOMAIN:
             if media_player.ATTR_SOUND_MODE_LIST in attrs:
                 mode_settings["sound mode"] = attrs.get(media_player.ATTR_SOUND_MODE)
-        elif self.state.domain in (input_select.DOMAIN, select.DOMAIN):
+        elif self.state.domain == input_select.DOMAIN:
+            mode_settings["option"] = self.state.state
+        elif self.state.domain == select.DOMAIN:
             mode_settings["option"] = self.state.state
         elif self.state.domain == humidifier.DOMAIN:
             if ATTR_MODE in attrs:
                 mode_settings["mode"] = attrs.get(ATTR_MODE)
-        elif self.state.domain == water_heater.DOMAIN:
-            if water_heater.ATTR_OPERATION_MODE in attrs:
-                mode_settings["operation mode"] = attrs.get(
-                    water_heater.ATTR_OPERATION_MODE
-                )
         elif self.state.domain == light.DOMAIN and (
             effect := attrs.get(light.ATTR_EFFECT)
         ):
@@ -2027,20 +1840,6 @@ class ModesTrait(_Trait):
             )
             return
 
-        if self.state.domain == water_heater.DOMAIN:
-            requested_mode = settings["operation mode"]
-            await self.hass.services.async_call(
-                water_heater.DOMAIN,
-                water_heater.SERVICE_SET_OPERATION_MODE,
-                {
-                    water_heater.ATTR_OPERATION_MODE: requested_mode,
-                    ATTR_ENTITY_ID: self.state.entity_id,
-                },
-                blocking=not self.config.should_report_state,
-                context=data.context,
-            )
-            return
-
         if self.state.domain == light.DOMAIN:
             requested_effect = settings["effect"]
             await self.hass.services.async_call(
@@ -2101,13 +1900,14 @@ class InputSelectorTrait(_Trait):
     def sync_attributes(self):
         """Return mode attributes for a sync request."""
         attrs = self.state.attributes
-        sourcelist: list[str] = attrs.get(media_player.ATTR_INPUT_SOURCE_LIST) or []
         inputs = [
             {"key": source, "names": [{"name_synonym": [source], "lang": "en"}]}
-            for source in sourcelist
+            for source in attrs.get(media_player.ATTR_INPUT_SOURCE_LIST, [])
         ]
 
-        return {"availableInputs": inputs, "orderedInputs": True}
+        payload = {"availableInputs": inputs, "orderedInputs": True}
+
+        return payload
 
     def query_attributes(self):
         """Return current modes."""
@@ -2163,7 +1963,7 @@ class OpenCloseTrait(_Trait):
     @staticmethod
     def supported(domain, features, device_class, _):
         """Test if state is supported."""
-        if domain in COVER_VALVE_DOMAINS:
+        if domain == cover.DOMAIN:
             return True
 
         return domain == binary_sensor.DOMAIN and device_class in (
@@ -2198,17 +1998,6 @@ class OpenCloseTrait(_Trait):
                 and features & CoverEntityFeature.CLOSE == 0
             ):
                 response["queryOnlyOpenClose"] = True
-        elif (
-            self.state.domain == valve.DOMAIN
-            and features & ValveEntityFeature.SET_POSITION == 0
-        ):
-            response["discreteOnlyOpenClose"] = True
-
-            if (
-                features & ValveEntityFeature.OPEN == 0
-                and features & ValveEntityFeature.CLOSE == 0
-            ):
-                response["queryOnlyOpenClose"] = True
 
         if self.state.attributes.get(ATTR_ASSUMED_STATE):
             response["commandOnlyOpenClose"] = True
@@ -2227,17 +2016,17 @@ class OpenCloseTrait(_Trait):
         if self.state.attributes.get(ATTR_ASSUMED_STATE):
             return response
 
-        if domain in COVER_VALVE_DOMAINS:
+        if domain == cover.DOMAIN:
             if self.state.state == STATE_UNKNOWN:
                 raise SmartHomeError(
                     ERR_NOT_SUPPORTED, "Querying state is not supported"
                 )
 
-            position = self.state.attributes.get(COVER_VALVE_CURRENT_POSITION[domain])
+            position = self.state.attributes.get(cover.ATTR_CURRENT_POSITION)
 
             if position is not None:
                 response["openPercent"] = position
-            elif self.state.state != COVER_VALVE_STATES[domain]["closed"]:
+            elif self.state.state != cover.STATE_CLOSED:
                 response["openPercent"] = 100
             else:
                 response["openPercent"] = 0
@@ -2255,13 +2044,11 @@ class OpenCloseTrait(_Trait):
         domain = self.state.domain
         features = self.state.attributes.get(ATTR_SUPPORTED_FEATURES, 0)
 
-        if domain in COVER_VALVE_DOMAINS:
+        if domain == cover.DOMAIN:
             svc_params = {ATTR_ENTITY_ID: self.state.entity_id}
             should_verify = False
             if command == COMMAND_OPENCLOSE_RELATIVE:
-                position = self.state.attributes.get(
-                    COVER_VALVE_CURRENT_POSITION[domain]
-                )
+                position = self.state.attributes.get(cover.ATTR_CURRENT_POSITION)
                 if position is None:
                     raise SmartHomeError(
                         ERR_NOT_SUPPORTED,
@@ -2272,16 +2059,16 @@ class OpenCloseTrait(_Trait):
                 position = params["openPercent"]
 
             if position == 0:
-                service = SERVICE_CLOSE_COVER_VALVE[domain]
+                service = cover.SERVICE_CLOSE_COVER
                 should_verify = False
             elif position == 100:
-                service = SERVICE_OPEN_COVER_VALVE[domain]
+                service = cover.SERVICE_OPEN_COVER
                 should_verify = True
-            elif features & COVER_VALVE_SET_POSITION_FEATURE[domain]:
-                service = SERVICE_SET_POSITION_COVER_VALVE[domain]
+            elif features & CoverEntityFeature.SET_POSITION:
+                service = cover.SERVICE_SET_COVER_POSITION
                 if position > 0:
                     should_verify = True
-                svc_params[COVER_VALVE_POSITION[domain]] = position
+                svc_params[cover.ATTR_POSITION] = position
             else:
                 raise SmartHomeError(
                     ERR_NOT_SUPPORTED, "No support for partial open close"
@@ -2295,7 +2082,7 @@ class OpenCloseTrait(_Trait):
                 _verify_pin_challenge(data, self.state, challenge)
 
             await self.hass.services.async_call(
-                domain,
+                cover.DOMAIN,
                 service,
                 svc_params,
                 blocking=not self.config.should_report_state,
@@ -2708,9 +2495,10 @@ class SensorStateTrait(_Trait):
     name = TRAIT_SENSOR_STATE
     commands: list[str] = []
 
-    def _air_quality_description_for_aqi(self, aqi: float | None) -> str:
-        if aqi is None or aqi < 0:
+    def _air_quality_description_for_aqi(self, aqi):
+        if aqi is None or aqi.isnumeric() is False:
             return "unknown"
+        aqi = int(aqi)
         if aqi <= 50:
             return "healthy"
         if aqi <= 100:
@@ -2765,17 +2553,11 @@ class SensorStateTrait(_Trait):
         if device_class is None or data is None:
             return {}
 
-        try:
-            value = float(self.state.state)
-        except ValueError:
-            value = None
-        if self.state.state == STATE_UNKNOWN:
-            value = None
-        sensor_data = {"name": data[0], "rawValue": value}
+        sensor_data = {"name": data[0], "rawValue": self.state.state}
 
         if device_class == sensor.SensorDeviceClass.AQI:
             sensor_data["currentSensorState"] = self._air_quality_description_for_aqi(
-                value
+                self.state.state
             )
 
         return {"currentSensorStateData": [sensor_data]}

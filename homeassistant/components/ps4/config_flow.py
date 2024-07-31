@@ -1,5 +1,4 @@
 """Config Flow for PlayStation 4."""
-
 from collections import OrderedDict
 
 from pyps4_2ndscreen.errors import CredentialTimeout
@@ -7,7 +6,7 @@ from pyps4_2ndscreen.helpers import Helper
 from pyps4_2ndscreen.media_art import COUNTRIES
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow
+from homeassistant import config_entries
 from homeassistant.const import (
     CONF_CODE,
     CONF_HOST,
@@ -39,7 +38,7 @@ PORT_MSG = {UDP_PORT: "port_987_bind_error", TCP_PORT: "port_997_bind_error"}
 PIN_LENGTH = 8
 
 
-class PlayStation4FlowHandler(ConfigFlow, domain=DOMAIN):
+class PlayStation4FlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a PlayStation 4 config flow."""
 
     VERSION = CONFIG_ENTRY_VERSION

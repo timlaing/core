@@ -1,5 +1,4 @@
 """The sia integration."""
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PORT
 from homeassistant.core import HomeAssistant

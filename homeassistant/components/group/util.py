@@ -1,5 +1,4 @@
 """Utility functions to combine state attributes from multiple entities."""
-
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator
@@ -29,7 +28,7 @@ def mean_int(*args: Any) -> int:
 
 def mean_tuple(*args: Any) -> tuple[float | Any, ...]:
     """Return the mean values along the columns of the supplied values."""
-    return tuple(sum(x) / len(x) for x in zip(*args, strict=False))
+    return tuple(sum(x) / len(x) for x in zip(*args))
 
 
 def attribute_equal(states: list[State], key: str) -> bool:

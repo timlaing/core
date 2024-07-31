@@ -1,5 +1,4 @@
 """The Starlink integration."""
-
 from __future__ import annotations
 
 from homeassistant.config_entries import ConfigEntry
@@ -15,7 +14,6 @@ PLATFORMS = [
     Platform.DEVICE_TRACKER,
     Platform.SENSOR,
     Platform.SWITCH,
-    Platform.TIME,
 ]
 
 

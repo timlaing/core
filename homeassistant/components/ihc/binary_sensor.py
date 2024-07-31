@@ -1,5 +1,4 @@
 """Support for IHC binary sensors."""
-
 from __future__ import annotations
 
 from ihcsdk.ihccontroller import IHCController

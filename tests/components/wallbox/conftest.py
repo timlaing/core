@@ -1,5 +1,4 @@
 """Test fixtures for the Wallbox integration."""
-
 import pytest
 
 from homeassistant.components.wallbox.const import CONF_STATION, DOMAIN

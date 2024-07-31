@@ -1,5 +1,4 @@
 """Fan representation of a Snooz device."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -75,15 +74,10 @@ class SnoozFan(FanEntity, RestoreEntity):
 
     _attr_has_entity_name = True
     _attr_name = None
-    _attr_supported_features = (
-        FanEntityFeature.SET_SPEED
-        | FanEntityFeature.TURN_OFF
-        | FanEntityFeature.TURN_ON
-    )
+    _attr_supported_features = FanEntityFeature.SET_SPEED
     _attr_should_poll = False
     _is_on: bool | None = None
     _percentage: int | None = None
-    _enable_turn_on_off_backwards_compatibility = False
 
     def __init__(self, data: SnoozConfigurationData) -> None:
         """Initialize a Snooz fan entity."""

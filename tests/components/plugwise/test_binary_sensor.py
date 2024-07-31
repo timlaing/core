@@ -4,7 +4,6 @@ from unittest.mock import MagicMock
 
 from homeassistant.const import STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_component import async_update_entity
 
 from tests.common import MockConfigEntry
 
@@ -46,7 +45,9 @@ async def test_anna_climate_binary_sensor_change(
     assert state
     assert state.state == STATE_ON
 
-    await async_update_entity(hass, "binary_sensor.opentherm_dhw_state")
+    await hass.helpers.entity_component.async_update_entity(
+        "binary_sensor.opentherm_dhw_state"
+    )
 
     state = hass.states.get("binary_sensor.opentherm_dhw_state")
     assert state

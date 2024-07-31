@@ -1,5 +1,4 @@
 """Constants for the EDL21 component."""
-
 import logging
 
 LOGGER = logging.getLogger(__package__)

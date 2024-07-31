@@ -3,7 +3,6 @@
 from unittest.mock import MagicMock
 
 from syrupy.assertion import SnapshotAssertion
-from syrupy.filters import props
 
 from homeassistant.core import HomeAssistant
 
@@ -22,4 +21,4 @@ async def test_diagnostics(
         hass, hass_client, mock_vicare_gas_boiler
     )
 
-    assert diag == snapshot(exclude=props("created_at", "modified_at"))
+    assert diag == snapshot

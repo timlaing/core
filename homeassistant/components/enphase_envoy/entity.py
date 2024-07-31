@@ -1,5 +1,4 @@
 """Support for Enphase Envoy solar energy monitor."""
-
 from __future__ import annotations
 
 from pyenphase import EnvoyData

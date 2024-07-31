@@ -1,5 +1,4 @@
 """Tests for Broadlink sensors."""
-
 from datetime import timedelta
 
 from homeassistant.components.broadlink.const import DOMAIN

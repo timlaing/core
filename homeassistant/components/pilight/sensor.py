@@ -1,15 +1,11 @@
 """Support for Pilight sensors."""
-
 from __future__ import annotations
 
 import logging
 
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
-    SensorEntity,
-)
+from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 from homeassistant.const import CONF_NAME, CONF_PAYLOAD, CONF_UNIT_OF_MEASUREMENT
 from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
@@ -23,7 +19,7 @@ _LOGGER = logging.getLogger(__name__)
 CONF_VARIABLE = "variable"
 
 DEFAULT_NAME = "Pilight Sensor"
-PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_VARIABLE): cv.string,
         vol.Required(CONF_PAYLOAD): vol.Schema(dict),

@@ -1,13 +1,23 @@
 """Tests for AccuWeather."""
+from unittest.mock import PropertyMock, patch
 
 from homeassistant.components.accuweather.const import DOMAIN
-from homeassistant.core import HomeAssistant
 
-from tests.common import MockConfigEntry
+from tests.common import (
+    MockConfigEntry,
+    load_json_array_fixture,
+    load_json_object_fixture,
+)
 
 
-async def init_integration(hass: HomeAssistant) -> MockConfigEntry:
+async def init_integration(
+    hass, forecast=False, unsupported_icon=False
+) -> MockConfigEntry:
     """Set up the AccuWeather integration in Home Assistant."""
+    options = {}
+    if forecast:
+        options["forecast"] = True
+
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="Home",
@@ -18,10 +28,28 @@ async def init_integration(hass: HomeAssistant) -> MockConfigEntry:
             "longitude": 122.12,
             "name": "Home",
         },
+        options=options,
     )
 
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    current = load_json_object_fixture("accuweather/current_conditions_data.json")
+    forecast = load_json_array_fixture("accuweather/forecast_data.json")
+
+    if unsupported_icon:
+        current["WeatherIcon"] = 999
+
+    with patch(
+        "homeassistant.components.accuweather.AccuWeather.async_get_current_conditions",
+        return_value=current,
+    ), patch(
+        "homeassistant.components.accuweather.AccuWeather.async_get_daily_forecast",
+        return_value=forecast,
+    ), patch(
+        "homeassistant.components.accuweather.AccuWeather.requests_remaining",
+        new_callable=PropertyMock,
+        return_value=10,
+    ):
+        entry.add_to_hass(hass)
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
 
     return entry

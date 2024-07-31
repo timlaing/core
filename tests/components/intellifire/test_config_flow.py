@@ -1,5 +1,4 @@
 """Test the IntelliFire config flow."""
-
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from intellifire4py.exceptions import LoginException
@@ -36,7 +35,7 @@ async def test_no_discovery(
         result = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["errors"] == {}
     assert result["step_id"] == "manual_device_entry"
 
@@ -48,7 +47,7 @@ async def test_no_discovery(
     )
     await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == FlowResultType.FORM
     assert result2["step_id"] == "api_config"
 
     result3 = await hass.config_entries.flow.async_configure(
@@ -57,7 +56,7 @@ async def test_no_discovery(
     )
     await hass.async_block_till_done()
 
-    assert result3["type"] is FlowResultType.CREATE_ENTRY
+    assert result3["type"] == FlowResultType.CREATE_ENTRY
     assert result3["title"] == "Fireplace 12345"
     assert result3["data"] == {
         CONF_HOST: "1.1.1.1",
@@ -98,7 +97,7 @@ async def test_single_discovery(
         {CONF_USERNAME: "test", CONF_PASSWORD: "AROONIE"},
     )
     await hass.async_block_till_done()
-    assert result3["type"] is FlowResultType.FORM
+    assert result3["type"] == FlowResultType.FORM
     assert result3["errors"] == {"base": "iftapi_connect"}
 
 
@@ -131,7 +130,7 @@ async def test_single_discovery_loign_error(
         {CONF_USERNAME: "test", CONF_PASSWORD: "AROONIE"},
     )
     await hass.async_block_till_done()
-    assert result3["type"] is FlowResultType.FORM
+    assert result3["type"] == FlowResultType.FORM
     assert result3["errors"] == {"base": "api_error"}
 
 
@@ -195,14 +194,14 @@ async def test_multi_discovery_cannot_connect(
         result = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == FlowResultType.FORM
         assert result["step_id"] == "pick_device"
 
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"], user_input={CONF_HOST: "192.168.1.33"}
         )
         await hass.async_block_till_done()
-        assert result2["type"] is FlowResultType.FORM
+        assert result2["type"] == FlowResultType.FORM
         assert result2["errors"] == {"base": "cannot_connect"}
 
 
@@ -217,7 +216,7 @@ async def test_form_cannot_connect_manual_entry(
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "manual_device_entry"
 
     result2 = await hass.config_entries.flow.async_configure(
@@ -227,7 +226,7 @@ async def test_form_cannot_connect_manual_entry(
         },
     )
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == FlowResultType.FORM
     assert result2["errors"] == {"base": "cannot_connect"}
 
 
@@ -262,7 +261,7 @@ async def test_picker_already_discovered(
             CONF_HOST: "192.168.1.4",
         },
     )
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == FlowResultType.FORM
     assert len(mock_setup_entry.mock_calls) == 0
 
 
@@ -299,7 +298,7 @@ async def test_reauth_flow(
         },
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "api_config"
 
     result3 = await hass.config_entries.flow.async_configure(
@@ -307,7 +306,7 @@ async def test_reauth_flow(
         {CONF_USERNAME: "test", CONF_PASSWORD: "AROONIE"},
     )
     await hass.async_block_till_done()
-    assert result3["type"] is FlowResultType.ABORT
+    assert result3["type"] == FlowResultType.ABORT
     assert entry.data[CONF_PASSWORD] == "AROONIE"
     assert entry.data[CONF_USERNAME] == "test"
 
@@ -323,14 +322,14 @@ async def test_dhcp_discovery_intellifire_device(
         context={"source": config_entries.SOURCE_DHCP},
         data=dhcp.DhcpServiceInfo(
             ip="1.1.1.1",
-            macaddress="aabbcceeddff",
+            macaddress="AA:BB:CC:DD:EE:FF",
             hostname="zentrios-Test",
         ),
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "dhcp_confirm"
     result2 = await hass.config_entries.flow.async_configure(result["flow_id"])
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == FlowResultType.FORM
     assert result2["step_id"] == "dhcp_confirm"
     result3 = await hass.config_entries.flow.async_configure(
         result2["flow_id"], user_input={}
@@ -353,10 +352,10 @@ async def test_dhcp_discovery_non_intellifire_device(
         context={"source": config_entries.SOURCE_DHCP},
         data=dhcp.DhcpServiceInfo(
             ip="1.1.1.1",
-            macaddress="aabbcceeddff",
+            macaddress="AA:BB:CC:DD:EE:FF",
             hostname="zentrios-Evil",
         ),
     )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "not_intellifire_device"

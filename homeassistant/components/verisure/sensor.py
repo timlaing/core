@@ -1,5 +1,4 @@
 """Support for Verisure sensors."""
-
 from __future__ import annotations
 
 from homeassistant.components.sensor import (
@@ -69,6 +68,7 @@ class VerisureThermometer(
         area = self.coordinator.data["climate"][self.serial_number]["device"]["area"]
         return DeviceInfo(
             name=area,
+            suggested_area=area,
             manufacturer="Verisure",
             model=DEVICE_TYPE_NAME.get(device_type, device_type),
             identifiers={(DOMAIN, self.serial_number)},
@@ -119,6 +119,7 @@ class VerisureHygrometer(
         area = self.coordinator.data["climate"][self.serial_number]["device"]["area"]
         return DeviceInfo(
             name=area,
+            suggested_area=area,
             manufacturer="Verisure",
             model=DEVICE_TYPE_NAME.get(device_type, device_type),
             identifiers={(DOMAIN, self.serial_number)},

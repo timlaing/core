@@ -1,5 +1,4 @@
 """Constants for NZBGet."""
-
 DOMAIN = "nzbget"
 
 # Attributes

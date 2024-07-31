@@ -1,5 +1,4 @@
 """Tests for the LaMetric number platform."""
-
 from unittest.mock import MagicMock
 
 from demetriek import LaMetricConnectionError, LaMetricError
@@ -18,6 +17,7 @@ from homeassistant.const import (
     ATTR_DEVICE_CLASS,
     ATTR_ENTITY_ID,
     ATTR_FRIENDLY_NAME,
+    ATTR_ICON,
     ATTR_UNIT_OF_MEASUREMENT,
     PERCENTAGE,
     STATE_UNAVAILABLE,
@@ -41,6 +41,7 @@ async def test_brightness(
     assert state
     assert state.attributes.get(ATTR_DEVICE_CLASS) is None
     assert state.attributes.get(ATTR_FRIENDLY_NAME) == "Frenck's LaMetric Brightness"
+    assert state.attributes.get(ATTR_ICON) == "mdi:brightness-6"
     assert state.attributes.get(ATTR_MAX) == 100
     assert state.attributes.get(ATTR_MIN) == 0
     assert state.attributes.get(ATTR_STEP) == 1
@@ -90,6 +91,7 @@ async def test_volume(
     assert state
     assert state.attributes.get(ATTR_DEVICE_CLASS) is None
     assert state.attributes.get(ATTR_FRIENDLY_NAME) == "Frenck's LaMetric Volume"
+    assert state.attributes.get(ATTR_ICON) == "mdi:volume-high"
     assert state.attributes.get(ATTR_MAX) == 100
     assert state.attributes.get(ATTR_MIN) == 0
     assert state.attributes.get(ATTR_STEP) == 1
@@ -150,6 +152,7 @@ async def test_number_error(
             },
             blocking=True,
         )
+        await hass.async_block_till_done()
 
     state = hass.states.get("number.frenck_s_lametric_volume")
     assert state
@@ -179,6 +182,7 @@ async def test_number_connection_error(
             },
             blocking=True,
         )
+        await hass.async_block_till_done()
 
     state = hass.states.get("number.frenck_s_lametric_volume")
     assert state

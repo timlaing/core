@@ -1,5 +1,4 @@
 """group conftest."""
-
 import pytest
 
 from homeassistant.core import HomeAssistant

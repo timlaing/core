@@ -1,14 +1,12 @@
 """Switcher integration Button platform."""
-
 from __future__ import annotations
 
-from collections.abc import Callable, Coroutine
+import asyncio
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, cast
 
 from aioswitcher.api import (
     DeviceState,
-    SwitcherApi,
     SwitcherBaseResponse,
     SwitcherType2Api,
     ThermostatSwing,
@@ -17,6 +15,7 @@ from aioswitcher.api.remotes import SwitcherBreezeRemote
 from aioswitcher.device import DeviceCategory
 
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
@@ -26,45 +25,51 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import SwitcherConfigEntry
+from . import SwitcherDataUpdateCoordinator
 from .const import SIGNAL_DEVICE_ADD
-from .coordinator import SwitcherDataUpdateCoordinator
 from .utils import get_breeze_remote_manager
 
 
-@dataclass(frozen=True, kw_only=True)
-class SwitcherThermostatButtonEntityDescription(ButtonEntityDescription):
-    """Class to describe a Switcher Thermostat Button entity."""
+@dataclass
+class SwitcherThermostatButtonDescriptionMixin:
+    """Mixin to describe a Switcher Thermostat Button entity."""
 
-    press_fn: Callable[
-        [SwitcherApi, SwitcherBreezeRemote],
-        Coroutine[Any, Any, SwitcherBaseResponse],
-    ]
+    press_fn: Callable[[SwitcherType2Api, SwitcherBreezeRemote], SwitcherBaseResponse]
     supported: Callable[[SwitcherBreezeRemote], bool]
+
+
+@dataclass
+class SwitcherThermostatButtonEntityDescription(
+    ButtonEntityDescription, SwitcherThermostatButtonDescriptionMixin
+):
+    """Class to describe a Switcher Thermostat Button entity."""
 
 
 THERMOSTAT_BUTTONS = [
     SwitcherThermostatButtonEntityDescription(
         key="assume_on",
         translation_key="assume_on",
+        icon="mdi:fan",
         entity_category=EntityCategory.CONFIG,
         press_fn=lambda api, remote: api.control_breeze_device(
             remote, state=DeviceState.ON, update_state=True
         ),
-        supported=lambda _: True,
+        supported=lambda remote: bool(remote.on_off_type),
     ),
     SwitcherThermostatButtonEntityDescription(
         key="assume_off",
         translation_key="assume_off",
+        icon="mdi:fan-off",
         entity_category=EntityCategory.CONFIG,
         press_fn=lambda api, remote: api.control_breeze_device(
             remote, state=DeviceState.OFF, update_state=True
         ),
-        supported=lambda _: True,
+        supported=lambda remote: bool(remote.on_off_type),
     ),
     SwitcherThermostatButtonEntityDescription(
         key="vertical_swing_on",
         translation_key="vertical_swing_on",
+        icon="mdi:autorenew",
         press_fn=lambda api, remote: api.control_breeze_device(
             remote, swing=ThermostatSwing.ON
         ),
@@ -73,6 +78,7 @@ THERMOSTAT_BUTTONS = [
     SwitcherThermostatButtonEntityDescription(
         key="vertical_swing_off",
         translation_key="vertical_swing_off",
+        icon="mdi:autorenew-off",
         press_fn=lambda api, remote: api.control_breeze_device(
             remote, swing=ThermostatSwing.OFF
         ),
@@ -83,17 +89,16 @@ THERMOSTAT_BUTTONS = [
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: SwitcherConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Switcher button from config entry."""
 
     async def async_add_buttons(coordinator: SwitcherDataUpdateCoordinator) -> None:
         """Get remote and add button from Switcher device."""
-        data = cast(SwitcherBreezeRemote, coordinator.data)
         if coordinator.data.device_type.category == DeviceCategory.THERMOSTAT:
             remote: SwitcherBreezeRemote = await hass.async_add_executor_job(
-                get_breeze_remote_manager(hass).get_remote, data.remote_id
+                get_breeze_remote_manager(hass).get_remote, coordinator.data.remote_id
             )
             async_add_entities(
                 SwitcherThermostatButtonEntity(coordinator, description, remote)
@@ -132,17 +137,15 @@ class SwitcherThermostatButtonEntity(
 
     async def async_press(self) -> None:
         """Press the button."""
-        response: SwitcherBaseResponse | None = None
+        response: SwitcherBaseResponse = None
         error = None
 
         try:
             async with SwitcherType2Api(
-                self.coordinator.data.ip_address,
-                self.coordinator.data.device_id,
-                self.coordinator.data.device_key,
+                self.coordinator.data.ip_address, self.coordinator.data.device_id
             ) as swapi:
                 response = await self.entity_description.press_fn(swapi, self._remote)
-        except (TimeoutError, OSError, RuntimeError) as err:
+        except (asyncio.TimeoutError, OSError, RuntimeError) as err:
             error = repr(err)
 
         if error or not response or not response.successful:

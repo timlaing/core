@@ -1,9 +1,8 @@
 """Tests for the Oncue integration."""
-
 from contextlib import contextmanager
 from unittest.mock import patch
 
-from aiooncue import LoginFailedException, OncueDevice, OncueSensor
+from aiooncue import OncueDevice, OncueSensor
 
 MOCK_ASYNC_FETCH_ALL = {
     "123456": OncueDevice(
@@ -802,14 +801,11 @@ MOCK_ASYNC_FETCH_ALL_UNAVAILABLE_DEVICE = {
 def _patch_login_and_data():
     @contextmanager
     def _patcher():
-        with (
-            patch(
-                "homeassistant.components.oncue.Oncue.async_login",
-            ),
-            patch(
-                "homeassistant.components.oncue.Oncue.async_fetch_all",
-                return_value=MOCK_ASYNC_FETCH_ALL,
-            ),
+        with patch(
+            "homeassistant.components.oncue.Oncue.async_login",
+        ), patch(
+            "homeassistant.components.oncue.Oncue.async_fetch_all",
+            return_value=MOCK_ASYNC_FETCH_ALL,
         ):
             yield
 
@@ -819,14 +815,11 @@ def _patch_login_and_data():
 def _patch_login_and_data_offline_device():
     @contextmanager
     def _patcher():
-        with (
-            patch(
-                "homeassistant.components.oncue.Oncue.async_login",
-            ),
-            patch(
-                "homeassistant.components.oncue.Oncue.async_fetch_all",
-                return_value=MOCK_ASYNC_FETCH_ALL_OFFLINE_DEVICE,
-            ),
+        with patch(
+            "homeassistant.components.oncue.Oncue.async_login",
+        ), patch(
+            "homeassistant.components.oncue.Oncue.async_fetch_all",
+            return_value=MOCK_ASYNC_FETCH_ALL_OFFLINE_DEVICE,
         ):
             yield
 
@@ -836,12 +829,9 @@ def _patch_login_and_data_offline_device():
 def _patch_login_and_data_unavailable():
     @contextmanager
     def _patcher():
-        with (
-            patch("homeassistant.components.oncue.Oncue.async_login"),
-            patch(
-                "homeassistant.components.oncue.Oncue.async_fetch_all",
-                return_value=MOCK_ASYNC_FETCH_ALL_UNAVAILABLE_DEVICE,
-            ),
+        with patch("homeassistant.components.oncue.Oncue.async_login"), patch(
+            "homeassistant.components.oncue.Oncue.async_fetch_all",
+            return_value=MOCK_ASYNC_FETCH_ALL_UNAVAILABLE_DEVICE,
         ):
             yield
 
@@ -851,30 +841,9 @@ def _patch_login_and_data_unavailable():
 def _patch_login_and_data_unavailable_device():
     @contextmanager
     def _patcher():
-        with (
-            patch("homeassistant.components.oncue.Oncue.async_login"),
-            patch(
-                "homeassistant.components.oncue.Oncue.async_fetch_all",
-                return_value=MOCK_ASYNC_FETCH_ALL_UNAVAILABLE_DEVICE,
-            ),
-        ):
-            yield
-
-    return _patcher()
-
-
-def _patch_login_and_data_auth_failure():
-    @contextmanager
-    def _patcher():
-        with (
-            patch(
-                "homeassistant.components.oncue.Oncue.async_login",
-                side_effect=LoginFailedException,
-            ),
-            patch(
-                "homeassistant.components.oncue.Oncue.async_fetch_all",
-                side_effect=LoginFailedException,
-            ),
+        with patch("homeassistant.components.oncue.Oncue.async_login"), patch(
+            "homeassistant.components.oncue.Oncue.async_fetch_all",
+            return_value=MOCK_ASYNC_FETCH_ALL_UNAVAILABLE_DEVICE,
         ):
             yield
 

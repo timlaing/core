@@ -1,5 +1,4 @@
 """Tests for the Slack integration."""
-
 from __future__ import annotations
 
 import json

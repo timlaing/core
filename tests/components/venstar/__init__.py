@@ -1,5 +1,4 @@
 """Tests for the venstar integration."""
-
 from requests import RequestException
 
 

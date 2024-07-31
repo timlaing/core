@@ -1,8 +1,8 @@
 """The tests for Media Extractor integration."""
-
 from typing import Any
 
-from .const import (
+from tests.common import load_json_object_fixture
+from tests.components.media_extractor.const import (
     AUDIO_QUERY,
     NO_FORMATS_RESPONSE,
     SOUNDCLOUD_TRACK,
@@ -10,8 +10,6 @@ from .const import (
     YOUTUBE_PLAYLIST,
     YOUTUBE_VIDEO,
 )
-
-from tests.common import load_json_object_fixture
 
 
 def _get_base_fixture(url: str) -> str:
@@ -37,13 +35,9 @@ class MockYoutubeDL:
         """Initialize mock object for YoutubeDL."""
         self.params = params
 
-    def extract_info(
-        self, url: str, *, download: bool = True, process: bool = False
-    ) -> dict[str, Any]:
+    def extract_info(self, url: str, *, process: bool = False) -> dict[str, Any]:
         """Return info."""
         self._fixture = _get_base_fixture(url)
-        if not download:
-            return load_json_object_fixture(f"media_extractor/{self._fixture}.json")
         return load_json_object_fixture(f"media_extractor/{self._fixture}_info.json")
 
     def process_ie_result(

@@ -1,5 +1,4 @@
 """Support for KNX/IP select entities."""
-
 from __future__ import annotations
 
 from xknx import XKNX
@@ -10,7 +9,6 @@ from homeassistant.components.select import SelectEntity
 from homeassistant.const import (
     CONF_ENTITY_CATEGORY,
     CONF_NAME,
-    CONF_PAYLOAD,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     Platform,
@@ -21,6 +19,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.typing import ConfigType
 
 from .const import (
+    CONF_PAYLOAD,
     CONF_PAYLOAD_LENGTH,
     CONF_RESPOND_TO_READ,
     CONF_STATE_ADDRESS,
@@ -81,18 +80,17 @@ class KNXSelect(KnxEntity, SelectEntity, RestoreEntity):
         if not self._device.remote_value.readable and (
             last_state := await self.async_get_last_state()
         ):
-            if (
-                last_state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE)
-                and (option := self._option_payloads.get(last_state.state)) is not None
-            ):
-                self._device.remote_value.update_value(option)
+            if last_state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE):
+                await self._device.remote_value.update_value(
+                    self._option_payloads.get(last_state.state)
+                )
 
-    def after_update_callback(self, device: XknxDevice) -> None:
+    async def after_update_callback(self, device: XknxDevice) -> None:
         """Call after device was updated."""
         self._attr_current_option = self.option_from_payload(
             self._device.remote_value.value
         )
-        super().after_update_callback(device)
+        await super().after_update_callback(device)
 
     def option_from_payload(self, payload: int | None) -> str | None:
         """Return the option a given payload is assigned to."""

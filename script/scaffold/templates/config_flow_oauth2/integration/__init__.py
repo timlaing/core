@@ -1,5 +1,4 @@
 """The NEW_NAME integration."""
-
 from __future__ import annotations
 
 from homeassistant.config_entries import ConfigEntry
@@ -8,18 +7,14 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import aiohttp_client, config_entry_oauth2_flow
 
 from . import api
+from .const import DOMAIN
 
 # TODO List the platforms that you want to support.
 # For your initial PR, limit it to 1 platform.
 PLATFORMS: list[Platform] = [Platform.LIGHT]
 
-# TODO Create ConfigEntry type alias with ConfigEntryAuth or AsyncConfigEntryAuth object
-# TODO Rename type alias and update all entry annotations
-type New_NameConfigEntry = ConfigEntry[api.AsyncConfigEntryAuth]
 
-
-# # TODO Update entry annotation
-async def async_setup_entry(hass: HomeAssistant, entry: New_NameConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up NEW_NAME from a config entry."""
     implementation = (
         await config_entry_oauth2_flow.async_get_config_entry_implementation(
@@ -30,10 +25,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: New_NameConfigEntry) -> 
     session = config_entry_oauth2_flow.OAuth2Session(hass, entry, implementation)
 
     # If using a requests-based API lib
-    entry.runtime_data = api.ConfigEntryAuth(hass, session)
+    hass.data[DOMAIN][entry.entry_id] = api.ConfigEntryAuth(hass, session)
 
     # If using an aiohttp-based API lib
-    entry.runtime_data = api.AsyncConfigEntryAuth(
+    hass.data[DOMAIN][entry.entry_id] = api.AsyncConfigEntryAuth(
         aiohttp_client.async_get_clientsession(hass), session
     )
 
@@ -42,7 +37,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: New_NameConfigEntry) -> 
     return True
 
 
-# TODO Update entry annotation
-async def async_unload_entry(hass: HomeAssistant, entry: New_NameConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        hass.data[DOMAIN].pop(entry.entry_id)
+
+    return unload_ok

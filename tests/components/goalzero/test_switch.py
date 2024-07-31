@@ -1,5 +1,4 @@
 """Switch tests for the Goalzero integration."""
-
 from homeassistant.components.goalzero.const import DEFAULT_NAME
 from homeassistant.components.switch import DOMAIN
 from homeassistant.const import (

@@ -1,5 +1,4 @@
 """Entity manager for generic GeoJSON events."""
-
 from __future__ import annotations
 
 from collections.abc import Callable

@@ -1,5 +1,4 @@
 """Support for Dremel 3D Printer buttons."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -8,19 +7,27 @@ from dataclasses import dataclass
 from dremel3dpy import Dremel3DPrinter
 
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .coordinator import DremelConfigEntry
+from .const import DOMAIN
 from .entity import Dremel3DPrinterEntity
 
 
-@dataclass(frozen=True, kw_only=True)
-class Dremel3DPrinterButtonEntityDescription(ButtonEntityDescription):
-    """Describes a Dremel 3D Printer button entity."""
+@dataclass
+class Dremel3DPrinterButtonEntityMixin:
+    """Mixin for required keys."""
 
     press_fn: Callable[[Dremel3DPrinter], None]
+
+
+@dataclass
+class Dremel3DPrinterButtonEntityDescription(
+    ButtonEntityDescription, Dremel3DPrinterButtonEntityMixin
+):
+    """Describes a Dremel 3D Printer button entity."""
 
 
 BUTTON_TYPES: tuple[Dremel3DPrinterButtonEntityDescription, ...] = (
@@ -44,12 +51,13 @@ BUTTON_TYPES: tuple[Dremel3DPrinterButtonEntityDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: DremelConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Dremel 3D Printer control buttons."""
+    coordinator = hass.data[DOMAIN][config_entry.entry_id]
     async_add_entities(
-        Dremel3DPrinterButtonEntity(config_entry.runtime_data, description)
+        Dremel3DPrinterButtonEntity(coordinator, description)
         for description in BUTTON_TYPES
     )
 

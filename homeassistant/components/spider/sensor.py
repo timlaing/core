@@ -1,5 +1,4 @@
 """Support for Spider Powerplugs (energy & power)."""
-
 from __future__ import annotations
 
 from homeassistant.components.sensor import (

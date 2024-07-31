@@ -1,5 +1,4 @@
 """Support for Vera binary sensors."""
-
 from __future__ import annotations
 
 import pyvera as veraApi

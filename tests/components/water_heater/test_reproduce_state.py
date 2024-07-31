@@ -1,5 +1,4 @@
 """Test reproduce state for Water heater."""
-
 import pytest
 
 from homeassistant.components.water_heater import (

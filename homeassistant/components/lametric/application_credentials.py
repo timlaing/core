@@ -1,5 +1,4 @@
 """Application credentials platform for LaMetric."""
-
 from homeassistant.components.application_credentials import AuthorizationServer
 from homeassistant.core import HomeAssistant
 

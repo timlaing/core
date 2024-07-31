@@ -1,5 +1,4 @@
 """Provides device actions for Humidifier."""
-
 from __future__ import annotations
 
 import voluptuous as vol
@@ -22,7 +21,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import get_capability, get_supported_features
-from homeassistant.helpers.typing import ConfigType, TemplateVarsType, VolDictType
+from homeassistant.helpers.typing import ConfigType, TemplateVarsType
 
 from . import DOMAIN, const
 
@@ -114,7 +113,7 @@ async def async_get_action_capabilities(
     """List action capabilities."""
     action_type = config[CONF_TYPE]
 
-    fields: VolDictType = {}
+    fields = {}
 
     if action_type == "set_humidity":
         fields[vol.Required(const.ATTR_HUMIDITY)] = vol.Coerce(int)

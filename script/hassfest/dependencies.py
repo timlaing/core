@@ -1,5 +1,4 @@
 """Validate dependencies."""
-
 from __future__ import annotations
 
 import ast
@@ -32,11 +31,7 @@ class ImportCollector(ast.NodeVisitor):
 
             self._cur_fil_dir = fil.relative_to(self.integration.path)
             self.referenced[self._cur_fil_dir] = set()
-            try:
-                self.visit(ast.parse(fil.read_text()))
-            except SyntaxError as e:
-                e.add_note(f"File: {fil}")
-                raise
+            self.visit(ast.parse(fil.read_text()))
             self._cur_fil_dir = None
 
     def _add_reference(self, reference_domain: str) -> None:
@@ -152,18 +147,14 @@ IGNORE_VIOLATIONS = {
     ("demo", "manual"),
     # This would be a circular dep
     ("http", "network"),
-    ("http", "cloud"),
     # This would be a circular dep
     ("zha", "homeassistant_hardware"),
     ("zha", "homeassistant_sky_connect"),
     ("zha", "homeassistant_yellow"),
-    ("homeassistant_sky_connect", "zha"),
     # This should become a helper method that integrations can submit data to
     ("websocket_api", "lovelace"),
     ("websocket_api", "shopping_list"),
     "logbook",
-    # Temporary needed for migration until 2024.10
-    ("conversation", "assist_pipeline"),
 }
 
 

@@ -1,5 +1,4 @@
 """Config flow for Coinbase integration."""
-
 from __future__ import annotations
 
 import logging
@@ -9,21 +8,15 @@ from coinbase.wallet.client import Client
 from coinbase.wallet.error import AuthenticationError
 import voluptuous as vol
 
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlow,
-)
+from homeassistant import config_entries, core, exceptions
 from homeassistant.const import CONF_API_KEY, CONF_API_TOKEN
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.core import callback
+from homeassistant.data_entry_flow import FlowResult
 import homeassistant.helpers.config_validation as cv
 
 from . import get_accounts
 from .const import (
     API_ACCOUNT_CURRENCY,
-    API_ACCOUNT_CURRENCY_CODE,
     API_RATES,
     API_RESOURCE_TYPE,
     API_TYPE_VAULT,
@@ -50,10 +43,11 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 def get_user_from_client(api_key, api_token):
     """Get the user name from Coinbase API credentials."""
     client = Client(api_key, api_token)
-    return client.get_current_user()
+    user = client.get_current_user()
+    return user
 
 
-async def validate_api(hass: HomeAssistant, data):
+async def validate_api(hass: core.HomeAssistant, data):
     """Validate the credentials."""
 
     try:
@@ -77,7 +71,9 @@ async def validate_api(hass: HomeAssistant, data):
     return {"title": user["name"]}
 
 
-async def validate_options(hass: HomeAssistant, config_entry: ConfigEntry, options):
+async def validate_options(
+    hass: core.HomeAssistant, config_entry: config_entries.ConfigEntry, options
+):
     """Validate the requested resources are provided by API."""
 
     client = hass.data[DOMAIN][config_entry.entry_id].client
@@ -85,7 +81,7 @@ async def validate_options(hass: HomeAssistant, config_entry: ConfigEntry, optio
     accounts = await hass.async_add_executor_job(get_accounts, client)
 
     accounts_currencies = [
-        account[API_ACCOUNT_CURRENCY][API_ACCOUNT_CURRENCY_CODE]
+        account[API_ACCOUNT_CURRENCY]
         for account in accounts
         if account[API_RESOURCE_TYPE] != API_TYPE_VAULT
     ]
@@ -103,14 +99,14 @@ async def validate_options(hass: HomeAssistant, config_entry: ConfigEntry, optio
     return True
 
 
-class CoinbaseConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Coinbase."""
 
     VERSION = 1
 
     async def async_step_user(
         self, user_input: dict[str, str] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         errors: dict[str, str] = {}
         if user_input is None:
@@ -130,7 +126,7 @@ class CoinbaseConfigFlow(ConfigFlow, domain=DOMAIN):
             errors["base"] = "invalid_auth_secret"
         except InvalidAuth:
             errors["base"] = "invalid_auth"
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             _LOGGER.exception("Unexpected exception")
             errors["base"] = "unknown"
         else:
@@ -142,22 +138,22 @@ class CoinbaseConfigFlow(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: ConfigEntry,
+        config_entry: config_entries.ConfigEntry,
     ) -> OptionsFlowHandler:
         """Get the options flow for this handler."""
         return OptionsFlowHandler(config_entry)
 
 
-class OptionsFlowHandler(OptionsFlow):
+class OptionsFlowHandler(config_entries.OptionsFlow):
     """Handle a option flow for Coinbase."""
 
-    def __init__(self, config_entry: ConfigEntry) -> None:
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         self.config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Manage the options."""
 
         errors = {}
@@ -188,7 +184,7 @@ class OptionsFlowHandler(OptionsFlow):
                 errors["base"] = "currency_unavailable"
             except ExchangeRateUnavailable:
                 errors["base"] = "exchange_rate_unavailable"
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
@@ -219,29 +215,29 @@ class OptionsFlowHandler(OptionsFlow):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(exceptions.HomeAssistantError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(exceptions.HomeAssistantError):
     """Error to indicate there is invalid auth."""
 
 
-class InvalidSecret(HomeAssistantError):
+class InvalidSecret(exceptions.HomeAssistantError):
     """Error to indicate auth failed due to invalid secret."""
 
 
-class InvalidKey(HomeAssistantError):
+class InvalidKey(exceptions.HomeAssistantError):
     """Error to indicate auth failed due to invalid key."""
 
 
-class AlreadyConfigured(HomeAssistantError):
+class AlreadyConfigured(exceptions.HomeAssistantError):
     """Error to indicate Coinbase API Key is already configured."""
 
 
-class CurrencyUnavailable(HomeAssistantError):
+class CurrencyUnavailable(exceptions.HomeAssistantError):
     """Error to indicate the requested currency resource is not provided by the API."""
 
 
-class ExchangeRateUnavailable(HomeAssistantError):
+class ExchangeRateUnavailable(exceptions.HomeAssistantError):
     """Error to indicate the requested exchange rate resource is not provided by the API."""

@@ -1,5 +1,4 @@
 """Tests for the Risco binary sensors."""
-
 from unittest.mock import PropertyMock, patch
 
 import pytest
@@ -17,27 +16,23 @@ SECOND_ENTITY_ID = "switch.zone_1_bypassed"
 
 @pytest.mark.parametrize("exception", [CannotConnectError, UnauthorizedError])
 async def test_error_on_login(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-    login_with_error,
-    cloud_config_entry,
+    hass: HomeAssistant, login_with_error, cloud_config_entry
 ) -> None:
     """Test error on login."""
     await hass.config_entries.async_setup(cloud_config_entry.entry_id)
     await hass.async_block_till_done()
-    assert not entity_registry.async_is_registered(FIRST_ENTITY_ID)
-    assert not entity_registry.async_is_registered(SECOND_ENTITY_ID)
+    registry = er.async_get(hass)
+    assert not registry.async_is_registered(FIRST_ENTITY_ID)
+    assert not registry.async_is_registered(SECOND_ENTITY_ID)
 
 
 async def test_cloud_setup(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-    two_zone_cloud,
-    setup_risco_cloud,
+    hass: HomeAssistant, two_zone_cloud, setup_risco_cloud
 ) -> None:
     """Test entity setup."""
-    assert entity_registry.async_is_registered(FIRST_ENTITY_ID)
-    assert entity_registry.async_is_registered(SECOND_ENTITY_ID)
+    registry = er.async_get(hass)
+    assert registry.async_is_registered(FIRST_ENTITY_ID)
+    assert registry.async_is_registered(SECOND_ENTITY_ID)
 
 
 async def _check_cloud_state(hass, zones, bypassed, entity_id, zone_id):
@@ -94,27 +89,23 @@ async def test_cloud_unbypass(
 
 @pytest.mark.parametrize("exception", [CannotConnectError, UnauthorizedError])
 async def test_error_on_connect(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-    connect_with_error,
-    local_config_entry,
+    hass: HomeAssistant, connect_with_error, local_config_entry
 ) -> None:
     """Test error on connect."""
     await hass.config_entries.async_setup(local_config_entry.entry_id)
     await hass.async_block_till_done()
-    assert not entity_registry.async_is_registered(FIRST_ENTITY_ID)
-    assert not entity_registry.async_is_registered(SECOND_ENTITY_ID)
+    registry = er.async_get(hass)
+    assert not registry.async_is_registered(FIRST_ENTITY_ID)
+    assert not registry.async_is_registered(SECOND_ENTITY_ID)
 
 
 async def test_local_setup(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-    two_zone_local,
-    setup_risco_local,
+    hass: HomeAssistant, two_zone_local, setup_risco_local
 ) -> None:
     """Test entity setup."""
-    assert entity_registry.async_is_registered(FIRST_ENTITY_ID)
-    assert entity_registry.async_is_registered(SECOND_ENTITY_ID)
+    registry = er.async_get(hass)
+    assert registry.async_is_registered(FIRST_ENTITY_ID)
+    assert registry.async_is_registered(SECOND_ENTITY_ID)
 
 
 async def _check_local_state(hass, zones, bypassed, entity_id, zone_id, callback):
@@ -132,17 +123,16 @@ async def _check_local_state(hass, zones, bypassed, entity_id, zone_id, callback
 
 
 @pytest.fixture
-def mock_zone_handler():
-    """Create a mock for add_zone_handler."""
+def _mock_zone_handler():
     with patch("homeassistant.components.risco.RiscoLocal.add_zone_handler") as mock:
         yield mock
 
 
 async def test_local_states(
-    hass: HomeAssistant, two_zone_local, mock_zone_handler, setup_risco_local
+    hass: HomeAssistant, two_zone_local, _mock_zone_handler, setup_risco_local
 ) -> None:
     """Test the various alarm states."""
-    callback = mock_zone_handler.call_args.args[0]
+    callback = _mock_zone_handler.call_args.args[0]
 
     assert callback is not None
 

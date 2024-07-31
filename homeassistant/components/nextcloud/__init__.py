@@ -24,16 +24,14 @@ from homeassistant.helpers import config_validation as cv, entity_registry as er
 from .const import DOMAIN
 from .coordinator import NextcloudDataUpdateCoordinator
 
-PLATFORMS = (Platform.SENSOR, Platform.BINARY_SENSOR, Platform.UPDATE)
+PLATFORMS = (Platform.SENSOR, Platform.BINARY_SENSOR)
 
 CONFIG_SCHEMA = cv.removed(DOMAIN, raise_if_present=False)
 
 _LOGGER = logging.getLogger(__name__)
 
-type NextcloudConfigEntry = ConfigEntry[NextcloudDataUpdateCoordinator]
 
-
-async def async_setup_entry(hass: HomeAssistant, entry: NextcloudConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up the Nextcloud integration."""
 
     # migrate old entity unique ids
@@ -54,8 +52,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: NextcloudConfigEntry) ->
             entry.data[CONF_URL],
             entry.data[CONF_USERNAME],
             entry.data[CONF_PASSWORD],
-            verify_ssl=entry.data[CONF_VERIFY_SSL],
-            skip_update=False,
+            entry.data[CONF_VERIFY_SSL],
         )
 
     try:
@@ -73,13 +70,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: NextcloudConfigEntry) ->
 
     await coordinator.async_config_entry_first_refresh()
 
-    entry.runtime_data = coordinator
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: NextcloudConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload Nextcloud integration."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        hass.data[DOMAIN].pop(entry.entry_id)
+        if not hass.data[DOMAIN]:
+            hass.data.pop(DOMAIN)
+    return unload_ok

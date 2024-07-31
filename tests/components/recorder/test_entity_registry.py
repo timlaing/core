@@ -1,28 +1,27 @@
 """The tests for sensor recorder platform."""
-
-from unittest.mock import patch
+from collections.abc import Callable
 
 import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from homeassistant.components import recorder
-from homeassistant.components.recorder import Recorder, history
+from homeassistant.components.recorder import history
 from homeassistant.components.recorder.db_schema import StatesMeta
 from homeassistant.components.recorder.util import session_scope
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from homeassistant.setup import setup_component
 from homeassistant.util import dt as dt_util
 
 from .common import (
     ForceReturnConnectionToPool,
     assert_dict_of_states_equal_without_context_and_last_changed,
-    async_record_states,
     async_wait_recording_done,
+    record_states,
+    wait_recording_done,
 )
 
-from tests.common import MockEntity, MockEntityPlatform
+from tests.common import MockEntity, MockEntityPlatform, mock_registry
 from tests.typing import RecorderInstanceGenerator
 
 
@@ -38,44 +37,41 @@ def _count_entity_id_in_states_meta(
     )
 
 
-@pytest.fixture
-async def mock_recorder_before_hass(
-    async_test_recorder: RecorderInstanceGenerator,
-) -> None:
-    """Set up recorder."""
-
-
-@pytest.fixture(autouse=True)
-def setup_recorder(recorder_mock: Recorder) -> recorder.Recorder:
-    """Set up recorder."""
-
-
-async def test_rename_entity_without_collision(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-    caplog: pytest.LogCaptureFixture,
+def test_rename_entity_without_collision(
+    hass_recorder: Callable[..., HomeAssistant], caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test states meta is migrated when entity_id is changed."""
-    await async_setup_component(hass, "sensor", {})
+    hass = hass_recorder()
+    setup_component(hass, "sensor", {})
 
-    reg_entry = entity_registry.async_get_or_create(
-        "sensor",
-        "test",
-        "unique_0000",
-        suggested_object_id="test1",
-    )
-    assert reg_entry.entity_id == "sensor.test1"
-    await hass.async_block_till_done()
+    entity_reg = mock_registry(hass)
 
-    zero, four, states = await async_record_states(hass)
+    @callback
+    def add_entry():
+        reg_entry = entity_reg.async_get_or_create(
+            "sensor",
+            "test",
+            "unique_0000",
+            suggested_object_id="test1",
+        )
+        assert reg_entry.entity_id == "sensor.test1"
+
+    hass.add_job(add_entry)
+    hass.block_till_done()
+
+    zero, four, states = record_states(hass)
     hist = history.get_significant_states(
         hass, zero, four, list(set(states) | {"sensor.test99", "sensor.test1"})
     )
 
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
-    entity_registry.async_update_entity("sensor.test1", new_entity_id="sensor.test99")
-    await async_wait_recording_done(hass)
+    @callback
+    def rename_entry():
+        entity_reg.async_update_entity("sensor.test1", new_entity_id="sensor.test99")
+
+    hass.add_job(rename_entry)
+    wait_recording_done(hass)
 
     hist = history.get_significant_states(
         hass, zero, four, list(set(states) | {"sensor.test99", "sensor.test1"})
@@ -83,8 +79,8 @@ async def test_rename_entity_without_collision(
     states["sensor.test99"] = states.pop("sensor.test1")
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
-    hass.states.async_set("sensor.test99", "post_migrate")
-    await async_wait_recording_done(hass)
+    hass.states.set("sensor.test99", "post_migrate")
+    wait_recording_done(hass)
     new_hist = history.get_significant_states(
         hass,
         zero,
@@ -102,8 +98,8 @@ async def test_rename_entity_without_collision(
 
 
 async def test_rename_entity_on_mocked_platform(
+    async_setup_recorder_instance: RecorderInstanceGenerator,
     hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test states meta is migrated when entity_id is changed when using a mocked platform.
@@ -112,10 +108,11 @@ async def test_rename_entity_on_mocked_platform(
     sure that we do not record the entity as removed in the database
     when we rename it.
     """
-    instance = recorder.get_instance(hass)
+    instance = await async_setup_recorder_instance(hass)
+    entity_reg = er.async_get(hass)
     start = dt_util.utcnow()
 
-    reg_entry = entity_registry.async_get_or_create(
+    reg_entry = entity_reg.async_get_or_create(
         "sensor",
         "test",
         "unique_0000",
@@ -142,7 +139,7 @@ async def test_rename_entity_on_mocked_platform(
         ["sensor.test1", "sensor.test99"],
     )
 
-    entity_registry.async_update_entity("sensor.test1", new_entity_id="sensor.test99")
+    entity_reg.async_update_entity("sensor.test1", new_entity_id="sensor.test99")
     await hass.async_block_till_done()
     # We have to call the remove method ourselves since we are mocking the platform
     hass.states.async_remove("sensor.test1")
@@ -196,38 +193,47 @@ async def test_rename_entity_on_mocked_platform(
     assert "the new entity_id is already in use" not in caplog.text
 
 
-async def test_rename_entity_collision(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-    caplog: pytest.LogCaptureFixture,
+def test_rename_entity_collision(
+    hass_recorder: Callable[..., HomeAssistant], caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test states meta is not migrated when there is a collision."""
-    await async_setup_component(hass, "sensor", {})
+    hass = hass_recorder()
+    setup_component(hass, "sensor", {})
 
-    reg_entry = entity_registry.async_get_or_create(
-        "sensor",
-        "test",
-        "unique_0000",
-        suggested_object_id="test1",
-    )
-    assert reg_entry.entity_id == "sensor.test1"
-    await hass.async_block_till_done()
+    entity_reg = mock_registry(hass)
 
-    zero, four, states = await async_record_states(hass)
+    @callback
+    def add_entry():
+        reg_entry = entity_reg.async_get_or_create(
+            "sensor",
+            "test",
+            "unique_0000",
+            suggested_object_id="test1",
+        )
+        assert reg_entry.entity_id == "sensor.test1"
+
+    hass.add_job(add_entry)
+    hass.block_till_done()
+
+    zero, four, states = record_states(hass)
     hist = history.get_significant_states(
         hass, zero, four, list(set(states) | {"sensor.test99", "sensor.test1"})
     )
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
     assert len(hist["sensor.test1"]) == 3
 
-    hass.states.async_set("sensor.test99", "collision")
-    hass.states.async_remove("sensor.test99")
+    hass.states.set("sensor.test99", "collision")
+    hass.states.remove("sensor.test99")
 
-    await hass.async_block_till_done()
+    hass.block_till_done()
 
     # Rename entity sensor.test1 to sensor.test99
-    entity_registry.async_update_entity("sensor.test1", new_entity_id="sensor.test99")
-    await async_wait_recording_done(hass)
+    @callback
+    def rename_entry():
+        entity_reg.async_update_entity("sensor.test1", new_entity_id="sensor.test99")
+
+    hass.add_job(rename_entry)
+    wait_recording_done(hass)
 
     # History is not migrated on collision
     hist = history.get_significant_states(
@@ -239,8 +245,8 @@ async def test_rename_entity_collision(
     with session_scope(hass=hass) as session:
         assert _count_entity_id_in_states_meta(hass, session, "sensor.test99") == 1
 
-    hass.states.async_set("sensor.test99", "post_migrate")
-    await async_wait_recording_done(hass)
+    hass.states.set("sensor.test99", "post_migrate")
+    wait_recording_done(hass)
     new_hist = history.get_significant_states(
         hass,
         zero,
@@ -254,92 +260,4 @@ async def test_rename_entity_collision(
         assert _count_entity_id_in_states_meta(hass, session, "sensor.test99") == 1
         assert _count_entity_id_in_states_meta(hass, session, "sensor.test1") == 1
 
-    # We should hit the safeguard in the states_meta_manager
     assert "the new entity_id is already in use" in caplog.text
-
-    # We should not hit the safeguard in the entity_registry
-    assert "Blocked attempt to insert duplicated state rows" not in caplog.text
-
-
-async def test_rename_entity_collision_without_states_meta_safeguard(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    """Test states meta is not migrated when there is a collision.
-
-    This test disables the safeguard in the states_meta_manager
-    and relies on the filter_unique_constraint_integrity_error safeguard.
-    """
-    await async_setup_component(hass, "sensor", {})
-
-    reg_entry = entity_registry.async_get_or_create(
-        "sensor",
-        "test",
-        "unique_0000",
-        suggested_object_id="test1",
-    )
-    assert reg_entry.entity_id == "sensor.test1"
-    await hass.async_block_till_done()
-
-    zero, four, states = await async_record_states(hass)
-    hist = history.get_significant_states(
-        hass, zero, four, list(set(states) | {"sensor.test99", "sensor.test1"})
-    )
-    assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
-    assert len(hist["sensor.test1"]) == 3
-
-    hass.states.async_set("sensor.test99", "collision")
-    hass.states.async_remove("sensor.test99")
-
-    await hass.async_block_till_done()
-    await async_wait_recording_done(hass)
-
-    # Verify history before collision
-    hist = history.get_significant_states(
-        hass, zero, four, list(set(states) | {"sensor.test99", "sensor.test1"})
-    )
-    assert len(hist["sensor.test1"]) == 3
-    assert len(hist["sensor.test99"]) == 2
-
-    instance = recorder.get_instance(hass)
-    # Patch out the safeguard in the states meta manager
-    # so that we hit the filter_unique_constraint_integrity_error safeguard in the entity_registry
-    with patch.object(instance.states_meta_manager, "get", return_value=None):
-        # Rename entity sensor.test1 to sensor.test99
-        entity_registry.async_update_entity(
-            "sensor.test1", new_entity_id="sensor.test99"
-        )
-        await async_wait_recording_done(hass)
-
-    # History is not migrated on collision
-    hist = history.get_significant_states(
-        hass, zero, four, list(set(states) | {"sensor.test99", "sensor.test1"})
-    )
-    assert len(hist["sensor.test1"]) == 3
-    assert len(hist["sensor.test99"]) == 2
-
-    with session_scope(hass=hass) as session:
-        assert _count_entity_id_in_states_meta(hass, session, "sensor.test99") == 1
-
-    hass.states.async_set("sensor.test99", "post_migrate")
-    await async_wait_recording_done(hass)
-
-    new_hist = history.get_significant_states(
-        hass,
-        zero,
-        dt_util.utcnow(),
-        list(set(states) | {"sensor.test99", "sensor.test1"}),
-    )
-    assert new_hist["sensor.test99"][-1].state == "post_migrate"
-    assert len(hist["sensor.test99"]) == 2
-
-    with session_scope(hass=hass) as session:
-        assert _count_entity_id_in_states_meta(hass, session, "sensor.test99") == 1
-        assert _count_entity_id_in_states_meta(hass, session, "sensor.test1") == 1
-
-    # We should not hit the safeguard in the states_meta_manager
-    assert "the new entity_id is already in use" not in caplog.text
-
-    # We should hit the safeguard in the entity_registry
-    assert "Blocked attempt to insert duplicated state rows" in caplog.text

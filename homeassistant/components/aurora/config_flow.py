@@ -1,15 +1,13 @@
 """Config flow for Aurora."""
-
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from aiohttp import ClientError
 from auroranoaa import AuroraForecast
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
+from homeassistant import config_entries
 from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
 from homeassistant.core import callback
 from homeassistant.helpers import aiohttp_client, config_validation as cv
@@ -34,7 +32,7 @@ OPTIONS_FLOW = {
 }
 
 
-class AuroraConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for NOAA Aurora Integration."""
 
     VERSION = 1
@@ -42,16 +40,14 @@ class AuroraConfigFlow(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: ConfigEntry,
+        config_entry: config_entries.ConfigEntry,
     ) -> SchemaOptionsFlowHandler:
         """Get the options flow for this handler."""
         return SchemaOptionsFlowHandler(config_entry, OPTIONS_FLOW)
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_user(self, user_input=None):
         """Handle the initial step."""
-        errors: dict[str, str] = {}
+        errors = {}
 
         if user_input is not None:
             longitude = user_input[CONF_LONGITUDE]
@@ -64,7 +60,7 @@ class AuroraConfigFlow(ConfigFlow, domain=DOMAIN):
                 await api.get_forecast_data(longitude, latitude)
             except ClientError:
                 errors["base"] = "cannot_connect"
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:

@@ -1,5 +1,4 @@
 """Test MQTT fans."""
-
 import copy
 from typing import Any
 from unittest.mock import patch
@@ -33,6 +32,7 @@ from homeassistant.const import (
     STATE_OFF,
     STATE_ON,
     STATE_UNKNOWN,
+    Platform,
 )
 from homeassistant.core import HomeAssistant
 
@@ -82,10 +82,18 @@ DEFAULT_CONFIG = {
 }
 
 
+@pytest.fixture(autouse=True)
+def fan_platform_only():
+    """Only setup the fan platform to speed up tests."""
+    with patch("homeassistant.components.mqtt.PLATFORMS", [Platform.FAN]):
+        yield
+
+
 @pytest.mark.parametrize("hass_config", [{mqtt.DOMAIN: {fan.DOMAIN: {"name": "test"}}}])
-@pytest.mark.usefixtures("hass")
 async def test_fail_setup_if_no_command_topic(
-    caplog: pytest.LogCaptureFixture, mqtt_mock_entry: MqttMockHAClientGenerator
+    hass: HomeAssistant,
+    caplog: pytest.LogCaptureFixture,
+    mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
     """Test if command fails with command topic."""
     assert await mqtt_mock_entry()
@@ -610,7 +618,8 @@ async def test_controlling_state_via_topic_and_json_message_shared_topic(
     ],
 )
 async def test_sending_mqtt_commands_and_optimistic(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    hass: HomeAssistant,
+    mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
     """Test optimistic mode without state topic."""
     mqtt_mock = await mqtt_mock_entry()
@@ -696,9 +705,8 @@ async def test_sending_mqtt_commands_and_optimistic(
     assert state.attributes.get(fan.ATTR_PERCENTAGE) == 0
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    with pytest.raises(NotValidPresetModeError) as exc:
+    with pytest.raises(NotValidPresetModeError):
         await common.async_set_preset_mode(hass, "fan.test", "low")
-    assert exc.value.translation_key == "not_valid_preset_mode"
 
     await common.async_set_preset_mode(hass, "fan.test", "whoosh")
     mqtt_mock.async_publish.assert_called_once_with(
@@ -859,7 +867,9 @@ async def test_sending_mqtt_commands_with_alternate_speed_range(
     ],
 )
 async def test_sending_mqtt_commands_and_optimistic_no_legacy(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    hass: HomeAssistant,
+    mqtt_mock_entry: MqttMockHAClientGenerator,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test optimistic mode without state topic without legacy speed command topic."""
     mqtt_mock = await mqtt_mock_entry()
@@ -906,13 +916,11 @@ async def test_sending_mqtt_commands_and_optimistic_no_legacy(
     assert state.attributes.get(fan.ATTR_PERCENTAGE) == 0
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    with pytest.raises(NotValidPresetModeError) as exc:
+    with pytest.raises(NotValidPresetModeError):
         await common.async_set_preset_mode(hass, "fan.test", "low")
-    assert exc.value.translation_key == "not_valid_preset_mode"
 
-    with pytest.raises(NotValidPresetModeError) as exc:
+    with pytest.raises(NotValidPresetModeError):
         await common.async_set_preset_mode(hass, "fan.test", "auto")
-    assert exc.value.translation_key == "not_valid_preset_mode"
 
     await common.async_set_preset_mode(hass, "fan.test", "whoosh")
     mqtt_mock.async_publish.assert_called_once_with(
@@ -968,9 +976,8 @@ async def test_sending_mqtt_commands_and_optimistic_no_legacy(
     assert state.state == STATE_ON
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    with pytest.raises(NotValidPresetModeError) as exc:
+    with pytest.raises(NotValidPresetModeError):
         await common.async_turn_on(hass, "fan.test", preset_mode="freaking-high")
-    assert exc.value.translation_key == "not_valid_preset_mode"
 
 
 @pytest.mark.parametrize(
@@ -1001,7 +1008,8 @@ async def test_sending_mqtt_commands_and_optimistic_no_legacy(
     ],
 )
 async def test_sending_mqtt_command_templates_(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    hass: HomeAssistant,
+    mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
     """Test optimistic mode without state topic without legacy speed command topic."""
     mqtt_mock = await mqtt_mock_entry()
@@ -1070,13 +1078,11 @@ async def test_sending_mqtt_command_templates_(
     assert state.attributes.get(fan.ATTR_PERCENTAGE) == 0
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    with pytest.raises(NotValidPresetModeError) as exc:
+    with pytest.raises(NotValidPresetModeError):
         await common.async_set_preset_mode(hass, "fan.test", "low")
-    assert exc.value.translation_key == "not_valid_preset_mode"
 
-    with pytest.raises(NotValidPresetModeError) as exc:
+    with pytest.raises(NotValidPresetModeError):
         await common.async_set_preset_mode(hass, "fan.test", "medium")
-    assert exc.value.translation_key == "not_valid_preset_mode"
 
     await common.async_set_preset_mode(hass, "fan.test", "whoosh")
     mqtt_mock.async_publish.assert_called_once_with(
@@ -1134,9 +1140,8 @@ async def test_sending_mqtt_command_templates_(
     assert state.state == STATE_ON
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    with pytest.raises(NotValidPresetModeError) as exc:
+    with pytest.raises(NotValidPresetModeError):
         await common.async_turn_on(hass, "fan.test", preset_mode="low")
-    assert exc.value.translation_key == "not_valid_preset_mode"
 
 
 @pytest.mark.parametrize(
@@ -1161,7 +1166,8 @@ async def test_sending_mqtt_command_templates_(
     ],
 )
 async def test_sending_mqtt_commands_and_optimistic_no_percentage_topic(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    hass: HomeAssistant,
+    mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
     """Test optimistic mode without state topic without percentage command topic."""
     mqtt_mock = await mqtt_mock_entry()
@@ -1170,9 +1176,8 @@ async def test_sending_mqtt_commands_and_optimistic_no_percentage_topic(
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    with pytest.raises(NotValidPresetModeError) as exc:
+    with pytest.raises(NotValidPresetModeError):
         await common.async_set_preset_mode(hass, "fan.test", "medium")
-    assert exc.value.translation_key == "not_valid_preset_mode"
 
     await common.async_set_preset_mode(hass, "fan.test", "whoosh")
     mqtt_mock.async_publish.assert_called_once_with(
@@ -1231,7 +1236,8 @@ async def test_sending_mqtt_commands_and_optimistic_no_percentage_topic(
     ],
 )
 async def test_sending_mqtt_commands_and_explicit_optimistic(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    hass: HomeAssistant,
+    mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
     """Test optimistic mode with state topic and turn on attributes."""
     mqtt_mock = await mqtt_mock_entry()
@@ -1270,10 +1276,11 @@ async def test_sending_mqtt_commands_and_explicit_optimistic(
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    with pytest.raises(NotValidPresetModeError) as exc:
+    with pytest.raises(NotValidPresetModeError):
         await common.async_turn_on(hass, "fan.test", preset_mode="auto")
-    assert exc.value.translation_key == "not_valid_preset_mode"
-    assert mqtt_mock.async_publish.call_count == 0
+    assert mqtt_mock.async_publish.call_count == 1
+    # We can turn on, but the invalid preset mode will raise
+    mqtt_mock.async_publish.assert_any_call("command-topic", "ON", 0, False)
     mqtt_mock.async_publish.reset_mock()
 
     await common.async_turn_on(hass, "fan.test", preset_mode="whoosh")
@@ -1421,13 +1428,11 @@ async def test_sending_mqtt_commands_and_explicit_optimistic(
     with pytest.raises(MultipleInvalid):
         await common.async_set_percentage(hass, "fan.test", 101)
 
-    with pytest.raises(NotValidPresetModeError) as exc:
+    with pytest.raises(NotValidPresetModeError):
         await common.async_set_preset_mode(hass, "fan.test", "low")
-    assert exc.value.translation_key == "not_valid_preset_mode"
 
-    with pytest.raises(NotValidPresetModeError) as exc:
+    with pytest.raises(NotValidPresetModeError):
         await common.async_set_preset_mode(hass, "fan.test", "medium")
-    assert exc.value.translation_key == "not_valid_preset_mode"
 
     await common.async_set_preset_mode(hass, "fan.test", "whoosh")
     mqtt_mock.async_publish.assert_called_once_with(
@@ -1447,9 +1452,8 @@ async def test_sending_mqtt_commands_and_explicit_optimistic(
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    with pytest.raises(NotValidPresetModeError) as exc:
+    with pytest.raises(NotValidPresetModeError):
         await common.async_set_preset_mode(hass, "fan.test", "freaking-high")
-    assert exc.value.translation_key == "not_valid_preset_mode"
 
     mqtt_mock.async_publish.reset_mock()
     state = hass.states.get("fan.test")
@@ -1526,7 +1530,9 @@ async def test_encoding_subscribable_topics(
     ],
 )
 async def test_attributes(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    hass: HomeAssistant,
+    mqtt_mock_entry: MqttMockHAClientGenerator,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test attributes."""
     await mqtt_mock_entry()
@@ -1590,7 +1596,7 @@ async def test_attributes(
                 }
             },
             True,
-            fan.FanEntityFeature.TURN_OFF | fan.FanEntityFeature.TURN_ON,
+            fan.FanEntityFeature(0),
             None,
         ),
         (
@@ -1605,9 +1611,7 @@ async def test_attributes(
                 }
             },
             True,
-            fan.FanEntityFeature.OSCILLATE
-            | fan.FanEntityFeature.TURN_OFF
-            | fan.FanEntityFeature.TURN_ON,
+            fan.FanEntityFeature.OSCILLATE,
             None,
         ),
         (
@@ -1622,9 +1626,7 @@ async def test_attributes(
                 }
             },
             True,
-            fan.FanEntityFeature.SET_SPEED
-            | fan.FanEntityFeature.TURN_OFF
-            | fan.FanEntityFeature.TURN_ON,
+            fan.FanEntityFeature.SET_SPEED,
             None,
         ),
         (
@@ -1655,9 +1657,7 @@ async def test_attributes(
                 }
             },
             True,
-            fan.FanEntityFeature.PRESET_MODE
-            | fan.FanEntityFeature.TURN_OFF
-            | fan.FanEntityFeature.TURN_ON,
+            fan.FanEntityFeature.PRESET_MODE,
             None,
         ),
         (
@@ -1673,9 +1673,7 @@ async def test_attributes(
                 }
             },
             True,
-            fan.FanEntityFeature.PRESET_MODE
-            | fan.FanEntityFeature.TURN_OFF
-            | fan.FanEntityFeature.TURN_ON,
+            fan.FanEntityFeature.PRESET_MODE,
             None,
         ),
         (
@@ -1690,9 +1688,7 @@ async def test_attributes(
                 }
             },
             True,
-            fan.FanEntityFeature.SET_SPEED
-            | fan.FanEntityFeature.TURN_OFF
-            | fan.FanEntityFeature.TURN_ON,
+            fan.FanEntityFeature.SET_SPEED,
             None,
         ),
         (
@@ -1708,10 +1704,7 @@ async def test_attributes(
                 }
             },
             True,
-            fan.FanEntityFeature.OSCILLATE
-            | fan.FanEntityFeature.SET_SPEED
-            | fan.FanEntityFeature.TURN_OFF
-            | fan.FanEntityFeature.TURN_ON,
+            fan.FanEntityFeature.OSCILLATE | fan.FanEntityFeature.SET_SPEED,
             None,
         ),
         (
@@ -1727,9 +1720,7 @@ async def test_attributes(
                 }
             },
             True,
-            fan.FanEntityFeature.PRESET_MODE
-            | fan.FanEntityFeature.TURN_OFF
-            | fan.FanEntityFeature.TURN_ON,
+            fan.FanEntityFeature.PRESET_MODE,
             None,
         ),
         (
@@ -1745,9 +1736,7 @@ async def test_attributes(
                 }
             },
             True,
-            fan.FanEntityFeature.PRESET_MODE
-            | fan.FanEntityFeature.TURN_OFF
-            | fan.FanEntityFeature.TURN_ON,
+            fan.FanEntityFeature.PRESET_MODE,
             None,
         ),
         (
@@ -1764,10 +1753,7 @@ async def test_attributes(
                 }
             },
             True,
-            fan.FanEntityFeature.PRESET_MODE
-            | fan.FanEntityFeature.OSCILLATE
-            | fan.FanEntityFeature.TURN_OFF
-            | fan.FanEntityFeature.TURN_ON,
+            fan.FanEntityFeature.PRESET_MODE | fan.FanEntityFeature.OSCILLATE,
             None,
         ),
         (
@@ -1784,9 +1770,7 @@ async def test_attributes(
                 }
             },
             True,
-            fan.FanEntityFeature.SET_SPEED
-            | fan.FanEntityFeature.TURN_OFF
-            | fan.FanEntityFeature.TURN_ON,
+            fan.FanEntityFeature.SET_SPEED,
             None,
         ),
         (
@@ -1804,7 +1788,7 @@ async def test_attributes(
             },
             False,
             None,
-            "speed_range_max must be > speed_range_min",
+            "not a valid value",
         ),
         (
             "test14",
@@ -1821,7 +1805,7 @@ async def test_attributes(
             },
             False,
             None,
-            "speed_range_min must be > 0",
+            "not a valid value",
         ),
         (
             "test15",
@@ -1853,9 +1837,7 @@ async def test_attributes(
                 }
             },
             True,
-            fan.FanEntityFeature.PRESET_MODE
-            | fan.FanEntityFeature.TURN_OFF
-            | fan.FanEntityFeature.TURN_ON,
+            fan.FanEntityFeature.PRESET_MODE,
             "some error",
         ),
         (
@@ -1870,9 +1852,7 @@ async def test_attributes(
                 }
             },
             True,
-            fan.FanEntityFeature.DIRECTION
-            | fan.FanEntityFeature.TURN_OFF
-            | fan.FanEntityFeature.TURN_ON,
+            fan.FanEntityFeature.DIRECTION,
             "some error",
         ),
     ],
@@ -1958,7 +1938,11 @@ async def test_setting_blocked_attribute_via_mqtt_json_message(
 ) -> None:
     """Test the setting of attribute via MQTT with JSON payload."""
     await help_test_setting_blocked_attribute_via_mqtt_json_message(
-        hass, mqtt_mock_entry, fan.DOMAIN, DEFAULT_CONFIG, MQTT_FAN_ATTRIBUTES_BLOCKED
+        hass,
+        mqtt_mock_entry,
+        fan.DOMAIN,
+        DEFAULT_CONFIG,
+        MQTT_FAN_ATTRIBUTES_BLOCKED,
     )
 
 
@@ -1978,7 +1962,11 @@ async def test_update_with_json_attrs_not_dict(
 ) -> None:
     """Test attributes get extracted from a JSON result."""
     await help_test_update_with_json_attrs_not_dict(
-        hass, mqtt_mock_entry, caplog, fan.DOMAIN, DEFAULT_CONFIG
+        hass,
+        mqtt_mock_entry,
+        caplog,
+        fan.DOMAIN,
+        DEFAULT_CONFIG,
     )
 
 
@@ -1989,16 +1977,22 @@ async def test_update_with_json_attrs_bad_json(
 ) -> None:
     """Test attributes get extracted from a JSON result."""
     await help_test_update_with_json_attrs_bad_json(
-        hass, mqtt_mock_entry, caplog, fan.DOMAIN, DEFAULT_CONFIG
+        hass,
+        mqtt_mock_entry,
+        caplog,
+        fan.DOMAIN,
+        DEFAULT_CONFIG,
     )
 
 
 async def test_discovery_update_attr(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    hass: HomeAssistant,
+    mqtt_mock_entry: MqttMockHAClientGenerator,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test update of discovered MQTTAttributes."""
     await help_test_discovery_update_attr(
-        hass, mqtt_mock_entry, fan.DOMAIN, DEFAULT_CONFIG
+        hass, mqtt_mock_entry, caplog, fan.DOMAIN, DEFAULT_CONFIG
     )
 
 
@@ -2033,26 +2027,32 @@ async def test_unique_id(
 
 
 async def test_discovery_removal_fan(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    hass: HomeAssistant,
+    mqtt_mock_entry: MqttMockHAClientGenerator,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test removal of discovered fan."""
     data = '{ "name": "test", "command_topic": "test_topic" }'
-    await help_test_discovery_removal(hass, mqtt_mock_entry, fan.DOMAIN, data)
+    await help_test_discovery_removal(hass, mqtt_mock_entry, caplog, fan.DOMAIN, data)
 
 
 async def test_discovery_update_fan(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    hass: HomeAssistant,
+    mqtt_mock_entry: MqttMockHAClientGenerator,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test update of discovered fan."""
     config1 = {"name": "Beer", "command_topic": "test_topic"}
     config2 = {"name": "Milk", "command_topic": "test_topic"}
     await help_test_discovery_update(
-        hass, mqtt_mock_entry, fan.DOMAIN, config1, config2
+        hass, mqtt_mock_entry, caplog, fan.DOMAIN, config1, config2
     )
 
 
 async def test_discovery_update_unchanged_fan(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    hass: HomeAssistant,
+    mqtt_mock_entry: MqttMockHAClientGenerator,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test update of discovered fan."""
     data1 = '{ "name": "Beer", "command_topic": "test_topic" }'
@@ -2060,19 +2060,28 @@ async def test_discovery_update_unchanged_fan(
         "homeassistant.components.mqtt.fan.MqttFan.discovery_update"
     ) as discovery_update:
         await help_test_discovery_update_unchanged(
-            hass, mqtt_mock_entry, fan.DOMAIN, data1, discovery_update
+            hass,
+            mqtt_mock_entry,
+            caplog,
+            fan.DOMAIN,
+            data1,
+            discovery_update,
         )
 
 
 @pytest.mark.no_fail_on_log_exception
 async def test_discovery_broken(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    hass: HomeAssistant,
+    mqtt_mock_entry: MqttMockHAClientGenerator,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test handling of bad discovery message."""
     data1 = '{ "name": "Beer" }'
     data2 = '{ "name": "Milk", "command_topic": "test_topic" }'
 
-    await help_test_discovery_broken(hass, mqtt_mock_entry, fan.DOMAIN, data1, data2)
+    await help_test_discovery_broken(
+        hass, mqtt_mock_entry, caplog, fan.DOMAIN, data1, data2
+    )
 
 
 async def test_entity_device_info_with_connection(
@@ -2220,7 +2229,8 @@ async def test_publishing_with_custom_encoding(
 
 
 async def test_reloadable(
-    hass: HomeAssistant, mqtt_client_mock: MqttMockPahoClient
+    hass: HomeAssistant,
+    mqtt_client_mock: MqttMockPahoClient,
 ) -> None:
     """Test reloading the MQTT platform."""
     domain = fan.DOMAIN
@@ -2243,7 +2253,8 @@ async def test_setup_manual_entity_from_yaml(
 
 
 async def test_unload_entry(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    hass: HomeAssistant,
+    mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
     """Test unloading the config entry."""
     domain = fan.DOMAIN
@@ -2296,50 +2307,3 @@ async def test_skipped_async_ha_write_state(
     """Test a write state command is only called when there is change."""
     await mqtt_mock_entry()
     await help_test_skipped_async_ha_write_state(hass, topic, payload1, payload2)
-
-
-VALUE_TEMPLATES = {
-    "state_value_template": "state_topic",
-    "direction_value_template": "direction_state_topic",
-    "oscillation_value_template": "oscillation_state_topic",
-    "percentage_value_template": "percentage_state_topic",
-    "preset_mode_value_template": "preset_mode_state_topic",
-}
-
-
-@pytest.mark.parametrize(
-    "hass_config",
-    [
-        help_custom_config(
-            fan.DOMAIN,
-            DEFAULT_CONFIG,
-            (
-                {
-                    "direction_command_topic": "direction-command-topic",
-                    "oscillation_command_topic": "oscillation-command-topic",
-                    "percentage_command_topic": "percentage-command-topic",
-                    "preset_mode_command_topic": "preset-mode-command-topic",
-                    "preset_modes": [
-                        "auto",
-                    ],
-                    topic: "test-topic",
-                    value_template: "{{ value_json.some_var * 1 }}",
-                },
-            ),
-        )
-        for value_template, topic in VALUE_TEMPLATES.items()
-    ],
-    ids=VALUE_TEMPLATES,
-)
-async def test_value_template_fails(
-    hass: HomeAssistant,
-    mqtt_mock_entry: MqttMockHAClientGenerator,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    """Test the rendering of MQTT value template fails."""
-    await mqtt_mock_entry()
-    async_fire_mqtt_message(hass, "test-topic", '{"some_var": null }')
-    assert (
-        "TypeError: unsupported operand type(s) for *: 'NoneType' and 'int' rendering template"
-        in caplog.text
-    )

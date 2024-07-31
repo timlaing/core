@@ -1,5 +1,4 @@
 """Support for IoTaWatt Energy monitor."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -37,7 +36,7 @@ from .coordinator import IotawattUpdater
 _LOGGER = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
+@dataclass
 class IotaWattSensorEntityDescription(SensorEntityDescription):
     """Class describing IotaWatt sensor entities."""
 
@@ -46,14 +45,14 @@ class IotaWattSensorEntityDescription(SensorEntityDescription):
 
 ENTITY_DESCRIPTION_KEY_MAP: dict[str, IotaWattSensorEntityDescription] = {
     "Amps": IotaWattSensorEntityDescription(
-        key="Amps",
+        "Amps",
         native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.CURRENT,
         entity_registry_enabled_default=False,
     ),
     "Hz": IotaWattSensorEntityDescription(
-        key="Hz",
+        "Hz",
         native_unit_of_measurement=UnitOfFrequency.HERTZ,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.FREQUENCY,
@@ -61,7 +60,7 @@ ENTITY_DESCRIPTION_KEY_MAP: dict[str, IotaWattSensorEntityDescription] = {
         entity_registry_enabled_default=False,
     ),
     "PF": IotaWattSensorEntityDescription(
-        key="PF",
+        "PF",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER_FACTOR,
@@ -69,40 +68,40 @@ ENTITY_DESCRIPTION_KEY_MAP: dict[str, IotaWattSensorEntityDescription] = {
         entity_registry_enabled_default=False,
     ),
     "Watts": IotaWattSensorEntityDescription(
-        key="Watts",
+        "Watts",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
     ),
     "WattHours": IotaWattSensorEntityDescription(
-        key="WattHours",
+        "WattHours",
         native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.ENERGY,
     ),
     "VA": IotaWattSensorEntityDescription(
-        key="VA",
+        "VA",
         native_unit_of_measurement=UnitOfApparentPower.VOLT_AMPERE,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.APPARENT_POWER,
         entity_registry_enabled_default=False,
     ),
     "VAR": IotaWattSensorEntityDescription(
-        key="VAR",
+        "VAR",
         native_unit_of_measurement=VOLT_AMPERE_REACTIVE,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:flash",
         entity_registry_enabled_default=False,
     ),
     "VARh": IotaWattSensorEntityDescription(
-        key="VARh",
+        "VARh",
         native_unit_of_measurement=VOLT_AMPERE_REACTIVE_HOURS,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:flash",
         entity_registry_enabled_default=False,
     ),
     "Volts": IotaWattSensorEntityDescription(
-        key="Volts",
+        "Volts",
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.VOLTAGE,
@@ -126,7 +125,7 @@ async def async_setup_entry(
         created.add(key)
         data = coordinator.data["sensors"][key]
         description = ENTITY_DESCRIPTION_KEY_MAP.get(
-            data.getUnit(), IotaWattSensorEntityDescription(key="base_sensor")
+            data.getUnit(), IotaWattSensorEntityDescription("base_sensor")
         )
 
         return IotaWattSensor(

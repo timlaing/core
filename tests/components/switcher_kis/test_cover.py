@@ -1,5 +1,4 @@
 """Test the Switcher cover platform."""
-
 from unittest.mock import patch
 
 from aioswitcher.api import SwitcherBaseResponse
@@ -31,9 +30,7 @@ ENTITY_ID = f"{COVER_DOMAIN}.{slugify(DEVICE.name)}"
 
 
 @pytest.mark.parametrize("mock_bridge", [[DEVICE]], indirect=True)
-async def test_cover(
-    hass: HomeAssistant, mock_bridge, mock_api, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_cover(hass: HomeAssistant, mock_bridge, mock_api, monkeypatch) -> None:
     """Test cover services."""
     await init_integration(hass)
     assert mock_bridge

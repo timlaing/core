@@ -1,5 +1,4 @@
 """The tests for the hassio binary sensors."""
-
 import os
 from unittest.mock import patch
 
@@ -17,7 +16,7 @@ MOCK_ENVIRON = {"SUPERVISOR": "127.0.0.1", "SUPERVISOR_TOKEN": "abcdefgh"}
 
 
 @pytest.fixture(autouse=True)
-def mock_all(aioclient_mock: AiohttpClientMocker) -> None:
+def mock_all(aioclient_mock, request):
     """Mock all setup requests."""
     aioclient_mock.post("http://127.0.0.1/homeassistant/options", json={"result": "ok"})
     aioclient_mock.get("http://127.0.0.1/supervisor/ping", json={"result": "ok"})
@@ -177,16 +176,6 @@ def mock_all(aioclient_mock: AiohttpClientMocker) -> None:
                 "suggestions": [],
                 "issues": [],
                 "checks": [],
-            },
-        },
-    )
-    aioclient_mock.get(
-        "http://127.0.0.1/network/info",
-        json={
-            "result": "ok",
-            "data": {
-                "host_internet": True,
-                "supervisor_internet": True,
             },
         },
     )

@@ -7,9 +7,6 @@
         "description": "Select a Roomba or Braava.",
         "data": {
           "host": "[%key:common::config_flow::data::host%]"
-        },
-        "data_description": {
-          "host": "The hostname or IP address of your Roomba or Braava."
         }
       },
       "manual": {
@@ -17,9 +14,6 @@
         "description": "No Roomba or Braava have been discovered on your network.",
         "data": {
           "host": "[%key:common::config_flow::data::host%]"
-        },
-        "data_description": {
-          "host": "The hostname or IP address of your Roomba or Braava."
         }
       },
       "link": {
@@ -84,9 +78,6 @@
       },
       "scrubs_count": {
         "name": "Scrubs"
-      },
-      "total_cleaned_area": {
-        "name": "Total cleaned area"
       }
     }
   }

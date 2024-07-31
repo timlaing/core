@@ -1,5 +1,4 @@
 """Config flow to configure the Tile integration."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -9,8 +8,9 @@ from pytile import async_login
 from pytile.errors import InvalidAuthError, TileError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import aiohttp_client
 
 from .const import DOMAIN, LOGGER
@@ -29,7 +29,7 @@ STEP_USER_SCHEMA = vol.Schema(
 )
 
 
-class TileFlowHandler(ConfigFlow, domain=DOMAIN):
+class TileFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a Tile config flow."""
 
     VERSION = 1
@@ -39,7 +39,7 @@ class TileFlowHandler(ConfigFlow, domain=DOMAIN):
         self._password: str | None = None
         self._username: str | None = None
 
-    async def _async_verify(self, step_id: str, schema: vol.Schema) -> ConfigFlowResult:
+    async def _async_verify(self, step_id: str, schema: vol.Schema) -> FlowResult:
         """Attempt to authenticate the provided credentials."""
         assert self._username
         assert self._password
@@ -71,22 +71,18 @@ class TileFlowHandler(ConfigFlow, domain=DOMAIN):
 
         return self.async_create_entry(title=self._username, data=data)
 
-    async def async_step_import(
-        self, import_config: dict[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_import(self, import_config: dict[str, Any]) -> FlowResult:
         """Import a config entry from configuration.yaml."""
         return await self.async_step_user(import_config)
 
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Handle configuration by re-auth."""
         self._username = entry_data[CONF_USERNAME]
         return await self.async_step_reauth_confirm()
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, str] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle re-auth completion."""
         if not user_input:
             return self.async_show_form(
@@ -99,7 +95,7 @@ class TileFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the start of the config flow."""
         if not user_input:
             return self.async_show_form(step_id="user", data_schema=STEP_USER_SCHEMA)

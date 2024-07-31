@@ -1,15 +1,10 @@
 """Platform for the Daikin AC."""
-
-from __future__ import annotations
-
 import asyncio
 from datetime import timedelta
 import logging
-from typing import Any
 
 from aiohttp import ClientConnectionError
 from pydaikin.daikin_base import Appliance
-from pydaikin.factory import DaikinFactory
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -73,33 +68,28 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 
-async def daikin_api_setup(
-    hass: HomeAssistant,
-    host: str,
-    key: str | None,
-    uuid: str | None,
-    password: str | None,
-) -> DaikinApi | None:
+async def daikin_api_setup(hass: HomeAssistant, host, key, uuid, password):
     """Create a Daikin instance only once."""
 
     session = async_get_clientsession(hass)
     try:
         async with asyncio.timeout(TIMEOUT):
-            device: Appliance = await DaikinFactory(
+            device = await Appliance.factory(
                 host, session, key=key, uuid=uuid, password=password
             )
-        _LOGGER.debug("Connection to %s successful", host)
-    except TimeoutError as err:
+    except asyncio.TimeoutError as err:
         _LOGGER.debug("Connection to %s timed out", host)
         raise ConfigEntryNotReady from err
     except ClientConnectionError as err:
         _LOGGER.debug("ClientConnectionError to %s", host)
         raise ConfigEntryNotReady from err
-    except Exception:  # noqa: BLE001
+    except Exception:  # pylint: disable=broad-except
         _LOGGER.error("Unexpected error creating device %s", host)
         return None
 
-    return DaikinApi(device)
+    api = DaikinApi(device)
+
+    return api
 
 
 class DaikinApi:
@@ -113,7 +103,7 @@ class DaikinApi:
         self._available = True
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
-    async def async_update(self, **kwargs: Any) -> None:
+    async def async_update(self, **kwargs):
         """Pull the latest data from Daikin."""
         try:
             await self.device.update_status()

@@ -1,5 +1,4 @@
 """Support for Xiomi Gateway alarm control panels."""
-
 from __future__ import annotations
 
 from functools import partial
@@ -54,7 +53,6 @@ class XiaomiGatewayAlarm(AlarmControlPanelEntity):
 
     _attr_icon = "mdi:shield-home"
     _attr_supported_features = AlarmControlPanelEntityFeature.ARM_AWAY
-    _attr_code_arm_required = False
 
     def __init__(
         self, gateway_device, gateway_name, model, mac_address, gateway_device_id

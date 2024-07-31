@@ -1,5 +1,4 @@
 """Test KNX date."""
-
 from homeassistant.components.datetime import ATTR_DATETIME, DOMAIN, SERVICE_SET_VALUE
 from homeassistant.components.knx.const import CONF_RESPOND_TO_READ, KNX_ADDRESS
 from homeassistant.components.knx.schema import DateTimeSchema
@@ -34,8 +33,7 @@ async def test_datetime(hass: HomeAssistant, knx: KNXTestKit) -> None:
     )
     await knx.assert_write(
         test_address,
-        # service call in UTC, telegram in local time
-        (0x78, 0x01, 0x01, 0x13, 0x04, 0x05, 0x24, 0x00),
+        (0x78, 0x01, 0x01, 0x73, 0x04, 0x05, 0x20, 0x80),
     )
     state = hass.states.get("datetime.test")
     assert state.state == "2020-01-02T03:04:05+00:00"
@@ -51,7 +49,7 @@ async def test_datetime(hass: HomeAssistant, knx: KNXTestKit) -> None:
 
 async def test_date_restore_and_respond(hass: HomeAssistant, knx: KNXTestKit) -> None:
     """Test KNX datetime with passive_address, restoring state and respond_to_read."""
-    await hass.config.async_set_time_zone("Europe/Vienna")
+    hass.config.set_time_zone("Europe/Vienna")
     test_address = "1/1/1"
     test_passive_address = "3/3/3"
     fake_state = State("datetime.test", "2022-03-03T03:04:05+00:00")
@@ -75,7 +73,7 @@ async def test_date_restore_and_respond(hass: HomeAssistant, knx: KNXTestKit) ->
     await knx.receive_read(test_address)
     await knx.assert_response(
         test_address,
-        (0x7A, 0x03, 0x03, 0x04, 0x04, 0x05, 0x24, 0x00),
+        (0x7A, 0x03, 0x03, 0x84, 0x04, 0x05, 0x20, 0x80),
     )
 
     # don't respond to passive address

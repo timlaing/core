@@ -1,5 +1,4 @@
 """DataUpdateCoordinator for pegel_online."""
-
 import logging
 
 from aiopegelonline import CONNECT_ERRORS, PegelOnline, Station, StationMeasurements

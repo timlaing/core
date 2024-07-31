@@ -1,5 +1,4 @@
 """Component that will help set the Dlib face detect processing."""
-
 from __future__ import annotations
 
 import io
@@ -10,7 +9,7 @@ import voluptuous as vol
 
 from homeassistant.components.image_processing import (
     CONF_CONFIDENCE,
-    PLATFORM_SCHEMA as IMAGE_PROCESSING_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     ImageProcessingFaceEntity,
 )
 from homeassistant.const import ATTR_NAME, CONF_ENTITY_ID, CONF_NAME, CONF_SOURCE
@@ -23,7 +22,7 @@ _LOGGER = logging.getLogger(__name__)
 
 CONF_FACES = "faces"
 
-PLATFORM_SCHEMA = IMAGE_PROCESSING_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_FACES): {cv.string: cv.isfile},
         vol.Optional(CONF_CONFIDENCE, default=0.6): vol.Coerce(float),
@@ -38,15 +37,18 @@ def setup_platform(
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the Dlib Face detection platform."""
-    add_entities(
-        DlibFaceIdentifyEntity(
-            camera[CONF_ENTITY_ID],
-            config[CONF_FACES],
-            camera.get(CONF_NAME),
-            config[CONF_CONFIDENCE],
+    entities = []
+    for camera in config[CONF_SOURCE]:
+        entities.append(
+            DlibFaceIdentifyEntity(
+                camera[CONF_ENTITY_ID],
+                config[CONF_FACES],
+                camera.get(CONF_NAME),
+                config[CONF_CONFIDENCE],
+            )
         )
-        for camera in config[CONF_SOURCE]
-    )
+
+    add_entities(entities)
 
 
 class DlibFaceIdentifyEntity(ImageProcessingFaceEntity):

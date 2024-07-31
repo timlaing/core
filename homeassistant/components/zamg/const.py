@@ -14,11 +14,13 @@ LOGGER = logging.getLogger(__package__)
 
 ATTR_STATION = "station"
 ATTR_UPDATED = "updated"
-ATTRIBUTION = "Data provided by GeoSphere Austria"
+ATTRIBUTION = "Data provided by ZAMG"
 
 CONF_STATION_ID = "station_id"
 
-MANUFACTURER_URL = "https://www.geosphere.at"
+DEFAULT_NAME = "zamg"
+
+MANUFACTURER_URL = "https://www.zamg.ac.at"
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=10)
 VIENNA_TIME_ZONE = dt_util.get_time_zone("Europe/Vienna")

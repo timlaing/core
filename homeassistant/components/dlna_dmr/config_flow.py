@@ -1,5 +1,4 @@
 """Config flow for DLNA DMR."""
-
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
@@ -16,18 +15,13 @@ from async_upnp_client.profiles.profile import find_device_of_type
 from getmac import get_mac_address
 import voluptuous as vol
 
+from homeassistant import config_entries
 from homeassistant.components import ssdp
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlow,
-)
 from homeassistant.const import CONF_DEVICE_ID, CONF_HOST, CONF_MAC, CONF_TYPE, CONF_URL
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import IntegrationError
 from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.typing import VolDictType
 
 from .const import (
     CONF_BROWSE_UNFILTERED,
@@ -41,14 +35,14 @@ from .data import get_domain_data
 
 LOGGER = logging.getLogger(__name__)
 
-type FlowInput = Mapping[str, Any] | None
+FlowInput = Mapping[str, Any] | None
 
 
 class ConnectError(IntegrationError):
     """Error occurred when trying to connect to a device."""
 
 
-class DlnaDmrFlowHandler(ConfigFlow, domain=DOMAIN):
+class DlnaDmrFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a DLNA DMR config flow.
 
     The Unique Device Name (UDN) of the DMR device is used as the unique_id for
@@ -71,12 +65,12 @@ class DlnaDmrFlowHandler(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: ConfigEntry,
-    ) -> OptionsFlow:
+        config_entry: config_entries.ConfigEntry,
+    ) -> config_entries.OptionsFlow:
         """Define the config flow to handle options."""
         return DlnaDmrOptionsFlowHandler(config_entry)
 
-    async def async_step_user(self, user_input: FlowInput = None) -> ConfigFlowResult:
+    async def async_step_user(self, user_input: FlowInput = None) -> FlowResult:
         """Handle a flow initialized by the user.
 
         Let user choose from a list of found and unconfigured devices or to
@@ -108,7 +102,7 @@ class DlnaDmrFlowHandler(ConfigFlow, domain=DOMAIN):
         )
         return self.async_show_form(step_id="user", data_schema=data_schema)
 
-    async def async_step_manual(self, user_input: FlowInput = None) -> ConfigFlowResult:
+    async def async_step_manual(self, user_input: FlowInput = None) -> FlowResult:
         """Manual URL entry by the user."""
         LOGGER.debug("async_step_manual: user_input: %s", user_input)
 
@@ -130,9 +124,7 @@ class DlnaDmrFlowHandler(ConfigFlow, domain=DOMAIN):
             step_id="manual", data_schema=data_schema, errors=errors
         )
 
-    async def async_step_ssdp(
-        self, discovery_info: ssdp.SsdpServiceInfo
-    ) -> ConfigFlowResult:
+    async def async_step_ssdp(self, discovery_info: ssdp.SsdpServiceInfo) -> FlowResult:
         """Handle a flow initialized by SSDP discovery."""
         if LOGGER.isEnabledFor(logging.DEBUG):
             LOGGER.debug("async_step_ssdp: discovery_info %s", pformat(discovery_info))
@@ -150,7 +142,7 @@ class DlnaDmrFlowHandler(ConfigFlow, domain=DOMAIN):
         # case the device doesn't have a static and unique UDN (breaking the
         # UPnP spec).
         for entry in self._async_current_entries(include_ignore=True):
-            if self._location == entry.data.get(CONF_URL):
+            if self._location == entry.data[CONF_URL]:
                 return self.async_abort(reason="already_configured")
             if self._mac and self._mac == entry.data.get(CONF_MAC):
                 return self.async_abort(reason="already_configured")
@@ -159,9 +151,7 @@ class DlnaDmrFlowHandler(ConfigFlow, domain=DOMAIN):
 
         return await self.async_step_confirm()
 
-    async def async_step_ignore(
-        self, user_input: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_ignore(self, user_input: Mapping[str, Any]) -> FlowResult:
         """Ignore this config flow, and add MAC address as secondary identifier.
 
         Not all DMR devices correctly implement the spec, so their UDN may
@@ -195,9 +185,7 @@ class DlnaDmrFlowHandler(ConfigFlow, domain=DOMAIN):
             },
         )
 
-    async def async_step_unignore(
-        self, user_input: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_unignore(self, user_input: Mapping[str, Any]) -> FlowResult:
         """Rediscover previously ignored devices by their unique_id."""
         LOGGER.debug("async_step_unignore: user_input: %s", user_input)
         self._udn = user_input["unique_id"]
@@ -220,9 +208,7 @@ class DlnaDmrFlowHandler(ConfigFlow, domain=DOMAIN):
 
         return await self.async_step_confirm()
 
-    async def async_step_confirm(
-        self, user_input: FlowInput = None
-    ) -> ConfigFlowResult:
+    async def async_step_confirm(self, user_input: FlowInput = None) -> FlowResult:
         """Allow the user to confirm adding the device."""
         LOGGER.debug("async_step_confirm: %s", user_input)
 
@@ -270,7 +256,7 @@ class DlnaDmrFlowHandler(ConfigFlow, domain=DOMAIN):
         if not self._mac and (host := urlparse(self._location).hostname):
             self._mac = await _async_get_mac_address(self.hass, host)
 
-    def _create_entry(self) -> ConfigFlowResult:
+    def _create_entry(self) -> FlowResult:
         """Create a config entry, assuming all required information is now known."""
         LOGGER.debug(
             "_async_create_entry: location: %s, UDN: %s", self._location, self._udn
@@ -340,22 +326,26 @@ class DlnaDmrFlowHandler(ConfigFlow, domain=DOMAIN):
             entry.unique_id
             for entry in self._async_current_entries(include_ignore=False)
         }
-        return [disc for disc in discoveries if disc.ssdp_udn not in current_unique_ids]
+        discoveries = [
+            disc for disc in discoveries if disc.ssdp_udn not in current_unique_ids
+        ]
+
+        return discoveries
 
 
-class DlnaDmrOptionsFlowHandler(OptionsFlow):
+class DlnaDmrOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle a DLNA DMR options flow.
 
     Configures the single instance and updates the existing config entry.
     """
 
-    def __init__(self, config_entry: ConfigEntry) -> None:
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize."""
         self.config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Manage the options."""
         errors: dict[str, str] = {}
         # Don't modify existing (read-only) options -- copy and update instead
@@ -383,7 +373,7 @@ class DlnaDmrOptionsFlowHandler(OptionsFlow):
             if not errors:
                 return self.async_create_entry(title="", data=options)
 
-        fields: VolDictType = {}
+        fields = {}
 
         def _add_with_suggestion(key: str, validator: Callable | type[bool]) -> None:
             """Add a field to with a suggested value.

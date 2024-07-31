@@ -3,7 +3,6 @@
 These are mostly used where a HomeKit accessory exposes additional non-standard
 characteristics that don't map to a Home Assistant feature.
 """
-
 from __future__ import annotations
 
 from aiohomekit.model.characteristics import Characteristic, CharacteristicsTypes
@@ -29,37 +28,37 @@ NUMBER_ENTITIES: dict[str, NumberEntityDescription] = {
     CharacteristicsTypes.VENDOR_VOCOLINC_HUMIDIFIER_SPRAY_LEVEL: NumberEntityDescription(
         key=CharacteristicsTypes.VENDOR_VOCOLINC_HUMIDIFIER_SPRAY_LEVEL,
         name="Spray Quantity",
-        translation_key="spray_quantity",
+        icon="mdi:water",
         entity_category=EntityCategory.CONFIG,
     ),
     CharacteristicsTypes.VENDOR_EVE_DEGREE_ELEVATION: NumberEntityDescription(
         key=CharacteristicsTypes.VENDOR_EVE_DEGREE_ELEVATION,
         name="Elevation",
-        translation_key="elevation",
+        icon="mdi:elevation-rise",
         entity_category=EntityCategory.CONFIG,
     ),
     CharacteristicsTypes.VENDOR_AQARA_GATEWAY_VOLUME: NumberEntityDescription(
         key=CharacteristicsTypes.VENDOR_AQARA_GATEWAY_VOLUME,
         name="Volume",
-        translation_key="volume",
+        icon="mdi:volume-high",
         entity_category=EntityCategory.CONFIG,
     ),
     CharacteristicsTypes.VENDOR_AQARA_E1_GATEWAY_VOLUME: NumberEntityDescription(
         key=CharacteristicsTypes.VENDOR_AQARA_E1_GATEWAY_VOLUME,
         name="Volume",
-        translation_key="volume",
+        icon="mdi:volume-high",
         entity_category=EntityCategory.CONFIG,
     ),
     CharacteristicsTypes.VENDOR_EVE_MOTION_DURATION: NumberEntityDescription(
         key=CharacteristicsTypes.VENDOR_EVE_MOTION_DURATION,
         name="Duration",
-        translation_key="duration",
+        icon="mdi:timer",
         entity_category=EntityCategory.CONFIG,
     ),
     CharacteristicsTypes.VENDOR_EVE_MOTION_SENSITIVITY: NumberEntityDescription(
         key=CharacteristicsTypes.VENDOR_EVE_MOTION_SENSITIVITY,
         name="Sensitivity",
-        translation_key="sensitivity",
+        icon="mdi:knob",
         entity_category=EntityCategory.CONFIG,
     ),
 }

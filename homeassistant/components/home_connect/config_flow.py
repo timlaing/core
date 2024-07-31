@@ -1,5 +1,4 @@
 """Config flow for Home Connect."""
-
 import logging
 
 from homeassistant.helpers import config_entry_oauth2_flow

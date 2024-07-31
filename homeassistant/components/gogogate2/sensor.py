@@ -1,5 +1,4 @@
 """Support for Gogogate2 garage Doors."""
-
 from __future__ import annotations
 
 from itertools import chain
@@ -16,8 +15,12 @@ from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .common import GoGoGate2Entity, get_data_update_coordinator, sensor_unique_id
-from .coordinator import DeviceDataUpdateCoordinator
+from .common import (
+    DeviceDataUpdateCoordinator,
+    GoGoGate2Entity,
+    get_data_update_coordinator,
+    sensor_unique_id,
+)
 
 SENSOR_ID_WIRED = "WIRE"
 

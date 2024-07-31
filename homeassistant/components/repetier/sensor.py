@@ -1,5 +1,4 @@
 """Support for monitoring Repetier Server Sensors."""
-
 from __future__ import annotations
 
 import logging

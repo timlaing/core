@@ -1,5 +1,4 @@
 """Provide info to system health."""
-
 from typing import Any
 
 from pydiscovergy.const import API_BASE

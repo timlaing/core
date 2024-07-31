@@ -1,5 +1,4 @@
 """Support for Zengge lights."""
-
 from __future__ import annotations
 
 import logging
@@ -12,7 +11,7 @@ from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_HS_COLOR,
     ATTR_WHITE,
-    PLATFORM_SCHEMA as LIGHT_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     ColorMode,
     LightEntity,
 )
@@ -27,7 +26,7 @@ _LOGGER = logging.getLogger(__name__)
 
 DEVICE_SCHEMA = vol.Schema({vol.Optional(CONF_NAME): cv.string})
 
-PLATFORM_SCHEMA = LIGHT_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {vol.Optional(CONF_DEVICES, default={}): {cv.string: DEVICE_SCHEMA}}
 )
 
@@ -41,7 +40,10 @@ def setup_platform(
     """Set up the Zengge platform."""
     lights = []
     for address, device_config in config[CONF_DEVICES].items():
-        light = ZenggeLight(device_config[CONF_NAME], address)
+        device = {}
+        device["name"] = device_config[CONF_NAME]
+        device["address"] = address
+        light = ZenggeLight(device)
         if light.is_valid:
             lights.append(light)
 
@@ -53,20 +55,22 @@ class ZenggeLight(LightEntity):
 
     _attr_supported_color_modes = {ColorMode.HS, ColorMode.WHITE}
 
-    def __init__(self, name: str, address: str) -> None:
+    def __init__(self, device):
         """Initialize the light."""
 
-        self._attr_name = name
-        self._attr_unique_id = address
+        self._attr_name = device["name"]
+        self._attr_unique_id = device["address"]
         self.is_valid = True
-        self._bulb = zengge(address)
+        self._bulb = zengge(device["address"])
         self._white = 0
         self._attr_brightness = 0
         self._attr_hs_color = (0, 0)
         self._attr_is_on = False
         if self._bulb.connect() is False:
             self.is_valid = False
-            _LOGGER.error("Failed to connect to bulb %s, %s", address, name)
+            _LOGGER.error(
+                "Failed to connect to bulb %s, %s", device["address"], device["name"]
+            )
             return
 
     @property

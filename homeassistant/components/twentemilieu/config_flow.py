@@ -1,5 +1,4 @@
 """Config flow to configure the Twente Milieu integration."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -11,8 +10,9 @@ from twentemilieu import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import ConfigFlow
 from homeassistant.const import CONF_ID
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_HOUSE_LETTER, CONF_HOUSE_NUMBER, CONF_POST_CODE, DOMAIN
@@ -25,7 +25,7 @@ class TwenteMilieuFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def _show_setup_form(
         self, errors: dict[str, str] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Show the setup form to the user."""
         return self.async_show_form(
             step_id="user",
@@ -41,7 +41,7 @@ class TwenteMilieuFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow initiated by the user."""
         if user_input is None:
             return await self._show_setup_form(user_input)

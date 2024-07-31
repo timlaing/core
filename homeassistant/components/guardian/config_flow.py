@@ -1,5 +1,4 @@
 """Config flow for Elexa Guardian integration."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -8,10 +7,11 @@ from aioguardian import Client
 from aioguardian.errors import GuardianError
 import voluptuous as vol
 
+from homeassistant import config_entries
 from homeassistant.components import dhcp, zeroconf
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_IP_ADDRESS, CONF_PORT
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.data_entry_flow import FlowResult
 
 from .const import CONF_UID, DOMAIN, LOGGER
 
@@ -52,7 +52,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     }
 
 
-class GuardianConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Elexa Guardian."""
 
     VERSION = 1
@@ -76,7 +76,7 @@ class GuardianConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle configuration via the UI."""
         if user_input is None:
             return self.async_show_form(
@@ -100,9 +100,7 @@ class GuardianConfigFlow(ConfigFlow, domain=DOMAIN):
             title=info[CONF_UID], data={CONF_UID: info["uid"], **user_input}
         )
 
-    async def async_step_dhcp(
-        self, discovery_info: dhcp.DhcpServiceInfo
-    ) -> ConfigFlowResult:
+    async def async_step_dhcp(self, discovery_info: dhcp.DhcpServiceInfo) -> FlowResult:
         """Handle the configuration via dhcp."""
         self.discovery_info = {
             CONF_IP_ADDRESS: discovery_info.ip,
@@ -115,7 +113,7 @@ class GuardianConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_zeroconf(
         self, discovery_info: zeroconf.ZeroconfServiceInfo
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the configuration via zeroconf."""
         self.discovery_info = {
             CONF_IP_ADDRESS: discovery_info.host,
@@ -125,7 +123,7 @@ class GuardianConfigFlow(ConfigFlow, domain=DOMAIN):
         await self._async_set_unique_id(pin)
         return await self._async_handle_discovery()
 
-    async def _async_handle_discovery(self) -> ConfigFlowResult:
+    async def _async_handle_discovery(self) -> FlowResult:
         """Handle any discovery."""
         self.context[CONF_IP_ADDRESS] = self.discovery_info[CONF_IP_ADDRESS]
         if any(
@@ -138,7 +136,7 @@ class GuardianConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_discovery_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Finish the configuration via any discovery."""
         if user_input is None:
             self._set_confirm_only()

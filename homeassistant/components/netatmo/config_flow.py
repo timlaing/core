@@ -1,5 +1,4 @@
 """Config flow for Netatmo."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -7,19 +6,15 @@ import logging
 from typing import Any
 import uuid
 
+from pyatmo.const import ALL_SCOPES
 import voluptuous as vol
 
-from homeassistant.config_entries import (
-    SOURCE_REAUTH,
-    ConfigEntry,
-    ConfigFlowResult,
-    OptionsFlow,
-)
+from homeassistant import config_entries
 from homeassistant.const import CONF_SHOW_ON_MAP, CONF_UUID
 from homeassistant.core import callback
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import config_entry_oauth2_flow, config_validation as cv
 
-from .api import get_api_scopes
 from .const import (
     CONF_AREA_NAME,
     CONF_LAT_NE,
@@ -45,8 +40,8 @@ class NetatmoFlowHandler(
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: ConfigEntry,
-    ) -> OptionsFlow:
+        config_entry: config_entries.ConfigEntry,
+    ) -> config_entries.OptionsFlow:
         """Get the options flow for this handler."""
         return NetatmoOptionsFlowHandler(config_entry)
 
@@ -58,34 +53,41 @@ class NetatmoFlowHandler(
     @property
     def extra_authorize_data(self) -> dict:
         """Extra data that needs to be appended to the authorize url."""
-        scopes = get_api_scopes(self.flow_impl.domain)
+        exclude = []
+        if self.flow_impl.name == "Home Assistant Cloud":
+            exclude = ["access_doorbell", "read_doorbell"]
+
+        scopes = [scope for scope in ALL_SCOPES if scope not in exclude]
+        scopes.sort()
+
         return {"scope": " ".join(scopes)}
 
-    async def async_step_user(self, user_input: dict | None = None) -> ConfigFlowResult:
+    async def async_step_user(self, user_input: dict | None = None) -> FlowResult:
         """Handle a flow start."""
         await self.async_set_unique_id(DOMAIN)
 
-        if self.source != SOURCE_REAUTH and self._async_current_entries():
+        if (
+            self.source != config_entries.SOURCE_REAUTH
+            and self._async_current_entries()
+        ):
             return self.async_abort(reason="single_instance_allowed")
 
         return await super().async_step_user(user_input)
 
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Perform reauth upon an API authentication error."""
         return await self.async_step_reauth_confirm()
 
     async def async_step_reauth_confirm(
         self, user_input: dict | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Dialog that informs the user that reauth is required."""
         if user_input is None:
             return self.async_show_form(step_id="reauth_confirm")
 
         return await self.async_step_user()
 
-    async def async_oauth_create_entry(self, data: dict) -> ConfigFlowResult:
+    async def async_oauth_create_entry(self, data: dict) -> FlowResult:
         """Create an oauth config entry or update existing entry for reauth."""
         existing_entry = await self.async_set_unique_id(DOMAIN)
         if existing_entry:
@@ -96,22 +98,22 @@ class NetatmoFlowHandler(
         return await super().async_oauth_create_entry(data)
 
 
-class NetatmoOptionsFlowHandler(OptionsFlow):
+class NetatmoOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle Netatmo options."""
 
-    def __init__(self, config_entry: ConfigEntry) -> None:
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize Netatmo options flow."""
         self.config_entry = config_entry
         self.options = dict(config_entry.options)
         self.options.setdefault(CONF_WEATHER_AREAS, {})
 
-    async def async_step_init(self, user_input: dict | None = None) -> ConfigFlowResult:
+    async def async_step_init(self, user_input: dict | None = None) -> FlowResult:
         """Manage the Netatmo options."""
         return await self.async_step_public_weather_areas()
 
     async def async_step_public_weather_areas(
         self, user_input: dict | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Manage configuration of Netatmo public weather areas."""
         errors: dict = {}
 
@@ -146,16 +148,16 @@ class NetatmoOptionsFlowHandler(OptionsFlow):
             errors=errors,
         )
 
-    async def async_step_public_weather(self, user_input: dict) -> ConfigFlowResult:
+    async def async_step_public_weather(self, user_input: dict) -> FlowResult:
         """Manage configuration of Netatmo public weather sensors."""
         if user_input is not None and CONF_NEW_AREA not in user_input:
-            self.options[CONF_WEATHER_AREAS][user_input[CONF_AREA_NAME]] = (
-                fix_coordinates(user_input)
-            )
+            self.options[CONF_WEATHER_AREAS][
+                user_input[CONF_AREA_NAME]
+            ] = fix_coordinates(user_input)
 
-            self.options[CONF_WEATHER_AREAS][user_input[CONF_AREA_NAME]][CONF_UUID] = (
-                str(uuid.uuid4())
-            )
+            self.options[CONF_WEATHER_AREAS][user_input[CONF_AREA_NAME]][
+                CONF_UUID
+            ] = str(uuid.uuid4())
 
             return await self.async_step_public_weather_areas()
 
@@ -197,7 +199,7 @@ class NetatmoOptionsFlowHandler(OptionsFlow):
                 vol.Required(
                     CONF_PUBLIC_MODE,
                     default=orig_options.get(CONF_PUBLIC_MODE, "avg"),
-                ): vol.In(["avg", "max", "min"]),
+                ): vol.In(["avg", "max"]),
                 vol.Required(
                     CONF_SHOW_ON_MAP,
                     default=orig_options.get(CONF_SHOW_ON_MAP, False),
@@ -207,7 +209,7 @@ class NetatmoOptionsFlowHandler(OptionsFlow):
 
         return self.async_show_form(step_id="public_weather", data_schema=data_schema)
 
-    def _create_options_entry(self) -> ConfigFlowResult:
+    def _create_options_entry(self) -> FlowResult:
         """Update config entry options."""
         return self.async_create_entry(
             title="Netatmo Public Weather", data=self.options

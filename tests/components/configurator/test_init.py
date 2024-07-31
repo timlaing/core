@@ -2,7 +2,7 @@
 
 from datetime import timedelta
 
-from homeassistant.components import configurator
+import homeassistant.components.configurator as configurator
 from homeassistant.const import ATTR_FRIENDLY_NAME
 from homeassistant.core import HomeAssistant
 import homeassistant.util.dt as dt_util

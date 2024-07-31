@@ -1,5 +1,4 @@
 """Number entities for musiccast."""
-
 from __future__ import annotations
 
 from aiomusiccast.capabilities import NumberSetter
@@ -20,18 +19,16 @@ async def async_setup_entry(
     """Set up MusicCast number entities based on a config entry."""
     coordinator: MusicCastDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
 
-    number_entities = [
-        NumberCapability(coordinator, capability)
-        for capability in coordinator.data.capabilities
-        if isinstance(capability, NumberSetter)
-    ]
+    number_entities = []
 
-    number_entities.extend(
-        NumberCapability(coordinator, capability, zone)
-        for zone, data in coordinator.data.zones.items()
-        for capability in data.capabilities
-        if isinstance(capability, NumberSetter)
-    )
+    for capability in coordinator.data.capabilities:
+        if isinstance(capability, NumberSetter):
+            number_entities.append(NumberCapability(coordinator, capability))
+
+    for zone, data in coordinator.data.zones.items():
+        for capability in data.capabilities:
+            if isinstance(capability, NumberSetter):
+                number_entities.append(NumberCapability(coordinator, capability, zone))
 
     async_add_entities(number_entities)
 

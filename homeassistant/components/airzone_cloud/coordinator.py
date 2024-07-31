@@ -1,5 +1,4 @@
 """The Airzone Cloud integration coordinator."""
-
 from __future__ import annotations
 
 from asyncio import timeout
@@ -26,7 +25,6 @@ class AirzoneUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def __init__(self, hass: HomeAssistant, airzone: AirzoneCloudApi) -> None:
         """Initialize."""
         self.airzone = airzone
-        self.airzone.set_update_callback(self.async_set_updated_data)
 
         super().__init__(
             hass,

@@ -1,5 +1,4 @@
 """The lg_soundbar component."""
-
 import logging
 
 from homeassistant import config_entries, core
@@ -35,4 +34,5 @@ async def async_unload_entry(
     hass: core.HomeAssistant, entry: config_entries.ConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    result = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return result

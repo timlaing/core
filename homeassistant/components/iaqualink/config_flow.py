@@ -1,5 +1,4 @@
 """Config flow to configure zone component."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -12,20 +11,21 @@ from iaqualink.exception import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from homeassistant.data_entry_flow import FlowResult
 
 from .const import DOMAIN
 
 
-class AqualinkFlowHandler(ConfigFlow, domain=DOMAIN):
+class AqualinkFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Aqualink config flow."""
 
     VERSION = 1
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow start."""
         # Supporting a single account.
         entries = self._async_current_entries()

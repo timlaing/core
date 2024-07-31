@@ -1,9 +1,8 @@
 """The tests for the telegram.notify platform."""
-
 from unittest.mock import patch
 
 from homeassistant import config as hass_config
-from homeassistant.components import notify
+import homeassistant.components.notify as notify
 from homeassistant.components.telegram import DOMAIN
 from homeassistant.const import SERVICE_RELOAD
 from homeassistant.core import HomeAssistant

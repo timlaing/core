@@ -1,5 +1,4 @@
 """Script to run benchmarks."""
-
 from __future__ import annotations
 
 import argparse
@@ -10,6 +9,7 @@ from contextlib import suppress
 import json
 import logging
 from timeit import default_timer as timer
+from typing import TypeVar
 
 from homeassistant import core
 from homeassistant.const import EVENT_STATE_CHANGED
@@ -22,6 +22,8 @@ from homeassistant.helpers.json import JSON_DUMP, JSONEncoder
 
 # mypy: allow-untyped-calls, allow-untyped-defs, no-check-untyped-defs
 # mypy: no-warn-return-any
+
+_CallableT = TypeVar("_CallableT", bound=Callable)
 
 BENCHMARKS: dict[str, Callable] = {}
 
@@ -53,7 +55,7 @@ async def run_benchmark(bench):
     await hass.async_stop()
 
 
-def benchmark[_CallableT: Callable](func: _CallableT) -> _CallableT:
+def benchmark(func: _CallableT) -> _CallableT:
     """Decorate to mark a benchmark."""
     BENCHMARKS[func.__name__] = func
     return func
@@ -94,7 +96,7 @@ async def fire_events_with_filter(hass):
     events_to_fire = 10**6
 
     @core.callback
-    def event_filter(event_data):
+    def event_filter(event):
         """Filter event."""
         return False
 

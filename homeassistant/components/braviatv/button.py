@@ -1,5 +1,4 @@
 """Button support for Bravia TV."""
-
 from __future__ import annotations
 
 from collections.abc import Callable, Coroutine
@@ -10,20 +9,28 @@ from homeassistant.components.button import (
     ButtonEntity,
     ButtonEntityDescription,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import BraviaTVConfigEntry
+from .const import DOMAIN
 from .coordinator import BraviaTVCoordinator
 from .entity import BraviaTVEntity
 
 
-@dataclass(frozen=True, kw_only=True)
-class BraviaTVButtonDescription(ButtonEntityDescription):
-    """Bravia TV Button description."""
+@dataclass
+class BraviaTVButtonDescriptionMixin:
+    """Mixin to describe a Bravia TV Button entity."""
 
     press_action: Callable[[BraviaTVCoordinator], Coroutine]
+
+
+@dataclass
+class BraviaTVButtonDescription(
+    ButtonEntityDescription, BraviaTVButtonDescriptionMixin
+):
+    """Bravia TV Button description."""
 
 
 BUTTONS: tuple[BraviaTVButtonDescription, ...] = (
@@ -44,12 +51,12 @@ BUTTONS: tuple[BraviaTVButtonDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: BraviaTVConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Bravia TV Button entities."""
 
-    coordinator = config_entry.runtime_data
+    coordinator = hass.data[DOMAIN][config_entry.entry_id]
     unique_id = config_entry.unique_id
     assert unique_id is not None
 

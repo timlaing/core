@@ -1,5 +1,4 @@
 """DataUpdateCoordinator for WeatherKit integration."""
-
 from __future__ import annotations
 
 from datetime import timedelta
@@ -38,7 +37,7 @@ class WeatherKitDataUpdateCoordinator(DataUpdateCoordinator):
             hass=hass,
             logger=LOGGER,
             name=DOMAIN,
-            update_interval=timedelta(minutes=5),
+            update_interval=timedelta(minutes=15),
         )
 
     async def update_supported_data_sets(self):

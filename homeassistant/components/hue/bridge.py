@@ -1,5 +1,4 @@
 """Code to handle a Hue bridge."""
-
 from __future__ import annotations
 
 import asyncio
@@ -14,11 +13,11 @@ from aiohue.errors import AiohueException, BridgeBusy
 
 from homeassistant import core
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import CONF_API_KEY, CONF_API_VERSION, CONF_HOST, Platform
+from homeassistant.const import CONF_API_KEY, CONF_HOST, Platform
 from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
 from homeassistant.helpers import aiohttp_client
 
-from .const import DOMAIN
+from .const import CONF_API_VERSION, DOMAIN
 from .v1.sensor_base import SensorManager
 from .v2.device import async_setup_devices
 from .v2.hue_event import async_setup_hue_events
@@ -72,11 +71,10 @@ class HueBridge:
 
     async def async_initialize_bridge(self) -> bool:
         """Initialize Connection with the Hue API."""
-        setup_ok = False
         try:
             async with asyncio.timeout(10):
                 await self.api.initialize()
-            setup_ok = True
+
         except (LinkButtonNotPressed, Unauthorized):
             # Usernames can become invalid if hub is reset or user removed.
             # We are going to fail the config entry setup and initiate a new
@@ -85,7 +83,7 @@ class HueBridge:
             create_config_flow(self.hass, self.host)
             return False
         except (
-            TimeoutError,
+            asyncio.TimeoutError,
             client_exceptions.ClientOSError,
             client_exceptions.ServerDisconnectedError,
             client_exceptions.ContentTypeError,
@@ -94,12 +92,9 @@ class HueBridge:
             raise ConfigEntryNotReady(
                 f"Error connecting to the Hue bridge at {self.host}"
             ) from err
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             self.logger.exception("Unknown error connecting to Hue bridge")
             return False
-        finally:
-            if not setup_ok:
-                await self.api.close()
 
         # v1 specific initialization/setup code here
         if self.api_version == 1:

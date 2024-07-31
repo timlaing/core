@@ -1,5 +1,4 @@
 """Add support for the Xiaomi TVs."""
-
 from __future__ import annotations
 
 import logging
@@ -8,7 +7,7 @@ import pymitv
 import voluptuous as vol
 
 from homeassistant.components.media_player import (
-    PLATFORM_SCHEMA as MEDIA_PLAYER_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
@@ -24,7 +23,7 @@ DEFAULT_NAME = "Xiaomi TV"
 _LOGGER = logging.getLogger(__name__)
 
 # No host is needed for configuration, however it can be set.
-PLATFORM_SCHEMA = MEDIA_PLAYER_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Optional(CONF_HOST): cv.string,
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,

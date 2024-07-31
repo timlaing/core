@@ -1,5 +1,4 @@
 """Support for RDW sensors."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -25,11 +24,18 @@ from homeassistant.helpers.update_coordinator import (
 from .const import CONF_LICENSE_PLATE, DOMAIN
 
 
-@dataclass(frozen=True, kw_only=True)
-class RDWSensorEntityDescription(SensorEntityDescription):
-    """Describes RDW sensor entity."""
+@dataclass
+class RDWSensorEntityDescriptionMixin:
+    """Mixin for required keys."""
 
     value_fn: Callable[[Vehicle], date | str | float | None]
+
+
+@dataclass
+class RDWSensorEntityDescription(
+    SensorEntityDescription, RDWSensorEntityDescriptionMixin
+):
+    """Describes RDW sensor entity."""
 
 
 SENSORS: tuple[RDWSensorEntityDescription, ...] = (

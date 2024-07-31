@@ -1,5 +1,4 @@
 """Utils for trafikverket_train."""
-
 from __future__ import annotations
 
 from datetime import date, time, timedelta
@@ -14,7 +13,7 @@ def create_unique_id(
     timestr = str(depart_time) if depart_time else ""
     return (
         f"{from_station.casefold().replace(' ', '')}-{to_station.casefold().replace(' ', '')}"
-        f"-{timestr.casefold().replace(' ', '')}-{weekdays!s}"
+        f"-{timestr.casefold().replace(' ', '')}-{str(weekdays)}"
     )
 
 

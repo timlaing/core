@@ -1,5 +1,4 @@
 """Support for Opower sensors."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -14,7 +13,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory, UnitOfEnergy, UnitOfVolume
+from homeassistant.const import UnitOfEnergy, UnitOfVolume
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -25,11 +24,16 @@ from .const import DOMAIN
 from .coordinator import OpowerCoordinator
 
 
-@dataclass(frozen=True, kw_only=True)
-class OpowerEntityDescription(SensorEntityDescription):
-    """Class describing Opower sensors entities."""
+@dataclass
+class OpowerEntityDescriptionMixin:
+    """Mixin values for required keys."""
 
     value_fn: Callable[[Forecast], str | float]
+
+
+@dataclass
+class OpowerEntityDescription(SensorEntityDescription, OpowerEntityDescriptionMixin):
+    """Class describing Opower sensors entities."""
 
 
 # suggested_display_precision=0 for all sensors since
@@ -69,6 +73,7 @@ ELEC_SENSORS: tuple[OpowerEntityDescription, ...] = (
         name="Current bill electric cost to date",
         device_class=SensorDeviceClass.MONETARY,
         native_unit_of_measurement="USD",
+        suggested_unit_of_measurement="USD",
         state_class=SensorStateClass.TOTAL,
         suggested_display_precision=0,
         value_fn=lambda data: data.cost_to_date,
@@ -78,6 +83,7 @@ ELEC_SENSORS: tuple[OpowerEntityDescription, ...] = (
         name="Current bill electric forecasted cost",
         device_class=SensorDeviceClass.MONETARY,
         native_unit_of_measurement="USD",
+        suggested_unit_of_measurement="USD",
         state_class=SensorStateClass.TOTAL,
         suggested_display_precision=0,
         value_fn=lambda data: data.forecasted_cost,
@@ -87,25 +93,10 @@ ELEC_SENSORS: tuple[OpowerEntityDescription, ...] = (
         name="Typical monthly electric cost",
         device_class=SensorDeviceClass.MONETARY,
         native_unit_of_measurement="USD",
+        suggested_unit_of_measurement="USD",
         state_class=SensorStateClass.TOTAL,
         suggested_display_precision=0,
         value_fn=lambda data: data.typical_cost,
-    ),
-    OpowerEntityDescription(
-        key="elec_start_date",
-        name="Current bill electric start date",
-        device_class=SensorDeviceClass.DATE,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        entity_registry_enabled_default=False,
-        value_fn=lambda data: data.start_date,
-    ),
-    OpowerEntityDescription(
-        key="elec_end_date",
-        name="Current bill electric end date",
-        device_class=SensorDeviceClass.DATE,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        entity_registry_enabled_default=False,
-        value_fn=lambda data: data.end_date,
     ),
 )
 GAS_SENSORS: tuple[OpowerEntityDescription, ...] = (
@@ -114,6 +105,7 @@ GAS_SENSORS: tuple[OpowerEntityDescription, ...] = (
         name="Current bill gas usage to date",
         device_class=SensorDeviceClass.GAS,
         native_unit_of_measurement=UnitOfVolume.CENTUM_CUBIC_FEET,
+        suggested_unit_of_measurement=UnitOfVolume.CENTUM_CUBIC_FEET,
         state_class=SensorStateClass.TOTAL,
         suggested_display_precision=0,
         value_fn=lambda data: data.usage_to_date,
@@ -123,6 +115,7 @@ GAS_SENSORS: tuple[OpowerEntityDescription, ...] = (
         name="Current bill gas forecasted usage",
         device_class=SensorDeviceClass.GAS,
         native_unit_of_measurement=UnitOfVolume.CENTUM_CUBIC_FEET,
+        suggested_unit_of_measurement=UnitOfVolume.CENTUM_CUBIC_FEET,
         state_class=SensorStateClass.TOTAL,
         suggested_display_precision=0,
         value_fn=lambda data: data.forecasted_usage,
@@ -132,6 +125,7 @@ GAS_SENSORS: tuple[OpowerEntityDescription, ...] = (
         name="Typical monthly gas usage",
         device_class=SensorDeviceClass.GAS,
         native_unit_of_measurement=UnitOfVolume.CENTUM_CUBIC_FEET,
+        suggested_unit_of_measurement=UnitOfVolume.CENTUM_CUBIC_FEET,
         state_class=SensorStateClass.TOTAL,
         suggested_display_precision=0,
         value_fn=lambda data: data.typical_usage,
@@ -141,6 +135,7 @@ GAS_SENSORS: tuple[OpowerEntityDescription, ...] = (
         name="Current bill gas cost to date",
         device_class=SensorDeviceClass.MONETARY,
         native_unit_of_measurement="USD",
+        suggested_unit_of_measurement="USD",
         state_class=SensorStateClass.TOTAL,
         suggested_display_precision=0,
         value_fn=lambda data: data.cost_to_date,
@@ -150,6 +145,7 @@ GAS_SENSORS: tuple[OpowerEntityDescription, ...] = (
         name="Current bill gas forecasted cost",
         device_class=SensorDeviceClass.MONETARY,
         native_unit_of_measurement="USD",
+        suggested_unit_of_measurement="USD",
         state_class=SensorStateClass.TOTAL,
         suggested_display_precision=0,
         value_fn=lambda data: data.forecasted_cost,
@@ -159,25 +155,10 @@ GAS_SENSORS: tuple[OpowerEntityDescription, ...] = (
         name="Typical monthly gas cost",
         device_class=SensorDeviceClass.MONETARY,
         native_unit_of_measurement="USD",
+        suggested_unit_of_measurement="USD",
         state_class=SensorStateClass.TOTAL,
         suggested_display_precision=0,
         value_fn=lambda data: data.typical_cost,
-    ),
-    OpowerEntityDescription(
-        key="gas_start_date",
-        name="Current bill gas start date",
-        device_class=SensorDeviceClass.DATE,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        entity_registry_enabled_default=False,
-        value_fn=lambda data: data.start_date,
-    ),
-    OpowerEntityDescription(
-        key="gas_end_date",
-        name="Current bill gas end date",
-        device_class=SensorDeviceClass.DATE,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        entity_registry_enabled_default=False,
-        value_fn=lambda data: data.end_date,
     ),
 )
 
@@ -210,16 +191,16 @@ async def async_setup_entry(
             and forecast.unit_of_measure in [UnitOfMeasure.THERM, UnitOfMeasure.CCF]
         ):
             sensors = GAS_SENSORS
-        entities.extend(
-            OpowerSensor(
-                coordinator,
-                sensor,
-                forecast.account.utility_account_id,
-                device,
-                device_id,
+        for sensor in sensors:
+            entities.append(
+                OpowerSensor(
+                    coordinator,
+                    sensor,
+                    forecast.account.utility_account_id,
+                    device,
+                    device_id,
+                )
             )
-            for sensor in sensors
-        )
 
     async_add_entities(entities)
 

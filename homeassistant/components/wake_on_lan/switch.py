@@ -1,5 +1,4 @@
 """Support for wake on lan."""
-
 from __future__ import annotations
 
 import logging
@@ -10,7 +9,7 @@ import voluptuous as vol
 import wakeonlan
 
 from homeassistant.components.switch import (
-    PLATFORM_SCHEMA as SWITCH_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA as PARENT_PLATFORM_SCHEMA,
     SwitchEntity,
 )
 from homeassistant.const import (
@@ -27,11 +26,16 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.script import Script
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from .const import CONF_OFF_ACTION, DEFAULT_NAME, DEFAULT_PING_TIMEOUT, DOMAIN
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORM_SCHEMA = SWITCH_PLATFORM_SCHEMA.extend(
+CONF_OFF_ACTION = "turn_off"
+
+DEFAULT_NAME = "Wake on LAN"
+DEFAULT_PING_TIMEOUT = 1
+
+PLATFORM_SCHEMA = PARENT_PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_MAC): cv.string,
         vol.Optional(CONF_BROADCAST_ADDRESS): cv.string,
@@ -43,10 +47,10 @@ PLATFORM_SCHEMA = SWITCH_PLATFORM_SCHEMA.extend(
 )
 
 
-async def async_setup_platform(
+def setup_platform(
     hass: HomeAssistant,
     config: ConfigType,
-    async_add_entities: AddEntitiesCallback,
+    add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up a wake on lan switch."""
@@ -57,7 +61,7 @@ async def async_setup_platform(
     name: str = config[CONF_NAME]
     off_action: list[Any] | None = config.get(CONF_OFF_ACTION)
 
-    async_add_entities(
+    add_entities(
         [
             WolSwitch(
                 hass,
@@ -124,7 +128,7 @@ class WolSwitch(SwitchEntity):
 
         if self._attr_assumed_state:
             self._state = True
-            self.schedule_update_ha_state()
+            self.async_write_ha_state()
 
     def turn_off(self, **kwargs: Any) -> None:
         """Turn the device off if an off action is present."""
@@ -133,7 +137,7 @@ class WolSwitch(SwitchEntity):
 
         if self._attr_assumed_state:
             self._state = False
-            self.schedule_update_ha_state()
+            self.async_write_ha_state()
 
     def update(self) -> None:
         """Check if device is on and update the state. Only called if assumed state is false."""

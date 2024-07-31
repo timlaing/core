@@ -1,5 +1,4 @@
 """The sensor tests for the tado platform."""
-
 from homeassistant.const import STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant
 

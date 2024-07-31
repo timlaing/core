@@ -1,5 +1,4 @@
 """Constants for the onboarding component."""
-
 DOMAIN = "onboarding"
 STEP_USER = "user"
 STEP_CORE_CONFIG = "core_config"

@@ -1,11 +1,9 @@
 """Component providing HA switch support for Ring Door Bell/Chimes."""
-
 from datetime import timedelta
-from enum import StrEnum, auto
 import logging
 from typing import Any
 
-from ring_doorbell import RingStickUpCam
+import requests
 
 from homeassistant.components.light import ColorMode, LightEntity
 from homeassistant.config_entries import ConfigEntry
@@ -13,10 +11,8 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 import homeassistant.util.dt as dt_util
 
-from . import RingData
-from .const import DOMAIN
-from .coordinator import RingDataCoordinator
-from .entity import RingEntity, exception_wrap
+from . import DOMAIN
+from .entity import RingEntityMixin
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,12 +24,8 @@ _LOGGER = logging.getLogger(__name__)
 
 SKIP_UPDATES_DELAY = timedelta(seconds=5)
 
-
-class OnOffState(StrEnum):
-    """Enum for allowed on off states."""
-
-    ON = auto()
-    OFF = auto()
+ON_STATE = "on"
+OFF_STATE = "off"
 
 
 async def async_setup_entry(
@@ -42,56 +34,56 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Create the lights for the Ring devices."""
-    ring_data: RingData = hass.data[DOMAIN][config_entry.entry_id]
-    devices_coordinator = ring_data.devices_coordinator
+    devices = hass.data[DOMAIN][config_entry.entry_id]["devices"]
 
-    async_add_entities(
-        RingLight(device, devices_coordinator)
-        for device in ring_data.devices.stickup_cams
-        if device.has_capability("light")
-    )
+    lights = []
+
+    for device in devices["stickup_cams"]:
+        if device.has_capability("light"):
+            lights.append(RingLight(config_entry.entry_id, device))
+
+    async_add_entities(lights)
 
 
-class RingLight(RingEntity[RingStickUpCam], LightEntity):
+class RingLight(RingEntityMixin, LightEntity):
     """Creates a switch to turn the ring cameras light on and off."""
 
     _attr_color_mode = ColorMode.ONOFF
     _attr_supported_color_modes = {ColorMode.ONOFF}
     _attr_translation_key = "light"
 
-    def __init__(
-        self, device: RingStickUpCam, coordinator: RingDataCoordinator
-    ) -> None:
+    def __init__(self, config_entry_id, device):
         """Initialize the light."""
-        super().__init__(device, coordinator)
-        self._attr_unique_id = str(device.id)
-        self._attr_is_on = device.lights == OnOffState.ON
+        super().__init__(config_entry_id, device)
+        self._attr_unique_id = device.id
+        self._attr_is_on = device.lights == ON_STATE
         self._no_updates_until = dt_util.utcnow()
 
     @callback
-    def _handle_coordinator_update(self) -> None:
+    def _update_callback(self):
         """Call update method."""
         if self._no_updates_until > dt_util.utcnow():
             return
-        device = self._get_coordinator_data().get_stickup_cam(
-            self._device.device_api_id
-        )
-        self._attr_is_on = device.lights == OnOffState.ON
-        super()._handle_coordinator_update()
 
-    @exception_wrap
-    def _set_light(self, new_state: OnOffState) -> None:
+        self._attr_is_on = self._device.lights == ON_STATE
+        self.async_write_ha_state()
+
+    def _set_light(self, new_state):
         """Update light state, and causes Home Assistant to correctly update."""
-        self._device.lights = new_state
+        try:
+            self._device.lights = new_state
+        except requests.Timeout:
+            _LOGGER.error("Time out setting %s light to %s", self.entity_id, new_state)
+            return
 
-        self._attr_is_on = new_state == OnOffState.ON
+        self._attr_is_on = new_state == ON_STATE
         self._no_updates_until = dt_util.utcnow() + SKIP_UPDATES_DELAY
-        self.schedule_update_ha_state()
+        self.async_write_ha_state()
 
     def turn_on(self, **kwargs: Any) -> None:
         """Turn the light on for 30 seconds."""
-        self._set_light(OnOffState.ON)
+        self._set_light(ON_STATE)
 
     def turn_off(self, **kwargs: Any) -> None:
         """Turn the light off."""
-        self._set_light(OnOffState.OFF)
+        self._set_light(OFF_STATE)

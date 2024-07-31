@@ -1,5 +1,4 @@
 """Config flow for Volumio integration."""
-
 from __future__ import annotations
 
 import logging
@@ -7,11 +6,11 @@ import logging
 from pyvolumio import CannotConnectError, Volumio
 import voluptuous as vol
 
+from homeassistant import config_entries, exceptions
 from homeassistant.components import zeroconf
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_HOST, CONF_ID, CONF_NAME, CONF_PORT
 from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
@@ -34,7 +33,7 @@ async def validate_input(hass, host, port):
         raise CannotConnect from error
 
 
-class VolumioConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Volumio."""
 
     VERSION = 1
@@ -79,7 +78,7 @@ class VolumioConfigFlow(ConfigFlow, domain=DOMAIN):
                 info = await validate_input(self.hass, self._host, self._port)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
 
@@ -97,7 +96,7 @@ class VolumioConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_zeroconf(
         self, discovery_info: zeroconf.ZeroconfServiceInfo
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle zeroconf discovery."""
         self._host = discovery_info.host
         self._port = discovery_info.port
@@ -122,5 +121,5 @@ class VolumioConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(exceptions.HomeAssistantError):
     """Error to indicate we cannot connect."""

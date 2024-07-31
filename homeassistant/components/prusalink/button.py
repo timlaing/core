@@ -1,13 +1,11 @@
 """PrusaLink sensors."""
-
 from __future__ import annotations
 
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass
 from typing import Any, Generic, TypeVar, cast
 
-from pyprusalink import JobInfo, LegacyPrinterStatus, PrinterStatus, PrusaLink
-from pyprusalink.types import Conflict, PrinterState
+from pyprusalink import Conflict, JobInfo, PrinterInfo, PrusaLink
 
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
 from homeassistant.config_entries import ConfigEntry
@@ -15,21 +13,19 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import PrusaLinkEntity
-from .const import DOMAIN
-from .coordinator import PrusaLinkUpdateCoordinator
+from . import DOMAIN, PrusaLinkEntity, PrusaLinkUpdateCoordinator
 
-T = TypeVar("T", PrinterStatus, LegacyPrinterStatus, JobInfo)
+T = TypeVar("T", PrinterInfo, JobInfo)
 
 
-@dataclass(frozen=True)
+@dataclass
 class PrusaLinkButtonEntityDescriptionMixin(Generic[T]):
     """Mixin for required keys."""
 
-    press_fn: Callable[[PrusaLink], Callable[[int], Coroutine[Any, Any, None]]]
+    press_fn: Callable[[PrusaLink], Coroutine[Any, Any, None]]
 
 
-@dataclass(frozen=True)
+@dataclass
 class PrusaLinkButtonEntityDescription(
     ButtonEntityDescription, PrusaLinkButtonEntityDescriptionMixin[T], Generic[T]
 ):
@@ -39,31 +35,33 @@ class PrusaLinkButtonEntityDescription(
 
 
 BUTTONS: dict[str, tuple[PrusaLinkButtonEntityDescription, ...]] = {
-    "status": (
-        PrusaLinkButtonEntityDescription[PrinterStatus](
+    "printer": (
+        PrusaLinkButtonEntityDescription[PrinterInfo](
             key="printer.cancel_job",
             translation_key="cancel_job",
-            press_fn=lambda api: api.cancel_job,
-            available_fn=lambda data: (
-                data["printer"]["state"]
-                in [PrinterState.PRINTING.value, PrinterState.PAUSED.value]
+            icon="mdi:cancel",
+            press_fn=lambda api: cast(Coroutine, api.cancel_job()),
+            available_fn=lambda data: any(
+                data["state"]["flags"][flag]
+                for flag in ("printing", "pausing", "paused")
             ),
         ),
-        PrusaLinkButtonEntityDescription[PrinterStatus](
+        PrusaLinkButtonEntityDescription[PrinterInfo](
             key="job.pause_job",
             translation_key="pause_job",
-            press_fn=lambda api: api.pause_job,
-            available_fn=lambda data: cast(
-                bool, data["printer"]["state"] == PrinterState.PRINTING.value
+            icon="mdi:pause",
+            press_fn=lambda api: cast(Coroutine, api.pause_job()),
+            available_fn=lambda data: (
+                data["state"]["flags"]["printing"]
+                and not data["state"]["flags"]["paused"]
             ),
         ),
-        PrusaLinkButtonEntityDescription[PrinterStatus](
+        PrusaLinkButtonEntityDescription[PrinterInfo](
             key="job.resume_job",
             translation_key="resume_job",
-            press_fn=lambda api: api.resume_job,
-            available_fn=lambda data: cast(
-                bool, data["printer"]["state"] == PrinterState.PAUSED.value
-            ),
+            icon="mdi:play",
+            press_fn=lambda api: cast(Coroutine, api.resume_job()),
+            available_fn=lambda data: cast(bool, data["state"]["flags"]["paused"]),
         ),
     ),
 }
@@ -115,10 +113,8 @@ class PrusaLinkButtonEntity(PrusaLinkEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         """Press the button."""
-        job_id = self.coordinator.data["job"]["id"]
-        func = self.entity_description.press_fn(self.coordinator.api)
         try:
-            await func(job_id)
+            await self.entity_description.press_fn(self.coordinator.api)
         except Conflict as err:
             raise HomeAssistantError(
                 "Action conflicts with current printer state"

@@ -1,5 +1,4 @@
 """Test the Elk-M1 Control config flow."""
-
 from dataclasses import asdict
 from unittest.mock import patch
 
@@ -12,7 +11,6 @@ from homeassistant.components.elkm1.const import DOMAIN
 from homeassistant.const import CONF_HOST, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import device_registry as dr
 
 from . import (
     ELK_DISCOVERY,
@@ -27,9 +25,7 @@ from . import (
 
 from tests.common import MockConfigEntry
 
-DHCP_DISCOVERY = dhcp.DhcpServiceInfo(
-    MOCK_IP_ADDRESS, "", dr.format_mac(MOCK_MAC).replace(":", "")
-)
+DHCP_DISCOVERY = dhcp.DhcpServiceInfo(MOCK_IP_ADDRESS, "", MOCK_MAC)
 ELK_DISCOVERY_INFO = asdict(ELK_DISCOVERY)
 ELK_DISCOVERY_INFO_NON_STANDARD_PORT = asdict(ELK_DISCOVERY_NON_STANDARD_PORT)
 
@@ -53,7 +49,7 @@ async def test_discovery_ignored_entry(hass: HomeAssistant) -> None:
             data=ELK_DISCOVERY_INFO,
         )
         await hass.async_block_till_done()
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
 
@@ -66,23 +62,18 @@ async def test_form_user_with_secure_elk_no_discovery(hass: HomeAssistant) -> No
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["errors"] == {}
     assert result["step_id"] == "manual_connection"
 
     mocked_elk = mock_elk(invalid_auth=False, sync_complete=True)
 
-    with (
-        _patch_discovery(no_device=True),
-        _patch_elk(elk=mocked_elk),
-        patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
-        ) as mock_setup,
-        patch(
-            "homeassistant.components.elkm1.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-    ):
+    with _patch_discovery(no_device=True), _patch_elk(elk=mocked_elk), patch(
+        "homeassistant.components.elkm1.async_setup", return_value=True
+    ) as mock_setup, patch(
+        "homeassistant.components.elkm1.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry:
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             {
@@ -95,7 +86,7 @@ async def test_form_user_with_secure_elk_no_discovery(hass: HomeAssistant) -> No
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
+    assert result2["type"] == "create_entry"
     assert result2["title"] == "ElkM1"
     assert result2["data"] == {
         "auto_configure": True,
@@ -123,23 +114,18 @@ async def test_form_user_with_insecure_elk_skip_discovery(hass: HomeAssistant) -
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["errors"] == {}
     assert result["step_id"] == "manual_connection"
 
     mocked_elk = mock_elk(invalid_auth=False, sync_complete=True)
 
-    with (
-        _patch_discovery(),
-        _patch_elk(elk=mocked_elk),
-        patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
-        ) as mock_setup,
-        patch(
-            "homeassistant.components.elkm1.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-    ):
+    with _patch_discovery(), _patch_elk(elk=mocked_elk), patch(
+        "homeassistant.components.elkm1.async_setup", return_value=True
+    ) as mock_setup, patch(
+        "homeassistant.components.elkm1.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry:
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             {
@@ -152,7 +138,7 @@ async def test_form_user_with_insecure_elk_skip_discovery(hass: HomeAssistant) -
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
+    assert result2["type"] == "create_entry"
     assert result2["title"] == "ElkM1"
     assert result2["data"] == {
         "auto_configure": True,
@@ -180,23 +166,18 @@ async def test_form_user_with_insecure_elk_no_discovery(hass: HomeAssistant) -> 
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["errors"] == {}
     assert result["step_id"] == "manual_connection"
 
     mocked_elk = mock_elk(invalid_auth=False, sync_complete=True)
 
-    with (
-        _patch_discovery(no_device=True),
-        _patch_elk(elk=mocked_elk),
-        patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
-        ) as mock_setup,
-        patch(
-            "homeassistant.components.elkm1.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-    ):
+    with _patch_discovery(no_device=True), _patch_elk(elk=mocked_elk), patch(
+        "homeassistant.components.elkm1.async_setup", return_value=True
+    ) as mock_setup, patch(
+        "homeassistant.components.elkm1.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry:
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             {
@@ -209,7 +190,7 @@ async def test_form_user_with_insecure_elk_no_discovery(hass: HomeAssistant) -> 
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
+    assert result2["type"] == "create_entry"
     assert result2["title"] == "ElkM1"
     assert result2["data"] == {
         "auto_configure": True,
@@ -237,20 +218,19 @@ async def test_form_user_with_insecure_elk_times_out(hass: HomeAssistant) -> Non
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["errors"] == {}
     assert result["step_id"] == "manual_connection"
 
     mocked_elk = mock_elk(invalid_auth=False, sync_complete=False)
 
-    with (
-        patch(
-            "homeassistant.components.elkm1.config_flow.VALIDATE_TIMEOUT",
-            0,
-        ),
-        patch("homeassistant.components.elkm1.config_flow.LOGIN_TIMEOUT", 0),
-        _patch_discovery(),
-        _patch_elk(elk=mocked_elk),
+    with patch(
+        "homeassistant.components.elkm1.config_flow.VALIDATE_TIMEOUT",
+        0,
+    ), patch(
+        "homeassistant.components.elkm1.config_flow.LOGIN_TIMEOUT", 0
+    ), _patch_discovery(), _patch_elk(
+        elk=mocked_elk
     ):
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
@@ -264,7 +244,7 @@ async def test_form_user_with_insecure_elk_times_out(hass: HomeAssistant) -> Non
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == FlowResultType.FORM
     assert result2["errors"] == {"base": "cannot_connect"}
 
 
@@ -285,7 +265,7 @@ async def test_form_user_with_secure_elk_no_discovery_ip_already_configured(
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["errors"] == {}
     assert result["step_id"] == "manual_connection"
 
@@ -304,7 +284,7 @@ async def test_form_user_with_secure_elk_no_discovery_ip_already_configured(
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.ABORT
+    assert result2["type"] == FlowResultType.ABORT
     assert result2["reason"] == "address_already_configured"
 
 
@@ -317,7 +297,7 @@ async def test_form_user_with_secure_elk_with_discovery(hass: HomeAssistant) -> 
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["errors"] is None
     assert result["step_id"] == "user"
 
@@ -330,17 +310,12 @@ async def test_form_user_with_secure_elk_with_discovery(hass: HomeAssistant) -> 
         )
         await hass.async_block_till_done()
 
-    with (
-        _patch_discovery(),
-        _patch_elk(elk=mocked_elk),
-        patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
-        ) as mock_setup,
-        patch(
-            "homeassistant.components.elkm1.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-    ):
+    with _patch_discovery(), _patch_elk(elk=mocked_elk), patch(
+        "homeassistant.components.elkm1.async_setup", return_value=True
+    ) as mock_setup, patch(
+        "homeassistant.components.elkm1.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry:
         result3 = await hass.config_entries.flow.async_configure(
             result2["flow_id"],
             {
@@ -350,7 +325,7 @@ async def test_form_user_with_secure_elk_with_discovery(hass: HomeAssistant) -> 
         )
         await hass.async_block_till_done()
 
-    assert result3["type"] is FlowResultType.CREATE_ENTRY
+    assert result3["type"] == "create_entry"
     assert result3["title"] == "ElkM1 ddeeff"
     assert result3["data"] == {
         "auto_configure": True,
@@ -375,7 +350,7 @@ async def test_form_user_with_secure_elk_with_discovery_pick_manual(
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["errors"] is None
     assert result["step_id"] == "user"
 
@@ -388,17 +363,12 @@ async def test_form_user_with_secure_elk_with_discovery_pick_manual(
         )
         await hass.async_block_till_done()
 
-    with (
-        _patch_discovery(),
-        _patch_elk(elk=mocked_elk),
-        patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
-        ) as mock_setup,
-        patch(
-            "homeassistant.components.elkm1.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-    ):
+    with _patch_discovery(), _patch_elk(elk=mocked_elk), patch(
+        "homeassistant.components.elkm1.async_setup", return_value=True
+    ) as mock_setup, patch(
+        "homeassistant.components.elkm1.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry:
         result3 = await hass.config_entries.flow.async_configure(
             result2["flow_id"],
             {
@@ -411,7 +381,7 @@ async def test_form_user_with_secure_elk_with_discovery_pick_manual(
         )
         await hass.async_block_till_done()
 
-    assert result3["type"] is FlowResultType.CREATE_ENTRY
+    assert result3["type"] == "create_entry"
     assert result3["title"] == "ElkM1"
     assert result3["data"] == {
         "auto_configure": True,
@@ -436,7 +406,7 @@ async def test_form_user_with_secure_elk_with_discovery_pick_manual_direct_disco
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["errors"] is None
     assert result["step_id"] == "user"
 
@@ -449,17 +419,12 @@ async def test_form_user_with_secure_elk_with_discovery_pick_manual_direct_disco
         )
         await hass.async_block_till_done()
 
-    with (
-        _patch_discovery(),
-        _patch_elk(elk=mocked_elk),
-        patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
-        ) as mock_setup,
-        patch(
-            "homeassistant.components.elkm1.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-    ):
+    with _patch_discovery(), _patch_elk(elk=mocked_elk), patch(
+        "homeassistant.components.elkm1.async_setup", return_value=True
+    ) as mock_setup, patch(
+        "homeassistant.components.elkm1.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry:
         result3 = await hass.config_entries.flow.async_configure(
             result2["flow_id"],
             {
@@ -472,7 +437,7 @@ async def test_form_user_with_secure_elk_with_discovery_pick_manual_direct_disco
         )
         await hass.async_block_till_done()
 
-    assert result3["type"] is FlowResultType.CREATE_ENTRY
+    assert result3["type"] == "create_entry"
     assert result3["title"] == "ElkM1 ddeeff"
     assert result3["data"] == {
         "auto_configure": True,
@@ -495,23 +460,18 @@ async def test_form_user_with_tls_elk_no_discovery(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["errors"] == {}
     assert result["step_id"] == "manual_connection"
 
     mocked_elk = mock_elk(invalid_auth=False, sync_complete=True)
 
-    with (
-        _patch_discovery(no_device=True),
-        _patch_elk(elk=mocked_elk),
-        patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
-        ) as mock_setup,
-        patch(
-            "homeassistant.components.elkm1.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-    ):
+    with _patch_discovery(no_device=True), _patch_elk(elk=mocked_elk), patch(
+        "homeassistant.components.elkm1.async_setup", return_value=True
+    ) as mock_setup, patch(
+        "homeassistant.components.elkm1.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry:
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             {
@@ -524,7 +484,7 @@ async def test_form_user_with_tls_elk_no_discovery(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
+    assert result2["type"] == "create_entry"
     assert result2["title"] == "ElkM1"
     assert result2["data"] == {
         "auto_configure": True,
@@ -546,23 +506,18 @@ async def test_form_user_with_non_secure_elk_no_discovery(hass: HomeAssistant) -
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["errors"] == {}
     assert result["step_id"] == "manual_connection"
 
     mocked_elk = mock_elk(invalid_auth=None, sync_complete=True)
 
-    with (
-        _patch_discovery(no_device=True),
-        _patch_elk(elk=mocked_elk),
-        patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
-        ) as mock_setup,
-        patch(
-            "homeassistant.components.elkm1.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-    ):
+    with _patch_discovery(no_device=True), _patch_elk(elk=mocked_elk), patch(
+        "homeassistant.components.elkm1.async_setup", return_value=True
+    ) as mock_setup, patch(
+        "homeassistant.components.elkm1.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry:
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             {
@@ -573,7 +528,7 @@ async def test_form_user_with_non_secure_elk_no_discovery(hass: HomeAssistant) -
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
+    assert result2["type"] == "create_entry"
     assert result2["title"] == "guest_house"
     assert result2["data"] == {
         "auto_configure": True,
@@ -595,23 +550,18 @@ async def test_form_user_with_serial_elk_no_discovery(hass: HomeAssistant) -> No
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["errors"] == {}
     assert result["step_id"] == "manual_connection"
 
     mocked_elk = mock_elk(invalid_auth=None, sync_complete=True)
 
-    with (
-        _patch_discovery(no_device=True),
-        _patch_elk(elk=mocked_elk),
-        patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
-        ) as mock_setup,
-        patch(
-            "homeassistant.components.elkm1.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-    ):
+    with _patch_discovery(no_device=True), _patch_elk(elk=mocked_elk), patch(
+        "homeassistant.components.elkm1.async_setup", return_value=True
+    ) as mock_setup, patch(
+        "homeassistant.components.elkm1.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry:
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             {
@@ -622,7 +572,7 @@ async def test_form_user_with_serial_elk_no_discovery(hass: HomeAssistant) -> No
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
+    assert result2["type"] == "create_entry"
     assert result2["title"] == "ElkM1"
     assert result2["data"] == {
         "auto_configure": True,
@@ -644,17 +594,12 @@ async def test_form_cannot_connect(hass: HomeAssistant) -> None:
 
     mocked_elk = mock_elk(invalid_auth=None, sync_complete=None)
 
-    with (
-        _patch_discovery(no_device=True),
-        _patch_elk(elk=mocked_elk),
-        patch(
-            "homeassistant.components.elkm1.config_flow.VALIDATE_TIMEOUT",
-            0,
-        ),
-        patch(
-            "homeassistant.components.elkm1.config_flow.LOGIN_TIMEOUT",
-            0,
-        ),
+    with _patch_discovery(no_device=True), _patch_elk(elk=mocked_elk), patch(
+        "homeassistant.components.elkm1.config_flow.VALIDATE_TIMEOUT",
+        0,
+    ), patch(
+        "homeassistant.components.elkm1.config_flow.LOGIN_TIMEOUT",
+        0,
     ):
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
@@ -667,7 +612,7 @@ async def test_form_cannot_connect(hass: HomeAssistant) -> None:
             },
         )
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == "form"
     assert result2["errors"] == {"base": "cannot_connect"}
 
 
@@ -680,17 +625,12 @@ async def test_unknown_exception(hass: HomeAssistant) -> None:
 
     mocked_elk = mock_elk(invalid_auth=None, sync_complete=None, exception=OSError)
 
-    with (
-        _patch_discovery(no_device=True),
-        _patch_elk(elk=mocked_elk),
-        patch(
-            "homeassistant.components.elkm1.config_flow.VALIDATE_TIMEOUT",
-            0,
-        ),
-        patch(
-            "homeassistant.components.elkm1.config_flow.LOGIN_TIMEOUT",
-            0,
-        ),
+    with _patch_discovery(no_device=True), _patch_elk(elk=mocked_elk), patch(
+        "homeassistant.components.elkm1.config_flow.VALIDATE_TIMEOUT",
+        0,
+    ), patch(
+        "homeassistant.components.elkm1.config_flow.LOGIN_TIMEOUT",
+        0,
     ):
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
@@ -703,7 +643,7 @@ async def test_unknown_exception(hass: HomeAssistant) -> None:
             },
         )
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == "form"
     assert result2["errors"] == {"base": "unknown"}
 
 
@@ -730,7 +670,7 @@ async def test_form_invalid_auth(hass: HomeAssistant) -> None:
             },
         )
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == "form"
     assert result2["errors"] == {CONF_PASSWORD: "invalid_auth"}
 
 
@@ -757,7 +697,7 @@ async def test_form_invalid_auth_no_password(hass: HomeAssistant) -> None:
             },
         )
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == "form"
     assert result2["errors"] == {CONF_PASSWORD: "invalid_auth"}
 
 
@@ -765,17 +705,12 @@ async def test_form_import(hass: HomeAssistant) -> None:
     """Test we get the form with import source."""
 
     mocked_elk = mock_elk(invalid_auth=False, sync_complete=True)
-    with (
-        _patch_discovery(no_device=True),
-        _patch_elk(elk=mocked_elk),
-        patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
-        ) as mock_setup,
-        patch(
-            "homeassistant.components.elkm1.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-    ):
+    with _patch_discovery(no_device=True), _patch_elk(elk=mocked_elk), patch(
+        "homeassistant.components.elkm1.async_setup", return_value=True
+    ) as mock_setup, patch(
+        "homeassistant.components.elkm1.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry:
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
@@ -807,7 +742,7 @@ async def test_form_import(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == "create_entry"
     assert result["title"] == "ohana"
 
     assert result["data"] == {
@@ -835,17 +770,12 @@ async def test_form_import_device_discovered(hass: HomeAssistant) -> None:
     """Test we can import with discovery."""
 
     mocked_elk = mock_elk(invalid_auth=False, sync_complete=True)
-    with (
-        _patch_discovery(),
-        _patch_elk(elk=mocked_elk),
-        patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
-        ) as mock_setup,
-        patch(
-            "homeassistant.components.elkm1.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-    ):
+    with _patch_discovery(), _patch_elk(elk=mocked_elk), patch(
+        "homeassistant.components.elkm1.async_setup", return_value=True
+    ) as mock_setup, patch(
+        "homeassistant.components.elkm1.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry:
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
@@ -877,7 +807,7 @@ async def test_form_import_device_discovered(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == "create_entry"
     assert result["title"] == "ohana"
     assert result["result"].unique_id == MOCK_MAC
     assert result["data"] == {
@@ -905,17 +835,12 @@ async def test_form_import_non_secure_device_discovered(hass: HomeAssistant) -> 
     """Test we can import non-secure with discovery."""
 
     mocked_elk = mock_elk(invalid_auth=False, sync_complete=True)
-    with (
-        _patch_discovery(),
-        _patch_elk(elk=mocked_elk),
-        patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
-        ) as mock_setup,
-        patch(
-            "homeassistant.components.elkm1.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-    ):
+    with _patch_discovery(), _patch_elk(elk=mocked_elk), patch(
+        "homeassistant.components.elkm1.async_setup", return_value=True
+    ) as mock_setup, patch(
+        "homeassistant.components.elkm1.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry:
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
@@ -929,7 +854,7 @@ async def test_form_import_non_secure_device_discovered(hass: HomeAssistant) -> 
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == "create_entry"
     assert result["title"] == "ohana"
     assert result["result"].unique_id == MOCK_MAC
     assert result["data"] == {
@@ -949,17 +874,12 @@ async def test_form_import_non_secure_non_stanadard_port_device_discovered(
     """Test we can import non-secure non standard port with discovery."""
 
     mocked_elk = mock_elk(invalid_auth=False, sync_complete=True)
-    with (
-        _patch_discovery(),
-        _patch_elk(elk=mocked_elk),
-        patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
-        ) as mock_setup,
-        patch(
-            "homeassistant.components.elkm1.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-    ):
+    with _patch_discovery(), _patch_elk(elk=mocked_elk), patch(
+        "homeassistant.components.elkm1.async_setup", return_value=True
+    ) as mock_setup, patch(
+        "homeassistant.components.elkm1.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry:
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
@@ -973,7 +893,7 @@ async def test_form_import_non_secure_non_stanadard_port_device_discovered(
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == "create_entry"
     assert result["title"] == "ohana"
     assert result["result"].unique_id == MOCK_MAC
     assert result["data"] == {
@@ -1007,7 +927,7 @@ async def test_form_import_non_secure_device_discovered_invalid_auth(
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "invalid_auth"
 
 
@@ -1051,7 +971,7 @@ async def test_form_import_existing(hass: HomeAssistant) -> None:
     )
     await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == FlowResultType.ABORT
     assert result["reason"] == "address_already_configured"
 
 
@@ -1079,7 +999,7 @@ async def test_discovered_by_dhcp_or_discovery_mac_address_mismatch_host_already
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
     assert config_entry.unique_id == "cc:cc:cc:cc:cc:cc"
@@ -1108,7 +1028,7 @@ async def test_discovered_by_dhcp_or_discovery_adds_missing_unique_id(
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
     assert config_entry.unique_id == MOCK_MAC
@@ -1124,7 +1044,7 @@ async def test_discovered_by_discovery_and_dhcp(hass: HomeAssistant) -> None:
             data=ELK_DISCOVERY_INFO,
         )
         await hass.async_block_till_done()
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["errors"] == {}
 
     with _patch_discovery(), _patch_elk():
@@ -1134,7 +1054,7 @@ async def test_discovered_by_discovery_and_dhcp(hass: HomeAssistant) -> None:
             data=DHCP_DISCOVERY,
         )
         await hass.async_block_till_done()
-    assert result2["type"] is FlowResultType.ABORT
+    assert result2["type"] == FlowResultType.ABORT
     assert result2["reason"] == "already_in_progress"
 
     with _patch_discovery(), _patch_elk():
@@ -1148,7 +1068,7 @@ async def test_discovered_by_discovery_and_dhcp(hass: HomeAssistant) -> None:
             ),
         )
         await hass.async_block_till_done()
-    assert result3["type"] is FlowResultType.ABORT
+    assert result3["type"] == FlowResultType.ABORT
     assert result3["reason"] == "already_in_progress"
 
 
@@ -1163,23 +1083,18 @@ async def test_discovered_by_discovery(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "discovered_connection"
     assert result["errors"] == {}
 
     mocked_elk = mock_elk(invalid_auth=False, sync_complete=True)
 
-    with (
-        _patch_discovery(),
-        _patch_elk(elk=mocked_elk),
-        patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
-        ) as mock_setup,
-        patch(
-            "homeassistant.components.elkm1.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-    ):
+    with _patch_discovery(), _patch_elk(elk=mocked_elk), patch(
+        "homeassistant.components.elkm1.async_setup", return_value=True
+    ) as mock_setup, patch(
+        "homeassistant.components.elkm1.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry:
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             {
@@ -1189,7 +1104,7 @@ async def test_discovered_by_discovery(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
+    assert result2["type"] == "create_entry"
     assert result2["title"] == "ElkM1 ddeeff"
     assert result2["data"] == {
         "auto_configure": True,
@@ -1213,23 +1128,18 @@ async def test_discovered_by_discovery_non_standard_port(hass: HomeAssistant) ->
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "discovered_connection"
     assert result["errors"] == {}
 
     mocked_elk = mock_elk(invalid_auth=False, sync_complete=True)
 
-    with (
-        _patch_discovery(),
-        _patch_elk(elk=mocked_elk),
-        patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
-        ) as mock_setup,
-        patch(
-            "homeassistant.components.elkm1.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-    ):
+    with _patch_discovery(), _patch_elk(elk=mocked_elk), patch(
+        "homeassistant.components.elkm1.async_setup", return_value=True
+    ) as mock_setup, patch(
+        "homeassistant.components.elkm1.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry:
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             {
@@ -1239,7 +1149,7 @@ async def test_discovered_by_discovery_non_standard_port(hass: HomeAssistant) ->
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
+    assert result2["type"] == "create_entry"
     assert result2["title"] == "ElkM1 ddeeff"
     assert result2["data"] == {
         "auto_configure": True,
@@ -1271,7 +1181,7 @@ async def test_discovered_by_discovery_url_already_configured(
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
 
@@ -1284,23 +1194,18 @@ async def test_discovered_by_dhcp_udp_responds(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "discovered_connection"
     assert result["errors"] == {}
 
     mocked_elk = mock_elk(invalid_auth=False, sync_complete=True)
 
-    with (
-        _patch_discovery(),
-        _patch_elk(elk=mocked_elk),
-        patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
-        ) as mock_setup,
-        patch(
-            "homeassistant.components.elkm1.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-    ):
+    with _patch_discovery(), _patch_elk(elk=mocked_elk), patch(
+        "homeassistant.components.elkm1.async_setup", return_value=True
+    ) as mock_setup, patch(
+        "homeassistant.components.elkm1.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry:
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             {
@@ -1310,7 +1215,7 @@ async def test_discovered_by_dhcp_udp_responds(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
+    assert result2["type"] == "create_entry"
     assert result2["title"] == "ElkM1 ddeeff"
     assert result2["data"] == {
         "auto_configure": True,
@@ -1334,23 +1239,20 @@ async def test_discovered_by_dhcp_udp_responds_with_nonsecure_port(
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "discovered_connection"
     assert result["errors"] == {}
 
     mocked_elk = mock_elk(invalid_auth=False, sync_complete=True)
 
-    with (
-        _patch_discovery(device=ELK_NON_SECURE_DISCOVERY),
-        _patch_elk(elk=mocked_elk),
-        patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
-        ) as mock_setup,
-        patch(
-            "homeassistant.components.elkm1.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-    ):
+    with _patch_discovery(device=ELK_NON_SECURE_DISCOVERY), _patch_elk(
+        elk=mocked_elk
+    ), patch(
+        "homeassistant.components.elkm1.async_setup", return_value=True
+    ) as mock_setup, patch(
+        "homeassistant.components.elkm1.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry:
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             {
@@ -1359,7 +1261,7 @@ async def test_discovered_by_dhcp_udp_responds_with_nonsecure_port(
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
+    assert result2["type"] == "create_entry"
     assert result2["title"] == "ElkM1 ddeeff"
     assert result2["data"] == {
         "auto_configure": True,
@@ -1389,30 +1291,25 @@ async def test_discovered_by_dhcp_udp_responds_existing_config_entry(
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "discovered_connection"
     assert result["errors"] == {}
 
     mocked_elk = mock_elk(invalid_auth=False, sync_complete=True)
 
-    with (
-        _patch_discovery(),
-        _patch_elk(elk=mocked_elk),
-        patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
-        ) as mock_setup,
-        patch(
-            "homeassistant.components.elkm1.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-    ):
+    with _patch_discovery(), _patch_elk(elk=mocked_elk), patch(
+        "homeassistant.components.elkm1.async_setup", return_value=True
+    ) as mock_setup, patch(
+        "homeassistant.components.elkm1.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry:
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             {"username": "test-username", "password": "test-password"},
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
+    assert result2["type"] == "create_entry"
     assert result2["title"] == "ElkM1 ddeeff"
     assert result2["data"] == {
         "auto_configure": True,
@@ -1434,7 +1331,7 @@ async def test_discovered_by_dhcp_no_udp_response(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == FlowResultType.ABORT
     assert result["reason"] == "cannot_connect"
 
 
@@ -1450,7 +1347,7 @@ async def test_multiple_instances_with_discovery(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert not result["errors"]
     assert result["step_id"] == "user"
 
@@ -1463,17 +1360,12 @@ async def test_multiple_instances_with_discovery(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    with (
-        _patch_discovery(device=elk_discovery_1),
-        _patch_elk(elk=mocked_elk),
-        patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
-        ) as mock_setup,
-        patch(
-            "homeassistant.components.elkm1.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-    ):
+    with _patch_discovery(device=elk_discovery_1), _patch_elk(elk=mocked_elk), patch(
+        "homeassistant.components.elkm1.async_setup", return_value=True
+    ) as mock_setup, patch(
+        "homeassistant.components.elkm1.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry:
         result3 = await hass.config_entries.flow.async_configure(
             result2["flow_id"],
             {
@@ -1483,7 +1375,7 @@ async def test_multiple_instances_with_discovery(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result3["type"] is FlowResultType.CREATE_ENTRY
+    assert result3["type"] == "create_entry"
     assert result3["title"] == "ElkM1 ddeeff"
     assert result3["data"] == {
         "auto_configure": True,
@@ -1502,7 +1394,7 @@ async def test_multiple_instances_with_discovery(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert not result["errors"]
     assert result["step_id"] == "user"
 
@@ -1515,14 +1407,10 @@ async def test_multiple_instances_with_discovery(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    with (
-        _patch_discovery(device=elk_discovery_2),
-        _patch_elk(elk=mocked_elk),
-        patch(
-            "homeassistant.components.elkm1.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-    ):
+    with _patch_discovery(device=elk_discovery_2), _patch_elk(elk=mocked_elk), patch(
+        "homeassistant.components.elkm1.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry:
         result3 = await hass.config_entries.flow.async_configure(
             result2["flow_id"],
             {
@@ -1532,7 +1420,7 @@ async def test_multiple_instances_with_discovery(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result3["type"] is FlowResultType.CREATE_ENTRY
+    assert result3["type"] == "create_entry"
     assert result3["title"] == "ElkM1 ddeefe"
     assert result3["data"] == {
         "auto_configure": True,
@@ -1551,20 +1439,16 @@ async def test_multiple_instances_with_discovery(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["errors"] == {}
     assert result["step_id"] == "manual_connection"
 
     mocked_elk = mock_elk(invalid_auth=None, sync_complete=True)
 
-    with (
-        _patch_discovery(no_device=True),
-        _patch_elk(elk=mocked_elk),
-        patch(
-            "homeassistant.components.elkm1.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-    ):
+    with _patch_discovery(no_device=True), _patch_elk(elk=mocked_elk), patch(
+        "homeassistant.components.elkm1.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry:
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             {
@@ -1575,7 +1459,7 @@ async def test_multiple_instances_with_discovery(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
+    assert result2["type"] == "create_entry"
     assert result2["title"] == "guest_house"
     assert result2["data"] == {
         "auto_configure": True,
@@ -1599,7 +1483,7 @@ async def test_multiple_instances_with_tls_v12(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert not result["errors"]
     assert result["step_id"] == "user"
 
@@ -1612,20 +1496,15 @@ async def test_multiple_instances_with_tls_v12(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == "form"
     assert not result["errors"]
     assert result2["step_id"] == "discovered_connection"
-    with (
-        _patch_discovery(device=elk_discovery_1),
-        _patch_elk(elk=mocked_elk),
-        patch(
-            "homeassistant.components.elkm1.async_setup", return_value=True
-        ) as mock_setup,
-        patch(
-            "homeassistant.components.elkm1.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-    ):
+    with _patch_discovery(device=elk_discovery_1), _patch_elk(elk=mocked_elk), patch(
+        "homeassistant.components.elkm1.async_setup", return_value=True
+    ) as mock_setup, patch(
+        "homeassistant.components.elkm1.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry:
         result3 = await hass.config_entries.flow.async_configure(
             result2["flow_id"],
             {
@@ -1636,7 +1515,7 @@ async def test_multiple_instances_with_tls_v12(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result3["type"] is FlowResultType.CREATE_ENTRY
+    assert result3["type"] == "create_entry"
     assert result3["title"] == "ElkM1 ddeeff"
     assert result3["data"] == {
         "auto_configure": True,
@@ -1655,7 +1534,7 @@ async def test_multiple_instances_with_tls_v12(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert not result["errors"]
     assert result["step_id"] == "user"
 
@@ -1668,14 +1547,10 @@ async def test_multiple_instances_with_tls_v12(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    with (
-        _patch_discovery(device=elk_discovery_2),
-        _patch_elk(elk=mocked_elk),
-        patch(
-            "homeassistant.components.elkm1.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-    ):
+    with _patch_discovery(device=elk_discovery_2), _patch_elk(elk=mocked_elk), patch(
+        "homeassistant.components.elkm1.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry:
         result3 = await hass.config_entries.flow.async_configure(
             result2["flow_id"],
             {
@@ -1686,7 +1561,7 @@ async def test_multiple_instances_with_tls_v12(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result3["type"] is FlowResultType.CREATE_ENTRY
+    assert result3["type"] == "create_entry"
     assert result3["title"] == "ElkM1 ddeefe"
     assert result3["data"] == {
         "auto_configure": True,
@@ -1705,20 +1580,16 @@ async def test_multiple_instances_with_tls_v12(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["errors"] == {}
     assert result["step_id"] == "manual_connection"
 
     mocked_elk = mock_elk(invalid_auth=False, sync_complete=True)
 
-    with (
-        _patch_discovery(no_device=True),
-        _patch_elk(elk=mocked_elk),
-        patch(
-            "homeassistant.components.elkm1.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-    ):
+    with _patch_discovery(no_device=True), _patch_elk(elk=mocked_elk), patch(
+        "homeassistant.components.elkm1.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry:
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             {
@@ -1731,7 +1602,7 @@ async def test_multiple_instances_with_tls_v12(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
+    assert result2["type"] == "create_entry"
     assert result2["title"] == "guest_house"
     assert result2["data"] == {
         "auto_configure": True,

@@ -1,14 +1,12 @@
 """The tests for Kira."""
-
 import os
-from pathlib import Path
 import shutil
 import tempfile
 from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components import kira
+import homeassistant.components.kira as kira
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 
@@ -77,9 +75,10 @@ async def test_kira_creates_codes(work_dir) -> None:
     assert os.path.exists(code_path), "Kira component didn't create codes file"
 
 
-async def test_load_codes(hass: HomeAssistant, work_dir) -> None:
+async def test_load_codes(work_dir) -> None:
     """Kira should ignore invalid codes."""
     code_path = os.path.join(work_dir, "codes.yaml")
-    await hass.async_add_executor_job(Path(code_path).write_text, KIRA_CODES)
+    with open(code_path, "w") as code_file:
+        code_file.write(KIRA_CODES)
     res = kira.load_codes(code_path)
     assert len(res) == 1, "Expected exactly 1 valid Kira code"

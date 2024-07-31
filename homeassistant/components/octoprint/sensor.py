@@ -1,5 +1,4 @@
 """Support for monitoring OctoPrint sensors."""
-
 from __future__ import annotations
 
 from datetime import datetime, timedelta
@@ -55,7 +54,7 @@ async def async_setup_entry(
         if not coordinator.data["printer"]:
             return
 
-        new_tools: list[OctoPrintTemperatureSensor] = []
+        new_tools = []
         for tool in [
             tool
             for tool in coordinator.data["printer"].temperatures
@@ -63,15 +62,15 @@ async def async_setup_entry(
         ]:
             assert device_id is not None
             known_tools.add(tool.name)
-            new_tools.extend(
-                OctoPrintTemperatureSensor(
-                    coordinator,
-                    tool.name,
-                    temp_type,
-                    device_id,
+            for temp_type in ("actual", "target"):
+                new_tools.append(
+                    OctoPrintTemperatureSensor(
+                        coordinator,
+                        tool.name,
+                        temp_type,
+                        device_id,
+                    )
                 )
-                for temp_type in ("actual", "target")
-            )
         async_add_entities(new_tools)
 
     config_entry.async_on_unload(coordinator.async_add_listener(async_add_tool_sensors))

@@ -1,10 +1,9 @@
 """Support for Telegram bot using polling."""
-
 import logging
 
 from telegram import Update
 from telegram.error import NetworkError, RetryAfter, TelegramError, TimedOut
-from telegram.ext import ApplicationBuilder, CallbackContext, TypeHandler
+from telegram.ext import CallbackContext, TypeHandler, Updater
 
 from homeassistant.const import EVENT_HOMEASSISTANT_START, EVENT_HOMEASSISTANT_STOP
 
@@ -23,7 +22,7 @@ async def async_setup_platform(hass, bot, config):
     return True
 
 
-async def process_error(update: Update, context: CallbackContext) -> None:
+def process_error(update: Update, context: CallbackContext) -> None:
     """Telegram bot error handler."""
     try:
         if context.error:
@@ -36,29 +35,26 @@ async def process_error(update: Update, context: CallbackContext) -> None:
 
 
 class PollBot(BaseTelegramBotEntity):
-    """Controls the Application object that holds the bot and an updater.
+    """Controls the Updater object that holds the bot and a dispatcher.
 
-    The application is set up to pass telegram updates to `self.handle_update`
+    The dispatcher is set up by the super class to pass telegram updates to `self.handle_update`
     """
 
     def __init__(self, hass, bot, config):
-        """Create Application to poll for updates."""
-        super().__init__(hass, config)
+        """Create Updater and Dispatcher before calling super()."""
         self.bot = bot
-        self.application = ApplicationBuilder().bot(self.bot).build()
-        self.application.add_handler(TypeHandler(Update, self.handle_update))
-        self.application.add_error_handler(process_error)
+        self.updater = Updater(bot=bot, workers=4)
+        self.dispatcher = self.updater.dispatcher
+        self.dispatcher.add_handler(TypeHandler(Update, self.handle_update))
+        self.dispatcher.add_error_handler(process_error)
+        super().__init__(hass, config)
 
-    async def start_polling(self, event=None):
+    def start_polling(self, event=None):
         """Start the polling task."""
         _LOGGER.debug("Starting polling")
-        await self.application.initialize()
-        await self.application.updater.start_polling()
-        await self.application.start()
+        self.updater.start_polling()
 
-    async def stop_polling(self, event=None):
+    def stop_polling(self, event=None):
         """Stop the polling task."""
         _LOGGER.debug("Stopping polling")
-        await self.application.updater.stop()
-        await self.application.stop()
-        await self.application.shutdown()
+        self.updater.stop()

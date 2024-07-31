@@ -1,5 +1,4 @@
 """Tests for the Freedompro sensor."""
-
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -11,7 +10,7 @@ from homeassistant.util.dt import utcnow
 
 from .conftest import get_states_response_for_uid
 
-from tests.common import MockConfigEntry, async_fire_time_changed
+from tests.common import async_fire_time_changed
 
 
 @pytest.mark.parametrize(
@@ -35,20 +34,17 @@ from tests.common import MockConfigEntry, async_fire_time_changed
     ],
 )
 async def test_sensor_get_state(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-    init_integration: MockConfigEntry,
-    entity_id: str,
-    uid: str,
-    name: str,
+    hass: HomeAssistant, init_integration, entity_id: str, uid: str, name: str
 ) -> None:
     """Test states of the sensor."""
+    init_integration
+    registry = er.async_get(hass)
 
     state = hass.states.get(entity_id)
     assert state
     assert state.attributes.get("friendly_name") == name
 
-    entry = entity_registry.async_get(entity_id)
+    entry = registry.async_get(entity_id)
     assert entry
     assert entry.unique_id == uid
 
@@ -72,7 +68,7 @@ async def test_sensor_get_state(
         assert state
         assert state.attributes.get("friendly_name") == name
 
-        entry = entity_registry.async_get(entity_id)
+        entry = registry.async_get(entity_id)
         assert entry
         assert entry.unique_id == uid
 

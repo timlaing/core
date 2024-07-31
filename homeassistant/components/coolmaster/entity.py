@@ -1,5 +1,4 @@
 """Base entity for Coolmaster integration."""
-
 from pycoolmasternet_async.coolmasternet import CoolMasterNetUnit
 
 from homeassistant.core import callback

@@ -1,5 +1,4 @@
 """The tests for the DTE Energy Bridge."""
-
 import requests_mock
 
 from homeassistant.core import HomeAssistant

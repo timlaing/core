@@ -1,5 +1,4 @@
 """Support gathering ted5000 information."""
-
 from __future__ import annotations
 
 from contextlib import suppress
@@ -11,7 +10,7 @@ import voluptuous as vol
 import xmltodict
 
 from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
@@ -37,7 +36,7 @@ DEFAULT_NAME = "ted"
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=10)
 
 
-PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_HOST): cv.string,
         vol.Optional(CONF_PORT, default=80): cv.port,
@@ -78,11 +77,12 @@ def setup_platform(
     # Get MUT information to create the sensors.
     gateway.update()
 
-    add_entities(
-        Ted5000Sensor(gateway, name, mtu, description)
-        for mtu in gateway.data
-        for description in SENSORS
-    )
+    entities = []
+    for mtu in gateway.data:
+        for description in SENSORS:
+            entities.append(Ted5000Sensor(gateway, name, mtu, description))
+
+    add_entities(entities)
 
 
 class Ted5000Sensor(SensorEntity):

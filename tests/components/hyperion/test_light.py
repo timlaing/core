@@ -1,5 +1,4 @@
 """Tests for the Hyperion integration."""
-
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, Mock, call, patch
@@ -115,11 +114,10 @@ async def test_setup_config_entry_not_ready_load_state_fail(
     assert hass.states.get(TEST_ENTITY_ID_1) is None
 
 
-async def test_setup_config_entry_dynamic_instances(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-) -> None:
+async def test_setup_config_entry_dynamic_instances(hass: HomeAssistant) -> None:
     """Test dynamic changes in the instance configuration."""
+    registry = er.async_get(hass)
+
     config_entry = add_test_config_entry(hass)
 
     master_client = create_mock_client()
@@ -166,7 +164,7 @@ async def test_setup_config_entry_dynamic_instances(
     assert hass.states.get(TEST_ENTITY_ID_3) is not None
 
     # Instance 1 is stopped, it should still be registered.
-    assert entity_registry.async_is_registered(TEST_ENTITY_ID_1)
+    assert registry.async_is_registered(TEST_ENTITY_ID_1)
 
     # == Inject a new instances update (remove instance 1)
     assert master_client.set_callbacks.called
@@ -190,7 +188,7 @@ async def test_setup_config_entry_dynamic_instances(
     assert hass.states.get(TEST_ENTITY_ID_3) is not None
 
     # Instance 1 is removed, it should not still be registered.
-    assert not entity_registry.async_is_registered(TEST_ENTITY_ID_1)
+    assert not registry.async_is_registered(TEST_ENTITY_ID_1)
 
     # == Inject a new instances update (re-add instance 1, but not running)
     with patch(
@@ -339,7 +337,6 @@ async def test_light_async_turn_on(hass: HomeAssistant) -> None:
             const.KEY_PRIORITY: TEST_PRIORITY,
             const.KEY_COMPONENTID: const.KEY_COMPONENTID_COLOR,
             const.KEY_VALUE: {const.KEY_RGB: (0, 255, 255)},
-            const.KEY_OWNER: "System",
         }
     ]
 
@@ -434,7 +431,6 @@ async def test_light_async_turn_on(hass: HomeAssistant) -> None:
             const.KEY_PRIORITY: TEST_PRIORITY,
             const.KEY_COMPONENTID: const.KEY_COMPONENTID_COLOR,
             const.KEY_VALUE: {const.KEY_RGB: (0, 0, 255)},
-            const.KEY_OWNER: "System",
         }
     ]
     call_registered_callback(client, "priorities-update")
@@ -567,8 +563,6 @@ async def test_light_async_updates_from_hyperion_client(
             const.KEY_PRIORITY: TEST_PRIORITY,
             const.KEY_COMPONENTID: const.KEY_COMPONENTID_EFFECT,
             const.KEY_OWNER: effect,
-            const.KEY_VISIBLE: True,
-            const.KEY_ORIGIN: "System",
         }
     ]
 
@@ -586,9 +580,6 @@ async def test_light_async_updates_from_hyperion_client(
             const.KEY_PRIORITY: TEST_PRIORITY,
             const.KEY_COMPONENTID: const.KEY_COMPONENTID_COLOR,
             const.KEY_VALUE: {const.KEY_RGB: rgb},
-            const.KEY_VISIBLE: True,
-            const.KEY_ORIGIN: "System",
-            const.KEY_OWNER: "System",
         }
     ]
 
@@ -633,9 +624,6 @@ async def test_light_async_updates_from_hyperion_client(
             const.KEY_PRIORITY: TEST_PRIORITY,
             const.KEY_COMPONENTID: const.KEY_COMPONENTID_COLOR,
             const.KEY_VALUE: {const.KEY_RGB: rgb},
-            const.KEY_VISIBLE: True,
-            const.KEY_ORIGIN: "System",
-            const.KEY_OWNER: "System",
         }
     ]
     call_registered_callback(client, "client-update", {"loaded-state": True})
@@ -656,7 +644,6 @@ async def test_full_state_loaded_on_start(hass: HomeAssistant) -> None:
             const.KEY_PRIORITY: TEST_PRIORITY,
             const.KEY_COMPONENTID: const.KEY_COMPONENTID_COLOR,
             const.KEY_VALUE: {const.KEY_RGB: (0, 100, 100)},
-            const.KEY_OWNER: "System",
         }
     ]
     client.effects = [{const.KEY_NAME: "One"}, {const.KEY_NAME: "Two"}]
@@ -713,15 +700,10 @@ async def test_setup_entry_no_token_reauth(hass: HomeAssistant) -> None:
     config_entry = add_test_config_entry(hass)
     client.async_is_auth_required = AsyncMock(return_value=TEST_AUTH_REQUIRED_RESP)
 
-    with (
-        patch(
-            "homeassistant.components.hyperion.client.HyperionClient",
-            return_value=client,
-        ),
-        patch.object(hass.config_entries.flow, "async_init") as mock_flow_init,
-    ):
+    with patch(
+        "homeassistant.components.hyperion.client.HyperionClient", return_value=client
+    ), patch.object(hass.config_entries.flow, "async_init") as mock_flow_init:
         assert not await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
         assert client.async_client_disconnect.called
         mock_flow_init.assert_called_once_with(
             DOMAIN,
@@ -747,15 +729,10 @@ async def test_setup_entry_bad_token_reauth(hass: HomeAssistant) -> None:
 
     # Fail to log in.
     client.async_client_login = AsyncMock(return_value=False)
-    with (
-        patch(
-            "homeassistant.components.hyperion.client.HyperionClient",
-            return_value=client,
-        ),
-        patch.object(hass.config_entries.flow, "async_init") as mock_flow_init,
-    ):
+    with patch(
+        "homeassistant.components.hyperion.client.HyperionClient", return_value=client
+    ), patch.object(hass.config_entries.flow, "async_init") as mock_flow_init:
         assert not await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
         assert client.async_client_disconnect.called
         mock_flow_init.assert_called_once_with(
             DOMAIN,
@@ -789,17 +766,14 @@ async def test_light_option_effect_hide_list(hass: HomeAssistant) -> None:
     ]
 
 
-async def test_device_info(
-    hass: HomeAssistant,
-    device_registry: dr.DeviceRegistry,
-    entity_registry: er.EntityRegistry,
-) -> None:
+async def test_device_info(hass: HomeAssistant) -> None:
     """Verify device information includes expected details."""
     client = create_mock_client()
 
     await setup_test_config_entry(hass, hyperion_client=client)
 
     device_id = get_hyperion_device_id(TEST_SYSINFO_ID, TEST_INSTANCE)
+    device_registry = dr.async_get(hass)
 
     device = device_registry.async_get_device(identifiers={(DOMAIN, device_id)})
     assert device
@@ -809,6 +783,7 @@ async def test_device_info(
     assert device.model == HYPERION_MODEL_NAME
     assert device.name == TEST_INSTANCE_1["friendly_name"]
 
+    entity_registry = er.async_get(hass)
     entities_from_device = [
         entry.entity_id
         for entry in er.async_entries_for_device(entity_registry, device.id)

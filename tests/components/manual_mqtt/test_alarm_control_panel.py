@@ -1,5 +1,4 @@
 """The tests for the manual_mqtt Alarm Control Panel component."""
-
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -380,7 +379,7 @@ async def test_with_specific_pending(
     await hass.services.async_call(
         alarm_control_panel.DOMAIN,
         service,
-        {ATTR_ENTITY_ID: "alarm_control_panel.test", ATTR_CODE: "1234"},
+        {ATTR_ENTITY_ID: "alarm_control_panel.test"},
         blocking=True,
     )
 
@@ -1442,7 +1441,7 @@ async def test_state_changes_are_published_to_mqtt(
     mqtt_mock.async_publish.reset_mock()
 
     # Arm in home mode
-    await common.async_alarm_arm_home(hass, "1234")
+    await common.async_alarm_arm_home(hass)
     await hass.async_block_till_done()
     mqtt_mock.async_publish.assert_called_once_with(
         "alarm/state", STATE_ALARM_PENDING, 0, True
@@ -1462,7 +1461,7 @@ async def test_state_changes_are_published_to_mqtt(
     mqtt_mock.async_publish.reset_mock()
 
     # Arm in away mode
-    await common.async_alarm_arm_away(hass, "1234")
+    await common.async_alarm_arm_away(hass)
     await hass.async_block_till_done()
     mqtt_mock.async_publish.assert_called_once_with(
         "alarm/state", STATE_ALARM_PENDING, 0, True
@@ -1482,7 +1481,7 @@ async def test_state_changes_are_published_to_mqtt(
     mqtt_mock.async_publish.reset_mock()
 
     # Arm in night mode
-    await common.async_alarm_arm_night(hass, "1234")
+    await common.async_alarm_arm_night(hass)
     await hass.async_block_till_done()
     mqtt_mock.async_publish.assert_called_once_with(
         "alarm/state", STATE_ALARM_PENDING, 0, True

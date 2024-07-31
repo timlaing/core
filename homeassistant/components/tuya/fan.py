@@ -1,10 +1,9 @@
 """Support for Tuya Fan."""
-
 from __future__ import annotations
 
 from typing import Any
 
-from tuya_sharing import CustomerDevice, Manager
+from tuya_iot import TuyaDevice, TuyaDeviceManager
 
 from homeassistant.components.fan import (
     DIRECTION_FORWARD,
@@ -12,6 +11,7 @@ from homeassistant.components.fan import (
     FanEntity,
     FanEntityFeature,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -20,9 +20,9 @@ from homeassistant.util.percentage import (
     percentage_to_ordered_list_item,
 )
 
-from . import TuyaConfigEntry
+from . import HomeAssistantTuyaData
 from .base import EnumTypeData, IntegerTypeData, TuyaEntity
-from .const import TUYA_DISCOVERY_NEW, DPCode, DPType
+from .const import DOMAIN, TUYA_DISCOVERY_NEW, DPCode, DPType
 
 TUYA_SUPPORT_TYPE = {
     "fs",  # Fan
@@ -34,22 +34,22 @@ TUYA_SUPPORT_TYPE = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: TuyaConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up tuya fan dynamically through tuya discovery."""
-    hass_data = entry.runtime_data
+    hass_data: HomeAssistantTuyaData = hass.data[DOMAIN][entry.entry_id]
 
     @callback
     def async_discover_device(device_ids: list[str]) -> None:
         """Discover and add a discovered tuya fan."""
         entities: list[TuyaFanEntity] = []
         for device_id in device_ids:
-            device = hass_data.manager.device_map[device_id]
+            device = hass_data.device_manager.device_map[device_id]
             if device and device.category in TUYA_SUPPORT_TYPE:
-                entities.append(TuyaFanEntity(device, hass_data.manager))
+                entities.append(TuyaFanEntity(device, hass_data.device_manager))
         async_add_entities(entities)
 
-    async_discover_device([*hass_data.manager.device_map])
+    async_discover_device([*hass_data.device_manager.device_map])
 
     entry.async_on_unload(
         async_dispatcher_connect(hass, TUYA_DISCOVERY_NEW, async_discover_device)
@@ -66,12 +66,11 @@ class TuyaFanEntity(TuyaEntity, FanEntity):
     _speeds: EnumTypeData | None = None
     _switch: DPCode | None = None
     _attr_name = None
-    _enable_turn_on_off_backwards_compatibility = False
 
     def __init__(
         self,
-        device: CustomerDevice,
-        device_manager: Manager,
+        device: TuyaDevice,
+        device_manager: TuyaDeviceManager,
     ) -> None:
         """Init Tuya Fan Device."""
         super().__init__(device, device_manager)
@@ -117,10 +116,6 @@ class TuyaFanEntity(TuyaEntity, FanEntity):
         ):
             self._direction = enum_type
             self._attr_supported_features |= FanEntityFeature.DIRECTION
-        if self._switch is not None:
-            self._attr_supported_features |= (
-                FanEntityFeature.TURN_ON | FanEntityFeature.TURN_OFF
-            )
 
     def set_preset_mode(self, preset_mode: str) -> None:
         """Set the preset mode of the fan."""

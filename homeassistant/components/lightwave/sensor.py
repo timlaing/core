@@ -1,5 +1,4 @@
 """Support for LightwaveRF TRV - Associated Battery."""
-
 from __future__ import annotations
 
 from homeassistant.components.sensor import (

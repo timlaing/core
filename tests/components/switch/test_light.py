@@ -1,5 +1,4 @@
 """The tests for the Light Switch platform."""
-
 import pytest
 
 from homeassistant.components.light import (

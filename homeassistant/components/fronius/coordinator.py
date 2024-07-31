@@ -1,10 +1,9 @@
 """DataUpdateCoordinators for the Fronius integration."""
-
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from pyfronius import BadStatusError, FroniusError
 
@@ -32,6 +31,8 @@ if TYPE_CHECKING:
     from . import FroniusSolarNet
     from .sensor import _FroniusSensorEntity
 
+    _FroniusEntityT = TypeVar("_FroniusEntityT", bound=_FroniusSensorEntity)
+
 
 class FroniusCoordinatorBase(
     ABC, DataUpdateCoordinator[dict[SolarNetId, dict[str, Any]]]
@@ -48,10 +49,8 @@ class FroniusCoordinatorBase(
         """Set up the FroniusCoordinatorBase class."""
         self._failed_update_count = 0
         self.solar_net = solar_net
-        # unregistered_descriptors are used to create entities in platform module
-        self.unregistered_descriptors: dict[
-            SolarNetId, list[FroniusSensorEntityDescription]
-        ] = {}
+        # unregistered_keys are used to create entities in platform module
+        self.unregistered_keys: dict[SolarNetId, set[str]] = {}
         super().__init__(*args, update_interval=self.default_interval, **kwargs)
 
     @abstractmethod
@@ -74,15 +73,15 @@ class FroniusCoordinatorBase(
                 self.update_interval = self.default_interval
 
             for solar_net_id in data:
-                if solar_net_id not in self.unregistered_descriptors:
+                if solar_net_id not in self.unregistered_keys:
                     # id seen for the first time
-                    self.unregistered_descriptors[solar_net_id] = (
-                        self.valid_descriptions.copy()
-                    )
+                    self.unregistered_keys[solar_net_id] = {
+                        desc.key for desc in self.valid_descriptions
+                    }
             return data
 
     @callback
-    def add_entities_for_seen_keys[_FroniusEntityT: _FroniusSensorEntity](
+    def add_entities_for_seen_keys(
         self,
         async_add_entities: AddEntitiesCallback,
         entity_constructor: type[_FroniusEntityT],
@@ -93,34 +92,22 @@ class FroniusCoordinatorBase(
         """
 
         @callback
-        def _add_entities_for_unregistered_descriptors() -> None:
+        def _add_entities_for_unregistered_keys() -> None:
             """Add entities for keys seen for the first time."""
-            new_entities: list[_FroniusEntityT] = []
+            new_entities: list = []
             for solar_net_id, device_data in self.data.items():
-                remaining_unregistered_descriptors = []
-                for description in self.unregistered_descriptors[solar_net_id]:
-                    key = description.response_key or description.key
-                    if key not in device_data:
-                        remaining_unregistered_descriptors.append(description)
-                        continue
+                for key in self.unregistered_keys[solar_net_id].intersection(
+                    device_data
+                ):
                     if device_data[key]["value"] is None:
-                        remaining_unregistered_descriptors.append(description)
                         continue
-                    new_entities.append(
-                        entity_constructor(
-                            coordinator=self,
-                            description=description,
-                            solar_net_id=solar_net_id,
-                        )
-                    )
-                self.unregistered_descriptors[solar_net_id] = (
-                    remaining_unregistered_descriptors
-                )
+                    new_entities.append(entity_constructor(self, key, solar_net_id))
+                    self.unregistered_keys[solar_net_id].remove(key)
             async_add_entities(new_entities)
 
-        _add_entities_for_unregistered_descriptors()
-        self.solar_net.config_entry.async_on_unload(
-            self.async_add_listener(_add_entities_for_unregistered_descriptors)
+        _add_entities_for_unregistered_keys()
+        self.solar_net.cleanup_callbacks.append(
+            self.async_add_listener(_add_entities_for_unregistered_keys)
         )
 
 
@@ -150,9 +137,9 @@ class FroniusInverterUpdateCoordinator(FroniusCoordinatorBase):
                 data = await self.solar_net.fronius.current_inverter_data(
                     self.inverter_info.solar_net_id
                 )
-            except BadStatusError:
+            except BadStatusError as err:
                 if silent_retry == (self.SILENT_RETRIES - 1):
-                    raise
+                    raise err
                 continue
             break
         # wrap a single devices data in a dict with solar_net_id key for

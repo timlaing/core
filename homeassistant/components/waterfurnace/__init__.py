@@ -1,5 +1,4 @@
 """Support for Waterfurnaces."""
-
 from datetime import timedelta
 import logging
 import threading

@@ -1,5 +1,4 @@
 """Binary Sensor platform for Sensibo integration."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -13,29 +12,44 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import SensiboConfigEntry
+from .const import DOMAIN
 from .coordinator import SensiboDataUpdateCoordinator
 from .entity import SensiboDeviceBaseEntity, SensiboMotionBaseEntity
 
 PARALLEL_UPDATES = 0
 
 
-@dataclass(frozen=True, kw_only=True)
-class SensiboMotionBinarySensorEntityDescription(BinarySensorEntityDescription):
-    """Describes Sensibo Motion sensor entity."""
+@dataclass
+class MotionBaseEntityDescriptionMixin:
+    """Mixin for required Sensibo base description keys."""
 
     value_fn: Callable[[MotionSensor], bool | None]
 
 
-@dataclass(frozen=True, kw_only=True)
-class SensiboDeviceBinarySensorEntityDescription(BinarySensorEntityDescription):
-    """Describes Sensibo Motion sensor entity."""
+@dataclass
+class DeviceBaseEntityDescriptionMixin:
+    """Mixin for required Sensibo base description keys."""
 
     value_fn: Callable[[SensiboDevice], bool | None]
+
+
+@dataclass
+class SensiboMotionBinarySensorEntityDescription(
+    BinarySensorEntityDescription, MotionBaseEntityDescriptionMixin
+):
+    """Describes Sensibo Motion sensor entity."""
+
+
+@dataclass
+class SensiboDeviceBinarySensorEntityDescription(
+    BinarySensorEntityDescription, DeviceBaseEntityDescriptionMixin
+):
+    """Describes Sensibo Motion sensor entity."""
 
 
 FILTER_CLEAN_REQUIRED_DESCRIPTION = SensiboDeviceBinarySensorEntityDescription(
@@ -56,11 +70,13 @@ MOTION_SENSOR_TYPES: tuple[SensiboMotionBinarySensorEntityDescription, ...] = (
         key="is_main_sensor",
         translation_key="is_main_sensor",
         entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:connection",
         value_fn=lambda data: data.is_main_sensor,
     ),
     SensiboMotionBinarySensorEntityDescription(
         key="motion",
         device_class=BinarySensorDeviceClass.MOTION,
+        icon="mdi:motion-sensor",
         value_fn=lambda data: data.motion,
     ),
 )
@@ -70,6 +86,7 @@ MOTION_DEVICE_SENSOR_TYPES: tuple[SensiboDeviceBinarySensorEntityDescription, ..
         key="room_occupied",
         translation_key="room_occupied",
         device_class=BinarySensorDeviceClass.MOTION,
+        icon="mdi:motion-sensor",
         value_fn=lambda data: data.room_occupied,
     ),
 )
@@ -114,13 +131,11 @@ DESCRIPTION_BY_MODELS = {"pure": PURE_SENSOR_TYPES}
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: SensiboConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up Sensibo binary sensor platform."""
 
-    coordinator = entry.runtime_data
+    coordinator: SensiboDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     entities: list[SensiboMotionSensor | SensiboDeviceSensor] = []
 

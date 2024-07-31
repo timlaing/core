@@ -1,5 +1,4 @@
 """Test stream init."""
-
 import logging
 
 import av

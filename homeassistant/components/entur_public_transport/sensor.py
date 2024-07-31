@@ -1,5 +1,4 @@
 """Real-time information about public transport departures in Norway."""
-
 from __future__ import annotations
 
 from datetime import datetime, timedelta
@@ -8,10 +7,7 @@ from random import randint
 from enturclient import EnturPublicTransportData
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
-    SensorEntity,
-)
+from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 from homeassistant.const import (
     CONF_LATITUDE,
     CONF_LONGITUDE,
@@ -49,7 +45,7 @@ ICONS = {
 
 SCAN_INTERVAL = timedelta(seconds=45)
 
-PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_STOP_IDS): vol.All(cv.ensure_list, [cv.string]),
         vol.Optional(CONF_EXPAND_PLATFORMS, default=True): cv.boolean,
@@ -241,9 +237,9 @@ class EnturPublicTransportSensor(SensorEntity):
         self._attributes[ATTR_NEXT_UP_AT] = calls[1].expected_departure_time.strftime(
             "%H:%M"
         )
-        self._attributes[ATTR_NEXT_UP_IN] = (
-            f"{due_in_minutes(calls[1].expected_departure_time)} min"
-        )
+        self._attributes[
+            ATTR_NEXT_UP_IN
+        ] = f"{due_in_minutes(calls[1].expected_departure_time)} min"
         self._attributes[ATTR_NEXT_UP_REALTIME] = calls[1].is_realtime
         self._attributes[ATTR_NEXT_UP_DELAY] = calls[1].delay_in_min
 

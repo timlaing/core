@@ -7,11 +7,7 @@ to the political situation in the world, please contact the ISO 3166 working gro
 
 """
 
-from __future__ import annotations
-
-from typing import Final
-
-COUNTRIES: Final[set[str]] = {
+COUNTRIES = {
     "AD",
     "AE",
     "AF",

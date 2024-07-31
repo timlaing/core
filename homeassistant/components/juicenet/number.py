@@ -1,5 +1,4 @@
 """Support for controlling juicenet/juicepoint/juicebox based EVSE numbers."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -20,11 +19,19 @@ from .const import DOMAIN, JUICENET_API, JUICENET_COORDINATOR
 from .entity import JuiceNetDevice
 
 
-@dataclass(frozen=True, kw_only=True)
-class JuiceNetNumberEntityDescription(NumberEntityDescription):
-    """An entity description for a JuiceNetNumber."""
+@dataclass
+class JuiceNetNumberEntityDescriptionMixin:
+    """Mixin for required keys."""
 
     setter_key: str
+
+
+@dataclass
+class JuiceNetNumberEntityDescription(
+    NumberEntityDescription, JuiceNetNumberEntityDescriptionMixin
+):
+    """An entity description for a JuiceNetNumber."""
+
     native_max_value_key: str | None = None
 
 

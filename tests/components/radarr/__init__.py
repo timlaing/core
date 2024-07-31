@@ -1,5 +1,4 @@
 """Tests for the Radarr component."""
-
 from http import HTTPStatus
 from unittest.mock import patch
 
@@ -103,18 +102,6 @@ def mock_connection(
     )
 
 
-def mock_calendar(
-    aioclient_mock: AiohttpClientMocker,
-    url: str = URL,
-) -> None:
-    """Mock radarr connection."""
-    aioclient_mock.get(
-        f"{url}/api/v3/calendar",
-        text=load_fixture("radarr/calendar.json"),
-        headers={"Content-Type": CONTENT_TYPE_JSON},
-    )
-
-
 def mock_connection_error(
     aioclient_mock: AiohttpClientMocker,
     url: str = URL,
@@ -133,7 +120,6 @@ def mock_connection_invalid_auth(
     aioclient_mock.get(f"{url}/api/v3/queue", status=HTTPStatus.UNAUTHORIZED)
     aioclient_mock.get(f"{url}/api/v3/rootfolder", status=HTTPStatus.UNAUTHORIZED)
     aioclient_mock.get(f"{url}/api/v3/system/status", status=HTTPStatus.UNAUTHORIZED)
-    aioclient_mock.get(f"{url}/api/v3/calendar", status=HTTPStatus.UNAUTHORIZED)
 
 
 def mock_connection_server_error(
@@ -150,9 +136,6 @@ def mock_connection_server_error(
     aioclient_mock.get(
         f"{url}/api/v3/system/status", status=HTTPStatus.INTERNAL_SERVER_ERROR
     )
-    aioclient_mock.get(
-        f"{url}/api/v3/calendar", status=HTTPStatus.INTERNAL_SERVER_ERROR
-    )
 
 
 async def setup_integration(
@@ -160,7 +143,7 @@ async def setup_integration(
     aioclient_mock: AiohttpClientMocker,
     url: str = URL,
     api_key: str = API_KEY,
-    unique_id: str | None = None,
+    unique_id: str = None,
     skip_entry_setup: bool = False,
     connection_error: bool = False,
     invalid_auth: bool = False,
@@ -188,8 +171,6 @@ async def setup_integration(
         windows=windows,
         single_return=single_return,
     )
-
-    mock_calendar(aioclient_mock, url)
 
     if not skip_entry_setup:
         await hass.config_entries.async_setup(entry.entry_id)

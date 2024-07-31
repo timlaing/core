@@ -1,5 +1,4 @@
 """The UptimeRobot integration."""
-
 from __future__ import annotations
 
 from pyuptimerobot import UptimeRobot
@@ -19,7 +18,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up UptimeRobot from a config entry."""
     hass.data.setdefault(DOMAIN, {})
     key: str = entry.data[CONF_API_KEY]
-    if key.startswith(("ur", "m")):
+    if key.startswith("ur") or key.startswith("m"):
         raise ConfigEntryAuthFailed(
             "Wrong API key type detected, use the 'main' API key"
         )

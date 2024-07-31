@@ -1,5 +1,4 @@
 """Support for SwitchBot switch."""
-
 from typing import Any
 
 from switchbot_api import CommonCommands, Device, PowerState, Remote, SwitchBotAPI
@@ -8,6 +7,7 @@ from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.typing import DiscoveryInfoType
 
 from . import SwitchbotCloudData
 from .const import DOMAIN
@@ -19,6 +19,7 @@ async def async_setup_entry(
     hass: HomeAssistant,
     config: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
+    discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up SwitchBot Cloud entry."""
     data: SwitchbotCloudData = hass.data[DOMAIN][config.entry_id]

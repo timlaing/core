@@ -1,17 +1,12 @@
 """Camera entity for PrusaLink."""
-
 from __future__ import annotations
-
-from pyprusalink.types import PrinterState
 
 from homeassistant.components.camera import Camera
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import PrusaLinkEntity
-from .const import DOMAIN
-from .coordinator import JobUpdateCoordinator
+from . import DOMAIN, JobUpdateCoordinator, PrusaLinkEntity
 
 
 async def async_setup_entry(
@@ -40,12 +35,7 @@ class PrusaLinkJobPreviewEntity(PrusaLinkEntity, Camera):
     @property
     def available(self) -> bool:
         """Get if camera is available."""
-        return (
-            super().available
-            and self.coordinator.data.get("state") != PrinterState.IDLE.value
-            and (file := self.coordinator.data.get("file"))
-            and file.get("refs", {}).get("thumbnail")
-        )
+        return super().available and self.coordinator.data.get("job") is not None
 
     async def async_camera_image(
         self, width: int | None = None, height: int | None = None
@@ -54,11 +44,11 @@ class PrusaLinkJobPreviewEntity(PrusaLinkEntity, Camera):
         if not self.available:
             return None
 
-        path = self.coordinator.data["file"]["refs"]["thumbnail"]
+        path = self.coordinator.data["job"]["file"]["path"]
 
         if self.last_path == path:
             return self.last_image
 
-        self.last_image = await self.coordinator.api.get_file(path)
+        self.last_image = await self.coordinator.api.get_large_thumbnail(path)
         self.last_path = path
         return self.last_image

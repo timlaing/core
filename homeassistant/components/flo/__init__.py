@@ -1,5 +1,4 @@
 """The flo integration."""
-
 import asyncio
 import logging
 
@@ -13,7 +12,7 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CLIENT, DOMAIN
-from .coordinator import FloDeviceDataUpdateCoordinator
+from .device import FloDeviceDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -1,5 +1,4 @@
 """Support for tracking a Volvo."""
-
 from __future__ import annotations
 
 from volvooncall.dashboard import Instrument
@@ -26,17 +25,21 @@ async def async_setup_entry(
     @callback
     def async_discover_device(instruments: list[Instrument]) -> None:
         """Discover and add a discovered Volvo On Call device tracker."""
-        async_add_entities(
-            VolvoTrackerEntity(
-                instrument.vehicle.vin,
-                instrument.component,
-                instrument.attr,
-                instrument.slug_attr,
-                coordinator,
-            )
-            for instrument in instruments
-            if instrument.component == "device_tracker"
-        )
+        entities: list[VolvoTrackerEntity] = []
+
+        for instrument in instruments:
+            if instrument.component == "device_tracker":
+                entities.append(
+                    VolvoTrackerEntity(
+                        instrument.vehicle.vin,
+                        instrument.component,
+                        instrument.attr,
+                        instrument.slug_attr,
+                        coordinator,
+                    )
+                )
+
+        async_add_entities(entities)
 
     async_discover_device([*volvo_data.instruments])
 

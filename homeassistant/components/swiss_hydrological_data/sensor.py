@@ -1,5 +1,4 @@
 """Support for hydrological data from the Fed. Office for the Environment."""
-
 from __future__ import annotations
 
 from datetime import timedelta
@@ -8,10 +7,7 @@ import logging
 from swisshydrodata import SwissHydroData
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
-    SensorEntity,
-)
+from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 from homeassistant.const import CONF_MONITORED_CONDITIONS
 from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
@@ -49,7 +45,7 @@ CONDITION_DETAILS = [
     ATTR_MIN_24H,
 ]
 
-PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_STATION): vol.Coerce(int),
         vol.Optional(CONF_MONITORED_CONDITIONS, default=[SENSOR_TEMPERATURE]): vol.All(
@@ -76,13 +72,12 @@ def setup_platform(
         _LOGGER.error("The station doesn't exists: %s", station)
         return
 
-    add_entities(
-        (
-            SwissHydrologicalDataSensor(hydro_data, station, condition)
-            for condition in monitored_conditions
-        ),
-        True,
-    )
+    entities = []
+
+    for condition in monitored_conditions:
+        entities.append(SwissHydrologicalDataSensor(hydro_data, station, condition))
+
+    add_entities(entities, True)
 
 
 class SwissHydrologicalDataSensor(SensorEntity):

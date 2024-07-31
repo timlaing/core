@@ -1,5 +1,4 @@
 """Constants for the Plex component."""
-
 from datetime import timedelta
 from typing import Final
 
@@ -24,6 +23,7 @@ GDM_SCANNER: Final = "gdm_scanner"
 PLATFORMS = frozenset(
     [Platform.BUTTON, Platform.MEDIA_PLAYER, Platform.SENSOR, Platform.UPDATE]
 )
+PLATFORMS_COMPLETED: Final = "platforms_completed"
 PLAYER_SOURCE = "player_source"
 SERVERS: Final = "servers"
 WEBSOCKETS: Final = "websockets"

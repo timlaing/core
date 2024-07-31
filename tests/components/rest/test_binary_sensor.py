@@ -1,5 +1,6 @@
 """The tests for the REST binary sensor platform."""
 
+import asyncio
 from http import HTTPStatus
 import ssl
 from unittest.mock import MagicMock, patch
@@ -106,7 +107,7 @@ async def test_setup_fail_on_ssl_erros(
 @respx.mock
 async def test_setup_timeout(hass: HomeAssistant) -> None:
     """Test setup when connection timeout occurs."""
-    respx.get("http://localhost").mock(side_effect=TimeoutError())
+    respx.get("http://localhost").mock(side_effect=asyncio.TimeoutError())
     assert await async_setup_component(
         hass,
         BINARY_SENSOR_DOMAIN,
@@ -363,77 +364,6 @@ async def test_setup_get_on(hass: HomeAssistant) -> None:
 
 
 @respx.mock
-async def test_setup_get_xml(hass: HomeAssistant) -> None:
-    """Test setup with valid xml configuration."""
-    respx.get("http://localhost").respond(
-        status_code=HTTPStatus.OK,
-        headers={"content-type": "text/xml"},
-        content="<dog>1</dog>",
-    )
-    assert await async_setup_component(
-        hass,
-        BINARY_SENSOR_DOMAIN,
-        {
-            BINARY_SENSOR_DOMAIN: {
-                "platform": DOMAIN,
-                "resource": "http://localhost",
-                "method": "GET",
-                "value_template": "{{ value_json.dog }}",
-                "name": "foo",
-                "verify_ssl": "true",
-                "timeout": 30,
-            }
-        },
-    )
-    await hass.async_block_till_done()
-    assert len(hass.states.async_all(BINARY_SENSOR_DOMAIN)) == 1
-
-    state = hass.states.get("binary_sensor.foo")
-    assert state.state == STATE_ON
-
-
-@respx.mock
-@pytest.mark.parametrize(
-    ("content"),
-    [
-        (""),
-        ("<open></close>"),
-    ],
-)
-async def test_setup_get_bad_xml(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, content: str
-) -> None:
-    """Test attributes get extracted from a XML result with bad xml."""
-
-    respx.get("http://localhost").respond(
-        status_code=HTTPStatus.OK,
-        headers={"content-type": "text/xml"},
-        content=content,
-    )
-    assert await async_setup_component(
-        hass,
-        BINARY_SENSOR_DOMAIN,
-        {
-            BINARY_SENSOR_DOMAIN: {
-                "platform": DOMAIN,
-                "resource": "http://localhost",
-                "method": "GET",
-                "value_template": "{{ value_json.toplevel.master_value }}",
-                "name": "foo",
-                "verify_ssl": "true",
-                "timeout": 30,
-            }
-        },
-    )
-    await hass.async_block_till_done()
-    assert len(hass.states.async_all(BINARY_SENSOR_DOMAIN)) == 1
-    state = hass.states.get("binary_sensor.foo")
-
-    assert state.state == STATE_OFF
-    assert "REST xml result could not be parsed" in caplog.text
-
-
-@respx.mock
 async def test_setup_with_exception(hass: HomeAssistant) -> None:
     """Test setup with exception."""
     respx.get("http://localhost").respond(status_code=HTTPStatus.OK, json={})
@@ -536,9 +466,7 @@ async def test_setup_query_params(hass: HomeAssistant) -> None:
 
 
 @respx.mock
-async def test_entity_config(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
-) -> None:
+async def test_entity_config(hass: HomeAssistant) -> None:
     """Test entity configuration."""
 
     config = {
@@ -559,6 +487,7 @@ async def test_entity_config(
     assert await async_setup_component(hass, BINARY_SENSOR_DOMAIN, config)
     await hass.async_block_till_done()
 
+    entity_registry = er.async_get(hass)
     assert (
         entity_registry.async_get("binary_sensor.rest_binary_sensor").unique_id
         == "very_unique"

@@ -1,5 +1,4 @@
 """Adds config flow for Dune HD integration."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -7,15 +6,15 @@ from typing import Any
 from pdunehd import DuneHDPlayer
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant import config_entries, exceptions
 from homeassistant.const import CONF_HOST
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.util.network import is_host_valid
 
 from .const import DOMAIN
 
 
-class DuneHDConfigFlow(ConfigFlow, domain=DOMAIN):
+class DuneHDConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Dune HD integration."""
 
     VERSION = 1
@@ -25,11 +24,11 @@ class DuneHDConfigFlow(ConfigFlow, domain=DOMAIN):
         player = DuneHDPlayer(host)
         state = await self.hass.async_add_executor_job(player.update_state)
         if not state:
-            raise CannotConnect
+            raise CannotConnect()
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         errors = {}
 
@@ -39,7 +38,7 @@ class DuneHDConfigFlow(ConfigFlow, domain=DOMAIN):
 
                 try:
                     if self.host_already_configured(host):
-                        raise AlreadyConfigured
+                        raise AlreadyConfigured()
                     await self.init_device(host)
                 except CannotConnect:
                     errors[CONF_HOST] = "cannot_connect"
@@ -64,9 +63,9 @@ class DuneHDConfigFlow(ConfigFlow, domain=DOMAIN):
         return host in existing_hosts
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(exceptions.HomeAssistantError):
     """Error to indicate we cannot connect."""
 
 
-class AlreadyConfigured(HomeAssistantError):
+class AlreadyConfigured(exceptions.HomeAssistantError):
     """Error to indicate device is already configured."""

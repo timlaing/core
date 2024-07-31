@@ -1,5 +1,4 @@
 """Support for Rflink devices."""
-
 from __future__ import annotations
 
 import asyncio
@@ -209,8 +208,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     TMP_ENTITY.format(event_id)
                 )
                 hass.async_create_task(
-                    hass.data[DATA_DEVICE_REGISTER][event_type](event),
-                    eager_start=False,
+                    hass.data[DATA_DEVICE_REGISTER][event_type](event)
                 )
             else:
                 _LOGGER.debug("device_id not known and automatic add disabled")
@@ -256,9 +254,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         async_dispatcher_send(hass, SIGNAL_AVAILABILITY, False)
 
         # If HA is not stopping, initiate new connection
-        if hass.state is not CoreState.stopping:
+        if hass.state != CoreState.stopping:
             _LOGGER.warning("Disconnected from Rflink, reconnecting")
-            hass.async_create_task(connect(), eager_start=False)
+            hass.async_create_task(connect())
 
     _reconnect_job = HassJob(reconnect, "Rflink reconnect", cancel_on_shutdown=True)
 
@@ -287,7 +285,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         except (
             SerialException,
             OSError,
-            TimeoutError,
+            asyncio.TimeoutError,
         ):
             reconnect_interval = config[DOMAIN][CONF_RECONNECT_INTERVAL]
             _LOGGER.exception(
@@ -313,7 +311,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
         _LOGGER.info("Connected to Rflink")
 
-    hass.async_create_task(connect(), eager_start=False)
+    hass.async_create_task(connect())
     async_dispatcher_connect(hass, SIGNAL_EVENT, event_callback)
     return True
 
@@ -378,7 +376,7 @@ class RflinkDevice(Entity):
 
     def _handle_event(self, event):
         """Platform specific event handler."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @property
     def name(self):
@@ -581,7 +579,7 @@ class RflinkCommand(RflinkDevice):
 
         if repetitions > 1:
             self._repetition_task = self.hass.async_create_task(
-                self._async_send_command(cmd, repetitions - 1), eager_start=False
+                self._async_send_command(cmd, repetitions - 1)
             )
 
 

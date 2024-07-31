@@ -1,5 +1,4 @@
 """Provides device automations for Water Heater."""
-
 from __future__ import annotations
 
 import voluptuous as vol

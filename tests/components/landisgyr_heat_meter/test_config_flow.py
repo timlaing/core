@@ -1,5 +1,4 @@
 """Test the Landis + Gyr Heat Meter config flow."""
-
 from dataclasses import dataclass
 from unittest.mock import patch
 
@@ -49,7 +48,7 @@ async def test_manual_entry(mock_heat_meter, hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
@@ -57,7 +56,7 @@ async def test_manual_entry(mock_heat_meter, hass: HomeAssistant) -> None:
         result["flow_id"], {"device": "Enter Manually"}
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "setup_serial_manual_path"
     assert result["errors"] == {}
 
@@ -65,7 +64,7 @@ async def test_manual_entry(mock_heat_meter, hass: HomeAssistant) -> None:
         result["flow_id"], {"device": "/dev/ttyUSB0"}
     )
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["title"] == "LUGCUH50"
     assert result["data"] == {
         "device": "/dev/ttyUSB0",
@@ -85,14 +84,14 @@ async def test_list_entry(mock_port, mock_heat_meter, hass: HomeAssistant) -> No
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {"device": port.device}
     )
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["title"] == "LUGCUH50"
     assert result["data"] == {
         "device": port.device,
@@ -105,12 +104,12 @@ async def test_list_entry(mock_port, mock_heat_meter, hass: HomeAssistant) -> No
 async def test_manual_entry_fail(mock_heat_meter, hass: HomeAssistant) -> None:
     """Test manual entry fails."""
 
-    mock_heat_meter().read.side_effect = serial.SerialException
+    mock_heat_meter().read.side_effect = serial.serialutil.SerialException
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
@@ -118,7 +117,7 @@ async def test_manual_entry_fail(mock_heat_meter, hass: HomeAssistant) -> None:
         result["flow_id"], {"device": "Enter Manually"}
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "setup_serial_manual_path"
     assert result["errors"] == {}
 
@@ -126,7 +125,7 @@ async def test_manual_entry_fail(mock_heat_meter, hass: HomeAssistant) -> None:
         result["flow_id"], {"device": "/dev/ttyUSB0"}
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "setup_serial_manual_path"
     assert result["errors"] == {"base": "cannot_connect"}
 
@@ -136,20 +135,20 @@ async def test_manual_entry_fail(mock_heat_meter, hass: HomeAssistant) -> None:
 async def test_list_entry_fail(mock_port, mock_heat_meter, hass: HomeAssistant) -> None:
     """Test select from list entry fails."""
 
-    mock_heat_meter().read.side_effect = serial.SerialException
+    mock_heat_meter().read.side_effect = serial.serialutil.SerialException
     port = mock_serial_port()
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {"device": port.device}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {"base": "cannot_connect"}
 
@@ -185,5 +184,5 @@ async def test_already_configured(
         result["flow_id"], {"device": port.device}
     )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == FlowResultType.ABORT
     assert result["reason"] == "already_configured"

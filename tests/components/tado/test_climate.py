@@ -1,5 +1,4 @@
 """The sensor tests for the tado platform."""
-
 from homeassistant.core import HomeAssistant
 
 from .util import async_init_integration
@@ -25,7 +24,7 @@ async def test_air_con(hass: HomeAssistant) -> None:
         "min_temp": 16.0,
         "preset_mode": "auto",
         "preset_modes": ["away", "home", "auto"],
-        "supported_features": 409,
+        "supported_features": 25,
         "target_temp_step": 1,
         "temperature": 17.8,
     }
@@ -52,7 +51,7 @@ async def test_heater(hass: HomeAssistant) -> None:
         "min_temp": 16.0,
         "preset_mode": "auto",
         "preset_modes": ["away", "home", "auto"],
-        "supported_features": 401,
+        "supported_features": 17,
         "target_temp_step": 1,
         "temperature": 20.5,
     }
@@ -82,41 +81,9 @@ async def test_smartac_with_swing(hass: HomeAssistant) -> None:
         "preset_mode": "auto",
         "preset_modes": ["away", "home", "auto"],
         "swing_modes": ["on", "off"],
-        "supported_features": 441,
+        "supported_features": 57,
         "target_temp_step": 1.0,
         "temperature": 20.0,
-    }
-    # Only test for a subset of attributes in case
-    # HA changes the implementation and a new one appears
-    assert all(item in state.attributes.items() for item in expected_attributes.items())
-
-
-async def test_smartac_with_fanlevel_vertical_and_horizontal_swing(
-    hass: HomeAssistant,
-) -> None:
-    """Test creation of smart ac with swing climate."""
-
-    await async_init_integration(hass)
-
-    state = hass.states.get("climate.air_conditioning_with_fanlevel")
-    assert state.state == "heat"
-
-    expected_attributes = {
-        "current_humidity": 70.9,
-        "current_temperature": 24.3,
-        "fan_mode": "high",
-        "fan_modes": ["high", "medium", "auto", "low"],
-        "friendly_name": "Air Conditioning with fanlevel",
-        "hvac_action": "heating",
-        "hvac_modes": ["off", "auto", "heat", "cool", "heat_cool", "dry", "fan_only"],
-        "max_temp": 31.0,
-        "min_temp": 16.0,
-        "preset_mode": "auto",
-        "preset_modes": ["away", "home", "auto"],
-        "swing_modes": ["vertical", "horizontal", "both", "off"],
-        "supported_features": 441,
-        "target_temp_step": 1.0,
-        "temperature": 25.0,
     }
     # Only test for a subset of attributes in case
     # HA changes the implementation and a new one appears

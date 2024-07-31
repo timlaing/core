@@ -1,12 +1,12 @@
 """Support for Abode Security System sensors."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import cast
 
-from jaraco.abode.devices.sensor import Sensor
+from jaraco.abode.devices.sensor import Sensor as AbodeSense
+from jaraco.abode.helpers import constants as CONST
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -18,27 +18,31 @@ from homeassistant.const import LIGHT_LUX, PERCENTAGE, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import AbodeSystem
+from . import AbodeDevice, AbodeSystem
 from .const import DOMAIN
-from .entity import AbodeDevice
 
 ABODE_TEMPERATURE_UNIT_HA_UNIT = {
-    "°F": UnitOfTemperature.FAHRENHEIT,
-    "°C": UnitOfTemperature.CELSIUS,
+    CONST.UNIT_FAHRENHEIT: UnitOfTemperature.FAHRENHEIT,
+    CONST.UNIT_CELSIUS: UnitOfTemperature.CELSIUS,
 }
 
 
-@dataclass(frozen=True, kw_only=True)
-class AbodeSensorDescription(SensorEntityDescription):
-    """Class describing Abode sensor entities."""
+@dataclass
+class AbodeSensorDescriptionMixin:
+    """Mixin for Abode sensor."""
 
-    value_fn: Callable[[Sensor], float]
-    native_unit_of_measurement_fn: Callable[[Sensor], str]
+    value_fn: Callable[[AbodeSense], float]
+    native_unit_of_measurement_fn: Callable[[AbodeSense], str]
+
+
+@dataclass
+class AbodeSensorDescription(SensorEntityDescription, AbodeSensorDescriptionMixin):
+    """Class describing Abode sensor entities."""
 
 
 SENSOR_TYPES: tuple[AbodeSensorDescription, ...] = (
     AbodeSensorDescription(
-        key="temperature",
+        key=CONST.TEMP_STATUS_KEY,
         device_class=SensorDeviceClass.TEMPERATURE,
         native_unit_of_measurement_fn=lambda device: ABODE_TEMPERATURE_UNIT_HA_UNIT[
             device.temp_unit
@@ -46,13 +50,13 @@ SENSOR_TYPES: tuple[AbodeSensorDescription, ...] = (
         value_fn=lambda device: cast(float, device.temp),
     ),
     AbodeSensorDescription(
-        key="humidity",
+        key=CONST.HUMI_STATUS_KEY,
         device_class=SensorDeviceClass.HUMIDITY,
         native_unit_of_measurement_fn=lambda _: PERCENTAGE,
         value_fn=lambda device: cast(float, device.humidity),
     ),
     AbodeSensorDescription(
-        key="lux",
+        key=CONST.LUX_STATUS_KEY,
         device_class=SensorDeviceClass.ILLUMINANCE,
         native_unit_of_measurement_fn=lambda _: LIGHT_LUX,
         value_fn=lambda device: cast(float, device.lux),
@@ -69,8 +73,8 @@ async def async_setup_entry(
     async_add_entities(
         AbodeSensor(data, device, description)
         for description in SENSOR_TYPES
-        for device in data.abode.get_devices(generic_type="sensor")
-        if description.key in device.get_value("statuses")
+        for device in data.abode.get_devices(generic_type=CONST.TYPE_SENSOR)
+        if description.key in device.get_value(CONST.STATUSES_KEY)
     )
 
 
@@ -78,12 +82,12 @@ class AbodeSensor(AbodeDevice, SensorEntity):
     """A sensor implementation for Abode devices."""
 
     entity_description: AbodeSensorDescription
-    _device: Sensor
+    _device: AbodeSense
 
     def __init__(
         self,
         data: AbodeSystem,
-        device: Sensor,
+        device: AbodeSense,
         description: AbodeSensorDescription,
     ) -> None:
         """Initialize a sensor for an Abode device."""

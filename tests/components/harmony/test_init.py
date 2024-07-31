@@ -1,5 +1,4 @@
 """Test init of Logitch Harmony Hub integration."""
-
 from homeassistant.components.harmony.const import DOMAIN
 from homeassistant.const import CONF_HOST, CONF_NAME
 from homeassistant.core import HomeAssistant

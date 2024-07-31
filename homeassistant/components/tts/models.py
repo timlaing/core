@@ -1,5 +1,4 @@
 """Text-to-speech data models."""
-
 from dataclasses import dataclass
 
 

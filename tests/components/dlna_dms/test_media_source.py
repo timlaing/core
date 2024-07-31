@@ -1,5 +1,4 @@
 """Tests for dlna_dms.media_source, mostly testing DmsMediaSource."""
-
 from unittest.mock import ANY, Mock
 
 from async_upnp_client.exceptions import UpnpError

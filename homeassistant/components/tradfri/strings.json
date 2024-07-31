@@ -7,9 +7,6 @@
         "data": {
           "host": "[%key:common::config_flow::data::host%]",
           "security_code": "Security Code"
-        },
-        "data_description": {
-          "host": "Hostname or IP address of your Trådfri gateway."
         }
       }
     },

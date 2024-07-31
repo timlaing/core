@@ -1,8 +1,6 @@
 """Common libraries for test setup."""
-
 from __future__ import annotations
 
-from asyncio import AbstractEventLoop
 from collections.abc import Generator
 import copy
 import shutil
@@ -38,7 +36,6 @@ from .common import (
 )
 
 from tests.common import MockConfigEntry
-from tests.typing import ClientSessionGenerator
 
 FAKE_TOKEN = "some-token"
 FAKE_REFRESH_TOKEN = "some-refresh-token"
@@ -88,17 +85,13 @@ class FakeAuth(AbstractAuth):
 
 
 @pytest.fixture
-def aiohttp_client(
-    event_loop: AbstractEventLoop,
-    aiohttp_client: ClientSessionGenerator,
-    socket_enabled: None,
-) -> ClientSessionGenerator:
+def aiohttp_client(event_loop, aiohttp_client, socket_enabled):
     """Return aiohttp_client and allow opening sockets."""
     return aiohttp_client
 
 
 @pytest.fixture
-async def auth(aiohttp_client: ClientSessionGenerator) -> FakeAuth:
+async def auth(aiohttp_client):
     """Fixture for an AbstractAuth."""
     auth = FakeAuth()
     app = aiohttp.web.Application()
@@ -109,7 +102,7 @@ async def auth(aiohttp_client: ClientSessionGenerator) -> FakeAuth:
 
 
 @pytest.fixture(autouse=True)
-def cleanup_media_storage(hass: HomeAssistant) -> Generator[None]:
+def cleanup_media_storage(hass):
     """Test cleanup, remove any media storage persisted during the test."""
     tmp_path = str(uuid.uuid4())
     with patch("homeassistant.components.nest.media_source.MEDIA_PATH", new=tmp_path):
@@ -170,7 +163,7 @@ async def create_device(
     device_id: str,
     device_type: str,
     device_traits: dict[str, Any],
-) -> CreateDevice:
+) -> None:
     """Fixture for creating devices."""
     factory = CreateDevice(device_manager, auth)
     factory.data.update(
@@ -196,7 +189,7 @@ def subscriber_id() -> str:
 
 
 @pytest.fixture
-def nest_test_config() -> NestTestConfig:
+def nest_test_config(request) -> NestTestConfig:
     """Fixture that sets up the configuration used for the test."""
     return TEST_CONFIG_APP_CREDS
 
@@ -298,7 +291,7 @@ async def setup_platform(
 
 
 @pytest.fixture(autouse=True)
-def reset_diagnostics() -> Generator[None]:
+def reset_diagnostics() -> Generator[None, None, None]:
     """Fixture to reset client library diagnostic counters."""
     yield
     diagnostics.reset()

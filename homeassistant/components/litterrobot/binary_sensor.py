@@ -1,5 +1,4 @@
 """Support for Litter-Robot binary sensors."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -13,22 +12,24 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import LitterRobotConfigEntry
+from .const import DOMAIN
 from .entity import LitterRobotEntity, _RobotT
+from .hub import LitterRobotHub
 
 
-@dataclass(frozen=True)
+@dataclass
 class RequiredKeysMixin(Generic[_RobotT]):
     """A class that describes robot binary sensor entity required keys."""
 
     is_on_fn: Callable[[_RobotT], bool]
 
 
-@dataclass(frozen=True)
+@dataclass
 class RobotBinarySensorEntityDescription(
     BinarySensorEntityDescription, RequiredKeysMixin[_RobotT]
 ):
@@ -51,6 +52,7 @@ BINARY_SENSOR_MAP: dict[type[Robot], tuple[RobotBinarySensorEntityDescription, .
         RobotBinarySensorEntityDescription[LitterRobot](
             key="sleeping",
             translation_key="sleeping",
+            icon="mdi:sleep",
             entity_category=EntityCategory.DIAGNOSTIC,
             entity_registry_enabled_default=False,
             is_on_fn=lambda robot: robot.is_sleeping,
@@ -58,6 +60,7 @@ BINARY_SENSOR_MAP: dict[type[Robot], tuple[RobotBinarySensorEntityDescription, .
         RobotBinarySensorEntityDescription[LitterRobot](
             key="sleep_mode",
             translation_key="sleep_mode",
+            icon="mdi:sleep",
             entity_category=EntityCategory.DIAGNOSTIC,
             entity_registry_enabled_default=False,
             is_on_fn=lambda robot: robot.sleep_mode_enabled,
@@ -78,11 +81,11 @@ BINARY_SENSOR_MAP: dict[type[Robot], tuple[RobotBinarySensorEntityDescription, .
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: LitterRobotConfigEntry,
+    entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Litter-Robot binary sensors using config entry."""
-    hub = entry.runtime_data
+    hub: LitterRobotHub = hass.data[DOMAIN][entry.entry_id]
     async_add_entities(
         LitterRobotBinarySensorEntity(robot=robot, hub=hub, description=description)
         for robot in hub.account.robots

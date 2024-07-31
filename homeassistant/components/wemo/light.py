@@ -1,5 +1,4 @@
 """Support for Belkin WeMo lights."""
-
 from __future__ import annotations
 
 from typing import Any, cast
@@ -23,8 +22,8 @@ import homeassistant.util.color as color_util
 
 from . import async_wemo_dispatcher_connect
 from .const import DOMAIN as WEMO_DOMAIN
-from .coordinator import DeviceCoordinator
 from .entity import WemoBinaryStateEntity, WemoEntity
+from .wemo_device import DeviceCoordinator
 
 # The WEMO_ constants below come from pywemo itself
 WEMO_OFF = 0

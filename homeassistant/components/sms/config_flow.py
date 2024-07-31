@@ -1,14 +1,11 @@
 """Config flow for SMS integration."""
-
 import logging
 
 import gammu
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow
+from homeassistant import config_entries, core, exceptions
 from homeassistant.const import CONF_DEVICE
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import selector
 
 from .const import CONF_BAUD_SPEED, DEFAULT_BAUD_SPEED, DEFAULT_BAUD_SPEEDS, DOMAIN
@@ -26,7 +23,7 @@ DATA_SCHEMA = vol.Schema(
 )
 
 
-async def get_imei_from_config(hass: HomeAssistant, data):
+async def get_imei_from_config(hass: core.HomeAssistant, data):
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
@@ -51,7 +48,7 @@ async def get_imei_from_config(hass: HomeAssistant, data):
     return imei
 
 
-class SMSFlowHandler(ConfigFlow, domain=DOMAIN):
+class SMSFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for SMS integration."""
 
     VERSION = 1
@@ -66,7 +63,7 @@ class SMSFlowHandler(ConfigFlow, domain=DOMAIN):
                 imei = await get_imei_from_config(self.hass, user_input)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
 
@@ -84,5 +81,5 @@ class SMSFlowHandler(ConfigFlow, domain=DOMAIN):
         return await self.async_step_user(user_input)
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(exceptions.HomeAssistantError):
     """Error to indicate we cannot connect."""

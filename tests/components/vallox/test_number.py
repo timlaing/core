@@ -1,8 +1,7 @@
 """Tests for Vallox number platform."""
-
 import pytest
 
-from homeassistant.components.number import (
+from homeassistant.components.number.const import (
     ATTR_VALUE,
     DOMAIN as NUMBER_DOMAIN,
     SERVICE_SET_VALUE,
@@ -10,7 +9,7 @@ from homeassistant.components.number import (
 from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import HomeAssistant
 
-from .conftest import patch_set_values
+from .conftest import patch_metrics, patch_metrics_set
 
 from tests.common import MockConfigEntry
 
@@ -42,15 +41,15 @@ async def test_temperature_number_entities(
     value: float,
     mock_entry: MockConfigEntry,
     hass: HomeAssistant,
-    setup_fetch_metric_data_mock,
 ) -> None:
     """Test temperature entities."""
     # Arrange
-    setup_fetch_metric_data_mock(metrics={metric_key: value})
+    metrics = {metric_key: value}
 
     # Act
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    with patch_metrics(metrics=metrics):
+        await hass.config_entries.async_setup(mock_entry.entry_id)
+        await hass.async_block_till_done()
 
     # Assert
     sensor = hass.states.get(entity_id)
@@ -67,14 +66,10 @@ async def test_temperature_number_entity_set(
     value: float,
     mock_entry: MockConfigEntry,
     hass: HomeAssistant,
-    setup_fetch_metric_data_mock,
 ) -> None:
     """Test temperature set."""
-    # Arrange
-    setup_fetch_metric_data_mock(metrics={metric_key: value})
-
     # Act
-    with patch_set_values() as set_values:
+    with patch_metrics(metrics={}), patch_metrics_set() as metrics_set:
         await hass.config_entries.async_setup(mock_entry.entry_id)
         await hass.async_block_till_done()
         await hass.services.async_call(
@@ -86,4 +81,4 @@ async def test_temperature_number_entity_set(
             },
         )
         await hass.async_block_till_done()
-        set_values.assert_called_once_with({metric_key: value})
+        metrics_set.assert_called_once_with({metric_key: value})

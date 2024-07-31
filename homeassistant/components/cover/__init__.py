@@ -1,14 +1,13 @@
 """Support for Cover devices."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import timedelta
 from enum import IntFlag, StrEnum
 import functools as ft
-from functools import cached_property
 import logging
-from typing import Any, final
+from typing import Any, ParamSpec, TypeVar, final
 
 import voluptuous as vol
 
@@ -30,26 +29,24 @@ from homeassistant.const import (
     STATE_OPENING,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.deprecation import (
-    DeprecatedConstantEnum,
-    all_with_deprecated_constants,
-    check_if_deprecated_constant,
-    dir_with_deprecated_constants,
+from homeassistant.helpers.config_validation import (  # noqa: F401
+    PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA_BASE,
 )
 from homeassistant.helpers.entity import Entity, EntityDescription
 from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.loader import bind_hass
 
-from .const import DOMAIN
-
 _LOGGER = logging.getLogger(__name__)
 
-ENTITY_ID_FORMAT = DOMAIN + ".{}"
-PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA
-PLATFORM_SCHEMA_BASE = cv.PLATFORM_SCHEMA_BASE
+DOMAIN = "cover"
 SCAN_INTERVAL = timedelta(seconds=15)
+
+ENTITY_ID_FORMAT = DOMAIN + ".{}"
+
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
 
 class CoverDeviceClass(StrEnum):
@@ -73,32 +70,16 @@ DEVICE_CLASSES_SCHEMA = vol.All(vol.Lower, vol.Coerce(CoverDeviceClass))
 # DEVICE_CLASS* below are deprecated as of 2021.12
 # use the CoverDeviceClass enum instead.
 DEVICE_CLASSES = [cls.value for cls in CoverDeviceClass]
-_DEPRECATED_DEVICE_CLASS_AWNING = DeprecatedConstantEnum(
-    CoverDeviceClass.AWNING, "2025.1"
-)
-_DEPRECATED_DEVICE_CLASS_BLIND = DeprecatedConstantEnum(
-    CoverDeviceClass.BLIND, "2025.1"
-)
-_DEPRECATED_DEVICE_CLASS_CURTAIN = DeprecatedConstantEnum(
-    CoverDeviceClass.CURTAIN, "2025.1"
-)
-_DEPRECATED_DEVICE_CLASS_DAMPER = DeprecatedConstantEnum(
-    CoverDeviceClass.DAMPER, "2025.1"
-)
-_DEPRECATED_DEVICE_CLASS_DOOR = DeprecatedConstantEnum(CoverDeviceClass.DOOR, "2025.1")
-_DEPRECATED_DEVICE_CLASS_GARAGE = DeprecatedConstantEnum(
-    CoverDeviceClass.GARAGE, "2025.1"
-)
-_DEPRECATED_DEVICE_CLASS_GATE = DeprecatedConstantEnum(CoverDeviceClass.GATE, "2025.1")
-_DEPRECATED_DEVICE_CLASS_SHADE = DeprecatedConstantEnum(
-    CoverDeviceClass.SHADE, "2025.1"
-)
-_DEPRECATED_DEVICE_CLASS_SHUTTER = DeprecatedConstantEnum(
-    CoverDeviceClass.SHUTTER, "2025.1"
-)
-_DEPRECATED_DEVICE_CLASS_WINDOW = DeprecatedConstantEnum(
-    CoverDeviceClass.WINDOW, "2025.1"
-)
+DEVICE_CLASS_AWNING = CoverDeviceClass.AWNING.value
+DEVICE_CLASS_BLIND = CoverDeviceClass.BLIND.value
+DEVICE_CLASS_CURTAIN = CoverDeviceClass.CURTAIN.value
+DEVICE_CLASS_DAMPER = CoverDeviceClass.DAMPER.value
+DEVICE_CLASS_DOOR = CoverDeviceClass.DOOR.value
+DEVICE_CLASS_GARAGE = CoverDeviceClass.GARAGE.value
+DEVICE_CLASS_GATE = CoverDeviceClass.GATE.value
+DEVICE_CLASS_SHADE = CoverDeviceClass.SHADE.value
+DEVICE_CLASS_SHUTTER = CoverDeviceClass.SHUTTER.value
+DEVICE_CLASS_WINDOW = CoverDeviceClass.WINDOW.value
 
 # mypy: disallow-any-generics
 
@@ -118,24 +99,14 @@ class CoverEntityFeature(IntFlag):
 
 # These SUPPORT_* constants are deprecated as of Home Assistant 2022.5.
 # Please use the CoverEntityFeature enum instead.
-_DEPRECATED_SUPPORT_OPEN = DeprecatedConstantEnum(CoverEntityFeature.OPEN, "2025.1")
-_DEPRECATED_SUPPORT_CLOSE = DeprecatedConstantEnum(CoverEntityFeature.CLOSE, "2025.1")
-_DEPRECATED_SUPPORT_SET_POSITION = DeprecatedConstantEnum(
-    CoverEntityFeature.SET_POSITION, "2025.1"
-)
-_DEPRECATED_SUPPORT_STOP = DeprecatedConstantEnum(CoverEntityFeature.STOP, "2025.1")
-_DEPRECATED_SUPPORT_OPEN_TILT = DeprecatedConstantEnum(
-    CoverEntityFeature.OPEN_TILT, "2025.1"
-)
-_DEPRECATED_SUPPORT_CLOSE_TILT = DeprecatedConstantEnum(
-    CoverEntityFeature.CLOSE_TILT, "2025.1"
-)
-_DEPRECATED_SUPPORT_STOP_TILT = DeprecatedConstantEnum(
-    CoverEntityFeature.STOP_TILT, "2025.1"
-)
-_DEPRECATED_SUPPORT_SET_TILT_POSITION = DeprecatedConstantEnum(
-    CoverEntityFeature.SET_TILT_POSITION, "2025.1"
-)
+SUPPORT_OPEN = 1
+SUPPORT_CLOSE = 2
+SUPPORT_SET_POSITION = 4
+SUPPORT_STOP = 8
+SUPPORT_OPEN_TILT = 16
+SUPPORT_CLOSE_TILT = 32
+SUPPORT_STOP_TILT = 64
+SUPPORT_SET_TILT_POSITION = 128
 
 ATTR_CURRENT_POSITION = "current_position"
 ATTR_CURRENT_TILT_POSITION = "current_tilt_position"
@@ -241,23 +212,14 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return await component.async_unload_entry(entry)
 
 
-class CoverEntityDescription(EntityDescription, frozen_or_thawed=True):
+@dataclass
+class CoverEntityDescription(EntityDescription):
     """A class that describes cover entities."""
 
     device_class: CoverDeviceClass | None = None
 
 
-CACHED_PROPERTIES_WITH_ATTR_ = {
-    "current_cover_position",
-    "current_cover_tilt_position",
-    "device_class",
-    "is_opening",
-    "is_closing",
-    "is_closed",
-}
-
-
-class CoverEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
+class CoverEntity(Entity):
     """Base class for cover entities."""
 
     entity_description: CoverEntityDescription
@@ -272,7 +234,7 @@ class CoverEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     _cover_is_last_toggle_direction_open = True
 
-    @cached_property
+    @property
     def current_cover_position(self) -> int | None:
         """Return current position of cover.
 
@@ -280,7 +242,7 @@ class CoverEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         """
         return self._attr_current_cover_position
 
-    @cached_property
+    @property
     def current_cover_tilt_position(self) -> int | None:
         """Return current position of cover tilt.
 
@@ -288,7 +250,7 @@ class CoverEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         """
         return self._attr_current_cover_tilt_position
 
-    @cached_property
+    @property
     def device_class(self) -> CoverDeviceClass | None:
         """Return the class of this entity."""
         if hasattr(self, "_attr_device_class"):
@@ -330,12 +292,8 @@ class CoverEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
     @property
     def supported_features(self) -> CoverEntityFeature:
         """Flag supported features."""
-        if (features := self._attr_supported_features) is not None:
-            if type(features) is int:  # noqa: E721
-                new_features = CoverEntityFeature(features)
-                self._report_deprecated_supported_features_values(new_features)
-                return new_features
-            return features
+        if self._attr_supported_features is not None:
+            return self._attr_supported_features
 
         supported_features = (
             CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.STOP
@@ -354,24 +312,24 @@ class CoverEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
         return supported_features
 
-    @cached_property
+    @property
     def is_opening(self) -> bool | None:
         """Return if the cover is opening or not."""
         return self._attr_is_opening
 
-    @cached_property
+    @property
     def is_closing(self) -> bool | None:
         """Return if the cover is closing or not."""
         return self._attr_is_closing
 
-    @cached_property
+    @property
     def is_closed(self) -> bool | None:
         """Return if the cover is closed or not."""
         return self._attr_is_closed
 
     def open_cover(self, **kwargs: Any) -> None:
         """Open the cover."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
     async def async_open_cover(self, **kwargs: Any) -> None:
         """Open the cover."""
@@ -379,7 +337,7 @@ class CoverEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     def close_cover(self, **kwargs: Any) -> None:
         """Close cover."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
     async def async_close_cover(self, **kwargs: Any) -> None:
         """Close cover."""
@@ -471,38 +429,15 @@ class CoverEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         else:
             await self.async_close_cover_tilt(**kwargs)
 
-    def _get_toggle_function[**_P, _R](
+    def _get_toggle_function(
         self, fns: dict[str, Callable[_P, _R]]
     ) -> Callable[_P, _R]:
-        # If we are opening or closing and we support stopping, then we should stop
-        if self.supported_features & CoverEntityFeature.STOP and (
+        if CoverEntityFeature.STOP | self.supported_features and (
             self.is_closing or self.is_opening
         ):
             return fns["stop"]
-
-        # If we are fully closed or in the process of closing, then we should open
-        if self.is_closed or self.is_closing:
+        if self.is_closed:
             return fns["open"]
-
-        # If we are fully open or in the process of opening, then we should close
-        if self.current_cover_position == 100 or self.is_opening:
+        if self._cover_is_last_toggle_direction_open:
             return fns["close"]
-
-        # We are any of:
-        # * fully open but do not report `current_cover_position`
-        # * stopped partially open
-        # * either opening or closing, but do not report them
-        # If we previously reported opening/closing, we should move in the opposite direction.
-        # Otherwise, we must assume we are (partially) open and should always close.
-        # Note: _cover_is_last_toggle_direction_open will always remain True if we never report opening/closing.
-        return (
-            fns["close"] if self._cover_is_last_toggle_direction_open else fns["open"]
-        )
-
-
-# These can be removed if no deprecated constant are in this module anymore
-__getattr__ = ft.partial(check_if_deprecated_constant, module_globals=globals())
-__dir__ = ft.partial(
-    dir_with_deprecated_constants, module_globals_keys=[*globals().keys()]
-)
-__all__ = all_with_deprecated_constants(globals())
+        return fns["open"]

@@ -1,5 +1,4 @@
 """Constants for the DirecTV integration."""
-
 DOMAIN = "directv"
 
 # Attributes

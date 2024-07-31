@@ -1,5 +1,4 @@
 """Support for Toon sensors."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -115,14 +114,14 @@ class ToonDisplayDeviceSensor(ToonSensor, ToonDisplayDeviceEntity):
     """Defines a Display sensor."""
 
 
-@dataclass(frozen=True)
+@dataclass
 class ToonSensorRequiredKeysMixin(ToonRequiredKeysMixin):
     """Mixin for sensor required keys."""
 
     cls: type[ToonSensor]
 
 
-@dataclass(frozen=True)
+@dataclass
 class ToonSensorEntityDescription(SensorEntityDescription, ToonSensorRequiredKeysMixin):
     """Describes Toon sensor entity."""
 

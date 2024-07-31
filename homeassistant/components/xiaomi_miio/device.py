@@ -1,15 +1,14 @@
 """Code to handle a Xiaomi Device."""
-
 import datetime
 from enum import Enum
 from functools import partial
 import logging
-from typing import Any
+from typing import Any, TypeVar
 
 from construct.core import ChecksumError
 from miio import Device, DeviceException
 
-from homeassistant.const import ATTR_CONNECTIONS, CONF_MAC, CONF_MODEL
+from homeassistant.const import ATTR_CONNECTIONS, CONF_MODEL
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity
@@ -18,9 +17,11 @@ from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
 )
 
-from .const import DOMAIN, AuthException, SetupException
+from .const import CONF_MAC, DOMAIN, AuthException, SetupException
 
 _LOGGER = logging.getLogger(__name__)
+
+_T = TypeVar("_T", bound=DataUpdateCoordinator[Any])
 
 
 class ConnectXiaomiDevice:
@@ -107,9 +108,7 @@ class XiaomiMiioEntity(Entity):
         return device_info
 
 
-class XiaomiCoordinatedMiioEntity[_T: DataUpdateCoordinator[Any]](
-    CoordinatorEntity[_T]
-):
+class XiaomiCoordinatedMiioEntity(CoordinatorEntity[_T]):
     """Representation of a base a coordinated Xiaomi Miio Entity."""
 
     _attr_has_entity_name = True
@@ -150,14 +149,15 @@ class XiaomiCoordinatedMiioEntity[_T: DataUpdateCoordinator[Any]](
             result = await self.hass.async_add_executor_job(
                 partial(func, *args, **kwargs)
             )
+
+            _LOGGER.debug("Response received from miio device: %s", result)
+
+            return True
         except DeviceException as exc:
             if self.available:
                 _LOGGER.error(mask_error, exc)
 
             return False
-
-        _LOGGER.debug("Response received from miio device: %s", result)
-        return True
 
     @classmethod
     def _extract_value_from_attribute(cls, state, attribute):

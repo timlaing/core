@@ -1,5 +1,6 @@
 """Tests for the Openhome config flow module."""
 
+from homeassistant import data_entry_flow
 from homeassistant.components import ssdp
 from homeassistant.components.openhome.const import DOMAIN
 from homeassistant.components.ssdp import ATTR_UPNP_FRIENDLY_NAME, ATTR_UPNP_UDN
@@ -30,7 +31,7 @@ async def test_ssdp(hass: HomeAssistant) -> None:
         data=MOCK_DISCOVER,
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "confirm"
     assert result["description_placeholders"] == {CONF_NAME: MOCK_FRIENDLY_NAME}
 
@@ -54,7 +55,7 @@ async def test_device_exists(hass: HomeAssistant) -> None:
         context={CONF_SOURCE: SOURCE_SSDP},
         data=MOCK_DISCOVER,
     )
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == data_entry_flow.FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
 
@@ -73,7 +74,7 @@ async def test_missing_udn(hass: HomeAssistant) -> None:
         context={CONF_SOURCE: SOURCE_SSDP},
         data=broken_discovery,
     )
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == data_entry_flow.FlowResultType.ABORT
     assert result["reason"] == "incomplete_discovery"
 
 
@@ -90,7 +91,7 @@ async def test_missing_ssdp_location(hass: HomeAssistant) -> None:
         context={CONF_SOURCE: SOURCE_SSDP},
         data=broken_discovery,
     )
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == data_entry_flow.FlowResultType.ABORT
     assert result["reason"] == "incomplete_discovery"
 
 
@@ -109,7 +110,7 @@ async def test_host_updated(hass: HomeAssistant) -> None:
         context={CONF_SOURCE: SOURCE_SSDP},
         data=MOCK_DISCOVER,
     )
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == data_entry_flow.FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
     assert entry.data[CONF_HOST] == MOCK_SSDP_LOCATION

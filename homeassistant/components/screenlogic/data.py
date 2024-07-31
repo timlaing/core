@@ -1,5 +1,4 @@
 """Support for configurable supported data values for the ScreenLogic integration."""
-
 from screenlogicpy.const.data import DEVICE, VALUE
 
 ENTITY_MIGRATIONS = {
@@ -9,10 +8,7 @@ ENTITY_MIGRATIONS = {
         "new_name": "Active Alert",
     },
     "chem_calcium_harness": {
-        "new_key": VALUE.CALCIUM_HARDNESS,
-    },
-    "calcium_harness": {
-        "new_key": VALUE.CALCIUM_HARDNESS,
+        "new_key": VALUE.CALCIUM_HARNESS,
     },
     "chem_current_orp": {
         "new_key": VALUE.ORP_NOW,

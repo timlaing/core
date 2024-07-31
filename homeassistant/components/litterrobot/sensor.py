@@ -1,5 +1,4 @@
 """Support for Litter-Robot sensors."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -15,12 +14,14 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfMass
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import LitterRobotConfigEntry
+from .const import DOMAIN
 from .entity import LitterRobotEntity, _RobotT
+from .hub import LitterRobotHub
 
 
 def icon_for_gauge_level(gauge_level: int | None = None, offset: int = 0) -> str:
@@ -34,7 +35,7 @@ def icon_for_gauge_level(gauge_level: int | None = None, offset: int = 0) -> str
     return "mdi:gauge-low"
 
 
-@dataclass(frozen=True)
+@dataclass
 class RobotSensorEntityDescription(SensorEntityDescription, Generic[_RobotT]):
     """A class that describes robot sensor entities."""
 
@@ -155,11 +156,11 @@ ROBOT_SENSOR_MAP: dict[type[Robot], list[RobotSensorEntityDescription]] = {
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: LitterRobotConfigEntry,
+    entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Litter-Robot sensors using config entry."""
-    hub = entry.runtime_data
+    hub: LitterRobotHub = hass.data[DOMAIN][entry.entry_id]
     entities = [
         LitterRobotSensorEntity(robot=robot, hub=hub, description=description)
         for robot in hub.account.robots

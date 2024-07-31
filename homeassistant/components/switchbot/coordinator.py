@@ -1,5 +1,4 @@
 """Provides the switchbot DataUpdateCoordinator."""
-
 from __future__ import annotations
 
 import asyncio
@@ -14,7 +13,6 @@ from homeassistant.components import bluetooth
 from homeassistant.components.bluetooth.active_update_coordinator import (
     ActiveBluetoothDataUpdateCoordinator,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CoreState, HomeAssistant, callback
 
 if TYPE_CHECKING:
@@ -24,8 +22,6 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 DEVICE_STARTUP_TIMEOUT = 30
-
-type SwitchbotConfigEntry = ConfigEntry[SwitchbotDataUpdateCoordinator]
 
 
 class SwitchbotDataUpdateCoordinator(ActiveBluetoothDataUpdateCoordinator[None]):
@@ -69,7 +65,7 @@ class SwitchbotDataUpdateCoordinator(ActiveBluetoothDataUpdateCoordinator[None])
         # Only poll if hass is running, we need to poll,
         # and we actually have a way to connect to the device
         return (
-            self.hass.state is CoreState.running
+            self.hass.state == CoreState.running
             and self.device.poll_needed(seconds_since_last_poll)
             and bool(
                 bluetooth.async_ble_device_from_address(
@@ -119,7 +115,7 @@ class SwitchbotDataUpdateCoordinator(ActiveBluetoothDataUpdateCoordinator[None])
 
     async def async_wait_ready(self) -> bool:
         """Wait for the device to be ready."""
-        with contextlib.suppress(TimeoutError):
+        with contextlib.suppress(asyncio.TimeoutError):
             async with asyncio.timeout(DEVICE_STARTUP_TIMEOUT):
                 await self._ready_event.wait()
                 return True

@@ -1,5 +1,4 @@
 """Support for THOMSON routers."""
-
 from __future__ import annotations
 
 import logging
@@ -10,7 +9,7 @@ import voluptuous as vol
 
 from homeassistant.components.device_tracker import (
     DOMAIN,
-    PLATFORM_SCHEMA as DEVICE_TRACKER_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA as PARENT_PLATFORM_SCHEMA,
     DeviceScanner,
 )
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
@@ -30,7 +29,7 @@ _DEVICES_REGEX = re.compile(
     r"(?P<host>([^\s]+))"
 )
 
-PLATFORM_SCHEMA = DEVICE_TRACKER_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PARENT_PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_HOST): cv.string,
         vol.Required(CONF_PASSWORD): cv.string,
@@ -107,10 +106,10 @@ class ThomsonDeviceScanner(DeviceScanner):
             telnet.write(b"exit\r\n")
         except EOFError:
             _LOGGER.exception("Unexpected response from router")
-            return None
+            return
         except ConnectionRefusedError:
             _LOGGER.exception("Connection refused by router. Telnet enabled?")
-            return None
+            return
 
         devices = {}
         for device in devices_result:

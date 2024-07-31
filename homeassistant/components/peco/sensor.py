@@ -1,5 +1,4 @@
 """Sensor component for PECO outage counter."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -25,12 +24,19 @@ from . import PECOCoordinatorData
 from .const import ATTR_CONTENT, CONF_COUNTY, DOMAIN
 
 
-@dataclass(frozen=True, kw_only=True)
-class PECOSensorEntityDescription(SensorEntityDescription):
-    """Description for PECO sensor."""
+@dataclass
+class PECOSensorEntityDescriptionMixin:
+    """Mixin for required keys."""
 
     value_fn: Callable[[PECOCoordinatorData], int | str]
     attribute_fn: Callable[[PECOCoordinatorData], dict[str, str]]
+
+
+@dataclass
+class PECOSensorEntityDescription(
+    SensorEntityDescription, PECOSensorEntityDescriptionMixin
+):
+    """Description for PECO sensor."""
 
 
 PARALLEL_UPDATES: Final = 0
@@ -40,6 +46,7 @@ SENSOR_LIST: tuple[PECOSensorEntityDescription, ...] = (
         translation_key="customers_out",
         value_fn=lambda data: int(data.outages.customers_out),
         attribute_fn=lambda data: {},
+        icon="mdi:power-plug-off",
         state_class=SensorStateClass.MEASUREMENT,
     ),
     PECOSensorEntityDescription(
@@ -48,6 +55,7 @@ SENSOR_LIST: tuple[PECOSensorEntityDescription, ...] = (
         native_unit_of_measurement=PERCENTAGE,
         value_fn=lambda data: int(data.outages.percent_customers_out),
         attribute_fn=lambda data: {},
+        icon="mdi:power-plug-off",
         state_class=SensorStateClass.MEASUREMENT,
     ),
     PECOSensorEntityDescription(
@@ -55,6 +63,7 @@ SENSOR_LIST: tuple[PECOSensorEntityDescription, ...] = (
         translation_key="outage_count",
         value_fn=lambda data: int(data.outages.outage_count),
         attribute_fn=lambda data: {},
+        icon="mdi:power-plug-off",
         state_class=SensorStateClass.MEASUREMENT,
     ),
     PECOSensorEntityDescription(
@@ -62,6 +71,7 @@ SENSOR_LIST: tuple[PECOSensorEntityDescription, ...] = (
         translation_key="customers_served",
         value_fn=lambda data: int(data.outages.customers_served),
         attribute_fn=lambda data: {},
+        icon="mdi:power-plug-off",
         state_class=SensorStateClass.MEASUREMENT,
     ),
     PECOSensorEntityDescription(
@@ -69,6 +79,7 @@ SENSOR_LIST: tuple[PECOSensorEntityDescription, ...] = (
         translation_key="map_alert",
         value_fn=lambda data: str(data.alerts.alert_title),
         attribute_fn=lambda data: {ATTR_CONTENT: data.alerts.alert_content},
+        icon="mdi:alert",
     ),
 )
 
@@ -80,7 +91,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up the sensor platform."""
     county: str = config_entry.data[CONF_COUNTY]
-    coordinator = hass.data[DOMAIN][config_entry.entry_id]["outage_count"]
+    coordinator = hass.data[DOMAIN][config_entry.entry_id]
 
     async_add_entities(
         PecoSensor(sensor, county, coordinator) for sensor in SENSOR_LIST

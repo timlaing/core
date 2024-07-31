@@ -1,21 +1,22 @@
 """A class to hold entity values."""
-
 from __future__ import annotations
 
+from collections import OrderedDict
 import fnmatch
 from functools import lru_cache
 import re
 from typing import Any
 
-from homeassistant.const import MAX_EXPECTED_ENTITY_IDS
 from homeassistant.core import split_entity_id
+
+_MAX_EXPECTED_ENTITIES = 16384
 
 
 class EntityValues:
     """Class to store entity id based values.
 
     This class is expected to only be used infrequently
-    as it caches all entity ids up to MAX_EXPECTED_ENTITY_IDS.
+    as it caches all entity ids up to _MAX_EXPECTED_ENTITIES.
 
     The cache includes `self` so it is important to
     only use this in places where usage of `EntityValues` is immortal.
@@ -34,13 +35,13 @@ class EntityValues:
         if glob is None:
             compiled: dict[re.Pattern[str], Any] | None = None
         else:
-            compiled = {
-                re.compile(fnmatch.translate(key)): value for key, value in glob.items()
-            }
+            compiled = OrderedDict()
+            for key, value in glob.items():
+                compiled[re.compile(fnmatch.translate(key))] = value
 
         self._glob = compiled
 
-    @lru_cache(maxsize=MAX_EXPECTED_ENTITY_IDS)
+    @lru_cache(maxsize=_MAX_EXPECTED_ENTITIES)
     def get(self, entity_id: str) -> dict[str, str]:
         """Get config for an entity id."""
         domain, _ = split_entity_id(entity_id)

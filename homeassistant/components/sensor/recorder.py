@@ -1,9 +1,8 @@
 """Statistics helper for sensor."""
-
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, MutableMapping
 import datetime
 import itertools
 import logging
@@ -37,13 +36,7 @@ from homeassistant.loader import async_suggest_report_issue
 from homeassistant.util import dt as dt_util
 from homeassistant.util.enum import try_parse_enum
 
-from .const import (
-    ATTR_LAST_RESET,
-    ATTR_STATE_CLASS,
-    DOMAIN,
-    SensorStateClass,
-    UnitOfVolumeFlowRate,
-)
+from .const import ATTR_LAST_RESET, ATTR_STATE_CLASS, DOMAIN, SensorStateClass
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -59,7 +52,6 @@ EQUIVALENT_UNITS = {
     "RPM": REVOLUTIONS_PER_MINUTE,
     "ft3": UnitOfVolume.CUBIC_FEET,
     "m3": UnitOfVolume.CUBIC_METERS,
-    "ft³/m": UnitOfVolumeFlowRate.CUBIC_FEET_PER_MINUTE,
 }
 
 # Keep track of entities for which a warning about decreasing value has been logged
@@ -76,20 +68,13 @@ LINK_DEV_STATISTICS = "https://my.home-assistant.io/redirect/developer_statistic
 
 def _get_sensor_states(hass: HomeAssistant) -> list[State]:
     """Get the current state of all sensors for which to compile statistics."""
+    all_sensors = hass.states.all(DOMAIN)
     instance = get_instance(hass)
-    # We check for state class first before calling the filter
-    # function as the filter function is much more expensive
-    # than checking the state class
-    entity_filter = instance.entity_filter
     return [
         state
-        for state in hass.states.all(DOMAIN)
-        if (state_class := state.attributes.get(ATTR_STATE_CLASS))
-        and (
-            type(state_class) is SensorStateClass
-            or try_parse_enum(SensorStateClass, state_class)
-        )
-        and (not entity_filter or entity_filter(state.entity_id))
+        for state in all_sensors
+        if instance.entity_filter(state.entity_id)
+        and try_parse_enum(SensorStateClass, state.attributes.get(ATTR_STATE_CLASS))
     ]
 
 
@@ -109,7 +94,7 @@ def _time_weighted_average(
     for fstate, state in fstates:
         # The recorder will give us the last known state, which may be well
         # before the requested start time for the statistics
-        start_time = max(state.last_updated, start)
+        start_time = start if state.last_updated < start else state.last_updated
         if old_start_time is None:
             # Adjust start time, if there was no last known state
             start = start_time
@@ -150,28 +135,36 @@ def _equivalent_units(units: set[str | None]) -> bool:
     if len(units) == 1:
         return True
     units = {
-        EQUIVALENT_UNITS[unit] if unit in EQUIVALENT_UNITS else unit  # noqa: SIM401
-        for unit in units
+        EQUIVALENT_UNITS[unit] if unit in EQUIVALENT_UNITS else unit for unit in units
     }
     return len(units) == 1
+
+
+def _parse_float(state: str) -> float:
+    """Parse a float string, throw on inf or nan."""
+    fstate = float(state)
+    if not math.isfinite(fstate):
+        raise ValueError
+    return fstate
+
+
+def _float_or_none(state: str) -> float | None:
+    """Return a float or None."""
+    try:
+        return _parse_float(state)
+    except (ValueError, TypeError):
+        return None
 
 
 def _entity_history_to_float_and_state(
     entity_history: Iterable[State],
 ) -> list[tuple[float, State]]:
     """Return a list of (float, state) tuples for the given entity."""
-    float_states: list[tuple[float, State]] = []
-    append = float_states.append
-    isfinite = math.isfinite
-    for state in entity_history:
-        try:
-            if (float_state := float(state.state)) is not None and isfinite(
-                float_state
-            ):
-                append((float_state, state))
-        except (ValueError, TypeError):
-            pass
-    return float_states
+    return [
+        (fstate, state)
+        for state in entity_history
+        if (fstate := _float_or_none(state.state)) is not None
+    ]
 
 
 def _normalize_states(
@@ -225,14 +218,13 @@ def _normalize_states(
 
     converter = statistics.STATISTIC_UNIT_TO_UNIT_CONVERTER[statistics_unit]
     valid_fstates: list[tuple[float, State]] = []
-    convert: Callable[[float], float] | None = None
+    convert: Callable[[float], float]
     last_unit: str | None | object = object()
-    valid_units = converter.VALID_UNITS
 
     for fstate, state in fstates:
         state_unit = state.attributes.get(ATTR_UNIT_OF_MEASUREMENT)
         # Exclude states with unsupported unit from statistics
-        if state_unit not in valid_units:
+        if state_unit not in converter.VALID_UNITS:
             if WARN_UNSUPPORTED_UNIT not in hass.data:
                 hass.data[WARN_UNSUPPORTED_UNIT] = set()
             if entity_id not in hass.data[WARN_UNSUPPORTED_UNIT]:
@@ -251,20 +243,13 @@ def _normalize_states(
                     LINK_DEV_STATISTICS,
                 )
             continue
-
         if state_unit != last_unit:
             # The unit of measurement has changed since the last state change
             # recreate the converter factory
-            if state_unit == statistics_unit:
-                convert = None
-            else:
-                convert = converter.converter_factory(state_unit, statistics_unit)
+            convert = converter.converter_factory(state_unit, statistics_unit)
             last_unit = state_unit
 
-        if convert is not None:
-            fstate = convert(fstate)
-
-        valid_fstates.append((fstate, state))
+        valid_fstates.append((convert(fstate), state))
 
     return statistics_unit, valid_fstates
 
@@ -403,7 +388,7 @@ def compile_statistics(  # noqa: C901
     entities_full_history = [
         i.entity_id for i in sensor_states if "sum" in wanted_statistics[i.entity_id]
     ]
-    history_list: dict[str, list[State]] = {}
+    history_list: MutableMapping[str, list[State]] = {}
     if entities_full_history:
         history_list = history.get_full_significant_states_with_session(
             hass,
@@ -513,11 +498,17 @@ def compile_statistics(  # noqa: C901
         stat: StatisticData = {"start": start}
         if "max" in wanted_statistics[entity_id]:
             stat["max"] = max(
-                *itertools.islice(zip(*valid_float_states, strict=False), 1)
+                *itertools.islice(
+                    zip(*valid_float_states),  # type: ignore[typeddict-item]
+                    1,
+                )
             )
         if "min" in wanted_statistics[entity_id]:
             stat["min"] = min(
-                *itertools.islice(zip(*valid_float_states, strict=False), 1)
+                *itertools.islice(
+                    zip(*valid_float_states),  # type: ignore[typeddict-item]
+                    1,
+                )
             )
 
         if "mean" in wanted_statistics[entity_id]:
@@ -681,7 +672,6 @@ def validate_statistics(
     sensor_entity_ids = {i.entity_id for i in sensor_states}
     sensor_statistic_ids = set(metadatas)
     instance = get_instance(hass)
-    entity_filter = instance.entity_filter
 
     for state in sensor_states:
         entity_id = state.entity_id
@@ -691,7 +681,7 @@ def validate_statistics(
         state_unit = state.attributes.get(ATTR_UNIT_OF_MEASUREMENT)
 
         if metadata := metadatas.get(entity_id):
-            if entity_filter and not entity_filter(state.entity_id):
+            if not instance.entity_filter(state.entity_id):
                 # Sensor was previously recorded, but no longer is
                 validation_result[entity_id].append(
                     statistics.ValidationIssue(
@@ -741,7 +731,7 @@ def validate_statistics(
                     )
                 )
         elif state_class is not None:
-            if entity_filter and not entity_filter(state.entity_id):
+            if not instance.entity_filter(state.entity_id):
                 # Sensor is not recorded
                 validation_result[entity_id].append(
                     statistics.ValidationIssue(

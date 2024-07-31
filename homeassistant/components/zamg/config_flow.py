@@ -1,5 +1,4 @@
 """Config Flow for the zamg integration."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -8,13 +7,14 @@ import voluptuous as vol
 from zamg import ZamgData
 from zamg.exceptions import ZamgApiError, ZamgNoDataError
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant import config_entries
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_STATION_ID, DOMAIN, LOGGER
 
 
-class ZamgConfigFlow(ConfigFlow, domain=DOMAIN):
+class ZamgConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for zamg integration."""
 
     VERSION = 1
@@ -23,7 +23,7 @@ class ZamgConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow initiated by the user."""
         if self._client is None:
             self._client = ZamgData()

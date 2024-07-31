@@ -1,6 +1,5 @@
 """OralB session fixtures."""
 
-from collections.abc import Generator
 from unittest import mock
 
 import pytest
@@ -45,7 +44,7 @@ class MockBleakClientBattery49(MockBleakClient):
 
 
 @pytest.fixture(autouse=True)
-def mock_bluetooth(enable_bluetooth: None) -> Generator[None]:
+def mock_bluetooth(enable_bluetooth):
     """Auto mock bluetooth."""
 
     with mock.patch(

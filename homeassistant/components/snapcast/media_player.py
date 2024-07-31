@@ -1,5 +1,4 @@
 """Support for interacting with Snapcast clients."""
-
 from __future__ import annotations
 
 from snapcast.control.server import Snapserver

@@ -1,5 +1,4 @@
 """Test the DuckDNS component."""
-
 from datetime import timedelta
 import logging
 
@@ -33,7 +32,7 @@ async def async_set_txt(hass, txt):
 
 
 @pytest.fixture
-def setup_duckdns(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
+def setup_duckdns(hass, aioclient_mock):
     """Fixture that sets up DuckDNS."""
     aioclient_mock.get(
         duckdns.UPDATE_URL, params={"domains": DOMAIN, "token": TOKEN}, text="OK"

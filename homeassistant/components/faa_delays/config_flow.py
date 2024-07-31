@@ -1,13 +1,11 @@
 """Config flow for FAA Delays integration."""
-
 import logging
-from typing import Any
 
 from aiohttp import ClientConnectionError
 import faadelays
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant import config_entries
 from homeassistant.const import CONF_ID
 from homeassistant.helpers import aiohttp_client
 
@@ -18,14 +16,12 @@ _LOGGER = logging.getLogger(__name__)
 DATA_SCHEMA = vol.Schema({vol.Required(CONF_ID): str})
 
 
-class FAADelaysConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for FAA Delays."""
 
     VERSION = 1
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_user(self, user_input=None):
         """Handle the initial step."""
         errors = {}
         if user_input is not None:
@@ -43,8 +39,8 @@ class FAADelaysConfigFlow(ConfigFlow, domain=DOMAIN):
                 _LOGGER.error("Error connecting to FAA API")
                 errors["base"] = "cannot_connect"
 
-            except Exception:
-                _LOGGER.exception("Unexpected exception")
+            except Exception as error:  # pylint: disable=broad-except
+                _LOGGER.exception("Unexpected exception: %s", error)
                 errors["base"] = "unknown"
 
             if not errors:

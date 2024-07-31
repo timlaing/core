@@ -1,5 +1,6 @@
 """Tests for the Moat BLE integration."""
 
+
 from homeassistant.helpers.service_info.bluetooth import BluetoothServiceInfo
 
 NOT_MOAT_SERVICE_INFO = BluetoothServiceInfo(

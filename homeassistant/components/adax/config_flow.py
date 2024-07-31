@@ -1,5 +1,4 @@
 """Config flow for Adax integration."""
-
 from __future__ import annotations
 
 import logging
@@ -9,13 +8,14 @@ import adax
 import adax_local
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant import config_entries
 from homeassistant.const import (
     CONF_IP_ADDRESS,
     CONF_PASSWORD,
     CONF_TOKEN,
     CONF_UNIQUE_ID,
 )
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
@@ -31,14 +31,12 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
-class AdaxConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Adax."""
 
     VERSION = 2
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_user(self, user_input=None):
         """Handle the initial step."""
         data_schema = vol.Schema(
             {
@@ -61,9 +59,7 @@ class AdaxConfigFlow(ConfigFlow, domain=DOMAIN):
             return await self.async_step_local()
         return await self.async_step_cloud()
 
-    async def async_step_local(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_local(self, user_input=None):
         """Handle the local step."""
         data_schema = vol.Schema(
             {vol.Required(WIFI_SSID): str, vol.Required(WIFI_PSWD): str}
@@ -110,7 +106,7 @@ class AdaxConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_cloud(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the cloud step."""
         data_schema = vol.Schema(
             {vol.Required(ACCOUNT_ID): int, vol.Required(CONF_PASSWORD): str}

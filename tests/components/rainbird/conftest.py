@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Generator
+from collections.abc import Awaitable, Callable, Generator
 from http import HTTPStatus
-import json
 from typing import Any
 from unittest.mock import patch
 
@@ -16,18 +15,19 @@ from homeassistant.components.rainbird.const import (
     ATTR_DURATION,
     DEFAULT_TRIGGER_TIME_MINUTES,
 )
-from homeassistant.const import EVENT_HOMEASSISTANT_CLOSE, Platform
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 from tests.test_util.aiohttp import AiohttpClientMocker, AiohttpClientMockResponse
+
+ComponentSetup = Callable[[], Awaitable[bool]]
 
 HOST = "example.com"
 URL = "http://example.com/stick"
 PASSWORD = "password"
 SERIAL_NUMBER = 0x12635436566
-MAC_ADDRESS = "4C:A1:61:00:11:22"
-MAC_ADDRESS_UNIQUE_ID = "4c:a1:61:00:11:22"
 
 #
 # Response payloads below come from pyrainbird test cases.
@@ -54,20 +54,6 @@ RAIN_DELAY = "B60010"  # 0x10 is 16
 RAIN_DELAY_OFF = "B60000"
 # ACK command 0x10, Echo 0x06
 ACK_ECHO = "0106"
-WIFI_PARAMS_RESPONSE = {
-    "macAddress": MAC_ADDRESS,
-    "localIpAddress": "1.1.1.38",
-    "localNetmask": "255.255.255.0",
-    "localGateway": "1.1.1.1",
-    "rssi": -61,
-    "wifiSsid": "wifi-ssid-name",
-    "wifiPassword": "wifi-password-name",
-    "wifiSecurity": "wpa2-aes",
-    "apTimeoutNoLan": 20,
-    "apTimeoutIdle": 20,
-    "apSecurity": "unknown",
-    "stickVersion": "Rain Bird Stick Rev C/1.63",
-}
 
 
 CONFIG = {
@@ -80,16 +66,10 @@ CONFIG = {
     }
 }
 
-CONFIG_ENTRY_DATA_OLD_FORMAT = {
-    "host": HOST,
-    "password": PASSWORD,
-    "serial_number": SERIAL_NUMBER,
-}
 CONFIG_ENTRY_DATA = {
     "host": HOST,
     "password": PASSWORD,
     "serial_number": SERIAL_NUMBER,
-    "mac": MAC_ADDRESS,
 }
 
 
@@ -100,24 +80,21 @@ def platforms() -> list[Platform]:
 
 
 @pytest.fixture
-async def config_entry_unique_id() -> str:
-    """Fixture for config entry unique id."""
-    return MAC_ADDRESS_UNIQUE_ID
+def yaml_config() -> dict[str, Any]:
+    """Fixture for configuration.yaml."""
+    return {}
 
 
 @pytest.fixture
-async def serial_number() -> int:
-    """Fixture for serial number used in the config entry data."""
+async def config_entry_unique_id() -> str:
+    """Fixture for serial number used in the config entry."""
     return SERIAL_NUMBER
 
 
 @pytest.fixture
-async def config_entry_data(serial_number: int) -> dict[str, Any]:
+async def config_entry_data() -> dict[str, Any]:
     """Fixture for MockConfigEntry data."""
-    return {
-        **CONFIG_ENTRY_DATA,
-        "serial_number": serial_number,
-    }
+    return CONFIG_ENTRY_DATA
 
 
 @pytest.fixture
@@ -145,63 +122,35 @@ async def add_config_entry(
         config_entry.add_to_hass(hass)
 
 
-@pytest.fixture(autouse=True)
-def setup_platforms(
+@pytest.fixture
+async def setup_integration(
     hass: HomeAssistant,
     platforms: list[str],
-) -> None:
-    """Fixture for setting up the default platforms."""
+    yaml_config: dict[str, Any],
+) -> Generator[ComponentSetup, None, None]:
+    """Fixture for setting up the component."""
 
     with patch(f"homeassistant.components.{DOMAIN}.PLATFORMS", platforms):
-        yield
+
+        async def func() -> bool:
+            result = await async_setup_component(hass, DOMAIN, yaml_config)
+            await hass.async_block_till_done()
+            return result
+
+        yield func
 
 
-@pytest.fixture(autouse=True)
-def aioclient_mock(hass: HomeAssistant) -> Generator[AiohttpClientMocker]:
-    """Context manager to mock aiohttp client."""
-    mocker = AiohttpClientMocker()
-
-    def create_session():
-        session = mocker.create_session(hass.loop)
-
-        async def close_session(event):
-            """Close session."""
-            await session.close()
-
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_CLOSE, close_session)
-        return session
-
-    with (
-        patch(
-            "homeassistant.components.rainbird.async_create_clientsession",
-            side_effect=create_session,
-        ),
-        patch(
-            "homeassistant.components.rainbird.config_flow.async_create_clientsession",
-            side_effect=create_session,
-        ),
-    ):
-        yield mocker
-
-
-def rainbird_json_response(result: dict[str, str]) -> bytes:
+def rainbird_response(data: str) -> bytes:
     """Create a fake API response."""
     return encryption.encrypt(
-        f'{{"jsonrpc": "2.0", "result": {json.dumps(result)}, "id": 1}} ',
+        '{"jsonrpc": "2.0", "result": {"data":"%s"}, "id": 1} ' % data,
         PASSWORD,
-    )
-
-
-def mock_json_response(result: dict[str, str]) -> AiohttpClientMockResponse:
-    """Create a fake AiohttpClientMockResponse."""
-    return AiohttpClientMockResponse(
-        "POST", URL, response=rainbird_json_response(result)
     )
 
 
 def mock_response(data: str) -> AiohttpClientMockResponse:
     """Create a fake AiohttpClientMockResponse."""
-    return mock_json_response({"data": data})
+    return AiohttpClientMockResponse("POST", URL, response=rainbird_response(data))
 
 
 def mock_response_error(

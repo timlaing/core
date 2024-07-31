@@ -1,5 +1,4 @@
 """OAuth2 implementations for Toon."""
-
 from __future__ import annotations
 
 import base64
@@ -73,4 +72,5 @@ class ElectricKiwiLocalOAuth2Implementation(AuthImplementation):
 
         resp = await session.post(self.token_url, data=data, headers=headers)
         resp.raise_for_status()
-        return cast(dict, await resp.json())
+        resp_json = cast(dict, await resp.json())
+        return resp_json

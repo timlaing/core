@@ -1,5 +1,4 @@
 """Config flow for Litter-Robot integration."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -10,8 +9,9 @@ from pylitterbot import Account
 from pylitterbot.exceptions import LitterRobotException, LitterRobotLoginException
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
@@ -23,23 +23,21 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 )
 
 
-class LitterRobotConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Litter-Robot."""
 
     VERSION = 1
 
     username: str
 
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Handle a reauthorization flow request."""
         self.username = entry_data[CONF_USERNAME]
         return await self.async_step_reauth_confirm()
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, str] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle user's reauth credentials."""
         errors = {}
         if user_input:
@@ -64,7 +62,7 @@ class LitterRobotConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: Mapping[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         errors = {}
 
@@ -94,7 +92,7 @@ class LitterRobotConfigFlow(ConfigFlow, domain=DOMAIN):
             return "invalid_auth"
         except LitterRobotException:
             return "cannot_connect"
-        except Exception:
-            _LOGGER.exception("Unexpected exception")
+        except Exception as ex:  # pylint: disable=broad-except
+            _LOGGER.exception("Unexpected exception: %s", ex)
             return "unknown"
         return ""

@@ -1,5 +1,4 @@
 """Support for Freebox devices (Freebox v6 and Freebox mini 4K)."""
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -104,7 +103,7 @@ class FreeboxDevice(ScannerEntity):
         return SourceType.ROUTER
 
     @callback
-    def async_on_demand_update(self) -> None:
+    def async_on_demand_update(self):
         """Update state."""
         self.async_update_state()
         self.async_write_ha_state()
@@ -121,6 +120,6 @@ class FreeboxDevice(ScannerEntity):
         )
 
 
-def icon_for_freebox_device(device: dict[str, Any]) -> str:
+def icon_for_freebox_device(device) -> str:
     """Return a device icon from its type."""
     return DEVICE_ICONS.get(device["host_type"], "mdi:help-network")

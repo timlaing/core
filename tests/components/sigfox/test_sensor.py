@@ -1,5 +1,4 @@
 """Tests for the sigfox sensor."""
-
 from http import HTTPStatus
 import re
 

@@ -1,5 +1,4 @@
 """Test the Google Sheets config flow."""
-
 from collections.abc import Generator
 from unittest.mock import Mock, patch
 
@@ -13,7 +12,6 @@ from homeassistant.components.application_credentials import (
 )
 from homeassistant.components.google_sheets.const import DOMAIN
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import config_entry_oauth2_flow
 from homeassistant.setup import async_setup_component
 
@@ -41,7 +39,7 @@ async def setup_credentials(hass: HomeAssistant) -> None:
 
 
 @pytest.fixture(autouse=True)
-async def mock_client() -> Generator[Mock]:
+async def mock_client() -> Generator[Mock, None, None]:
     """Fixture to setup a fake spreadsheet client library."""
     with patch(
         "homeassistant.components.google_sheets.config_flow.Client"
@@ -49,11 +47,11 @@ async def mock_client() -> Generator[Mock]:
         yield mock_client
 
 
-@pytest.mark.usefixtures("current_request_with_host")
 async def test_full_flow(
     hass: HomeAssistant,
     hass_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
+    current_request_with_host: None,
     setup_credentials,
     mock_client,
 ) -> None:
@@ -105,7 +103,7 @@ async def test_full_flow(
     assert len(mock_setup.mock_calls) == 1
     assert len(mock_client.mock_calls) == 2
 
-    assert result.get("type") is FlowResultType.CREATE_ENTRY
+    assert result.get("type") == "create_entry"
     assert result.get("title") == TITLE
     assert "result" in result
     assert result.get("result").unique_id == SHEET_ID
@@ -116,11 +114,11 @@ async def test_full_flow(
     )
 
 
-@pytest.mark.usefixtures("current_request_with_host")
 async def test_create_sheet_error(
     hass: HomeAssistant,
     hass_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
+    current_request_with_host: None,
     setup_credentials,
     mock_client,
 ) -> None:
@@ -164,15 +162,15 @@ async def test_create_sheet_error(
     )
 
     result = await hass.config_entries.flow.async_configure(result["flow_id"])
-    assert result.get("type") is FlowResultType.ABORT
+    assert result.get("type") == "abort"
     assert result.get("reason") == "create_spreadsheet_failure"
 
 
-@pytest.mark.usefixtures("current_request_with_host")
 async def test_reauth(
     hass: HomeAssistant,
     hass_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
+    current_request_with_host: None,
     setup_credentials,
     mock_client,
 ) -> None:
@@ -239,7 +237,7 @@ async def test_reauth(
     assert len(hass.config_entries.async_entries(DOMAIN)) == 1
     assert len(mock_setup.mock_calls) == 1
 
-    assert result.get("type") is FlowResultType.ABORT
+    assert result.get("type") == "abort"
     assert result.get("reason") == "reauth_successful"
 
     assert config_entry.unique_id == SHEET_ID
@@ -249,11 +247,11 @@ async def test_reauth(
     assert config_entry.data["token"].get("refresh_token") == "mock-refresh-token"
 
 
-@pytest.mark.usefixtures("current_request_with_host")
 async def test_reauth_abort(
     hass: HomeAssistant,
     hass_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
+    current_request_with_host: None,
     setup_credentials,
     mock_client,
 ) -> None:
@@ -314,15 +312,15 @@ async def test_reauth_abort(
     )
 
     result = await hass.config_entries.flow.async_configure(result["flow_id"])
-    assert result.get("type") is FlowResultType.ABORT
+    assert result.get("type") == "abort"
     assert result.get("reason") == "open_spreadsheet_failure"
 
 
-@pytest.mark.usefixtures("current_request_with_host")
 async def test_already_configured(
     hass: HomeAssistant,
     hass_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
+    current_request_with_host: None,
     setup_credentials,
     mock_client,
 ) -> None:
@@ -377,5 +375,5 @@ async def test_already_configured(
     )
 
     result = await hass.config_entries.flow.async_configure(result["flow_id"])
-    assert result.get("type") is FlowResultType.ABORT
+    assert result.get("type") == "abort"
     assert result.get("reason") == "already_configured"

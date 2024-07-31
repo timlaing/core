@@ -1,12 +1,10 @@
 """Data template classes for discovery used to generate additional data for setup."""
-
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
-from enum import Enum
 import logging
-from typing import Any, cast
+from typing import Any, TypeVar, cast
 
 from zwave_js_server.const import CommandClass
 from zwave_js_server.const.command_class.energy_production import (
@@ -358,12 +356,22 @@ class NumericSensorDataTemplateData:
     unit_of_measurement: str | None = None
 
 
+T = TypeVar(
+    "T",
+    MultilevelSensorType,
+    MultilevelSensorScaleType,
+    MeterScaleType,
+    EnergyProductionParameter,
+    EnergyProductionScaleType,
+)
+
+
 class NumericSensorDataTemplate(BaseDiscoverySchemaDataTemplate):
     """Data template class for Z-Wave Sensor entities."""
 
     @staticmethod
-    def find_key_from_matching_set[_T: Enum](
-        enum_value: _T, set_map: Mapping[str, list[_T]]
+    def find_key_from_matching_set(
+        enum_value: T, set_map: Mapping[str, list[T]]
     ) -> str | None:
         """Find a key in a set map that matches a given enum value."""
         for key, value_set in set_map.items():
@@ -556,7 +564,6 @@ class ConfigurableFanValueMappingDataTemplate(
 
     `configuration_value_to_fan_value_mapping` maps the values from
     `configuration_option` to the value mapping object.
-
     """
 
     def resolve_data(
@@ -627,7 +634,6 @@ class FixedFanValueMappingDataTemplate(
               )
           ),
       ),
-
     """
 
     def get_fan_value_mapping(

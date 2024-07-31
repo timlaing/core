@@ -1,5 +1,4 @@
 """Provides device automations for Philips Hue events in V1 bridge/api."""
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING

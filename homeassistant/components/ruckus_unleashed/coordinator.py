@@ -1,5 +1,4 @@
 """Ruckus Unleashed DataUpdateCoordinator."""
-
 from datetime import timedelta
 import logging
 

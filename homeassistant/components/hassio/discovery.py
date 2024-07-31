@@ -1,5 +1,4 @@
 """Implement the services discovery feature from Hass.io for Add-ons."""
-
 from __future__ import annotations
 
 import asyncio
@@ -13,7 +12,7 @@ from aiohttp.web_exceptions import HTTPServiceUnavailable
 from homeassistant import config_entries
 from homeassistant.components.http import HomeAssistantView
 from homeassistant.const import ATTR_NAME, ATTR_SERVICE, EVENT_HOMEASSISTANT_START
-from homeassistant.core import Event, HomeAssistant, callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import BaseServiceInfo
 from homeassistant.helpers import discovery_flow
 
@@ -34,13 +33,13 @@ class HassioServiceInfo(BaseServiceInfo):
 
 
 @callback
-def async_setup_discovery_view(hass: HomeAssistant, hassio: HassIO) -> None:
+def async_setup_discovery_view(hass: HomeAssistant, hassio):
     """Discovery setup."""
     hassio_discovery = HassIODiscovery(hass, hassio)
     hass.http.register_view(hassio_discovery)
 
     # Handle exists discovery messages
-    async def _async_discovery_start_handler(event: Event) -> None:
+    async def _async_discovery_start_handler(event):
         """Process all exists discovery on startup."""
         try:
             data = await hassio.retrieve_discovery_messages()
@@ -71,21 +70,21 @@ class HassIODiscovery(HomeAssistantView):
         self.hass = hass
         self.hassio = hassio
 
-    async def post(self, request: web.Request, uuid: str) -> web.Response:
+    async def post(self, request, uuid):
         """Handle new discovery requests."""
         # Fetch discovery data and prevent injections
         try:
             data = await self.hassio.get_discovery_message(uuid)
         except HassioAPIError as err:
             _LOGGER.error("Can't read discovery data: %s", err)
-            raise HTTPServiceUnavailable from None
+            raise HTTPServiceUnavailable() from None
 
         await self.async_process_new(data)
         return web.Response()
 
-    async def delete(self, request: web.Request, uuid: str) -> web.Response:
+    async def delete(self, request, uuid):
         """Handle remove discovery requests."""
-        data: dict[str, Any] = await request.json()
+        data = await request.json()
 
         await self.async_process_del(data)
         return web.Response()
@@ -115,7 +114,7 @@ class HassIODiscovery(HomeAssistantView):
             data=HassioServiceInfo(config=config_data, name=name, slug=slug, uuid=uuid),
         )
 
-    async def async_process_del(self, data: dict[str, Any]) -> None:
+    async def async_process_del(self, data):
         """Process remove discovery entry."""
         service = data[ATTR_SERVICE]
         uuid = data[ATTR_UUID]

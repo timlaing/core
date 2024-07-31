@@ -1,5 +1,6 @@
 """Constants for history."""
 
+
 STATE_KEY = "state"
 LAST_CHANGED_KEY = "last_changed"
 

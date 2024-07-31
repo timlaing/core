@@ -1,5 +1,4 @@
 """Support for Ambient Weather Station binary sensors."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -10,12 +9,12 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_NAME, EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import AmbientStationConfigEntry
-from .const import ATTR_LAST_DATA
+from .const import ATTR_LAST_DATA, DOMAIN
 from .entity import AmbientWeatherEntity
 
 TYPE_BATT1 = "batt1"
@@ -64,11 +63,18 @@ TYPE_RELAY8 = "relay8"
 TYPE_RELAY9 = "relay9"
 
 
-@dataclass(frozen=True, kw_only=True)
-class AmbientBinarySensorDescription(BinarySensorEntityDescription):
-    """Describe an Ambient PWS binary sensor."""
+@dataclass
+class AmbientBinarySensorDescriptionMixin:
+    """Define an entity description mixin for binary sensors."""
 
     on_state: Literal[0, 1]
+
+
+@dataclass
+class AmbientBinarySensorDescription(
+    BinarySensorEntityDescription, AmbientBinarySensorDescriptionMixin
+):
+    """Describe an Ambient PWS binary sensor."""
 
 
 BINARY_SENSOR_DESCRIPTIONS = (
@@ -379,12 +385,10 @@ BINARY_SENSOR_DESCRIPTIONS = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: AmbientStationConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up Ambient PWS binary sensors based on a config entry."""
-    ambient = entry.runtime_data
+    ambient = hass.data[DOMAIN][entry.entry_id]
 
     async_add_entities(
         AmbientWeatherBinarySensor(

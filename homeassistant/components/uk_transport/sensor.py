@@ -1,5 +1,4 @@
 """Support for UK public transport data provided by transportapi.com."""
-
 from __future__ import annotations
 
 from datetime import datetime, timedelta
@@ -10,10 +9,7 @@ import re
 import requests
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
-    SensorEntity,
-)
+from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 from homeassistant.const import CONF_MODE, UnitOfTime
 from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
@@ -47,7 +43,7 @@ _QUERY_SCHEME = vol.Schema(
     }
 )
 
-PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_API_APP_ID): cv.string,
         vol.Required(CONF_API_APP_KEY): cv.string,
@@ -287,4 +283,5 @@ def _delta_mins(hhmm_time_str):
     if hhmm_datetime < now:
         hhmm_datetime += timedelta(days=1)
 
-    return (hhmm_datetime - now).total_seconds() // 60
+    delta_mins = (hhmm_datetime - now).total_seconds() // 60
+    return delta_mins

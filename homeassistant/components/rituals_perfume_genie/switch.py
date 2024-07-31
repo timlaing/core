@@ -1,5 +1,4 @@
 """Support for Rituals Perfume Genie switches."""
-
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
@@ -18,20 +17,27 @@ from .coordinator import RitualsDataUpdateCoordinator
 from .entity import DiffuserEntity
 
 
-@dataclass(frozen=True, kw_only=True)
-class RitualsSwitchEntityDescription(SwitchEntityDescription):
-    """Class describing Rituals switch entities."""
+@dataclass
+class RitualsEntityDescriptionMixin:
+    """Mixin values for Rituals entities."""
 
     is_on_fn: Callable[[Diffuser], bool]
     turn_on_fn: Callable[[Diffuser], Awaitable[None]]
     turn_off_fn: Callable[[Diffuser], Awaitable[None]]
 
 
+@dataclass
+class RitualsSwitchEntityDescription(
+    SwitchEntityDescription, RitualsEntityDescriptionMixin
+):
+    """Class describing Rituals switch entities."""
+
+
 ENTITY_DESCRIPTIONS = (
     RitualsSwitchEntityDescription(
         key="is_on",
         name=None,
-        translation_key="fan",
+        icon="mdi:fan",
         is_on_fn=lambda diffuser: diffuser.is_on,
         turn_on_fn=lambda diffuser: diffuser.turn_on(),
         turn_off_fn=lambda diffuser: diffuser.turn_off(),

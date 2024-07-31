@@ -1,10 +1,8 @@
 """Support for Enphase Envoy solar energy monitor."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from operator import attrgetter
 
 from pyenphase import EnvoyEncharge, EnvoyEnpower
 
@@ -13,21 +11,29 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
-from .coordinator import EnphaseConfigEntry, EnphaseUpdateCoordinator
+from .coordinator import EnphaseUpdateCoordinator
 from .entity import EnvoyBaseEntity
 
 
-@dataclass(frozen=True, kw_only=True)
-class EnvoyEnchargeBinarySensorEntityDescription(BinarySensorEntityDescription):
-    """Describes an Envoy Encharge binary sensor entity."""
+@dataclass
+class EnvoyEnchargeRequiredKeysMixin:
+    """Mixin for required keys."""
 
     value_fn: Callable[[EnvoyEncharge], bool]
+
+
+@dataclass
+class EnvoyEnchargeBinarySensorEntityDescription(
+    BinarySensorEntityDescription, EnvoyEnchargeRequiredKeysMixin
+):
+    """Describes an Envoy Encharge binary sensor entity."""
 
 
 ENCHARGE_SENSORS = (
@@ -36,7 +42,7 @@ ENCHARGE_SENSORS = (
         translation_key="communicating",
         device_class=BinarySensorDeviceClass.CONNECTIVITY,
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=attrgetter("communicating"),
+        value_fn=lambda encharge: encharge.communicating,
     ),
     EnvoyEnchargeBinarySensorEntityDescription(
         key="dc_switch",
@@ -47,11 +53,18 @@ ENCHARGE_SENSORS = (
 )
 
 
-@dataclass(frozen=True, kw_only=True)
-class EnvoyEnpowerBinarySensorEntityDescription(BinarySensorEntityDescription):
-    """Describes an Envoy Enpower binary sensor entity."""
+@dataclass
+class EnvoyEnpowerRequiredKeysMixin:
+    """Mixin for required keys."""
 
     value_fn: Callable[[EnvoyEnpower], bool]
+
+
+@dataclass
+class EnvoyEnpowerBinarySensorEntityDescription(
+    BinarySensorEntityDescription, EnvoyEnpowerRequiredKeysMixin
+):
+    """Describes an Envoy Enpower binary sensor entity."""
 
 
 ENPOWER_SENSORS = (
@@ -60,7 +73,7 @@ ENPOWER_SENSORS = (
         translation_key="communicating",
         device_class=BinarySensorDeviceClass.CONNECTIVITY,
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=attrgetter("communicating"),
+        value_fn=lambda enpower: enpower.communicating,
     ),
     EnvoyEnpowerBinarySensorEntityDescription(
         key="mains_oper_state",
@@ -73,11 +86,11 @@ ENPOWER_SENSORS = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: EnphaseConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up envoy binary sensor platform."""
-    coordinator = config_entry.runtime_data
+    coordinator: EnphaseUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
     envoy_data = coordinator.envoy.data
     assert envoy_data is not None
     entities: list[BinarySensorEntity] = []

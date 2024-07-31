@@ -1,5 +1,4 @@
 """The binary_sensor tests for the nexia platform."""
-
 from homeassistant.const import STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant
 
@@ -20,7 +19,7 @@ async def test_create_binary_sensors(hass: HomeAssistant) -> None:
     # Only test for a subset of attributes in case
     # HA changes the implementation and a new one appears
     assert all(
-        state.attributes[key] == value for key, value in expected_attributes.items()
+        state.attributes[key] == expected_attributes[key] for key in expected_attributes
     )
 
     state = hass.states.get("binary_sensor.downstairs_east_wing_blower_active")
@@ -32,5 +31,5 @@ async def test_create_binary_sensors(hass: HomeAssistant) -> None:
     # Only test for a subset of attributes in case
     # HA changes the implementation and a new one appears
     assert all(
-        state.attributes[key] == value for key, value in expected_attributes.items()
+        state.attributes[key] == expected_attributes[key] for key in expected_attributes
     )

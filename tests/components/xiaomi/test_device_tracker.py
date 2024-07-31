@@ -1,5 +1,4 @@
 """The tests for the Xiaomi router device tracker platform."""
-
 from http import HTTPStatus
 import logging
 from unittest.mock import MagicMock, call, patch
@@ -28,7 +27,7 @@ def mocked_requests(*args, **kwargs):
     class MockResponse:
         """Class to represent a mocked response."""
 
-        def __init__(self, json_data, status_code) -> None:
+        def __init__(self, json_data, status_code):
             """Initialize the mock response class."""
             self.json_data = json_data
             self.status_code = status_code
@@ -48,8 +47,7 @@ def mocked_requests(*args, **kwargs):
                 raise requests.HTTPError(self.status_code)
 
     data = kwargs.get("data")
-    # pylint: disable-next=global-statement
-    global FIRST_CALL  # noqa: PLW0603
+    global FIRST_CALL
 
     if data and data.get("username", None) == INVALID_USERNAME:
         # deliver an invalid token
@@ -144,7 +142,6 @@ def mocked_requests(*args, **kwargs):
             200,
         )
     _LOGGER.debug("UNKNOWN ROUTE")
-    return None
 
 
 @patch(

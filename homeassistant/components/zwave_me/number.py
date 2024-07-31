@@ -1,5 +1,4 @@
 """Representation of a switchMultilevel."""
-
 from homeassistant.components.number import NumberEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
@@ -50,5 +49,5 @@ class ZWaveMeNumber(ZWaveMeEntity, NumberEntity):
     def set_native_value(self, value: float) -> None:
         """Update the current value."""
         self.controller.zwave_api.send_command(
-            self.device.id, f"exact?level={round(value)!s}"
+            self.device.id, f"exact?level={str(round(value))}"
         )

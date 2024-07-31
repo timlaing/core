@@ -1,5 +1,4 @@
 """The Tautulli integration."""
-
 from __future__ import annotations
 
 from pytautulli import PyTautulli, PyTautulliApiUser, PyTautulliHostConfiguration
@@ -16,10 +15,9 @@ from .const import DEFAULT_NAME, DOMAIN
 from .coordinator import TautulliDataUpdateCoordinator
 
 PLATFORMS = [Platform.SENSOR]
-type TautulliConfigEntry = ConfigEntry[TautulliDataUpdateCoordinator]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: TautulliConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Tautulli from a config entry."""
     host_configuration = PyTautulliHostConfiguration(
         api_token=entry.data[CONF_API_KEY],
@@ -30,18 +28,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: TautulliConfigEntry) -> 
         host_configuration=host_configuration,
         session=async_get_clientsession(hass, entry.data[CONF_VERIFY_SSL]),
     )
-    entry.runtime_data = TautulliDataUpdateCoordinator(
-        hass, host_configuration, api_client
-    )
-    await entry.runtime_data.async_config_entry_first_refresh()
+    coordinator = TautulliDataUpdateCoordinator(hass, host_configuration, api_client)
+    await coordinator.async_config_entry_first_refresh()
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: TautulliConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        hass.data[DOMAIN].pop(entry.entry_id)
+    return unload_ok
 
 
 class TautulliEntity(CoordinatorEntity[TautulliDataUpdateCoordinator]):

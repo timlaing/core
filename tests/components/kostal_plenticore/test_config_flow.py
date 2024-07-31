@@ -1,5 +1,5 @@
 """Test the Kostal Plenticore Solar Inverter config flow."""
-
+import asyncio
 from collections.abc import Generator
 from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
@@ -9,7 +9,6 @@ import pytest
 from homeassistant import config_entries
 from homeassistant.components.kostal_plenticore.const import DOMAIN
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -25,7 +24,7 @@ def mock_apiclient() -> ApiClient:
 
 
 @pytest.fixture
-def mock_apiclient_class(mock_apiclient) -> Generator[type[ApiClient]]:
+def mock_apiclient_class(mock_apiclient) -> Generator[type[ApiClient], None, None]:
     """Return a mocked ApiClient class."""
     with patch(
         "homeassistant.components.kostal_plenticore.config_flow.ApiClient",
@@ -45,7 +44,7 @@ async def test_form_g1(
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["errors"] == {}
 
     with patch(
@@ -55,19 +54,7 @@ async def test_form_g1(
         # mock of the context manager instance
         mock_apiclient.login = AsyncMock()
         mock_apiclient.get_settings = AsyncMock(
-            return_value={
-                "scb:network": [
-                    SettingsData(
-                        min="1",
-                        max="63",
-                        default=None,
-                        access="readwrite",
-                        unit=None,
-                        id="Hostname",
-                        type="string",
-                    ),
-                ]
-            }
+            return_value={"scb:network": [SettingsData({"id": "Hostname"})]}
         )
         mock_apiclient.get_setting_values = AsyncMock(
             # G1 model has the entry id "Hostname"
@@ -92,7 +79,7 @@ async def test_form_g1(
             "scb:network", "Hostname"
         )
 
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
+    assert result2["type"] == "create_entry"
     assert result2["title"] == "scb"
     assert result2["data"] == {
         "host": "1.1.1.1",
@@ -111,7 +98,7 @@ async def test_form_g2(
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["errors"] == {}
 
     with patch(
@@ -121,19 +108,7 @@ async def test_form_g2(
         # mock of the context manager instance
         mock_apiclient.login = AsyncMock()
         mock_apiclient.get_settings = AsyncMock(
-            return_value={
-                "scb:network": [
-                    SettingsData(
-                        min="1",
-                        max="63",
-                        default=None,
-                        access="readwrite",
-                        unit=None,
-                        id="Network:Hostname",
-                        type="string",
-                    ),
-                ]
-            }
+            return_value={"scb:network": [SettingsData({"id": "Network:Hostname"})]}
         )
         mock_apiclient.get_setting_values = AsyncMock(
             # G1 model has the entry id "Hostname"
@@ -158,7 +133,7 @@ async def test_form_g2(
             "scb:network", "Network:Hostname"
         )
 
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
+    assert result2["type"] == "create_entry"
     assert result2["title"] == "scb"
     assert result2["data"] == {
         "host": "1.1.1.1",
@@ -197,7 +172,7 @@ async def test_form_invalid_auth(hass: HomeAssistant) -> None:
             },
         )
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == "form"
     assert result2["errors"] == {"password": "invalid_auth"}
 
 
@@ -213,7 +188,7 @@ async def test_form_cannot_connect(hass: HomeAssistant) -> None:
         # mock of the context manager instance
         mock_api_ctx = MagicMock()
         mock_api_ctx.login = AsyncMock(
-            side_effect=TimeoutError(),
+            side_effect=asyncio.TimeoutError(),
         )
 
         # mock of the return instance of ApiClient
@@ -231,7 +206,7 @@ async def test_form_cannot_connect(hass: HomeAssistant) -> None:
             },
         )
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == "form"
     assert result2["errors"] == {"host": "cannot_connect"}
 
 
@@ -265,7 +240,7 @@ async def test_form_unexpected_error(hass: HomeAssistant) -> None:
             },
         )
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == "form"
     assert result2["errors"] == {"base": "unknown"}
 
 
@@ -289,5 +264,5 @@ async def test_already_configured(hass: HomeAssistant) -> None:
         },
     )
 
-    assert result2["type"] is FlowResultType.ABORT
+    assert result2["type"] == "abort"
     assert result2["reason"] == "already_configured"

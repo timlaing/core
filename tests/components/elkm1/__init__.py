@@ -50,15 +50,12 @@ def _patch_elk(elk=None):
 
     @contextmanager
     def _patcher():
-        with (
-            patch(
-                "homeassistant.components.elkm1.config_flow.Elk",
-                new=_elk,
-            ),
-            patch(
-                "homeassistant.components.elkm1.config_flow.Elk",
-                new=_elk,
-            ),
+        with patch(
+            "homeassistant.components.elkm1.config_flow.Elk",
+            new=_elk,
+        ), patch(
+            "homeassistant.components.elkm1.config_flow.Elk",
+            new=_elk,
         ):
             yield
 

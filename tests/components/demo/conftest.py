@@ -1,5 +1,4 @@
 """demo conftest."""
-
 from unittest.mock import patch
 
 import pytest
@@ -22,16 +21,10 @@ async def setup_homeassistant(hass: HomeAssistant):
 
 
 @pytest.fixture
-def disable_platforms(hass: HomeAssistant) -> None:
+async def disable_platforms(hass: HomeAssistant) -> None:
     """Disable platforms to speed up tests."""
-    with (
-        patch(
-            "homeassistant.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
-            [],
-        ),
-        patch(
-            "homeassistant.components.demo.COMPONENTS_WITH_DEMO_PLATFORM",
-            [],
-        ),
+    with patch(
+        "homeassistant.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
+        [],
     ):
         yield

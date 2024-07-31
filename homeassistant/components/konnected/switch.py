@@ -1,5 +1,4 @@
 """Support for wired switches attached to a Konnected device."""
-
 import logging
 from typing import Any
 

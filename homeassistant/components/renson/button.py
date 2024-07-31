@@ -1,10 +1,9 @@
 """Renson ventilation unit buttons."""
-
 from __future__ import annotations
 
-from collections.abc import Callable
 from dataclasses import dataclass
 
+from _collections_abc import Callable
 from renson_endura_delta.renson import RensonVentilation
 
 from homeassistant.components.button import (
@@ -22,11 +21,18 @@ from .const import DOMAIN
 from .entity import RensonEntity
 
 
-@dataclass(frozen=True, kw_only=True)
-class RensonButtonEntityDescription(ButtonEntityDescription):
-    """Class describing Renson button entity."""
+@dataclass
+class RensonButtonEntityDescriptionMixin:
+    """Action function called on press."""
 
     action_fn: Callable[[RensonVentilation], None]
+
+
+@dataclass
+class RensonButtonEntityDescription(
+    ButtonEntityDescription, RensonButtonEntityDescriptionMixin
+):
+    """Class describing Renson button entity."""
 
 
 ENTITY_DESCRIPTIONS: tuple[RensonButtonEntityDescription, ...] = (
@@ -41,12 +47,6 @@ ENTITY_DESCRIPTIONS: tuple[RensonButtonEntityDescription, ...] = (
         device_class=ButtonDeviceClass.RESTART,
         entity_category=EntityCategory.CONFIG,
         action_fn=lambda api: api.restart_device(),
-    ),
-    RensonButtonEntityDescription(
-        key="reset_filter",
-        translation_key="reset_filter",
-        entity_category=EntityCategory.CONFIG,
-        action_fn=lambda api: api.reset_filter(),
     ),
 )
 

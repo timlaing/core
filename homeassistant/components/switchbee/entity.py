@@ -1,7 +1,6 @@
 """Support for SwitchBee entity."""
-
 import logging
-from typing import cast
+from typing import Generic, TypeVar, cast
 
 from switchbee import SWITCHBEE_BRAND
 from switchbee.device import DeviceType, SwitchBeeBaseDevice
@@ -12,12 +11,13 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN
 from .coordinator import SwitchBeeCoordinator
 
+_DeviceTypeT = TypeVar("_DeviceTypeT", bound=SwitchBeeBaseDevice)
+
+
 _LOGGER = logging.getLogger(__name__)
 
 
-class SwitchBeeEntity[_DeviceTypeT: SwitchBeeBaseDevice](
-    CoordinatorEntity[SwitchBeeCoordinator]
-):
+class SwitchBeeEntity(CoordinatorEntity[SwitchBeeCoordinator], Generic[_DeviceTypeT]):
     """Representation of a Switchbee entity."""
 
     _attr_has_entity_name = True
@@ -34,9 +34,7 @@ class SwitchBeeEntity[_DeviceTypeT: SwitchBeeBaseDevice](
         self._attr_unique_id = f"{coordinator.unique_id}-{device.id}"
 
 
-class SwitchBeeDeviceEntity[_DeviceTypeT: SwitchBeeBaseDevice](
-    SwitchBeeEntity[_DeviceTypeT]
-):
+class SwitchBeeDeviceEntity(SwitchBeeEntity[_DeviceTypeT]):
     """Representation of a Switchbee device entity."""
 
     def __init__(

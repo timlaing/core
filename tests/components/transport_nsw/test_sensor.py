@@ -1,5 +1,4 @@
 """The tests for the Transport NSW (AU) sensor platform."""
-
 from unittest.mock import patch
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
@@ -19,7 +18,7 @@ VALID_CONFIG = {
 
 def get_departuresMock(_stop_id, route, destination, api_key):
     """Mock TransportNSW departures loading."""
-    return {
+    data = {
         "stop_id": "209516",
         "route": "199",
         "due": 16,
@@ -28,6 +27,7 @@ def get_departuresMock(_stop_id, route, destination, api_key):
         "destination": "Palm Beach",
         "mode": "Bus",
     }
+    return data
 
 
 @patch("TransportNSW.TransportNSW.get_departures", side_effect=get_departuresMock)
@@ -49,7 +49,7 @@ async def test_transportnsw_config(mocked_get_departures, hass: HomeAssistant) -
 
 def get_departuresMock_notFound(_stop_id, route, destination, api_key):
     """Mock TransportNSW departures loading."""
-    return {
+    data = {
         "stop_id": "n/a",
         "route": "n/a",
         "due": "n/a",
@@ -58,6 +58,7 @@ def get_departuresMock_notFound(_stop_id, route, destination, api_key):
         "destination": "n/a",
         "mode": "n/a",
     }
+    return data
 
 
 @patch(

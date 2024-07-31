@@ -1,5 +1,4 @@
 """Config flow for buienradar integration."""
-
 from __future__ import annotations
 
 import copy
@@ -7,9 +6,11 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_COUNTRY_CODE, CONF_LATITUDE, CONF_LONGITUDE
+from homeassistant import config_entries
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
 from homeassistant.core import callback
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.schema_config_entry_flow import (
@@ -19,6 +20,7 @@ from homeassistant.helpers.schema_config_entry_flow import (
 )
 
 from .const import (
+    CONF_COUNTRY,
     CONF_DELTA,
     CONF_TIMEFRAME,
     DEFAULT_COUNTRY,
@@ -30,9 +32,7 @@ from .const import (
 
 OPTIONS_SCHEMA = vol.Schema(
     {
-        vol.Optional(
-            CONF_COUNTRY_CODE, default=DEFAULT_COUNTRY
-        ): selector.CountrySelector(
+        vol.Optional(CONF_COUNTRY, default=DEFAULT_COUNTRY): selector.CountrySelector(
             selector.CountrySelectorConfig(countries=SUPPORTED_COUNTRY_CODES)
         ),
         vol.Optional(CONF_DELTA, default=DEFAULT_DELTA): selector.NumberSelector(
@@ -72,7 +72,7 @@ OPTIONS_FLOW = {
 }
 
 
-class BuienradarFlowHandler(ConfigFlow, domain=DOMAIN):
+class BuienradarFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for buienradar."""
 
     VERSION = 1
@@ -87,7 +87,7 @@ class BuienradarFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow initialized by the user."""
         if user_input is not None:
             lat = user_input.get(CONF_LATITUDE)

@@ -1,19 +1,20 @@
 """Component to pressing a button as platforms."""
-
 from __future__ import annotations
 
-from datetime import timedelta
+from dataclasses import dataclass
+from datetime import datetime, timedelta
 from enum import StrEnum
-from functools import cached_property
 import logging
 from typing import final
 
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.config_validation import (  # noqa: F401
+    PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA_BASE,
+)
 from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.helpers.restore_state import RestoreEntity
@@ -22,14 +23,13 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, SERVICE_PRESS
 
-_LOGGER = logging.getLogger(__name__)
-
-ENTITY_ID_FORMAT = DOMAIN + ".{}"
-PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA
-PLATFORM_SCHEMA_BASE = cv.PLATFORM_SCHEMA_BASE
 SCAN_INTERVAL = timedelta(seconds=30)
 
+ENTITY_ID_FORMAT = DOMAIN + ".{}"
+
 MIN_TIME_BETWEEN_SCANS = timedelta(seconds=10)
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class ButtonDeviceClass(StrEnum):
@@ -73,25 +73,21 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return await component.async_unload_entry(entry)
 
 
-class ButtonEntityDescription(EntityDescription, frozen_or_thawed=True):
+@dataclass
+class ButtonEntityDescription(EntityDescription):
     """A class that describes button entities."""
 
     device_class: ButtonDeviceClass | None = None
 
 
-CACHED_PROPERTIES_WITH_ATTR_ = {
-    "device_class",
-}
-
-
-class ButtonEntity(RestoreEntity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
+class ButtonEntity(RestoreEntity):
     """Representation of a Button entity."""
 
     entity_description: ButtonEntityDescription
     _attr_should_poll = False
     _attr_device_class: ButtonDeviceClass | None
     _attr_state: None = None
-    __last_pressed_isoformat: str | None = None
+    __last_pressed: datetime | None = None
 
     def _default_to_device_class_name(self) -> bool:
         """Return True if an unnamed entity should be named by its device class.
@@ -100,7 +96,7 @@ class ButtonEntity(RestoreEntity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_
         """
         return self.device_class is not None
 
-    @cached_property
+    @property
     def device_class(self) -> ButtonDeviceClass | None:
         """Return the class of this entity."""
         if hasattr(self, "_attr_device_class"):
@@ -109,17 +105,13 @@ class ButtonEntity(RestoreEntity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_
             return self.entity_description.device_class
         return None
 
-    @cached_property
+    @property
     @final
     def state(self) -> str | None:
         """Return the entity state."""
-        return self.__last_pressed_isoformat
-
-    def __set_state(self, state: str | None) -> None:
-        """Set the entity state."""
-        # Invalidate the cache of the cached property
-        self.__dict__.pop("state", None)
-        self.__last_pressed_isoformat = state
+        if self.__last_pressed is None:
+            return None
+        return self.__last_pressed.isoformat()
 
     @final
     async def _async_press_action(self) -> None:
@@ -127,7 +119,7 @@ class ButtonEntity(RestoreEntity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_
 
         Should not be overridden, handle setting last press timestamp.
         """
-        self.__set_state(dt_util.utcnow().isoformat())
+        self.__last_pressed = dt_util.utcnow()
         self.async_write_ha_state()
         await self.async_press()
 
@@ -135,12 +127,12 @@ class ButtonEntity(RestoreEntity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_
         """Call when the button is added to hass."""
         await super().async_internal_added_to_hass()
         state = await self.async_get_last_state()
-        if state is not None and state.state not in (STATE_UNAVAILABLE, None):
-            self.__set_state(state.state)
+        if state is not None and state.state is not None:
+            self.__last_pressed = dt_util.parse_datetime(state.state)
 
     def press(self) -> None:
         """Press the button."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
     async def async_press(self) -> None:
         """Press the button."""

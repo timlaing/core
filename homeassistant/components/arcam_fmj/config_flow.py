@@ -1,5 +1,4 @@
 """Config flow to configure the Arcam FMJ component."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -9,15 +8,23 @@ from arcam.fmj.client import Client, ConnectionFailed
 from arcam.fmj.utils import get_uniqueid_from_host, get_uniqueid_from_udn
 import voluptuous as vol
 
+from homeassistant import config_entries
 from homeassistant.components import ssdp
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_HOST, CONF_PORT
+from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import DEFAULT_NAME, DEFAULT_PORT, DOMAIN
+from .const import DEFAULT_NAME, DEFAULT_PORT, DOMAIN, DOMAIN_DATA_ENTRIES
 
 
-class ArcamFmjFlowHandler(ConfigFlow, domain=DOMAIN):
+def get_entry_client(hass: HomeAssistant, entry: config_entries.ConfigEntry) -> Client:
+    """Retrieve client associated with a config entry."""
+    client: Client = hass.data[DOMAIN_DATA_ENTRIES][entry.entry_id]
+    return client
+
+
+class ArcamFmjFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle config flow."""
 
     VERSION = 1
@@ -28,7 +35,7 @@ class ArcamFmjFlowHandler(ConfigFlow, domain=DOMAIN):
         await self.async_set_unique_id(uuid)
         self._abort_if_unique_id_configured({CONF_HOST: host, CONF_PORT: port})
 
-    async def _async_check_and_create(self, host: str, port: int) -> ConfigFlowResult:
+    async def _async_check_and_create(self, host: str, port: int) -> FlowResult:
         client = Client(host, port)
         try:
             await client.start()
@@ -44,7 +51,7 @@ class ArcamFmjFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a discovered device."""
         errors: dict[str, str] = {}
 
@@ -72,7 +79,7 @@ class ArcamFmjFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle user-confirmation of discovered node."""
         context = self.context
         placeholders = {
@@ -89,9 +96,7 @@ class ArcamFmjFlowHandler(ConfigFlow, domain=DOMAIN):
             step_id="confirm", description_placeholders=placeholders
         )
 
-    async def async_step_ssdp(
-        self, discovery_info: ssdp.SsdpServiceInfo
-    ) -> ConfigFlowResult:
+    async def async_step_ssdp(self, discovery_info: ssdp.SsdpServiceInfo) -> FlowResult:
         """Handle a discovered device."""
         host = str(urlparse(discovery_info.ssdp_location).hostname)
         port = DEFAULT_PORT

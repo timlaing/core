@@ -1,5 +1,4 @@
 """Tests for the Wemo light entity via the bridge."""
-
 from unittest.mock import create_autospec
 
 import pytest
@@ -85,7 +84,7 @@ async def test_available_after_update(
     pywemo_bridge_light,
     wemo_entity,
 ) -> None:
-    """Test the availability when an On call fails and after an update."""
+    """Test the avaliability when an On call fails and after an update."""
     pywemo_bridge_light.turn_on.side_effect = pywemo.exceptions.ActionException
     pywemo_bridge_light.state["onoff"] = 1
     await entity_test_helpers.test_avaliable_after_update(

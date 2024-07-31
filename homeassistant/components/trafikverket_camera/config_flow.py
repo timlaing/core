@@ -1,61 +1,66 @@
 """Adds config flow for Trafikverket Camera integration."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
 from typing import Any
 
-from pytrafikverket.exceptions import InvalidAuthentication, NoCameraFound, UnknownError
-from pytrafikverket.models import CameraInfoModel
-from pytrafikverket.trafikverket_camera import TrafikverketCamera
+from pytrafikverket.exceptions import (
+    InvalidAuthentication,
+    MultipleCamerasFound,
+    NoCameraFound,
+    UnknownError,
+)
+from pytrafikverket.trafikverket_camera import CameraInfo, TrafikverketCamera
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY, CONF_ID, CONF_LOCATION
+from homeassistant import config_entries
+from homeassistant.const import CONF_API_KEY
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import (
-    SelectOptionDict,
-    SelectSelector,
-    SelectSelectorConfig,
-    SelectSelectorMode,
-    TextSelector,
-)
+import homeassistant.helpers.config_validation as cv
 
-from .const import DOMAIN
+from .const import CONF_LOCATION, DOMAIN
 
 
-class TVCameraConfigFlow(ConfigFlow, domain=DOMAIN):
+class TVCameraConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Trafikverket Camera integration."""
 
-    VERSION = 3
+    VERSION = 2
 
-    entry: ConfigEntry | None
-    cameras: list[CameraInfoModel]
-    api_key: str
+    entry: config_entries.ConfigEntry | None
 
     async def validate_input(
         self, sensor_api: str, location: str
-    ) -> tuple[dict[str, str], list[CameraInfoModel] | None]:
+    ) -> tuple[dict[str, str], str | None, str | None]:
         """Validate input from user input."""
         errors: dict[str, str] = {}
-        cameras: list[CameraInfoModel] | None = None
+        camera_info: CameraInfo | None = None
+        camera_location: str | None = None
+        camera_id: str | None = None
 
         web_session = async_get_clientsession(self.hass)
         camera_api = TrafikverketCamera(web_session, sensor_api)
         try:
-            cameras = await camera_api.async_get_cameras(location)
+            camera_info = await camera_api.async_get_camera(location)
         except NoCameraFound:
             errors["location"] = "invalid_location"
+        except MultipleCamerasFound:
+            errors["location"] = "more_locations"
         except InvalidAuthentication:
             errors["base"] = "invalid_auth"
         except UnknownError:
             errors["base"] = "cannot_connect"
 
-        return (errors, cameras)
+        if camera_info:
+            camera_id = camera_info.camera_id
+            if _location := camera_info.location:
+                camera_location = _location
+            else:
+                camera_location = camera_info.camera_name
 
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+        return (errors, camera_location, camera_id)
+
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Handle re-authentication with Trafikverket."""
 
         self.entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
@@ -63,7 +68,7 @@ class TVCameraConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Confirm re-authentication with Trafikverket."""
         errors: dict[str, str] = {}
 
@@ -71,7 +76,9 @@ class TVCameraConfigFlow(ConfigFlow, domain=DOMAIN):
             api_key = user_input[CONF_API_KEY]
 
             assert self.entry is not None
-            errors, _ = await self.validate_input(api_key, self.entry.data[CONF_ID])
+            errors, _, _ = await self.validate_input(
+                api_key, self.entry.data[CONF_LOCATION]
+            )
 
             if not errors:
                 self.hass.config_entries.async_update_entry(
@@ -88,7 +95,7 @@ class TVCameraConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="reauth_confirm",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_API_KEY): TextSelector(),
+                    vol.Required(CONF_API_KEY): cv.string,
                 }
             ),
             errors=errors,
@@ -96,7 +103,7 @@ class TVCameraConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, str] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         errors: dict[str, str] = {}
 
@@ -104,66 +111,29 @@ class TVCameraConfigFlow(ConfigFlow, domain=DOMAIN):
             api_key = user_input[CONF_API_KEY]
             location = user_input[CONF_LOCATION]
 
-            errors, cameras = await self.validate_input(api_key, location)
+            errors, camera_location, camera_id = await self.validate_input(
+                api_key, location
+            )
 
-            if not errors and cameras:
-                if len(cameras) > 1:
-                    self.cameras = cameras
-                    self.api_key = api_key
-                    return await self.async_step_multiple_cameras()
-                await self.async_set_unique_id(f"{DOMAIN}-{cameras[0].camera_id}")
+            if not errors:
+                assert camera_location
+                await self.async_set_unique_id(f"{DOMAIN}-{camera_id}")
                 self._abort_if_unique_id_configured()
                 return self.async_create_entry(
-                    title=cameras[0].camera_name or "Trafikverket Camera",
-                    data={CONF_API_KEY: api_key, CONF_ID: cameras[0].camera_id},
+                    title=camera_location,
+                    data={
+                        CONF_API_KEY: api_key,
+                        CONF_LOCATION: camera_location,
+                    },
                 )
 
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_API_KEY): TextSelector(),
-                    vol.Required(CONF_LOCATION): TextSelector(),
+                    vol.Required(CONF_API_KEY): cv.string,
+                    vol.Required(CONF_LOCATION): cv.string,
                 }
             ),
             errors=errors,
-        )
-
-    async def async_step_multiple_cameras(
-        self, user_input: dict[str, str] | None = None
-    ) -> ConfigFlowResult:
-        """Handle when multiple cameras."""
-
-        if user_input:
-            errors, cameras = await self.validate_input(
-                self.api_key, user_input[CONF_ID]
-            )
-
-            if not errors and cameras:
-                await self.async_set_unique_id(f"{DOMAIN}-{cameras[0].camera_id}")
-                self._abort_if_unique_id_configured()
-                return self.async_create_entry(
-                    title=cameras[0].camera_name or "Trafikverket Camera",
-                    data={CONF_API_KEY: self.api_key, CONF_ID: cameras[0].camera_id},
-                )
-
-        camera_choices = [
-            SelectOptionDict(
-                value=f"{camera_info.camera_id}",
-                label=f"{camera_info.camera_id} - {camera_info.camera_name} - {camera_info.location}",
-            )
-            for camera_info in self.cameras
-        ]
-
-        return self.async_show_form(
-            step_id="multiple_cameras",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(CONF_ID): SelectSelector(
-                        SelectSelectorConfig(
-                            options=camera_choices, mode=SelectSelectorMode.LIST
-                        )
-                    ),
-                }
-            ),
         )

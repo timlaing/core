@@ -1,5 +1,4 @@
 """Test different accessory types: Media Players."""
-
 import pytest
 
 from homeassistant.components.homekit.accessories import HomeDriver
@@ -40,15 +39,13 @@ from homeassistant.const import (
     STATE_PLAYING,
     STATE_STANDBY,
 )
-from homeassistant.core import CoreState, Event, HomeAssistant
+from homeassistant.core import CoreState, HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
 from tests.common import async_mock_service
 
 
-async def test_media_player_set_state(
-    hass: HomeAssistant, hk_driver, events: list[Event]
-) -> None:
+async def test_media_player_set_state(hass: HomeAssistant, hk_driver, events) -> None:
     """Test if accessory and HA are updated accordingly."""
     config = {
         CONF_FEATURE_LIST: {
@@ -68,7 +65,7 @@ async def test_media_player_set_state(
     )
     await hass.async_block_till_done()
     acc = MediaPlayer(hass, hk_driver, "MediaPlayer", entity_id, 2, config)
-    acc.run()
+    await acc.run()
     await hass.async_block_till_done()
 
     assert acc.aid == 2
@@ -179,10 +176,7 @@ async def test_media_player_set_state(
 
 
 async def test_media_player_television(
-    hass: HomeAssistant,
-    hk_driver,
-    events: list[Event],
-    caplog: pytest.LogCaptureFixture,
+    hass: HomeAssistant, hk_driver, events, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test if television accessory and HA are updated accordingly."""
     entity_id = "media_player.television"
@@ -202,7 +196,7 @@ async def test_media_player_television(
     )
     await hass.async_block_till_done()
     acc = TelevisionMediaPlayer(hass, hk_driver, "MediaPlayer", entity_id, 2, None)
-    acc.run()
+    await acc.run()
     await hass.async_block_till_done()
 
     assert acc.aid == 2
@@ -362,6 +356,7 @@ async def test_media_player_television(
 
     with pytest.raises(ValueError):
         acc.char_remote_key.client_update_value(20)
+        await hass.async_block_till_done()
 
     acc.char_remote_key.client_update_value(7)
     await hass.async_block_till_done()
@@ -371,7 +366,7 @@ async def test_media_player_television(
 
 
 async def test_media_player_television_basic(
-    hass: HomeAssistant, hk_driver, caplog: pytest.LogCaptureFixture
+    hass: HomeAssistant, hk_driver, events, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test if basic television accessory and HA are updated accordingly."""
     entity_id = "media_player.television"
@@ -387,7 +382,7 @@ async def test_media_player_television_basic(
     )
     await hass.async_block_till_done()
     acc = TelevisionMediaPlayer(hass, hk_driver, "MediaPlayer", entity_id, 2, None)
-    acc.run()
+    await acc.run()
     await hass.async_block_till_done()
 
     assert acc.chars_tv == [CHAR_REMOTE_KEY]
@@ -414,7 +409,7 @@ async def test_media_player_television_basic(
 
 
 async def test_media_player_television_supports_source_select_no_sources(
-    hass: HomeAssistant, hk_driver
+    hass: HomeAssistant, hk_driver, events, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test if basic tv that supports source select but is missing a source list."""
     entity_id = "media_player.television"
@@ -427,26 +422,26 @@ async def test_media_player_television_supports_source_select_no_sources(
     )
     await hass.async_block_till_done()
     acc = TelevisionMediaPlayer(hass, hk_driver, "MediaPlayer", entity_id, 2, None)
-    acc.run()
+    await acc.run()
     await hass.async_block_till_done()
 
     assert acc.support_select_source is False
 
 
-async def test_tv_restore(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, hk_driver
-) -> None:
+async def test_tv_restore(hass: HomeAssistant, hk_driver, events) -> None:
     """Test setting up an entity from state in the event registry."""
-    hass.set_state(CoreState.not_running)
+    hass.state = CoreState.not_running
 
-    entity_registry.async_get_or_create(
+    registry = er.async_get(hass)
+
+    registry.async_get_or_create(
         "media_player",
         "generic",
         "1234",
         suggested_object_id="simple",
         original_device_class=MediaPlayerDeviceClass.TV,
     )
-    entity_registry.async_get_or_create(
+    registry.async_get_or_create(
         "media_player",
         "generic",
         "9012",
@@ -487,7 +482,7 @@ async def test_tv_restore(
 
 
 async def test_media_player_television_max_sources(
-    hass: HomeAssistant, hk_driver
+    hass: HomeAssistant, hk_driver, events, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test if television accessory that reaches the maximum number of sources."""
     entity_id = "media_player.television"
@@ -505,7 +500,7 @@ async def test_media_player_television_max_sources(
     )
     await hass.async_block_till_done()
     acc = TelevisionMediaPlayer(hass, hk_driver, "MediaPlayer", entity_id, 2, None)
-    acc.run()
+    await acc.run()
     await hass.async_block_till_done()
 
     assert acc.aid == 2
@@ -546,7 +541,7 @@ async def test_media_player_television_max_sources(
 
 
 async def test_media_player_television_duplicate_sources(
-    hass: HomeAssistant, hk_driver
+    hass: HomeAssistant, hk_driver, events, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test if television accessory with duplicate sources."""
     entity_id = "media_player.television"
@@ -564,7 +559,7 @@ async def test_media_player_television_duplicate_sources(
     )
     await hass.async_block_till_done()
     acc = TelevisionMediaPlayer(hass, hk_driver, "MediaPlayer", entity_id, 2, None)
-    acc.run()
+    await acc.run()
     await hass.async_block_till_done()
 
     assert acc.aid == 2
@@ -591,7 +586,7 @@ async def test_media_player_television_duplicate_sources(
 
 
 async def test_media_player_television_unsafe_chars(
-    hass: HomeAssistant, hk_driver, events: list[Event]
+    hass: HomeAssistant, hk_driver, events, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test if television accessory with unsafe characters."""
     entity_id = "media_player.television"
@@ -609,7 +604,7 @@ async def test_media_player_television_unsafe_chars(
     )
     await hass.async_block_till_done()
     acc = TelevisionMediaPlayer(hass, hk_driver, "MediaPlayer", entity_id, 2, None)
-    acc.run()
+    await acc.run()
     await hass.async_block_till_done()
 
     assert acc.aid == 2
@@ -676,7 +671,7 @@ async def test_media_player_receiver(
     )
     await hass.async_block_till_done()
     acc = ReceiverMediaPlayer(hass, hk_driver, "MediaPlayer", entity_id, 2, None)
-    acc.run()
+    await acc.run()
     await hass.async_block_till_done()
 
     assert acc.aid == 2

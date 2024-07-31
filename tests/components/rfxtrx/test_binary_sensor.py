@@ -1,5 +1,4 @@
 """The tests for the Rfxtrx sensor platform."""
-
 import pytest
 
 from homeassistant.components.rfxtrx import DOMAIN
@@ -98,7 +97,7 @@ async def test_pt2262_unconfigured(hass: HomeAssistant, rfxtrx) -> None:
 
 @pytest.mark.parametrize(
     ("state", "event"),
-    [("on", "0b1100cd0213c7f230010f71"), ("off", "0b1100cd0213c7f230000f71")],
+    [["on", "0b1100cd0213c7f230010f71"], ["off", "0b1100cd0213c7f230000f71"]],
 )
 async def test_state_restore(hass: HomeAssistant, rfxtrx, state, event) -> None:
     """State restoration."""

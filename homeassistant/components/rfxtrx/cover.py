@@ -1,5 +1,4 @@
 """Support for RFXtrx covers."""
-
 from __future__ import annotations
 
 import logging

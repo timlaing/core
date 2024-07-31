@@ -1,5 +1,4 @@
 """Tests for the Bond cover device."""
-
 from datetime import timedelta
 
 from bond_async import Action, DeviceType
@@ -24,6 +23,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.entity_registry import EntityRegistry
 from homeassistant.util import utcnow
 
 from .common import (
@@ -72,10 +72,7 @@ def tilt_shades(name: str):
     }
 
 
-async def test_entity_registry(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-) -> None:
+async def test_entity_registry(hass: HomeAssistant) -> None:
     """Tests that the devices are registered in the entity registry."""
     await setup_platform(
         hass,
@@ -85,7 +82,8 @@ async def test_entity_registry(
         bond_device_id="test-device-id",
     )
 
-    entity = entity_registry.entities["cover.name_1"]
+    registry: EntityRegistry = er.async_get(hass)
+    entity = registry.entities["cover.name_1"]
     assert entity.unique_id == "test-hub-id_test-device-id"
 
 
@@ -265,9 +263,8 @@ async def test_set_position_cover(hass: HomeAssistant) -> None:
         bond_device_id="test-device-id",
     )
 
-    with (
-        patch_bond_action() as mock_hold,
-        patch_bond_device_state(return_value={"position": 0, "open": 1}),
+    with patch_bond_action() as mock_hold, patch_bond_device_state(
+        return_value={"position": 0, "open": 1}
     ):
         await hass.services.async_call(
             COVER_DOMAIN,
@@ -283,9 +280,8 @@ async def test_set_position_cover(hass: HomeAssistant) -> None:
     assert entity_state.state == STATE_OPEN
     assert entity_state.attributes[ATTR_CURRENT_POSITION] == 100
 
-    with (
-        patch_bond_action() as mock_hold,
-        patch_bond_device_state(return_value={"position": 100, "open": 0}),
+    with patch_bond_action() as mock_hold, patch_bond_device_state(
+        return_value={"position": 100, "open": 0}
     ):
         await hass.services.async_call(
             COVER_DOMAIN,
@@ -301,9 +297,8 @@ async def test_set_position_cover(hass: HomeAssistant) -> None:
     assert entity_state.state == STATE_CLOSED
     assert entity_state.attributes[ATTR_CURRENT_POSITION] == 0
 
-    with (
-        patch_bond_action() as mock_hold,
-        patch_bond_device_state(return_value={"position": 40, "open": 1}),
+    with patch_bond_action() as mock_hold, patch_bond_device_state(
+        return_value={"position": 40, "open": 1}
     ):
         await hass.services.async_call(
             COVER_DOMAIN,

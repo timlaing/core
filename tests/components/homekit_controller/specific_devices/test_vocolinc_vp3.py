@@ -1,7 +1,6 @@
 """Make sure that existing VOCOlinc VP3 support isn't broken."""
-
 from homeassistant.components.sensor import SensorStateClass
-from homeassistant.const import UnitOfPower
+from homeassistant.const import POWER_WATT
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
@@ -15,12 +14,10 @@ from ..common import (
 )
 
 
-async def test_vocolinc_vp3_setup(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-) -> None:
+async def test_vocolinc_vp3_setup(hass: HomeAssistant) -> None:
     """Test that a VOCOlinc VP3 can be correctly setup in HA."""
 
+    entity_registry = er.async_get(hass)
     outlet = entity_registry.async_get_or_create(
         "switch",
         "homekit_controller",
@@ -59,7 +56,7 @@ async def test_vocolinc_vp3_setup(
                     entity_id="sensor.original_vocolinc_vp3_power",
                     friendly_name="VOCOlinc-VP3-123456 Power",
                     unique_id="00:00:00:00:00:00_1_48_97",
-                    unit_of_measurement=UnitOfPower.WATT,
+                    unit_of_measurement=POWER_WATT,
                     capabilities={"state_class": SensorStateClass.MEASUREMENT},
                     state="0",
                 ),

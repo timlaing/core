@@ -1,5 +1,4 @@
 """Constants for amcrest component."""
-
 DOMAIN = "amcrest"
 DATA_AMCREST = DOMAIN
 CAMERAS = "cameras"

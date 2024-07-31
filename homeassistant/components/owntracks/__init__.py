@@ -1,11 +1,10 @@
 """Support for OwnTracks."""
-
 from collections import defaultdict
 import json
 import logging
 import re
 
-from aiohttp import web
+from aiohttp.web import json_response
 import voluptuous as vol
 
 from homeassistant.components import cloud, mqtt, webhook
@@ -153,9 +152,7 @@ async def async_connect_mqtt(hass, component):
     return True
 
 
-async def handle_webhook(
-    hass: HomeAssistant, webhook_id: str, request: web.Request
-) -> web.Response:
+async def handle_webhook(hass, webhook_id, request):
     """Handle webhook callback.
 
     iOS sets the "topic" as part of the payload.
@@ -168,7 +165,7 @@ async def handle_webhook(
         message = await request.json()
     except ValueError:
         _LOGGER.warning("Received invalid JSON from OwnTracks")
-        return web.json_response([])
+        return json_response([])
 
     # Android doesn't populate topic
     if "topic" not in message:
@@ -185,24 +182,26 @@ async def handle_webhook(
                 " set a username in Connection -> Identification"
             )
             # Keep it as a 200 response so the incorrect packet is discarded
-            return web.json_response([])
+            return json_response([])
 
     async_dispatcher_send(hass, DOMAIN, hass, context, message)
 
-    response = [
-        {
-            "_type": "location",
-            "lat": person.attributes["latitude"],
-            "lon": person.attributes["longitude"],
-            "tid": "".join(p[0] for p in person.name.split(" ")[:2]),
-            "tst": int(person.last_updated.timestamp()),
-        }
-        for person in hass.states.async_all("person")
-        if "latitude" in person.attributes and "longitude" in person.attributes
-    ]
+    response = []
+
+    for person in hass.states.async_all("person"):
+        if "latitude" in person.attributes and "longitude" in person.attributes:
+            response.append(
+                {
+                    "_type": "location",
+                    "lat": person.attributes["latitude"],
+                    "lon": person.attributes["longitude"],
+                    "tid": "".join(p[0] for p in person.name.split(" ")[:2]),
+                    "tst": int(person.last_updated.timestamp()),
+                }
+            )
 
     if message["_type"] == "encrypted" and context.secret:
-        return web.json_response(
+        return json_response(
             {
                 "_type": "encrypted",
                 "data": encrypt_message(
@@ -211,7 +210,7 @@ async def handle_webhook(
             }
         )
 
-    return web.json_response(response)
+    return json_response(response)
 
 
 class OwnTracksContext:

@@ -1,15 +1,15 @@
 """Support for DoorBird devices."""
-
 from __future__ import annotations
 
 from http import HTTPStatus
 
 from aiohttp import web
 
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.components.http import HomeAssistantView
+from homeassistant.core import HomeAssistant
 
 from .const import API_URL, DOMAIN
+from .device import async_reset_device_favorites
 from .util import get_door_station_by_token
 
 
@@ -23,14 +23,26 @@ class DoorBirdRequestView(HomeAssistantView):
 
     async def get(self, request: web.Request, event: str) -> web.Response:
         """Respond to requests from the device."""
-        hass = request.app[KEY_HASS]
+        hass: HomeAssistant = request.app["hass"]
         token: str | None = request.query.get("token")
-        if not token or not (door_station := get_door_station_by_token(hass, token)):
+        if (
+            token is None
+            or (door_station := get_door_station_by_token(hass, token)) is None
+        ):
             return web.Response(
                 status=HTTPStatus.UNAUTHORIZED, text="Invalid token provided."
             )
 
-        event_data = door_station.get_event_data(event)
+        if door_station:
+            event_data = door_station.get_event_data(event)
+        else:
+            event_data = {}
+
+        if event == "clear":
+            await async_reset_device_favorites(hass, door_station)
+            message = f"HTTP Favorites cleared for {door_station.slug}"
+            return web.Response(text=message)
+
         #
         # This integration uses a multiple different events.
         # It would be a major breaking change to change this to
@@ -39,7 +51,5 @@ class DoorBirdRequestView(HomeAssistantView):
         # Do not copy this pattern in the future
         # for any new integrations.
         #
-        event_type = f"{DOMAIN}_{event}"
-        hass.bus.async_fire(event_type, event_data)
-        async_dispatcher_send(hass, event_type)
+        hass.bus.async_fire(f"{DOMAIN}_{event}", event_data)
         return web.Response(text="OK")

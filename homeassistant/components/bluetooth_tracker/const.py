@@ -1,5 +1,4 @@
 """Constants for the Bluetooth Tracker component."""
-
 from typing import Final
 
 DOMAIN: Final = "bluetooth_tracker"

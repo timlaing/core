@@ -1,5 +1,4 @@
 """The tests for the Google Wifi platform."""
-
 from datetime import datetime, timedelta
 from http import HTTPStatus
 from unittest.mock import Mock, patch
@@ -94,8 +93,8 @@ def setup_api(hass, data, requests_mock):
             "units": desc.native_unit_of_measurement,
             "icon": desc.icon,
         }
-    for value in sensor_dict.values():
-        sensor = value["sensor"]
+    for name in sensor_dict:
+        sensor = sensor_dict[name]["sensor"]
         sensor.hass = hass
 
     return api, sensor_dict
@@ -111,9 +110,9 @@ def fake_delay(hass, ha_delay):
 def test_name(requests_mock: requests_mock.Mocker) -> None:
     """Test the name."""
     api, sensor_dict = setup_api(None, MOCK_DATA, requests_mock)
-    for value in sensor_dict.values():
-        sensor = value["sensor"]
-        test_name = value["name"]
+    for name in sensor_dict:
+        sensor = sensor_dict[name]["sensor"]
+        test_name = sensor_dict[name]["name"]
         assert test_name == sensor.name
 
 
@@ -122,17 +121,17 @@ def test_unit_of_measurement(
 ) -> None:
     """Test the unit of measurement."""
     api, sensor_dict = setup_api(hass, MOCK_DATA, requests_mock)
-    for value in sensor_dict.values():
-        sensor = value["sensor"]
-        assert value["units"] == sensor.unit_of_measurement
+    for name in sensor_dict:
+        sensor = sensor_dict[name]["sensor"]
+        assert sensor_dict[name]["units"] == sensor.unit_of_measurement
 
 
 def test_icon(requests_mock: requests_mock.Mocker) -> None:
     """Test the icon."""
     api, sensor_dict = setup_api(None, MOCK_DATA, requests_mock)
-    for value in sensor_dict.values():
-        sensor = value["sensor"]
-        assert value["icon"] == sensor.icon
+    for name in sensor_dict:
+        sensor = sensor_dict[name]["sensor"]
+        assert sensor_dict[name]["icon"] == sensor.icon
 
 
 def test_state(hass: HomeAssistant, requests_mock: requests_mock.Mocker) -> None:
@@ -140,8 +139,8 @@ def test_state(hass: HomeAssistant, requests_mock: requests_mock.Mocker) -> None
     api, sensor_dict = setup_api(hass, MOCK_DATA, requests_mock)
     now = datetime(1970, month=1, day=1)
     with patch("homeassistant.util.dt.now", return_value=now):
-        for name, value in sensor_dict.items():
-            sensor = value["sensor"]
+        for name in sensor_dict:
+            sensor = sensor_dict[name]["sensor"]
             fake_delay(hass, 2)
             sensor.update()
             if name == google_wifi.ATTR_LAST_RESTART:
@@ -159,8 +158,8 @@ def test_update_when_value_is_none(
 ) -> None:
     """Test state gets updated to unknown when sensor returns no data."""
     api, sensor_dict = setup_api(hass, None, requests_mock)
-    for value in sensor_dict.values():
-        sensor = value["sensor"]
+    for name in sensor_dict:
+        sensor = sensor_dict[name]["sensor"]
         fake_delay(hass, 2)
         sensor.update()
         assert sensor.state is None
@@ -173,8 +172,8 @@ def test_update_when_value_changed(
     api, sensor_dict = setup_api(hass, MOCK_DATA_NEXT, requests_mock)
     now = datetime(1970, month=1, day=1)
     with patch("homeassistant.util.dt.now", return_value=now):
-        for name, value in sensor_dict.items():
-            sensor = value["sensor"]
+        for name in sensor_dict:
+            sensor = sensor_dict[name]["sensor"]
             fake_delay(hass, 2)
             sensor.update()
             if name == google_wifi.ATTR_LAST_RESTART:
@@ -198,8 +197,8 @@ def test_when_api_data_missing(
     api, sensor_dict = setup_api(hass, MOCK_DATA_MISSING, requests_mock)
     now = datetime(1970, month=1, day=1)
     with patch("homeassistant.util.dt.now", return_value=now):
-        for value in sensor_dict.values():
-            sensor = value["sensor"]
+        for name in sensor_dict:
+            sensor = sensor_dict[name]["sensor"]
             fake_delay(hass, 2)
             sensor.update()
             assert sensor.state is None
@@ -214,8 +213,8 @@ def test_update_when_unavailable(
         "google_wifi.GoogleWifiAPI.update",
         side_effect=update_side_effect(hass, requests_mock),
     )
-    for value in sensor_dict.values():
-        sensor = value["sensor"]
+    for name in sensor_dict:
+        sensor = sensor_dict[name]["sensor"]
         sensor.update()
         assert sensor.state is None
 

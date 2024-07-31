@@ -1,5 +1,4 @@
 """Config flow to configure SmartThings."""
-
 from http import HTTPStatus
 import logging
 
@@ -8,7 +7,7 @@ from pysmartthings import APIResponseError, AppOAuth, SmartThings
 from pysmartthings.installedapp import format_install_url
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow
+from homeassistant import config_entries
 from homeassistant.const import CONF_ACCESS_TOKEN, CONF_CLIENT_ID, CONF_CLIENT_SECRET
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
@@ -36,7 +35,7 @@ from .smartapp import (
 _LOGGER = logging.getLogger(__name__)
 
 
-class SmartThingsFlowHandler(ConfigFlow, domain=DOMAIN):
+class SmartThingsFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle configuration of SmartThings integrations."""
 
     VERSION = 2
@@ -159,7 +158,7 @@ class SmartThingsFlowHandler(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "app_setup_error"
                 _LOGGER.exception("Unexpected error setting up the SmartApp")
             return self._show_step_pat(errors)
-        except Exception:
+        except Exception:  # pylint:disable=broad-except
             errors["base"] = "app_setup_error"
             _LOGGER.exception("Unexpected error setting up the SmartApp")
             return self._show_step_pat(errors)

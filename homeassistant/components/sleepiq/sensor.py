@@ -1,5 +1,4 @@
 """Support for SleepIQ Sensor."""
-
 from __future__ import annotations
 
 from asyncsleepiq import SleepIQBed, SleepIQSleeper

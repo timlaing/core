@@ -1,5 +1,4 @@
 """Support for NuHeat thermostats."""
-
 import logging
 from typing import Any
 
@@ -79,7 +78,6 @@ class NuHeatThermostat(CoordinatorEntity, ClimateEntity):
     _attr_has_entity_name = True
     _attr_name = None
     _attr_preset_modes = PRESET_MODES
-    _enable_turn_on_off_backwards_compatibility = False
 
     def __init__(self, coordinator, thermostat, temperature_unit):
         """Initialize the thermostat."""
@@ -253,7 +251,6 @@ class NuHeatThermostat(CoordinatorEntity, ClimateEntity):
         """Return the device_info of the device."""
         return DeviceInfo(
             identifiers={(DOMAIN, self._thermostat.serial_number)},
-            serial_number=self._thermostat.serial_number,
             name=self._thermostat.room,
             model="nVent Signature",
             manufacturer=MANUFACTURER,

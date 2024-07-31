@@ -1,5 +1,4 @@
 """The sms component."""
-
 import logging
 
 import voluptuous as vol

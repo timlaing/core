@@ -1,17 +1,16 @@
 """Support for D-Link Power Plug Switches."""
-
 from __future__ import annotations
 
 from datetime import timedelta
 from typing import Any
 
 from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import DLinkConfigEntry
-from .const import ATTR_TOTAL_CONSUMPTION
+from .const import ATTR_TOTAL_CONSUMPTION, DOMAIN
 from .entity import DLinkEntity
 
 SCAN_INTERVAL = timedelta(minutes=2)
@@ -22,12 +21,13 @@ SWITCH_TYPE = SwitchEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: DLinkConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up the D-Link Power Plug switch."""
-    async_add_entities([SmartPlugSwitch(entry, SWITCH_TYPE)], True)
+    async_add_entities(
+        [SmartPlugSwitch(entry, hass.data[DOMAIN][entry.entry_id], SWITCH_TYPE)],
+        True,
+    )
 
 
 class SmartPlugSwitch(DLinkEntity, SwitchEntity):
@@ -50,10 +50,12 @@ class SmartPlugSwitch(DLinkEntity, SwitchEntity):
         except ValueError:
             total_consumption = None
 
-        return {
+        attrs = {
             ATTR_TOTAL_CONSUMPTION: total_consumption,
             ATTR_TEMPERATURE: temperature,
         }
+
+        return attrs
 
     @property
     def is_on(self) -> bool:

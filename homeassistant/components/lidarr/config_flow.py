@@ -1,5 +1,4 @@
 """Config flow for Lidarr."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -10,12 +9,12 @@ from aiopyarr import exceptions
 from aiopyarr.lidarr_client import LidarrClient
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import ConfigEntry, ConfigFlow
 from homeassistant.const import CONF_API_KEY, CONF_URL, CONF_VERIFY_SSL
 from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from . import LidarrConfigEntry
 from .const import DEFAULT_NAME, DOMAIN
 
 
@@ -26,11 +25,9 @@ class LidarrConfigFlow(ConfigFlow, domain=DOMAIN):
 
     def __init__(self) -> None:
         """Initialize the flow."""
-        self.entry: LidarrConfigEntry | None = None
+        self.entry: ConfigEntry | None = None
 
-    async def async_step_reauth(
-        self, user_input: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, user_input: Mapping[str, Any]) -> FlowResult:
         """Handle configuration by re-auth."""
         self.entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
 
@@ -38,7 +35,7 @@ class LidarrConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, str] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Confirm reauth dialog."""
         if user_input is not None:
             return await self.async_step_user()
@@ -48,7 +45,7 @@ class LidarrConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow initiated by the user."""
         errors = {}
 

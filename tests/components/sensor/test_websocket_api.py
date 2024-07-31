@@ -1,5 +1,4 @@
 """Test the sensor websocket API."""
-
 from pytest_unordered import unordered
 
 from homeassistant.components.sensor.const import (
@@ -31,18 +30,7 @@ async def test_device_class_units(
     msg = await client.receive_json()
     assert msg["success"]
     assert msg["result"] == {
-        "units": [
-            "Beaufort",
-            "ft/s",
-            "in/d",
-            "in/h",
-            "km/h",
-            "kn",
-            "m/s",
-            "mm/d",
-            "mm/h",
-            "mph",
-        ]
+        "units": ["ft/s", "in/d", "in/h", "km/h", "kn", "m/s", "mm/d", "mm/h", "mph"]
     }
 
     # Device class with units which include `None`

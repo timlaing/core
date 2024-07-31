@@ -1,5 +1,4 @@
 """Tests for the MJPEG IP Camera integration."""
-
 from unittest.mock import AsyncMock, MagicMock
 
 from homeassistant.components.mjpeg.const import DOMAIN

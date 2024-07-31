@@ -1,5 +1,4 @@
 """The epson integration."""
-
 import logging
 
 from epson_projector import Projector

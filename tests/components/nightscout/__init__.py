@@ -1,5 +1,4 @@
 """Tests for the Nightscout integration."""
-
 import json
 from unittest.mock import patch
 
@@ -8,7 +7,6 @@ from py_nightscout.models import SGV, ServerStatus
 
 from homeassistant.components.nightscout.const import DOMAIN
 from homeassistant.const import CONF_URL
-from homeassistant.core import HomeAssistant
 
 from tests.common import MockConfigEntry
 
@@ -31,21 +29,18 @@ SERVER_STATUS_STATUS_ONLY = ServerStatus.new_from_json_dict(
 )
 
 
-async def init_integration(hass: HomeAssistant) -> MockConfigEntry:
+async def init_integration(hass) -> MockConfigEntry:
     """Set up the Nightscout integration in Home Assistant."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_URL: "https://some.url:1234"},
     )
-    with (
-        patch(
-            "homeassistant.components.nightscout.NightscoutAPI.get_sgvs",
-            return_value=GLUCOSE_READINGS,
-        ),
-        patch(
-            "homeassistant.components.nightscout.NightscoutAPI.get_server_status",
-            return_value=SERVER_STATUS,
-        ),
+    with patch(
+        "homeassistant.components.nightscout.NightscoutAPI.get_sgvs",
+        return_value=GLUCOSE_READINGS,
+    ), patch(
+        "homeassistant.components.nightscout.NightscoutAPI.get_server_status",
+        return_value=SERVER_STATUS,
     ):
         entry.add_to_hass(hass)
         await hass.config_entries.async_setup(entry.entry_id)
@@ -54,21 +49,18 @@ async def init_integration(hass: HomeAssistant) -> MockConfigEntry:
     return entry
 
 
-async def init_integration_unavailable(hass: HomeAssistant) -> MockConfigEntry:
+async def init_integration_unavailable(hass) -> MockConfigEntry:
     """Set up the Nightscout integration in Home Assistant."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_URL: "https://some.url:1234"},
     )
-    with (
-        patch(
-            "homeassistant.components.nightscout.NightscoutAPI.get_sgvs",
-            side_effect=ClientConnectionError(),
-        ),
-        patch(
-            "homeassistant.components.nightscout.NightscoutAPI.get_server_status",
-            return_value=SERVER_STATUS,
-        ),
+    with patch(
+        "homeassistant.components.nightscout.NightscoutAPI.get_sgvs",
+        side_effect=ClientConnectionError(),
+    ), patch(
+        "homeassistant.components.nightscout.NightscoutAPI.get_server_status",
+        return_value=SERVER_STATUS,
     ):
         entry.add_to_hass(hass)
         await hass.config_entries.async_setup(entry.entry_id)
@@ -77,21 +69,17 @@ async def init_integration_unavailable(hass: HomeAssistant) -> MockConfigEntry:
     return entry
 
 
-async def init_integration_empty_response(hass: HomeAssistant) -> MockConfigEntry:
+async def init_integration_empty_response(hass) -> MockConfigEntry:
     """Set up the Nightscout integration in Home Assistant."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_URL: "https://some.url:1234"},
     )
-    with (
-        patch(
-            "homeassistant.components.nightscout.NightscoutAPI.get_sgvs",
-            return_value=[],
-        ),
-        patch(
-            "homeassistant.components.nightscout.NightscoutAPI.get_server_status",
-            return_value=SERVER_STATUS,
-        ),
+    with patch(
+        "homeassistant.components.nightscout.NightscoutAPI.get_sgvs", return_value=[]
+    ), patch(
+        "homeassistant.components.nightscout.NightscoutAPI.get_server_status",
+        return_value=SERVER_STATUS,
     ):
         entry.add_to_hass(hass)
         await hass.config_entries.async_setup(entry.entry_id)

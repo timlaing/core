@@ -1,5 +1,4 @@
 """Support for Ubiquiti mFi sensors."""
-
 from __future__ import annotations
 
 import logging
@@ -9,7 +8,7 @@ import requests
 import voluptuous as vol
 
 from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
 )
@@ -45,7 +44,7 @@ SENSOR_MODELS = [
     "Input Digital",
 ]
 
-PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_HOST): cv.string,
         vol.Required(CONF_USERNAME): cv.string,

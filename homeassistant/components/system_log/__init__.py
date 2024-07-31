@@ -1,5 +1,4 @@
 """Support for system log."""
-
 from __future__ import annotations
 
 from collections import OrderedDict, deque
@@ -7,7 +6,6 @@ import logging
 import re
 import sys
 import traceback
-from types import FrameType
 from typing import Any, cast
 
 import voluptuous as vol
@@ -15,11 +13,9 @@ import voluptuous as vol
 from homeassistant import __path__ as HOMEASSISTANT_PATH
 from homeassistant.components import websocket_api
 from homeassistant.const import EVENT_HOMEASSISTANT_CLOSE
-from homeassistant.core import Event, HomeAssistant, ServiceCall, callback
+from homeassistant.core import HomeAssistant, ServiceCall, callback
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.typing import ConfigType
-
-type KeyType = tuple[str, tuple[str, int], tuple[str, int, str] | None]
 
 CONF_MAX_ENTRIES = "max_entries"
 CONF_FIRE_EVENT = "fire_event"
@@ -64,21 +60,14 @@ SERVICE_WRITE_SCHEMA = vol.Schema(
 
 
 def _figure_out_source(
-    record: logging.LogRecord,
-    paths_re: re.Pattern[str],
-    extracted_tb: list[tuple[FrameType, int]] | None = None,
+    record: logging.LogRecord, paths_re: re.Pattern
 ) -> tuple[str, int]:
     """Figure out where a log message came from."""
     # If a stack trace exists, extract file names from the entire call stack.
     # The other case is when a regular "log" is made (without an attached
     # exception). In that case, just use the file where the log was made from.
     if record.exc_info:
-        source: list[tuple[FrameType, int]] = extracted_tb or list(
-            traceback.walk_tb(record.exc_info[2])
-        )
-        stack = [
-            (tb_frame.f_code.co_filename, tb_line_no) for tb_frame, tb_line_no in source
-        ]
+        stack = [(x[0], x[1]) for x in traceback.extract_tb(record.exc_info[2])]
         for i, (filename, _) in enumerate(stack):
             # Slice the stack to the first frame that matches
             # the record pathname.
@@ -106,7 +95,7 @@ def _figure_out_source(
         # and since this code is running in the event loop, we need to avoid
         # blocking I/O.
 
-        frame = sys._getframe(4)  # noqa: SLF001
+        frame = sys._getframe(4)  # pylint: disable=protected-access
         #
         # We use _getframe with 4 to skip the following frames:
         #
@@ -152,10 +141,10 @@ def _safe_get_message(record: logging.LogRecord) -> str:
     """
     try:
         return record.getMessage()
-    except Exception as ex:  # noqa: BLE001
+    except Exception as ex:  # pylint: disable=broad-except
         try:
             return f"Bad logger message: {record.msg} ({record.args})"
-        except Exception:  # noqa: BLE001
+        except Exception:  # pylint: disable=broad-except
             return f"Bad logger message: {ex}"
 
 
@@ -175,13 +164,7 @@ class LogEntry:
         "key",
     )
 
-    def __init__(
-        self,
-        record: logging.LogRecord,
-        paths_re: re.Pattern,
-        formatter: logging.Formatter | None = None,
-        figure_out_source: bool = False,
-    ) -> None:
+    def __init__(self, record: logging.LogRecord, source: tuple[str, int]) -> None:
         """Initialize a log entry."""
         self.first_occurred = self.timestamp = record.created
         self.name = record.name
@@ -190,29 +173,18 @@ class LogEntry:
         # This must be manually tested when changing the code.
         self.message = deque([_safe_get_message(record)], maxlen=5)
         self.exception = ""
-        self.root_cause: tuple[str, int, str] | None = None
-        extracted_tb: list[tuple[FrameType, int]] | None = None
+        self.root_cause = None
         if record.exc_info:
-            if formatter and record.exc_text is None:
-                record.exc_text = formatter.formatException(record.exc_info)
-            self.exception = record.exc_text or ""
-            if extracted := list(traceback.walk_tb(record.exc_info[2])):
-                # Last line of traceback contains the root cause of the exception
-                extracted_tb = extracted
-                tb_frame, tb_line_no = extracted[-1]
-                self.root_cause = (
-                    tb_frame.f_code.co_filename,
-                    tb_line_no,
-                    tb_frame.f_code.co_name,
-                )
-        if figure_out_source:
-            self.source = _figure_out_source(record, paths_re, extracted_tb)
-        else:
-            self.source = (record.pathname, record.lineno)
+            self.exception = "".join(traceback.format_exception(*record.exc_info))
+            _, _, tb = record.exc_info
+            # Last line of traceback contains the root cause of the exception
+            if traceback.extract_tb(tb):
+                self.root_cause = str(traceback.extract_tb(tb)[-1])
+        self.source = source
         self.count = 1
-        self.key = (self.name, self.source, self.root_cause)
+        self.key = (self.name, source, self.root_cause)
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self):
         """Convert object into dict to maintain backward compatibility."""
         return {
             "name": self.name,
@@ -226,10 +198,10 @@ class LogEntry:
         }
 
 
-class DedupStore(OrderedDict[KeyType, LogEntry]):
+class DedupStore(OrderedDict):
     """Data store to hold max amount of deduped entries."""
 
-    def __init__(self, maxlen: int = 50) -> None:
+    def __init__(self, maxlen=50):
         """Initialize a new DedupStore."""
         super().__init__()
         self.maxlen = maxlen
@@ -255,7 +227,7 @@ class DedupStore(OrderedDict[KeyType, LogEntry]):
             # Removes the first record which should also be the oldest
             self.popitem(last=False)
 
-    def to_list(self) -> list[dict[str, Any]]:
+    def to_list(self):
         """Return reversed list of log entries - LIFO."""
         return [value.to_dict() for value in reversed(self.values())]
 
@@ -264,11 +236,7 @@ class LogErrorHandler(logging.Handler):
     """Log handler for error messages."""
 
     def __init__(
-        self,
-        hass: HomeAssistant,
-        maxlen: int,
-        fire_event: bool,
-        paths_re: re.Pattern[str],
+        self, hass: HomeAssistant, maxlen: int, fire_event: bool, paths_re: re.Pattern
     ) -> None:
         """Initialize a new LogErrorHandler."""
         super().__init__()
@@ -284,9 +252,7 @@ class LogErrorHandler(logging.Handler):
         default upper limit is set to 50 (older entries are discarded) but can
         be changed if needed.
         """
-        entry = LogEntry(
-            record, self.paths_re, formatter=self.formatter, figure_out_source=True
-        )
+        entry = LogEntry(record, _figure_out_source(record, self.paths_re))
         self.records.add_entry(entry)
         if self.fire_event:
             self.hass.bus.fire(EVENT_SYSTEM_LOG, entry.to_dict())
@@ -305,12 +271,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     handler = LogErrorHandler(
         hass, conf[CONF_MAX_ENTRIES], conf[CONF_FIRE_EVENT], paths_re
     )
-    handler.setLevel(logging.WARNING)
+    handler.setLevel(logging.WARN)
 
     hass.data[DOMAIN] = handler
 
     @callback
-    def _async_stop_handler(_: Event) -> None:
+    def _async_stop_handler(_) -> None:
         """Cleanup handler."""
         logging.root.removeHandler(handler)
         del hass.data[DOMAIN]
@@ -321,22 +287,23 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     websocket_api.async_register_command(hass, list_errors)
 
-    @callback
-    def _async_clear_service_handler(service: ServiceCall) -> None:
-        handler.records.clear()
-
-    @callback
-    def _async_write_service_handler(service: ServiceCall) -> None:
-        name = service.data.get(CONF_LOGGER, f"{__name__}.external")
-        logger = logging.getLogger(name)
-        level = service.data[CONF_LEVEL]
-        getattr(logger, level)(service.data[CONF_MESSAGE])
+    async def async_service_handler(service: ServiceCall) -> None:
+        """Handle logger services."""
+        if service.service == "clear":
+            handler.records.clear()
+            return
+        if service.service == "write":
+            logger = logging.getLogger(
+                service.data.get(CONF_LOGGER, f"{__name__}.external")
+            )
+            level = service.data[CONF_LEVEL]
+            getattr(logger, level)(service.data[CONF_MESSAGE])
 
     hass.services.async_register(
-        DOMAIN, SERVICE_CLEAR, _async_clear_service_handler, schema=SERVICE_CLEAR_SCHEMA
+        DOMAIN, SERVICE_CLEAR, async_service_handler, schema=SERVICE_CLEAR_SCHEMA
     )
     hass.services.async_register(
-        DOMAIN, SERVICE_WRITE, _async_write_service_handler, schema=SERVICE_WRITE_SCHEMA
+        DOMAIN, SERVICE_WRITE, async_service_handler, schema=SERVICE_WRITE_SCHEMA
     )
 
     return True

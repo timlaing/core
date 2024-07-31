@@ -1,5 +1,4 @@
 """Support for controlling Sisyphus Kinetic Art Tables."""
-
 import asyncio
 import logging
 

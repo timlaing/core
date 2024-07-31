@@ -1,5 +1,4 @@
 """Support for QVR Pro NVR software by QNAP."""
-
 import logging
 
 from pyqvrpro import Client

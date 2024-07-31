@@ -1,11 +1,10 @@
 """The tests for unifiprotect recorder."""
-
 from __future__ import annotations
 
 from datetime import datetime, timedelta
 from unittest.mock import Mock
 
-from uiprotect.data import Camera, Event, EventType, ModelType
+from pyunifiprotect.data import Camera, Event, EventType
 
 from homeassistant.components.recorder import Recorder
 from homeassistant.components.recorder.history import get_significant_states
@@ -40,7 +39,6 @@ async def test_exclude_attributes(
     )
 
     event = Event(
-        model=ModelType.EVENT,
         id="test_event_id",
         type=EventType.MOTION,
         start=fixed_now - timedelta(seconds=1),

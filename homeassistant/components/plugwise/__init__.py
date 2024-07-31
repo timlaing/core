@@ -1,5 +1,4 @@
 """Plugwise platform for Home Assistant Core."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -12,18 +11,16 @@ from homeassistant.helpers import device_registry as dr, entity_registry as er
 from .const import DOMAIN, LOGGER, PLATFORMS
 from .coordinator import PlugwiseDataUpdateCoordinator
 
-type PlugwiseConfigEntry = ConfigEntry[PlugwiseDataUpdateCoordinator]
 
-
-async def async_setup_entry(hass: HomeAssistant, entry: PlugwiseConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Plugwise components from a config entry."""
     await er.async_migrate_entries(hass, entry.entry_id, async_migrate_entity_entry)
 
-    coordinator = PlugwiseDataUpdateCoordinator(hass)
+    coordinator = PlugwiseDataUpdateCoordinator(hass, entry)
     await coordinator.async_config_entry_first_refresh()
     migrate_sensor_entities(hass, coordinator)
 
-    entry.runtime_data = coordinator
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
     device_registry = dr.async_get(hass)
     device_registry.async_get_or_create(
@@ -40,31 +37,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: PlugwiseConfigEntry) -> 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: PlugwiseConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload the Plugwise components."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        hass.data[DOMAIN].pop(entry.entry_id)
+    return unload_ok
 
 
 @callback
 def async_migrate_entity_entry(entry: er.RegistryEntry) -> dict[str, Any] | None:
     """Migrate Plugwise entity entries.
 
-    - Migrates old unique ID's from old binary_sensors and switches to the new unique ID's
+    - Migrates unique ID from old relay switches to the new unique ID
     """
-    if entry.domain == Platform.BINARY_SENSOR and entry.unique_id.endswith(
-        "-slave_boiler_state"
-    ):
-        return {
-            "new_unique_id": entry.unique_id.replace(
-                "-slave_boiler_state", "-secondary_boiler_state"
-            )
-        }
-    if entry.domain == Platform.SENSOR and entry.unique_id.endswith(
-        "-relative_humidity"
-    ):
-        return {
-            "new_unique_id": entry.unique_id.replace("-relative_humidity", "-humidity")
-        }
     if entry.domain == Platform.SWITCH and entry.unique_id.endswith("-plug"):
         return {"new_unique_id": entry.unique_id.replace("-plug", "-relay")}
 

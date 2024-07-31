@@ -1,5 +1,4 @@
 """Constants for the sma integration."""
-
 from homeassistant.const import Platform
 
 DOMAIN = "sma"

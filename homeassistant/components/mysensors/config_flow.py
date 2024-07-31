@@ -1,5 +1,4 @@
 """Config flow for MySensors."""
-
 from __future__ import annotations
 
 import os
@@ -12,20 +11,21 @@ from awesomeversion import (
 )
 import voluptuous as vol
 
+from homeassistant import config_entries
 from homeassistant.components.mqtt import (
     DOMAIN as MQTT_DOMAIN,
     valid_publish_topic,
     valid_subscribe_topic,
 )
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_DEVICE
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import callback
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.typing import VolDictType
 
 from .const import (
     CONF_BAUD_RATE,
+    CONF_DEVICE,
     CONF_GATEWAY_TYPE,
     CONF_GATEWAY_TYPE_MQTT,
     CONF_GATEWAY_TYPE_SERIAL,
@@ -64,7 +64,7 @@ def is_persistence_file(value: str) -> str:
 
 def _get_schema_common(user_input: dict[str, str]) -> dict:
     """Create a schema with options common to all gateway types."""
-    return {
+    schema = {
         vol.Required(
             CONF_VERSION,
             description={
@@ -73,6 +73,7 @@ def _get_schema_common(user_input: dict[str, str]) -> dict:
         ): str,
         vol.Optional(CONF_PERSISTENCE_FILE): str,
     }
+    return schema
 
 
 def _validate_version(version: str) -> dict[str, str]:
@@ -119,7 +120,7 @@ def _is_same_device(
     return True
 
 
-class MySensorsConfigFlowHandler(ConfigFlow, domain=DOMAIN):
+class MySensorsConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow."""
 
     def __init__(self) -> None:
@@ -128,13 +129,13 @@ class MySensorsConfigFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, str] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Create a config entry from frontend user input."""
         return await self.async_step_select_gateway_type()
 
     async def async_step_select_gateway_type(
         self, user_input: dict[str, str] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Show the select gateway type menu."""
         return self.async_show_menu(
             step_id="select_gateway_type",
@@ -143,7 +144,7 @@ class MySensorsConfigFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_gw_serial(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Create config entry for a serial gateway."""
         gw_type = self._gw_type = CONF_GATEWAY_TYPE_SERIAL
         errors: dict[str, str] = {}
@@ -154,7 +155,7 @@ class MySensorsConfigFlowHandler(ConfigFlow, domain=DOMAIN):
                 return self._async_create_entry(user_input)
 
         user_input = user_input or {}
-        schema: VolDictType = {
+        schema = {
             vol.Required(
                 CONF_DEVICE, default=user_input.get(CONF_DEVICE, "/dev/ttyACM0")
             ): str,
@@ -165,13 +166,14 @@ class MySensorsConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         }
         schema.update(_get_schema_common(user_input))
 
+        schema = vol.Schema(schema)
         return self.async_show_form(
-            step_id="gw_serial", data_schema=vol.Schema(schema), errors=errors
+            step_id="gw_serial", data_schema=schema, errors=errors
         )
 
     async def async_step_gw_tcp(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Create a config entry for a tcp gateway."""
         gw_type = self._gw_type = CONF_GATEWAY_TYPE_TCP
         errors: dict[str, str] = {}
@@ -182,7 +184,7 @@ class MySensorsConfigFlowHandler(ConfigFlow, domain=DOMAIN):
                 return self._async_create_entry(user_input)
 
         user_input = user_input or {}
-        schema: VolDictType = {
+        schema = {
             vol.Required(
                 CONF_DEVICE, default=user_input.get(CONF_DEVICE, "127.0.0.1")
             ): str,
@@ -192,9 +194,8 @@ class MySensorsConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         }
         schema.update(_get_schema_common(user_input))
 
-        return self.async_show_form(
-            step_id="gw_tcp", data_schema=vol.Schema(schema), errors=errors
-        )
+        schema = vol.Schema(schema)
+        return self.async_show_form(step_id="gw_tcp", data_schema=schema, errors=errors)
 
     def _check_topic_exists(self, topic: str) -> bool:
         for other_config in self._async_current_entries():
@@ -206,7 +207,7 @@ class MySensorsConfigFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_gw_mqtt(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Create a config entry for a mqtt gateway."""
         # Naive check that doesn't consider config entry state.
         if MQTT_DOMAIN not in self.hass.config.components:
@@ -244,7 +245,7 @@ class MySensorsConfigFlowHandler(ConfigFlow, domain=DOMAIN):
                 return self._async_create_entry(user_input)
 
         user_input = user_input or {}
-        schema: VolDictType = {
+        schema = {
             vol.Required(
                 CONF_TOPIC_IN_PREFIX, default=user_input.get(CONF_TOPIC_IN_PREFIX, "")
             ): str,
@@ -255,12 +256,13 @@ class MySensorsConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         }
         schema.update(_get_schema_common(user_input))
 
+        schema = vol.Schema(schema)
         return self.async_show_form(
-            step_id="gw_mqtt", data_schema=vol.Schema(schema), errors=errors
+            step_id="gw_mqtt", data_schema=schema, errors=errors
         )
 
     @callback
-    def _async_create_entry(self, user_input: dict[str, Any]) -> ConfigFlowResult:
+    def _async_create_entry(self, user_input: dict[str, Any]) -> FlowResult:
         """Create the config entry."""
         return self.async_create_entry(
             title=f"{user_input[CONF_DEVICE]}",
@@ -301,9 +303,9 @@ class MySensorsConfigFlowHandler(ConfigFlow, domain=DOMAIN):
             except vol.Invalid:
                 errors[CONF_PERSISTENCE_FILE] = "invalid_persistence_file"
             else:
-                real_persistence_path = user_input[CONF_PERSISTENCE_FILE] = (
-                    self._normalize_persistence_file(user_input[CONF_PERSISTENCE_FILE])
-                )
+                real_persistence_path = user_input[
+                    CONF_PERSISTENCE_FILE
+                ] = self._normalize_persistence_file(user_input[CONF_PERSISTENCE_FILE])
                 for other_entry in self._async_current_entries():
                     if CONF_PERSISTENCE_FILE not in other_entry.data:
                         continue

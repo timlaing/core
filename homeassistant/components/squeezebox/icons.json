@@ -1,8 +1,0 @@
-{
-  "services": {
-    "call_method": "mdi:console",
-    "call_query": "mdi:database",
-    "sync": "mdi:sync",
-    "unsync": "mdi:sync-off"
-  }
-}

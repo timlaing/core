@@ -1,5 +1,4 @@
 """Base entity for the LOQED integration."""
-
 from __future__ import annotations
 
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo

@@ -1,5 +1,4 @@
 """Adds config flow for SQL integration."""
-
 from __future__ import annotations
 
 import logging
@@ -7,23 +6,16 @@ from typing import Any
 
 import sqlalchemy
 from sqlalchemy.engine import Result
-from sqlalchemy.exc import MultipleResultsFound, NoSuchColumnError, SQLAlchemyError
+from sqlalchemy.exc import NoSuchColumnError, SQLAlchemyError
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
-import sqlparse
-from sqlparse.exceptions import SQLParseError
 import voluptuous as vol
 
+from homeassistant import config_entries
 from homeassistant.components.recorder import CONF_DB_URL, get_instance
 from homeassistant.components.sensor import (
     CONF_STATE_CLASS,
     SensorDeviceClass,
     SensorStateClass,
-)
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlowWithConfigEntry,
 )
 from homeassistant.const import (
     CONF_DEVICE_CLASS,
@@ -32,6 +24,7 @@ from homeassistant.const import (
     CONF_VALUE_TEMPLATE,
 )
 from homeassistant.core import callback
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 
 from .const import CONF_COLUMN_NAME, CONF_QUERY, DOMAIN
@@ -87,16 +80,11 @@ CONFIG_SCHEMA: vol.Schema = vol.Schema(
 ).extend(OPTIONS_SCHEMA.schema)
 
 
-def validate_sql_select(value: str) -> str:
+def validate_sql_select(value: str) -> str | None:
     """Validate that value is a SQL SELECT query."""
-    if len(query := sqlparse.parse(value.lstrip().lstrip(";"))) > 1:
-        raise MultipleResultsFound
-    if len(query) == 0 or (query_type := query[0].get_type()) == "UNKNOWN":
-        raise ValueError
-    if query_type != "SELECT":
-        _LOGGER.debug("The SQL query %s is of type %s", query, query_type)
-        raise SQLParseError
-    return str(query[0])
+    if not value.lstrip().lower().startswith("select"):
+        raise ValueError("Incorrect Query")
+    return value
 
 
 def validate_query(db_url: str, query: str, column: str) -> bool:
@@ -133,7 +121,7 @@ def validate_query(db_url: str, query: str, column: str) -> bool:
     return True
 
 
-class SQLConfigFlow(ConfigFlow, domain=DOMAIN):
+class SQLConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for SQL integration."""
 
     VERSION = 1
@@ -141,14 +129,14 @@ class SQLConfigFlow(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: ConfigEntry,
+        config_entry: config_entries.ConfigEntry,
     ) -> SQLOptionsFlowHandler:
         """Get the options flow for this handler."""
         return SQLOptionsFlowHandler(config_entry)
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the user step."""
         errors = {}
         description_placeholders = {}
@@ -160,7 +148,7 @@ class SQLConfigFlow(ConfigFlow, domain=DOMAIN):
             db_url_for_validation = None
 
             try:
-                query = validate_sql_select(query)
+                validate_sql_select(query)
                 db_url_for_validation = resolve_db_url(self.hass, db_url)
                 await self.hass.async_add_executor_job(
                     validate_query, db_url_for_validation, query, column
@@ -168,14 +156,9 @@ class SQLConfigFlow(ConfigFlow, domain=DOMAIN):
             except NoSuchColumnError:
                 errors["column"] = "column_invalid"
                 description_placeholders = {"column": column}
-            except MultipleResultsFound:
-                errors["query"] = "multiple_queries"
             except SQLAlchemyError:
                 errors["db_url"] = "db_url_invalid"
-            except SQLParseError:
-                errors["query"] = "query_no_read_only"
-            except ValueError as err:
-                _LOGGER.debug("Invalid query: %s", err)
+            except ValueError:
                 errors["query"] = "query_invalid"
 
             options = {
@@ -209,12 +192,12 @@ class SQLConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class SQLOptionsFlowHandler(OptionsFlowWithConfigEntry):
+class SQLOptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
     """Handle SQL options."""
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Manage SQL options."""
         errors = {}
         description_placeholders = {}
@@ -226,7 +209,7 @@ class SQLOptionsFlowHandler(OptionsFlowWithConfigEntry):
             name = self.options.get(CONF_NAME, self.config_entry.title)
 
             try:
-                query = validate_sql_select(query)
+                validate_sql_select(query)
                 db_url_for_validation = resolve_db_url(self.hass, db_url)
                 await self.hass.async_add_executor_job(
                     validate_query, db_url_for_validation, query, column
@@ -234,14 +217,9 @@ class SQLOptionsFlowHandler(OptionsFlowWithConfigEntry):
             except NoSuchColumnError:
                 errors["column"] = "column_invalid"
                 description_placeholders = {"column": column}
-            except MultipleResultsFound:
-                errors["query"] = "multiple_queries"
             except SQLAlchemyError:
                 errors["db_url"] = "db_url_invalid"
-            except SQLParseError:
-                errors["query"] = "query_no_read_only"
-            except ValueError as err:
-                _LOGGER.debug("Invalid query: %s", err)
+            except ValueError:
                 errors["query"] = "query_invalid"
             else:
                 recorder_db = get_instance(self.hass).db_url

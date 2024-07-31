@@ -1,5 +1,4 @@
 """Test reproduce state for Fan."""
-
 import pytest
 
 from homeassistant.components.fan import (

@@ -1,5 +1,4 @@
 """Adds config flow for Scrape integration."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -60,7 +59,6 @@ from homeassistant.helpers.selector import (
     TextSelectorConfig,
     TextSelectorType,
 )
-from homeassistant.helpers.trigger_template_entity import CONF_AVAILABILITY
 
 from . import COMBINED_SCHEMA
 from .const import (
@@ -106,7 +104,6 @@ SENSOR_SETUP = {
     ),
     vol.Optional(CONF_ATTRIBUTE): TextSelector(),
     vol.Optional(CONF_VALUE_TEMPLATE): TemplateSelector(),
-    vol.Optional(CONF_AVAILABILITY): TemplateSelector(),
     vol.Optional(CONF_DEVICE_CLASS): SelectSelector(
         SelectSelectorConfig(
             options=[

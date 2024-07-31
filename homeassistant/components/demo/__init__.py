@@ -1,5 +1,4 @@
 """Set up the demo environment that mimics interaction with devices."""
-
 from __future__ import annotations
 
 import asyncio
@@ -38,7 +37,6 @@ COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM = [
     Platform.LIGHT,
     Platform.LOCK,
     Platform.MEDIA_PLAYER,
-    Platform.NOTIFY,
     Platform.NUMBER,
     Platform.SELECT,
     Platform.SENSOR,
@@ -56,6 +54,7 @@ COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM = [
 COMPONENTS_WITH_DEMO_PLATFORM = [
     Platform.TTS,
     Platform.MAILBOX,
+    Platform.NOTIFY,
     Platform.IMAGE_PROCESSING,
     Platform.DEVICE_TRACKER,
 ]
@@ -65,11 +64,12 @@ CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the demo environment."""
-    hass.async_create_task(
-        hass.config_entries.flow.async_init(
-            DOMAIN, context={"source": config_entries.SOURCE_IMPORT}, data={}
+    if not hass.config_entries.async_entries(DOMAIN):
+        hass.async_create_task(
+            hass.config_entries.flow.async_init(
+                DOMAIN, context={"source": config_entries.SOURCE_IMPORT}, data={}
+            )
         )
-    )
 
     if DOMAIN not in config:
         return True

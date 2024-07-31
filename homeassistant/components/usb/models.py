@@ -1,5 +1,4 @@
 """Models helper class for the usb integration."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass

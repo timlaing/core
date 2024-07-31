@@ -1,15 +1,11 @@
 """Test cloud repairs."""
-
+from collections.abc import Generator
 from datetime import timedelta
 from http import HTTPStatus
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
-import pytest
-
-from homeassistant.components.cloud.const import DOMAIN
-from homeassistant.components.cloud.repairs import (
-    async_manage_legacy_subscription_issue,
-)
+from homeassistant.components.cloud import DOMAIN
+import homeassistant.components.cloud.repairs as cloud_repairs
 from homeassistant.components.repairs import DOMAIN as REPAIRS_DOMAIN
 from homeassistant.core import HomeAssistant
 import homeassistant.helpers.issue_registry as ir
@@ -25,9 +21,10 @@ from tests.typing import ClientSessionGenerator
 
 async def test_do_not_create_repair_issues_at_startup_if_not_logged_in(
     hass: HomeAssistant,
-    issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test that we create repair issue at startup if we are logged in."""
+    issue_registry: ir.IssueRegistry = ir.async_get(hass)
+
     with patch("homeassistant.components.cloud.Cloud.is_logged_in", False):
         await mock_cloud(hass)
 
@@ -39,13 +36,13 @@ async def test_do_not_create_repair_issues_at_startup_if_not_logged_in(
     )
 
 
-@pytest.mark.usefixtures("mock_auth")
 async def test_create_repair_issues_at_startup_if_logged_in(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
-    issue_registry: ir.IssueRegistry,
-) -> None:
+    mock_auth: Generator[None, AsyncMock, None],
+):
     """Test that we create repair issue at startup if we are logged in."""
+    issue_registry: ir.IssueRegistry = ir.async_get(hass)
     aioclient_mock.get(
         "https://accounts.nabucasa.com/payments/subscription_info",
         json={"provider": "legacy"},
@@ -64,28 +61,28 @@ async def test_create_repair_issues_at_startup_if_logged_in(
 
 async def test_legacy_subscription_delete_issue_if_no_longer_legacy(
     hass: HomeAssistant,
-    issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test that we delete the legacy subscription issue if no longer legacy."""
-    async_manage_legacy_subscription_issue(hass, {"provider": "legacy"})
+    issue_registry: ir.IssueRegistry = ir.async_get(hass)
+    cloud_repairs.async_manage_legacy_subscription_issue(hass, {"provider": "legacy"})
     assert issue_registry.async_get_issue(
         domain="cloud", issue_id="legacy_subscription"
     )
 
-    async_manage_legacy_subscription_issue(hass, {})
+    cloud_repairs.async_manage_legacy_subscription_issue(hass, {})
     assert not issue_registry.async_get_issue(
         domain="cloud", issue_id="legacy_subscription"
     )
 
 
-@pytest.mark.usefixtures("mock_auth")
 async def test_legacy_subscription_repair_flow(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
+    mock_auth: Generator[None, AsyncMock, None],
     hass_client: ClientSessionGenerator,
-    issue_registry: ir.IssueRegistry,
-) -> None:
+):
     """Test desired flow of the fix flow for legacy subscription."""
+    issue_registry: ir.IssueRegistry = ir.async_get(hass)
     aioclient_mock.get(
         "https://accounts.nabucasa.com/payments/subscription_info",
         json={"provider": None},
@@ -95,7 +92,7 @@ async def test_legacy_subscription_repair_flow(
         json={"url": "https://paypal.com"},
     )
 
-    async_manage_legacy_subscription_issue(hass, {"provider": "legacy"})
+    cloud_repairs.async_manage_legacy_subscription_issue(hass, {"provider": "legacy"})
     repair_issue = issue_registry.async_get_issue(
         domain="cloud", issue_id="legacy_subscription"
     )
@@ -151,6 +148,7 @@ async def test_legacy_subscription_repair_flow(
 
     flow_id = data["flow_id"]
     assert data == {
+        "version": 1,
         "type": "create_entry",
         "flow_id": flow_id,
         "handler": DOMAIN,
@@ -163,20 +161,21 @@ async def test_legacy_subscription_repair_flow(
     )
 
 
-@pytest.mark.usefixtures("mock_auth")
 async def test_legacy_subscription_repair_flow_timeout(
     hass: HomeAssistant,
     hass_client: ClientSessionGenerator,
+    mock_auth: Generator[None, AsyncMock, None],
     aioclient_mock: AiohttpClientMocker,
-    issue_registry: ir.IssueRegistry,
-) -> None:
+):
     """Test timeout flow of the fix flow for legacy subscription."""
     aioclient_mock.post(
         "https://accounts.nabucasa.com/payments/migrate_paypal_agreement",
         status=403,
     )
 
-    async_manage_legacy_subscription_issue(hass, {"provider": "legacy"})
+    issue_registry: ir.IssueRegistry = ir.async_get(hass)
+
+    cloud_repairs.async_manage_legacy_subscription_issue(hass, {"provider": "legacy"})
     repair_issue = issue_registry.async_get_issue(
         domain="cloud", issue_id="legacy_subscription"
     )

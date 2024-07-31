@@ -1,5 +1,4 @@
 """The tests for the geolocation component."""
-
 import pytest
 
 from homeassistant.components import geo_location

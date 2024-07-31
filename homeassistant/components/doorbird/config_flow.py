@@ -1,48 +1,24 @@
 """Config flow for DoorBird integration."""
-
 from __future__ import annotations
 
-from collections.abc import Mapping
 from http import HTTPStatus
 import logging
 from typing import Any
 
-from aiohttp import ClientResponseError
 from doorbirdpy import DoorBird
+import requests
 import voluptuous as vol
 
+from homeassistant import config_entries, core, exceptions
 from homeassistant.components import zeroconf
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlow,
-)
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.typing import VolDictType
+from homeassistant.data_entry_flow import FlowResult
 
-from .const import (
-    CONF_EVENTS,
-    DEFAULT_DOORBELL_EVENT,
-    DEFAULT_MOTION_EVENT,
-    DOMAIN,
-    DOORBIRD_OUI,
-)
+from .const import CONF_EVENTS, DOMAIN, DOORBIRD_OUI
 from .util import get_mac_address_from_door_station_info
 
 _LOGGER = logging.getLogger(__name__)
-
-DEFAULT_OPTIONS = {CONF_EVENTS: [DEFAULT_DOORBELL_EVENT, DEFAULT_MOTION_EVENT]}
-
-
-AUTH_VOL_DICT: VolDictType = {
-    vol.Required(CONF_USERNAME): str,
-    vol.Required(CONF_PASSWORD): str,
-}
-AUTH_SCHEMA = vol.Schema(AUTH_VOL_DICT)
 
 
 def _schema_with_defaults(
@@ -51,26 +27,34 @@ def _schema_with_defaults(
     return vol.Schema(
         {
             vol.Required(CONF_HOST, default=host): str,
-            **AUTH_VOL_DICT,
+            vol.Required(CONF_USERNAME): str,
+            vol.Required(CONF_PASSWORD): str,
             vol.Optional(CONF_NAME, default=name): str,
         }
     )
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, str]:
+def _check_device(device: DoorBird) -> tuple[tuple[bool, int], dict[str, Any]]:
+    """Verify we can connect to the device and return the status."""
+    return device.ready(), device.info()
+
+
+async def validate_input(
+    hass: core.HomeAssistant, data: dict[str, Any]
+) -> dict[str, str]:
     """Validate the user input allows us to connect."""
-    session = async_get_clientsession(hass)
-    device = DoorBird(
-        data[CONF_HOST], data[CONF_USERNAME], data[CONF_PASSWORD], http_session=session
-    )
+    device = DoorBird(data[CONF_HOST], data[CONF_USERNAME], data[CONF_PASSWORD])
     try:
-        info = await device.info()
-    except ClientResponseError as err:
-        if err.status == HTTPStatus.UNAUTHORIZED:
+        status, info = await hass.async_add_executor_job(_check_device, device)
+    except requests.exceptions.HTTPError as err:
+        if err.response.status_code == HTTPStatus.UNAUTHORIZED:
             raise InvalidAuth from err
         raise CannotConnect from err
     except OSError as err:
         raise CannotConnect from err
+
+    if not status[0]:
+        raise CannotConnect
 
     mac_addr = get_mac_address_from_door_station_info(info)
 
@@ -80,19 +64,18 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
 
 async def async_verify_supported_device(hass: HomeAssistant, host: str) -> bool:
     """Verify the doorbell state endpoint returns a 401."""
-    session = async_get_clientsession(hass)
-    device = DoorBird(host, "", "", http_session=session)
+    device = DoorBird(host, "", "")
     try:
-        await device.doorbell_state()
-    except ClientResponseError as err:
-        if err.status == HTTPStatus.UNAUTHORIZED:
+        await hass.async_add_executor_job(device.doorbell_state)
+    except requests.exceptions.HTTPError as err:
+        if err.response.status_code == HTTPStatus.UNAUTHORIZED:
             return True
     except OSError:
         return False
     return False
 
 
-class DoorBirdConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for DoorBird."""
 
     VERSION = 1
@@ -100,51 +83,10 @@ class DoorBirdConfigFlow(ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         """Initialize the DoorBird config flow."""
         self.discovery_schema: vol.Schema | None = None
-        self.reauth_entry: ConfigEntry | None = None
-
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
-        """Handle reauth."""
-        entry_id = self.context["entry_id"]
-        self.reauth_entry = self.hass.config_entries.async_get_entry(entry_id)
-        return await self.async_step_reauth_confirm()
-
-    async def async_step_reauth_confirm(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Handle reauth input."""
-        errors: dict[str, str] = {}
-        existing_entry = self.reauth_entry
-        assert existing_entry
-        existing_data = existing_entry.data
-        placeholders: dict[str, str] = {
-            CONF_NAME: existing_data[CONF_NAME],
-            CONF_HOST: existing_data[CONF_HOST],
-        }
-        self.context["title_placeholders"] = placeholders
-        if user_input is not None:
-            new_config = {
-                **existing_data,
-                CONF_USERNAME: user_input[CONF_USERNAME],
-                CONF_PASSWORD: user_input[CONF_PASSWORD],
-            }
-            _, errors = await self._async_validate_or_error(new_config)
-            if not errors:
-                return self.async_update_reload_and_abort(
-                    existing_entry, data=new_config
-                )
-
-        return self.async_show_form(
-            description_placeholders=placeholders,
-            step_id="reauth_confirm",
-            data_schema=AUTH_SCHEMA,
-            errors=errors,
-        )
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -152,16 +94,14 @@ class DoorBirdConfigFlow(ConfigFlow, domain=DOMAIN):
             if not errors:
                 await self.async_set_unique_id(info["mac_addr"])
                 self._abort_if_unique_id_configured()
-                return self.async_create_entry(
-                    title=info["title"], data=user_input, options=DEFAULT_OPTIONS
-                )
+                return self.async_create_entry(title=info["title"], data=user_input)
 
         data = self.discovery_schema or _schema_with_defaults()
         return self.async_show_form(step_id="user", data_schema=data, errors=errors)
 
     async def async_step_zeroconf(
         self, discovery_info: zeroconf.ZeroconfServiceInfo
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Prepare configuration for a discovered doorbird device."""
         macaddress = discovery_info.properties["macaddress"]
 
@@ -204,7 +144,7 @@ class DoorBirdConfigFlow(ConfigFlow, domain=DOMAIN):
             errors["base"] = "cannot_connect"
         except InvalidAuth:
             errors["base"] = "invalid_auth"
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             _LOGGER.exception("Unexpected exception")
             errors["base"] = "unknown"
         return info, errors
@@ -212,25 +152,26 @@ class DoorBirdConfigFlow(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: ConfigEntry,
+        config_entry: config_entries.ConfigEntry,
     ) -> OptionsFlowHandler:
         """Get the options flow for this handler."""
         return OptionsFlowHandler(config_entry)
 
 
-class OptionsFlowHandler(OptionsFlow):
+class OptionsFlowHandler(config_entries.OptionsFlow):
     """Handle a option flow for doorbird."""
 
-    def __init__(self, config_entry: ConfigEntry) -> None:
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         self.config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle options flow."""
         if user_input is not None:
             events = [event.strip() for event in user_input[CONF_EVENTS].split(",")]
+
             return self.async_create_entry(title="", data={CONF_EVENTS: events})
 
         current_events = self.config_entry.options.get(CONF_EVENTS, [])
@@ -243,9 +184,9 @@ class OptionsFlowHandler(OptionsFlow):
         return self.async_show_form(step_id="init", data_schema=options_schema)
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(exceptions.HomeAssistantError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(exceptions.HomeAssistantError):
     """Error to indicate there is invalid auth."""

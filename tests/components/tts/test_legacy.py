@@ -1,8 +1,5 @@
 """Test the legacy tts setup."""
-
 from __future__ import annotations
-
-from pathlib import Path
 
 import pytest
 
@@ -141,7 +138,7 @@ async def test_platform_setup_with_error(
 
 
 async def test_service_without_cache_config(
-    hass: HomeAssistant, mock_tts_cache_dir: Path, mock_tts
+    hass: HomeAssistant, mock_tts_cache_dir, mock_tts
 ) -> None:
     """Set up a TTS platform without cache."""
     calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
@@ -150,7 +147,6 @@ async def test_service_without_cache_config(
 
     with assert_setup_component(1, DOMAIN):
         assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
 
     await hass.services.async_call(
         DOMAIN,

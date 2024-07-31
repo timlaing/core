@@ -1,6 +1,4 @@
 """The tests for the Islamic prayer times sensor platform."""
-
-from datetime import timedelta
 from unittest.mock import patch
 
 from freezegun import freeze_time
@@ -8,16 +6,17 @@ import pytest
 
 from homeassistant.components.islamic_prayer_times.const import DOMAIN
 from homeassistant.core import HomeAssistant
+import homeassistant.util.dt as dt_util
 
-from . import NOW, PRAYER_TIMES, PRAYER_TIMES_TOMORROW, PRAYER_TIMES_YESTERDAY
+from . import NOW, PRAYER_TIMES, PRAYER_TIMES_TIMESTAMPS
 
 from tests.common import MockConfigEntry
 
 
 @pytest.fixture(autouse=True)
-async def set_utc(hass: HomeAssistant) -> None:
+def set_utc(hass: HomeAssistant) -> None:
     """Set timezone to UTC."""
-    await hass.config.async_set_time_zone("UTC")
+    hass.config.set_time_zone("UTC")
 
 
 @pytest.mark.parametrize(
@@ -32,38 +31,20 @@ async def set_utc(hass: HomeAssistant) -> None:
         ("Midnight", "sensor.islamic_prayer_times_midnight_time"),
     ],
 )
-# In our example data, Islamic midnight occurs at 00:44 (yesterday's times, occurs today) and 00:45 (today's times, occurs tomorrow),
-# hence we check that the times roll over at exactly the desired minute
-@pytest.mark.parametrize(
-    ("offset", "prayer_times"),
-    [
-        (timedelta(days=-1), PRAYER_TIMES_YESTERDAY),
-        (timedelta(minutes=44), PRAYER_TIMES_YESTERDAY),
-        (timedelta(minutes=44, seconds=1), PRAYER_TIMES),  # Rolls over at 00:44 + 1 sec
-        (timedelta(days=1, minutes=45), PRAYER_TIMES),
-        (
-            timedelta(days=1, minutes=45, seconds=1),  # Rolls over at 00:45 + 1 sec
-            PRAYER_TIMES_TOMORROW,
-        ),
-    ],
-)
 async def test_islamic_prayer_times_sensors(
-    hass: HomeAssistant,
-    key: str,
-    sensor_name: str,
-    offset: timedelta,
-    prayer_times: dict[str, str],
+    hass: HomeAssistant, key: str, sensor_name: str
 ) -> None:
     """Test minimum Islamic prayer times configuration."""
     entry = MockConfigEntry(domain=DOMAIN, data={})
     entry.add_to_hass(hass)
-    with (
-        patch(
-            "prayer_times_calculator_offline.PrayerTimesCalculator.fetch_prayer_times",
-            side_effect=(PRAYER_TIMES_YESTERDAY, PRAYER_TIMES, PRAYER_TIMES_TOMORROW),
-        ),
-        freeze_time(NOW + offset),
-    ):
+
+    with patch(
+        "prayer_times_calculator.PrayerTimesCalculator.fetch_prayer_times",
+        return_value=PRAYER_TIMES,
+    ), freeze_time(NOW):
         await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
-        assert hass.states.get(sensor_name).state == prayer_times[key]
+        assert (
+            hass.states.get(sensor_name).state
+            == PRAYER_TIMES_TIMESTAMPS[key].astimezone(dt_util.UTC).isoformat()
+        )

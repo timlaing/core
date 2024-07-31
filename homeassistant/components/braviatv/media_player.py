@@ -1,8 +1,6 @@
 """Media player support for Bravia TV integration."""
-
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Any
 
 from homeassistant.components.media_player import (
@@ -15,22 +13,22 @@ from homeassistant.components.media_player import (
     MediaType,
 )
 from homeassistant.components.media_player.browse_media import BrowseMedia
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import BraviaTVConfigEntry
-from .const import SourceType
+from .const import DOMAIN, SourceType
 from .entity import BraviaTVEntity
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: BraviaTVConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Bravia TV Media Player from a config_entry."""
 
-    coordinator = config_entry.runtime_data
+    coordinator = hass.data[DOMAIN][config_entry.entry_id]
     unique_id = config_entry.unique_id
     assert unique_id is not None
 
@@ -112,16 +110,6 @@ class BraviaTVMediaPlayer(BraviaTVEntity, MediaPlayerEntity):
     def media_duration(self) -> int | None:
         """Duration of current playing media in seconds."""
         return self.coordinator.media_duration
-
-    @property
-    def media_position(self) -> int | None:
-        """Position of current playing media in seconds."""
-        return self.coordinator.media_position
-
-    @property
-    def media_position_updated_at(self) -> datetime | None:
-        """When was the position of the current playing media valid."""
-        return self.coordinator.media_position_updated_at
 
     async def async_turn_on(self) -> None:
         """Turn the device on."""

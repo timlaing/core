@@ -1,5 +1,4 @@
 """Diagnostics support for LG webOS Smart TV."""
-
 from __future__ import annotations
 
 from typing import Any

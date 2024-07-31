@@ -1,5 +1,4 @@
 """Camera platform that has a Raspberry Pi camera."""
-
 from __future__ import annotations
 
 import logging

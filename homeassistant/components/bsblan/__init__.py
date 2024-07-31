@@ -1,8 +1,7 @@
 """The BSB-Lan integration."""
-
 import dataclasses
 
-from bsblan import BSBLAN, Device, Info, StaticState
+from bsblan import BSBLAN, Device, Info, State, StaticState
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -14,6 +13,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import CONF_PASSKEY, DOMAIN
 from .coordinator import BSBLanUpdateCoordinator
@@ -25,7 +25,7 @@ PLATFORMS = [Platform.CLIMATE]
 class HomeAssistantBSBLANData:
     """BSBLan data stored in the Home Assistant data object."""
 
-    coordinator: BSBLanUpdateCoordinator
+    coordinator: DataUpdateCoordinator[State]
     client: BSBLAN
     device: Device
     info: Info

@@ -1,5 +1,4 @@
 """DataUpdateCoordinator for the Airly integration."""
-
 from asyncio import timeout
 from datetime import timedelta
 import logging
@@ -55,7 +54,7 @@ def set_update_interval(instances_count: int, requests_remaining: int) -> timede
     return interval
 
 
-class AirlyDataUpdateCoordinator(DataUpdateCoordinator[dict[str, str | float | int]]):
+class AirlyDataUpdateCoordinator(DataUpdateCoordinator):
     """Define an object to hold Airly data."""
 
     def __init__(

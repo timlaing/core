@@ -1,5 +1,4 @@
 """Support for Genius Hub climate devices."""
-
 from __future__ import annotations
 
 from homeassistant.components.climate import (
@@ -12,9 +11,9 @@ from homeassistant.components.climate import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from . import GeniusHubConfigEntry
-from .entity import GeniusHeatingZone
+from . import DOMAIN, GeniusHeatingZone
 
 # GeniusHub Zones support: Off, Timer, Override/Boost, Footprint & Linked modes
 HA_HVAC_TO_GH = {HVACMode.OFF: "off", HVACMode.HEAT: "timer"}
@@ -26,19 +25,24 @@ GH_PRESET_TO_HA = {v: k for k, v in HA_PRESET_TO_GH.items()}
 GH_ZONES = ["radiator", "wet underfloor"]
 
 
-async def async_setup_entry(
+async def async_setup_platform(
     hass: HomeAssistant,
-    entry: GeniusHubConfigEntry,
+    config: ConfigType,
     async_add_entities: AddEntitiesCallback,
+    discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the Genius Hub climate entities."""
+    if discovery_info is None:
+        return
 
-    broker = entry.runtime_data
+    broker = hass.data[DOMAIN]["broker"]
 
     async_add_entities(
-        GeniusClimateZone(broker, z)
-        for z in broker.client.zone_objs
-        if z.data.get("type") in GH_ZONES
+        [
+            GeniusClimateZone(broker, z)
+            for z in broker.client.zone_objs
+            if z.data.get("type") in GH_ZONES
+        ]
     )
 
 
@@ -46,12 +50,8 @@ class GeniusClimateZone(GeniusHeatingZone, ClimateEntity):
     """Representation of a Genius Hub climate device."""
 
     _attr_supported_features = (
-        ClimateEntityFeature.TARGET_TEMPERATURE
-        | ClimateEntityFeature.PRESET_MODE
-        | ClimateEntityFeature.TURN_OFF
-        | ClimateEntityFeature.TURN_ON
+        ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.PRESET_MODE
     )
-    _enable_turn_on_off_backwards_compatibility = False
 
     def __init__(self, broker, zone) -> None:
         """Initialize the climate device."""

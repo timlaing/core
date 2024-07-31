@@ -1,5 +1,6 @@
 """Constants for SlimProto Player integration."""
 
+
 DOMAIN = "slimproto"
 
 DEFAULT_NAME = "SlimProto Player"

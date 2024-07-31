@@ -1,19 +1,16 @@
 """The tests for the hassio component."""
-
-from collections.abc import Generator
+import asyncio
 from http import HTTPStatus
 from unittest.mock import patch
 
 from aiohttp import StreamReader
-from aiohttp.test_utils import TestClient
 import pytest
 
-from tests.common import MockUser
 from tests.test_util.aiohttp import AiohttpClientMocker
 
 
 @pytest.fixture
-def mock_not_onboarded() -> Generator[None]:
+def mock_not_onboarded():
     """Mock that we're not onboarded."""
     with patch(
         "homeassistant.components.hassio.http.async_is_onboarded", return_value=False
@@ -22,9 +19,7 @@ def mock_not_onboarded() -> Generator[None]:
 
 
 @pytest.fixture
-def hassio_user_client(
-    hassio_client: TestClient, hass_admin_user: MockUser
-) -> TestClient:
+def hassio_user_client(hassio_client, hass_admin_user):
     """Return a Hass.io HTTP client tied to a non-admin user."""
     hass_admin_user.groups = []
     return hassio_client
@@ -39,7 +34,7 @@ def hassio_user_client(
     ],
 )
 async def test_forward_request_onboarded_user_get(
-    hassio_user_client: TestClient, aioclient_mock: AiohttpClientMocker, path: str
+    hassio_user_client, aioclient_mock: AiohttpClientMocker, path: str
 ) -> None:
     """Test fetching normal path."""
     aioclient_mock.get(f"http://127.0.0.1/{path}", text="response")
@@ -59,7 +54,7 @@ async def test_forward_request_onboarded_user_get(
 
 @pytest.mark.parametrize("method", ["POST", "PUT", "DELETE", "RANDOM"])
 async def test_forward_request_onboarded_user_unallowed_methods(
-    hassio_user_client: TestClient, aioclient_mock: AiohttpClientMocker, method: str
+    hassio_user_client, aioclient_mock: AiohttpClientMocker, method: str
 ) -> None:
     """Test fetching normal path."""
     resp = await hassio_user_client.post("/api/hassio/app/entrypoint.js")
@@ -86,7 +81,7 @@ async def test_forward_request_onboarded_user_unallowed_methods(
     ],
 )
 async def test_forward_request_onboarded_user_unallowed_paths(
-    hassio_user_client: TestClient,
+    hassio_user_client,
     aioclient_mock: AiohttpClientMocker,
     bad_path: str,
     expected_status: int,
@@ -109,7 +104,7 @@ async def test_forward_request_onboarded_user_unallowed_paths(
     ],
 )
 async def test_forward_request_onboarded_noauth_get(
-    hassio_noauth_client: TestClient, aioclient_mock: AiohttpClientMocker, path: str
+    hassio_noauth_client, aioclient_mock: AiohttpClientMocker, path: str
 ) -> None:
     """Test fetching normal path."""
     aioclient_mock.get(f"http://127.0.0.1/{path}", text="response")
@@ -129,7 +124,7 @@ async def test_forward_request_onboarded_noauth_get(
 
 @pytest.mark.parametrize("method", ["POST", "PUT", "DELETE", "RANDOM"])
 async def test_forward_request_onboarded_noauth_unallowed_methods(
-    hassio_noauth_client: TestClient, aioclient_mock: AiohttpClientMocker, method: str
+    hassio_noauth_client, aioclient_mock: AiohttpClientMocker, method: str
 ) -> None:
     """Test fetching normal path."""
     resp = await hassio_noauth_client.post("/api/hassio/app/entrypoint.js")
@@ -156,7 +151,7 @@ async def test_forward_request_onboarded_noauth_unallowed_methods(
     ],
 )
 async def test_forward_request_onboarded_noauth_unallowed_paths(
-    hassio_noauth_client: TestClient,
+    hassio_noauth_client,
     aioclient_mock: AiohttpClientMocker,
     bad_path: str,
     expected_status: int,
@@ -180,7 +175,7 @@ async def test_forward_request_onboarded_noauth_unallowed_paths(
     ],
 )
 async def test_forward_request_not_onboarded_get(
-    hassio_noauth_client: TestClient,
+    hassio_noauth_client,
     aioclient_mock: AiohttpClientMocker,
     path: str,
     authenticated: bool,
@@ -216,7 +211,7 @@ async def test_forward_request_not_onboarded_get(
     ],
 )
 async def test_forward_request_not_onboarded_post(
-    hassio_noauth_client: TestClient,
+    hassio_noauth_client,
     aioclient_mock: AiohttpClientMocker,
     path: str,
     mock_not_onboarded,
@@ -242,7 +237,7 @@ async def test_forward_request_not_onboarded_post(
 
 @pytest.mark.parametrize("method", ["POST", "PUT", "DELETE", "RANDOM"])
 async def test_forward_request_not_onboarded_unallowed_methods(
-    hassio_noauth_client: TestClient, aioclient_mock: AiohttpClientMocker, method: str
+    hassio_noauth_client, aioclient_mock: AiohttpClientMocker, method: str
 ) -> None:
     """Test fetching normal path."""
     resp = await hassio_noauth_client.post("/api/hassio/app/entrypoint.js")
@@ -269,7 +264,7 @@ async def test_forward_request_not_onboarded_unallowed_methods(
     ],
 )
 async def test_forward_request_not_onboarded_unallowed_paths(
-    hassio_noauth_client: TestClient,
+    hassio_noauth_client,
     aioclient_mock: AiohttpClientMocker,
     bad_path: str,
     expected_status: int,
@@ -298,7 +293,7 @@ async def test_forward_request_not_onboarded_unallowed_paths(
     ],
 )
 async def test_forward_request_admin_get(
-    hassio_client: TestClient,
+    hassio_client,
     aioclient_mock: AiohttpClientMocker,
     path: str,
     authenticated: bool,
@@ -333,7 +328,7 @@ async def test_forward_request_admin_get(
     ],
 )
 async def test_forward_request_admin_post(
-    hassio_client: TestClient,
+    hassio_client,
     aioclient_mock: AiohttpClientMocker,
     path: str,
 ) -> None:
@@ -358,7 +353,7 @@ async def test_forward_request_admin_post(
 
 @pytest.mark.parametrize("method", ["POST", "PUT", "DELETE", "RANDOM"])
 async def test_forward_request_admin_unallowed_methods(
-    hassio_client: TestClient, aioclient_mock: AiohttpClientMocker, method: str
+    hassio_client, aioclient_mock: AiohttpClientMocker, method: str
 ) -> None:
     """Test fetching normal path."""
     resp = await hassio_client.post("/api/hassio/app/entrypoint.js")
@@ -383,7 +378,7 @@ async def test_forward_request_admin_unallowed_methods(
     ],
 )
 async def test_forward_request_admin_unallowed_paths(
-    hassio_client: TestClient,
+    hassio_client,
     aioclient_mock: AiohttpClientMocker,
     bad_path: str,
     expected_status: int,
@@ -398,18 +393,19 @@ async def test_forward_request_admin_unallowed_paths(
 
 
 async def test_bad_gateway_when_cannot_find_supervisor(
-    hassio_client: TestClient, aioclient_mock: AiohttpClientMocker
+    hassio_client, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test we get a bad gateway error if we can't find supervisor."""
-    aioclient_mock.get("http://127.0.0.1/app/entrypoint.js", exc=TimeoutError)
+    aioclient_mock.get("http://127.0.0.1/app/entrypoint.js", exc=asyncio.TimeoutError)
 
     resp = await hassio_client.get("/api/hassio/app/entrypoint.js")
     assert resp.status == HTTPStatus.BAD_GATEWAY
 
 
 async def test_backup_upload_headers(
-    hassio_client: TestClient,
+    hassio_client,
     aioclient_mock: AiohttpClientMocker,
+    caplog: pytest.LogCaptureFixture,
     mock_not_onboarded,
 ) -> None:
     """Test that we forward the full header for backup upload."""
@@ -430,7 +426,7 @@ async def test_backup_upload_headers(
 
 
 async def test_backup_download_headers(
-    hassio_client: TestClient, aioclient_mock: AiohttpClientMocker, mock_not_onboarded
+    hassio_client, aioclient_mock: AiohttpClientMocker, mock_not_onboarded
 ) -> None:
     """Test that we forward the full header for backup download."""
     content_disposition = "attachment; filename=test.tar"
@@ -452,9 +448,7 @@ async def test_backup_download_headers(
     assert resp.headers["Content-Disposition"] == content_disposition
 
 
-async def test_stream(
-    hassio_client: TestClient, aioclient_mock: AiohttpClientMocker
-) -> None:
+async def test_stream(hassio_client, aioclient_mock: AiohttpClientMocker) -> None:
     """Verify that the request is a stream."""
     content_type = "multipart/form-data; boundary='--webkit'"
     aioclient_mock.post("http://127.0.0.1/backups/new/upload")
@@ -467,7 +461,7 @@ async def test_stream(
 
 
 async def test_simple_get_no_stream(
-    hassio_client: TestClient, aioclient_mock: AiohttpClientMocker
+    hassio_client, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Verify that a simple GET request is not a stream."""
     aioclient_mock.get("http://127.0.0.1/app/entrypoint.js")
@@ -477,7 +471,7 @@ async def test_simple_get_no_stream(
 
 
 async def test_entrypoint_cache_control(
-    hassio_client: TestClient, aioclient_mock: AiohttpClientMocker
+    hassio_client, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test that we return cache control for requests to the entrypoint only."""
     aioclient_mock.get("http://127.0.0.1/app/entrypoint.js")

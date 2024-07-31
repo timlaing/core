@@ -1,9 +1,7 @@
 """Config flow for Android TV Remote integration."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
-import logging
 from typing import Any
 
 from androidtvremote2 import (
@@ -18,27 +16,15 @@ from homeassistant.components import zeroconf
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
-    ConfigFlowResult,
     OptionsFlowWithConfigEntry,
 )
 from homeassistant.const import CONF_HOST, CONF_MAC, CONF_NAME
 from homeassistant.core import callback
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.selector import (
-    SelectOptionDict,
-    SelectSelector,
-    SelectSelectorConfig,
-    SelectSelectorMode,
-)
 
-from .const import CONF_APP_ICON, CONF_APP_NAME, CONF_APPS, CONF_ENABLE_IME, DOMAIN
+from .const import CONF_ENABLE_IME, DOMAIN
 from .helpers import create_api, get_enable_ime
-
-_LOGGER = logging.getLogger(__name__)
-
-APPS_NEW_ID = "NewApp"
-CONF_APP_DELETE = "app_delete"
-CONF_APP_ID = "app_id"
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
@@ -68,7 +54,7 @@ class AndroidTVRemoteConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -92,7 +78,7 @@ class AndroidTVRemoteConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def _async_start_pair(self) -> ConfigFlowResult:
+    async def _async_start_pair(self) -> FlowResult:
         """Start pairing with the Android TV. Navigate to the pair flow to enter the PIN shown on screen."""
         assert self.host
         self.api = create_api(self.hass, self.host, enable_ime=False)
@@ -102,7 +88,7 @@ class AndroidTVRemoteConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_pair(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the pair step."""
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -150,9 +136,8 @@ class AndroidTVRemoteConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_zeroconf(
         self, discovery_info: zeroconf.ZeroconfServiceInfo
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle zeroconf discovery."""
-        _LOGGER.debug("Android TV device found via zeroconf: %s", discovery_info)
         self.host = discovery_info.host
         self.name = discovery_info.name.removesuffix("._androidtvremote2._tcp.local.")
         self.mac = discovery_info.properties.get("bt")
@@ -162,13 +147,12 @@ class AndroidTVRemoteConfigFlow(ConfigFlow, domain=DOMAIN):
         self._abort_if_unique_id_configured(
             updates={CONF_HOST: self.host, CONF_NAME: self.name}
         )
-        _LOGGER.debug("New Android TV device found via zeroconf: %s", self.name)
         self.context.update({"title_placeholders": {CONF_NAME: self.name}})
         return await self.async_step_zeroconf_confirm()
 
     async def async_step_zeroconf_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow initiated by zeroconf."""
         if user_input is not None:
             try:
@@ -182,9 +166,7 @@ class AndroidTVRemoteConfigFlow(ConfigFlow, domain=DOMAIN):
             description_placeholders={CONF_NAME: self.name},
         )
 
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Handle configuration by re-auth."""
         self.host = entry_data[CONF_HOST]
         self.name = entry_data[CONF_NAME]
@@ -196,7 +178,7 @@ class AndroidTVRemoteConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Dialog that informs the user that reauth is required."""
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -223,108 +205,21 @@ class AndroidTVRemoteConfigFlow(ConfigFlow, domain=DOMAIN):
 class AndroidTVRemoteOptionsFlowHandler(OptionsFlowWithConfigEntry):
     """Android TV Remote options flow."""
 
-    def __init__(self, config_entry: ConfigEntry) -> None:
-        """Initialize options flow."""
-        super().__init__(config_entry)
-        self._apps: dict[str, Any] = self.options.setdefault(CONF_APPS, {})
-        self._conf_app_id: str | None = None
-
-    @callback
-    def _save_config(self, data: dict[str, Any]) -> ConfigFlowResult:
-        """Save the updated options."""
-        new_data = {k: v for k, v in data.items() if k not in [CONF_APPS]}
-        if self._apps:
-            new_data[CONF_APPS] = self._apps
-
-        return self.async_create_entry(title="", data=new_data)
-
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Manage the options."""
         if user_input is not None:
-            if sel_app := user_input.get(CONF_APPS):
-                return await self.async_step_apps(None, sel_app)
-            return self._save_config(user_input)
+            return self.async_create_entry(title="", data=user_input)
 
-        apps_list = {
-            k: f"{v[CONF_APP_NAME]} ({k})" if CONF_APP_NAME in v else k
-            for k, v in self._apps.items()
-        }
-        apps = [SelectOptionDict(value=APPS_NEW_ID, label="Add new")] + [
-            SelectOptionDict(value=k, label=v) for k, v in apps_list.items()
-        ]
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
                 {
-                    vol.Optional(CONF_APPS): SelectSelector(
-                        SelectSelectorConfig(
-                            options=apps, mode=SelectSelectorMode.DROPDOWN
-                        )
-                    ),
                     vol.Required(
                         CONF_ENABLE_IME,
                         default=get_enable_ime(self.config_entry),
                     ): bool,
                 }
             ),
-        )
-
-    async def async_step_apps(
-        self, user_input: dict[str, Any] | None = None, app_id: str | None = None
-    ) -> ConfigFlowResult:
-        """Handle options flow for apps list."""
-        if app_id is not None:
-            self._conf_app_id = app_id if app_id != APPS_NEW_ID else None
-            return self._async_apps_form(app_id)
-
-        if user_input is not None:
-            app_id = user_input.get(CONF_APP_ID, self._conf_app_id)
-            if app_id:
-                if user_input.get(CONF_APP_DELETE, False):
-                    self._apps.pop(app_id)
-                else:
-                    self._apps[app_id] = {
-                        CONF_APP_NAME: user_input.get(CONF_APP_NAME, ""),
-                        CONF_APP_ICON: user_input.get(CONF_APP_ICON, ""),
-                    }
-
-        return await self.async_step_init()
-
-    @callback
-    def _async_apps_form(self, app_id: str) -> ConfigFlowResult:
-        """Return configuration form for apps."""
-
-        app_schema = {
-            vol.Optional(
-                CONF_APP_NAME,
-                description={
-                    "suggested_value": self._apps[app_id].get(CONF_APP_NAME, "")
-                    if app_id in self._apps
-                    else ""
-                },
-            ): str,
-            vol.Optional(
-                CONF_APP_ICON,
-                description={
-                    "suggested_value": self._apps[app_id].get(CONF_APP_ICON, "")
-                    if app_id in self._apps
-                    else ""
-                },
-            ): str,
-        }
-        if app_id == APPS_NEW_ID:
-            data_schema = vol.Schema({**app_schema, vol.Optional(CONF_APP_ID): str})
-        else:
-            data_schema = vol.Schema(
-                {**app_schema, vol.Optional(CONF_APP_DELETE, default=False): bool}
-            )
-
-        return self.async_show_form(
-            step_id="apps",
-            data_schema=data_schema,
-            description_placeholders={
-                "app_id": f"`{app_id}`" if app_id != APPS_NEW_ID else "",
-            },
         )

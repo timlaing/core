@@ -1,5 +1,4 @@
 """Support for yalexs ble sensors."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -7,6 +6,7 @@ from dataclasses import dataclass
 
 from yalexs_ble import ConnectionInfo, LockInfo, LockState
 
+from homeassistant import config_entries
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -22,16 +22,23 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import YALEXSBLEConfigEntry
+from .const import DOMAIN
 from .entity import YALEXSBLEEntity
 from .models import YaleXSBLEData
 
 
-@dataclass(frozen=True, kw_only=True)
-class YaleXSBLESensorEntityDescription(SensorEntityDescription):
-    """Describes Yale Access Bluetooth sensor entity."""
+@dataclass
+class YaleXSBLERequiredKeysMixin:
+    """Mixin for required keys."""
 
     value_fn: Callable[[LockState, LockInfo, ConnectionInfo], int | float | None]
+
+
+@dataclass
+class YaleXSBLESensorEntityDescription(
+    SensorEntityDescription, YaleXSBLERequiredKeysMixin
+):
+    """Describes Yale Access Bluetooth sensor entity."""
 
 
 SENSORS: tuple[YaleXSBLESensorEntityDescription, ...] = (
@@ -74,11 +81,11 @@ SENSORS: tuple[YaleXSBLESensorEntityDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: YALEXSBLEConfigEntry,
+    entry: config_entries.ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up YALE XS Bluetooth sensors."""
-    data = entry.runtime_data
+    data: YaleXSBLEData = hass.data[DOMAIN][entry.entry_id]
     async_add_entities(YaleXSBLESensor(description, data) for description in SENSORS)
 
 

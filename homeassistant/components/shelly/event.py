@@ -1,5 +1,4 @@
 """Event for Shelly."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -7,7 +6,6 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Final
 
 from aioshelly.block_device import Block
-from aioshelly.const import MODEL_I3, RPC_GENERATIONS
 
 from homeassistant.components.event import (
     DOMAIN as EVENT_DOMAIN,
@@ -15,6 +13,7 @@ from homeassistant.components.event import (
     EventEntity,
     EventEntityDescription,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -25,7 +24,7 @@ from .const import (
     RPC_INPUTS_EVENTS_TYPES,
     SHIX3_1_INPUTS_EVENTS_TYPES,
 )
-from .coordinator import ShellyBlockCoordinator, ShellyConfigEntry, ShellyRpcCoordinator
+from .coordinator import ShellyBlockCoordinator, ShellyRpcCoordinator, get_entry_data
 from .entity import ShellyBlockEntity
 from .utils import (
     async_remove_shelly_entity,
@@ -37,14 +36,14 @@ from .utils import (
 )
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass
 class ShellyBlockEventDescription(EventEntityDescription):
     """Class to describe Shelly event."""
 
     removal_condition: Callable[[dict, Block], bool] | None = None
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass
 class ShellyRpcEventDescription(EventEntityDescription):
     """Class to describe Shelly event."""
 
@@ -72,7 +71,7 @@ RPC_EVENT: Final = ShellyRpcEventDescription(
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ShellyConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up sensors for device."""
@@ -80,8 +79,8 @@ async def async_setup_entry(
 
     coordinator: ShellyRpcCoordinator | ShellyBlockCoordinator | None = None
 
-    if get_device_entry_gen(config_entry) in RPC_GENERATIONS:
-        coordinator = config_entry.runtime_data.rpc
+    if get_device_entry_gen(config_entry) == 2:
+        coordinator = get_entry_data(hass)[config_entry.entry_id].rpc
         if TYPE_CHECKING:
             assert coordinator
 
@@ -96,7 +95,7 @@ async def async_setup_entry(
             else:
                 entities.append(ShellyRpcEvent(coordinator, key, RPC_EVENT))
     else:
-        coordinator = config_entry.runtime_data.block
+        coordinator = get_entry_data(hass)[config_entry.entry_id].block
         if TYPE_CHECKING:
             assert coordinator
             assert coordinator.device.blocks
@@ -136,7 +135,7 @@ class ShellyBlockEvent(ShellyBlockEntity, EventEntity):
         self.channel = channel = int(block.channel or 0) + 1
         self._attr_unique_id = f"{super().unique_id}-{channel}"
 
-        if coordinator.model == MODEL_I3:
+        if coordinator.model == "SHIX3-1":
             self._attr_event_types = list(SHIX3_1_INPUTS_EVENTS_TYPES)
         else:
             self._attr_event_types = list(BASIC_INPUTS_EVENTS_TYPES)

@@ -1,5 +1,4 @@
 """Support for Firmata switch output."""
-
 import logging
 from typing import Any
 

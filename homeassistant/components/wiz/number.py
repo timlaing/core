@@ -1,5 +1,4 @@
 """Support for WiZ effect speed numbers."""
-
 from __future__ import annotations
 
 from collections.abc import Callable, Coroutine
@@ -13,22 +12,30 @@ from homeassistant.components.number import (
     NumberEntityDescription,
     NumberMode,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import WizConfigEntry
+from .const import DOMAIN
 from .entity import WizEntity
 from .models import WizData
 
 
-@dataclass(frozen=True, kw_only=True)
-class WizNumberEntityDescription(NumberEntityDescription):
-    """Class to describe a WiZ number entity."""
+@dataclass
+class WizNumberEntityDescriptionMixin:
+    """Mixin to describe a WiZ number entity."""
 
-    required_feature: str
-    set_value_fn: Callable[[wizlight, int], Coroutine[None, None, None]]
     value_fn: Callable[[wizlight], int | None]
+    set_value_fn: Callable[[wizlight, int], Coroutine[None, None, None]]
+    required_feature: str
+
+
+@dataclass
+class WizNumberEntityDescription(
+    NumberEntityDescription, WizNumberEntityDescriptionMixin
+):
+    """Class to describe a WiZ number entity."""
 
 
 async def _async_set_speed(device: wizlight, speed: int) -> None:
@@ -46,6 +53,7 @@ NUMBERS: tuple[WizNumberEntityDescription, ...] = (
         native_min_value=10,
         native_max_value=200,
         native_step=1,
+        icon="mdi:speedometer",
         value_fn=lambda device: cast(int | None, device.state.get_speed()),
         set_value_fn=_async_set_speed,
         required_feature="effect",
@@ -57,6 +65,7 @@ NUMBERS: tuple[WizNumberEntityDescription, ...] = (
         native_min_value=0,
         native_max_value=100,
         native_step=1,
+        icon="mdi:floor-lamp-dual",
         value_fn=lambda device: cast(int | None, device.state.get_ratio()),
         set_value_fn=_async_set_ratio,
         required_feature="dual_head",
@@ -67,16 +76,15 @@ NUMBERS: tuple[WizNumberEntityDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: WizConfigEntry,
+    entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the wiz speed number."""
+    wiz_data: WizData = hass.data[DOMAIN][entry.entry_id]
     async_add_entities(
-        WizSpeedNumber(entry.runtime_data, entry.title, description)
+        WizSpeedNumber(wiz_data, entry.title, description)
         for description in NUMBERS
-        if getattr(
-            entry.runtime_data.bulb.bulbtype.features, description.required_feature
-        )
+        if getattr(wiz_data.bulb.bulbtype.features, description.required_feature)
     )
 
 

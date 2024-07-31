@@ -1,5 +1,4 @@
 """The PEGELONLINE component."""
-
 from __future__ import annotations
 
 import logging
@@ -11,17 +10,15 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import CONF_STATION
+from .const import CONF_STATION, DOMAIN
 from .coordinator import PegelOnlineDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = [Platform.SENSOR]
 
-type PegelOnlineConfigEntry = ConfigEntry[PegelOnlineDataUpdateCoordinator]
 
-
-async def async_setup_entry(hass: HomeAssistant, entry: PegelOnlineConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up PEGELONLINE entry."""
     station_uuid = entry.data[CONF_STATION]
 
@@ -34,7 +31,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: PegelOnlineConfigEntry) 
 
     await coordinator.async_config_entry_first_refresh()
 
-    entry.runtime_data = coordinator
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN][entry.entry_id] = coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -43,4 +41,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: PegelOnlineConfigEntry) 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload PEGELONLINE entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        hass.data[DOMAIN].pop(entry.entry_id)
+    return unload_ok

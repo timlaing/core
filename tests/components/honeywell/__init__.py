@@ -1,5 +1,4 @@
 """Tests for honeywell component."""
-
 from unittest.mock import MagicMock
 
 from homeassistant.core import HomeAssistant

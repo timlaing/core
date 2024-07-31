@@ -1,5 +1,4 @@
 """Constants for the Stookwijzer integration."""
-
 from enum import StrEnum
 import logging
 from typing import Final

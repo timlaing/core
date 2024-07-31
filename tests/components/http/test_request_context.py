@@ -1,5 +1,4 @@
 """Test request context middleware."""
-
 from contextvars import ContextVar
 from http import HTTPStatus
 

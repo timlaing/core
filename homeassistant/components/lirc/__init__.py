@@ -1,5 +1,4 @@
 """Support for LIRC devices."""
-
 import logging
 import threading
 import time

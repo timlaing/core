@@ -2,7 +2,8 @@
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant import config_entries
+from homeassistant.data_entry_flow import FlowResult
 
 from .const import CONF_SERIAL_PORT, DEFAULT_TITLE, DOMAIN
 
@@ -13,14 +14,14 @@ DATA_SCHEMA = vol.Schema(
 )
 
 
-class EDL21ConfigFlow(ConfigFlow, domain=DOMAIN):
+class EDL21ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """EDL21 config flow."""
 
     VERSION = 1
 
     async def async_step_user(
         self, user_input: dict[str, str] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the user setup step."""
         if user_input is not None:
             self._async_abort_entries_match(

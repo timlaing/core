@@ -1,5 +1,4 @@
 """Test WattTime diagnostics."""
-
 from syrupy import SnapshotAssertion
 from syrupy.filters import props
 
@@ -19,4 +18,4 @@ async def test_entry_diagnostics(
     """Test config entry diagnostics."""
     assert await get_diagnostics_for_config_entry(
         hass, hass_client, config_entry
-    ) == snapshot(exclude=props("entry_id", "created_at", "modified_at"))
+    ) == snapshot(exclude=props("entry_id"))

@@ -1,5 +1,4 @@
 """Support for Goal Zero Yeti Sensors."""
-
 from __future__ import annotations
 
 from typing import cast
@@ -10,6 +9,7 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     PERCENTAGE,
     SIGNAL_STRENGTH_DECIBELS,
@@ -25,7 +25,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 
-from .coordinator import GoalZeroConfigEntry
+from .const import DOMAIN
 from .entity import GoalZeroEntity
 
 SENSOR_TYPES: tuple[SensorEntityDescription, ...] = (
@@ -129,13 +129,15 @@ SENSOR_TYPES: tuple[SensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: GoalZeroConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up the Goal Zero Yeti sensor."""
     async_add_entities(
-        GoalZeroSensor(entry.runtime_data, description) for description in SENSOR_TYPES
+        GoalZeroSensor(
+            hass.data[DOMAIN][entry.entry_id],
+            description,
+        )
+        for description in SENSOR_TYPES
     )
 
 

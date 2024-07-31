@@ -1,5 +1,4 @@
 """Support for WeMo humidifier."""
-
 from __future__ import annotations
 
 from datetime import timedelta
@@ -14,17 +13,16 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import VolDictType
 from homeassistant.util.percentage import (
+    int_states_in_range,
     percentage_to_ranged_value,
     ranged_value_to_percentage,
 )
-from homeassistant.util.scaling import int_states_in_range
 
 from . import async_wemo_dispatcher_connect
 from .const import SERVICE_RESET_FILTER_LIFE, SERVICE_SET_HUMIDITY
-from .coordinator import DeviceCoordinator
 from .entity import WemoBinaryStateEntity
+from .wemo_device import DeviceCoordinator
 
 SCAN_INTERVAL = timedelta(seconds=10)
 PARALLEL_UPDATES = 0
@@ -38,7 +36,7 @@ ATTR_WATER_LEVEL = "water_level"
 
 SPEED_RANGE = (FanMode.Minimum, FanMode.Maximum)  # off is not included
 
-SET_HUMIDITY_SCHEMA: VolDictType = {
+SET_HUMIDITY_SCHEMA = {
     vol.Required(ATTR_TARGET_HUMIDITY): vol.All(
         vol.Coerce(float), vol.Range(min=0, max=100)
     ),
@@ -74,14 +72,9 @@ async def async_setup_entry(
 class WemoHumidifier(WemoBinaryStateEntity, FanEntity):
     """Representation of a WeMo humidifier."""
 
-    _attr_supported_features = (
-        FanEntityFeature.SET_SPEED
-        | FanEntityFeature.TURN_OFF
-        | FanEntityFeature.TURN_ON
-    )
+    _attr_supported_features = FanEntityFeature.SET_SPEED
     wemo: Humidifier
     _last_fan_on_mode: FanMode
-    _enable_turn_on_off_backwards_compatibility = False
 
     def __init__(self, coordinator: DeviceCoordinator) -> None:
         """Initialize the WeMo switch."""

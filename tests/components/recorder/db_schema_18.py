@@ -68,7 +68,7 @@ DATETIME_TYPE = DateTime(timezone=True).with_variant(
 )
 
 
-class Events(Base):  # type: ignore[valid-type,misc]
+class Events(Base):  # type: ignore
     """Event history data."""
 
     __table_args__ = (
@@ -131,7 +131,7 @@ class Events(Base):  # type: ignore[valid-type,misc]
             return None
 
 
-class States(Base):  # type: ignore[valid-type,misc]
+class States(Base):  # type: ignore
     """State change history."""
 
     __table_args__ = (
@@ -211,7 +211,7 @@ class States(Base):  # type: ignore[valid-type,misc]
             return None
 
 
-class Statistics(Base):  # type: ignore[valid-type,misc]
+class Statistics(Base):  # type: ignore
     """Statistics."""
 
     __table_args__ = (
@@ -244,7 +244,7 @@ class Statistics(Base):  # type: ignore[valid-type,misc]
         )
 
 
-class StatisticsMeta(Base):  # type: ignore[valid-type,misc]
+class StatisticsMeta(Base):  # type: ignore
     """Statistics meta data."""
 
     __tablename__ = TABLE_STATISTICS_META
@@ -267,7 +267,7 @@ class StatisticsMeta(Base):  # type: ignore[valid-type,misc]
         )
 
 
-class RecorderRuns(Base):  # type: ignore[valid-type,misc]
+class RecorderRuns(Base):  # type: ignore
     """Representation of recorder run."""
 
     __table_args__ = (Index("ix_recorder_runs_start_end", "start", "end"),)
@@ -317,7 +317,7 @@ class RecorderRuns(Base):  # type: ignore[valid-type,misc]
         return self
 
 
-class SchemaChanges(Base):  # type: ignore[valid-type,misc]
+class SchemaChanges(Base):  # type: ignore
     """Representation of schema version changes."""
 
     __tablename__ = TABLE_SCHEMA_CHANGES
@@ -379,7 +379,7 @@ class LazyState(State):
         self._last_updated = None
         self._context = None
 
-    @property
+    @property  # type: ignore
     def attributes(self):
         """State attributes."""
         if not self._attributes:
@@ -396,7 +396,7 @@ class LazyState(State):
         """Set attributes."""
         self._attributes = value
 
-    @property
+    @property  # type: ignore
     def context(self):
         """State context."""
         if not self._context:
@@ -408,7 +408,7 @@ class LazyState(State):
         """Set context."""
         self._context = value
 
-    @property
+    @property  # type: ignore
     def last_changed(self):
         """Last changed datetime."""
         if not self._last_changed:
@@ -420,7 +420,7 @@ class LazyState(State):
         """Set last changed datetime."""
         self._last_changed = value
 
-    @property
+    @property  # type: ignore
     def last_updated(self):
         """Last updated datetime."""
         if not self._last_updated:

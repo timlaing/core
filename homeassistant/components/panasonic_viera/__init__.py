@@ -1,18 +1,21 @@
 """The Panasonic Viera integration."""
-
-from collections.abc import Callable
 from functools import partial
 import logging
-from typing import Any
 from urllib.error import HTTPError, URLError
 
 from panasonic_viera import EncryptionRequired, Keys, RemoteControl, SOAPError
 import voluptuous as vol
 
-from homeassistant.components.media_player import MediaPlayerState, MediaType
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, Platform
-from homeassistant.core import Context, HomeAssistant
+from homeassistant.const import (
+    CONF_HOST,
+    CONF_NAME,
+    CONF_PORT,
+    STATE_OFF,
+    STATE_ON,
+    Platform,
+)
+from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.script import Script
 from homeassistant.helpers.typing import ConfigType
@@ -128,13 +131,13 @@ class Remote:
 
     def __init__(
         self,
-        hass: HomeAssistant,
-        host: str,
-        port: int,
-        on_action: Script | None = None,
-        app_id: str | None = None,
-        encryption_key: str | None = None,
-    ) -> None:
+        hass,
+        host,
+        port,
+        on_action=None,
+        app_id=None,
+        encryption_key=None,
+    ):
         """Initialize the Remote class."""
         self._hass = hass
 
@@ -146,14 +149,15 @@ class Remote:
         self._app_id = app_id
         self._encryption_key = encryption_key
 
-        self._control: RemoteControl | None = None
-        self.state: MediaPlayerState | None = None
-        self.available: bool = False
-        self.volume: float = 0
-        self.muted: bool = False
-        self.playing: bool = True
+        self.state = None
+        self.available = False
+        self.volume = 0
+        self.muted = False
+        self.playing = True
 
-    async def async_create_remote_control(self, during_setup: bool = False) -> None:
+        self._control = None
+
+    async def async_create_remote_control(self, during_setup=False):
         """Create remote control."""
         try:
             params = {}
@@ -170,15 +174,15 @@ class Remote:
         except (URLError, SOAPError, OSError) as err:
             _LOGGER.debug("Could not establish remote connection: %s", err)
             self._control = None
-            self.state = MediaPlayerState.OFF
+            self.state = STATE_OFF
             self.available = self._on_action is not None
-        except Exception:
-            _LOGGER.exception("An unknown error occurred")
+        except Exception as err:  # pylint: disable=broad-except
+            _LOGGER.exception("An unknown error occurred: %s", err)
             self._control = None
-            self.state = MediaPlayerState.OFF
+            self.state = STATE_OFF
             self.available = self._on_action is not None
 
-    async def async_update(self) -> None:
+    async def async_update(self):
         """Update device data."""
         if self._control is None:
             await self.async_create_remote_control()
@@ -186,56 +190,51 @@ class Remote:
 
         await self._handle_errors(self._update)
 
-    def _update(self) -> None:
+    def _update(self):
         """Retrieve the latest data."""
-        assert self._control is not None
         self.muted = self._control.get_mute()
         self.volume = self._control.get_volume() / 100
 
-    async def async_send_key(self, key: Keys | str) -> None:
+    async def async_send_key(self, key):
         """Send a key to the TV and handle exceptions."""
         try:
-            key = getattr(Keys, key.upper())
+            key = getattr(Keys, key)
         except (AttributeError, TypeError):
             key = getattr(key, "value", key)
 
-        assert self._control is not None
         await self._handle_errors(self._control.send_key, key)
 
-    async def async_turn_on(self, context: Context | None) -> None:
+    async def async_turn_on(self, context):
         """Turn on the TV."""
         if self._on_action is not None:
             await self._on_action.async_run(context=context)
             await self.async_update()
-        elif self.state is not MediaPlayerState.ON:
-            await self.async_send_key(Keys.POWER)
+        elif self.state != STATE_ON:
+            await self.async_send_key(Keys.power)
             await self.async_update()
 
-    async def async_turn_off(self) -> None:
+    async def async_turn_off(self):
         """Turn off the TV."""
-        if self.state is not MediaPlayerState.OFF:
-            await self.async_send_key(Keys.POWER)
-            self.state = MediaPlayerState.OFF
+        if self.state != STATE_OFF:
+            await self.async_send_key(Keys.power)
+            self.state = STATE_OFF
             await self.async_update()
 
-    async def async_set_mute(self, enable: bool) -> None:
+    async def async_set_mute(self, enable):
         """Set mute based on 'enable'."""
-        assert self._control is not None
         await self._handle_errors(self._control.set_mute, enable)
 
-    async def async_set_volume(self, volume: float) -> None:
+    async def async_set_volume(self, volume):
         """Set volume level, range 0..1."""
-        assert self._control is not None
         volume = int(volume * 100)
         await self._handle_errors(self._control.set_volume, volume)
 
-    async def async_play_media(self, media_type: MediaType, media_id: str) -> None:
+    async def async_play_media(self, media_type, media_id):
         """Play media."""
-        assert self._control is not None
         _LOGGER.debug("Play media: %s (%s)", media_id, media_type)
         await self._handle_errors(self._control.open_webpage, media_id)
 
-    async def async_get_device_info(self) -> dict[str, Any] | None:
+    async def async_get_device_info(self):
         """Return device info."""
         if self._control is None:
             return None
@@ -243,35 +242,29 @@ class Remote:
         _LOGGER.debug("Fetched device info: %s", str(device_info))
         return device_info
 
-    async def _handle_errors[_R, *_Ts](
-        self, func: Callable[[*_Ts], _R], *args: *_Ts
-    ) -> _R | None:
+    async def _handle_errors(self, func, *args):
         """Handle errors from func, set available and reconnect if needed."""
         try:
             result = await self._hass.async_add_executor_job(func, *args)
+            self.state = STATE_ON
+            self.available = True
+            return result
         except EncryptionRequired:
             _LOGGER.error(
                 "The connection couldn't be encrypted. Please reconfigure your TV"
             )
             self.available = False
-            return None
         except (SOAPError, HTTPError) as err:
             _LOGGER.debug("An error occurred: %s", err)
-            self.state = MediaPlayerState.OFF
+            self.state = STATE_OFF
             self.available = True
             await self.async_create_remote_control()
-            return None
         except (URLError, OSError) as err:
             _LOGGER.debug("An error occurred: %s", err)
-            self.state = MediaPlayerState.OFF
+            self.state = STATE_OFF
             self.available = self._on_action is not None
             await self.async_create_remote_control()
-            return None
-        except Exception:
-            _LOGGER.exception("An unknown error occurred")
-            self.state = MediaPlayerState.OFF
+        except Exception as err:  # pylint: disable=broad-except
+            _LOGGER.exception("An unknown error occurred: %s", err)
+            self.state = STATE_OFF
             self.available = self._on_action is not None
-            return None
-        self.state = MediaPlayerState.ON
-        self.available = True
-        return result

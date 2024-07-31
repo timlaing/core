@@ -1,10 +1,10 @@
 """Support for Abode Security System switches."""
-
 from __future__ import annotations
 
 from typing import Any, cast
 
-from jaraco.abode.devices.switch import Switch
+from jaraco.abode.devices.switch import Switch as AbodeSW
+from jaraco.abode.helpers import constants as CONST
 
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
@@ -12,11 +12,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import AbodeSystem
+from . import AbodeAutomation, AbodeDevice, AbodeSystem
 from .const import DOMAIN
-from .entity import AbodeAutomation, AbodeDevice
 
-DEVICE_TYPES = ["switch", "valve"]
+DEVICE_TYPES = [CONST.TYPE_SWITCH, CONST.TYPE_VALVE]
+
+ICON = "mdi:robot"
 
 
 async def async_setup_entry(
@@ -42,7 +43,7 @@ async def async_setup_entry(
 class AbodeSwitch(AbodeDevice, SwitchEntity):
     """Representation of an Abode switch."""
 
-    _device: Switch
+    _device: AbodeSW
     _attr_name = None
 
     def turn_on(self, **kwargs: Any) -> None:
@@ -62,7 +63,7 @@ class AbodeSwitch(AbodeDevice, SwitchEntity):
 class AbodeAutomationSwitch(AbodeAutomation, SwitchEntity):
     """A switch implementation for Abode automations."""
 
-    _attr_translation_key = "automation"
+    _attr_icon = ICON
 
     async def async_added_to_hass(self) -> None:
         """Set up trigger automation service."""
@@ -88,4 +89,4 @@ class AbodeAutomationSwitch(AbodeAutomation, SwitchEntity):
     @property
     def is_on(self) -> bool:
         """Return True if the automation is enabled."""
-        return bool(self._automation.enabled)
+        return bool(self._automation.is_enabled)

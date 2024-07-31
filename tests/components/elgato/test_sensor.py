@@ -1,5 +1,4 @@
 """Tests for the Elgato sensor platform."""
-
 import pytest
 from syrupy.assertion import SnapshotAssertion
 

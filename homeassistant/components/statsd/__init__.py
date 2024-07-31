@@ -1,5 +1,4 @@
 """Support for sending data to StatsD."""
-
 import logging
 
 import statsd

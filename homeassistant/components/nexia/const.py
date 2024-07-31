@@ -1,5 +1,4 @@
 """Nexia constants."""
-
 from homeassistant.const import Platform
 
 PLATFORMS = [

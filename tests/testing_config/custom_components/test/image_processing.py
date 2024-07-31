@@ -1,17 +1,11 @@
 """Provide a mock image processing."""
 
 from homeassistant.components.image_processing import ImageProcessingEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
-    config: ConfigType,
-    async_add_entities_callback: AddEntitiesCallback,
-    discovery_info: DiscoveryInfoType | None = None,
-) -> None:
+    hass, config, async_add_entities_callback, discovery_info=None
+):
     """Set up the test image_processing platform."""
     async_add_entities_callback([TestImageProcessing("camera.demo_camera", "Test")])
 
@@ -19,7 +13,7 @@ async def async_setup_platform(
 class TestImageProcessing(ImageProcessingEntity):
     """Test image processing entity."""
 
-    def __init__(self, camera_entity, name) -> None:
+    def __init__(self, camera_entity, name):
         """Initialize test image processing."""
         self._name = name
         self._camera = camera_entity

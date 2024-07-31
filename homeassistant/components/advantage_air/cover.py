@@ -1,5 +1,4 @@
 """Cover platform for Advantage Air integration."""
-
 from typing import Any
 
 from homeassistant.components.cover import (
@@ -8,11 +7,15 @@ from homeassistant.components.cover import (
     CoverEntity,
     CoverEntityFeature,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import AdvantageAirDataConfigEntry
-from .const import ADVANTAGE_AIR_STATE_CLOSE, ADVANTAGE_AIR_STATE_OPEN
+from .const import (
+    ADVANTAGE_AIR_STATE_CLOSE,
+    ADVANTAGE_AIR_STATE_OPEN,
+    DOMAIN as ADVANTAGE_AIR_DOMAIN,
+)
 from .entity import AdvantageAirThingEntity, AdvantageAirZoneEntity
 from .models import AdvantageAirData
 
@@ -21,12 +24,12 @@ PARALLEL_UPDATES = 0
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: AdvantageAirDataConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up AdvantageAir cover platform."""
 
-    instance = config_entry.runtime_data
+    instance: AdvantageAirData = hass.data[ADVANTAGE_AIR_DOMAIN][config_entry.entry_id]
 
     entities: list[CoverEntity] = []
     if aircons := instance.coordinator.data.get("aircons"):

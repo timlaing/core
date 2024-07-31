@@ -1,5 +1,4 @@
 """Support for HomeMatic sensors."""
-
 from __future__ import annotations
 
 from copy import copy
@@ -156,6 +155,7 @@ SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         key="GAS_POWER",
         native_unit_of_measurement=UnitOfVolume.CUBIC_METERS,
         device_class=SensorDeviceClass.GAS,
+        state_class=SensorStateClass.MEASUREMENT,
     ),
     "GAS_ENERGY_COUNTER": SensorEntityDescription(
         key="GAS_ENERGY_COUNTER",

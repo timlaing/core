@@ -1,5 +1,4 @@
 """Test the select significant change platform."""
-
 from homeassistant.components.select.significant_change import (
     async_check_significant_change,
 )

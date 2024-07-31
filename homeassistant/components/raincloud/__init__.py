@@ -1,5 +1,4 @@
 """Support for Melnor RainCloud sprinkler water timer."""
-
 from datetime import timedelta
 import logging
 

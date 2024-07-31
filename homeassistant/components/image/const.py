@@ -1,5 +1,4 @@
 """Constants for the image integration."""
-
 from typing import Final
 
 DOMAIN: Final = "image"

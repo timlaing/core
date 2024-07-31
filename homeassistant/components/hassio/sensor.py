@@ -1,5 +1,4 @@
 """Sensor platform for Hass.io addons."""
-
 from __future__ import annotations
 
 from homeassistant.components.sensor import (
@@ -13,8 +12,8 @@ from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfInformation
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from . import ADDONS_COORDINATOR
 from .const import (
-    ADDONS_COORDINATOR,
     ATTR_CPU_PERCENT,
     ATTR_MEMORY_PERCENT,
     ATTR_VERSION,
@@ -51,6 +50,7 @@ STATS_ENTITY_DESCRIPTIONS = (
         entity_registry_enabled_default=False,
         key=ATTR_CPU_PERCENT,
         translation_key="cpu_percent",
+        icon="mdi:cpu-64-bit",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
     ),
@@ -58,6 +58,7 @@ STATS_ENTITY_DESCRIPTIONS = (
         entity_registry_enabled_default=False,
         key=ATTR_MEMORY_PERCENT,
         translation_key="memory_percent",
+        icon="mdi:memory",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
     ),
@@ -118,48 +119,50 @@ async def async_setup_entry(
 
     entities: list[
         HassioOSSensor | HassioAddonSensor | CoreSensor | SupervisorSensor | HostSensor
-    ] = [
-        HassioAddonSensor(
-            addon=addon,
-            coordinator=coordinator,
-            entity_description=entity_description,
-        )
-        for addon in coordinator.data[DATA_KEY_ADDONS].values()
-        for entity_description in ADDON_ENTITY_DESCRIPTIONS
-    ]
+    ] = []
 
-    entities.extend(
-        CoreSensor(
-            coordinator=coordinator,
-            entity_description=entity_description,
-        )
-        for entity_description in CORE_ENTITY_DESCRIPTIONS
-    )
+    for addon in coordinator.data[DATA_KEY_ADDONS].values():
+        for entity_description in ADDON_ENTITY_DESCRIPTIONS:
+            entities.append(
+                HassioAddonSensor(
+                    addon=addon,
+                    coordinator=coordinator,
+                    entity_description=entity_description,
+                )
+            )
 
-    entities.extend(
-        SupervisorSensor(
-            coordinator=coordinator,
-            entity_description=entity_description,
-        )
-        for entity_description in SUPERVISOR_ENTITY_DESCRIPTIONS
-    )
-
-    entities.extend(
-        HostSensor(
-            coordinator=coordinator,
-            entity_description=entity_description,
-        )
-        for entity_description in HOST_ENTITY_DESCRIPTIONS
-    )
-
-    if coordinator.is_hass_os:
-        entities.extend(
-            HassioOSSensor(
+    for entity_description in CORE_ENTITY_DESCRIPTIONS:
+        entities.append(
+            CoreSensor(
                 coordinator=coordinator,
                 entity_description=entity_description,
             )
-            for entity_description in OS_ENTITY_DESCRIPTIONS
         )
+
+    for entity_description in SUPERVISOR_ENTITY_DESCRIPTIONS:
+        entities.append(
+            SupervisorSensor(
+                coordinator=coordinator,
+                entity_description=entity_description,
+            )
+        )
+
+    for entity_description in HOST_ENTITY_DESCRIPTIONS:
+        entities.append(
+            HostSensor(
+                coordinator=coordinator,
+                entity_description=entity_description,
+            )
+        )
+
+    if coordinator.is_hass_os:
+        for entity_description in OS_ENTITY_DESCRIPTIONS:
+            entities.append(
+                HassioOSSensor(
+                    coordinator=coordinator,
+                    entity_description=entity_description,
+                )
+            )
 
     async_add_entities(entities)
 

@@ -1,5 +1,4 @@
 """Define constants for the SimpliSafe component."""
-
 import logging
 
 LOGGER = logging.getLogger(__package__)

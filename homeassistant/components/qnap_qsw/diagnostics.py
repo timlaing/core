@@ -1,5 +1,4 @@
 """Support for the QNAP QSW diagnostics."""
-
 from __future__ import annotations
 
 from typing import Any

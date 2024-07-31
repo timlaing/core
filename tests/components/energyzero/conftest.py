@@ -1,5 +1,4 @@
 """Fixtures for EnergyZero integration tests."""
-
 from collections.abc import Generator
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -14,7 +13,7 @@ from tests.common import MockConfigEntry, load_fixture
 
 
 @pytest.fixture
-def mock_setup_entry() -> Generator[AsyncMock]:
+def mock_setup_entry() -> Generator[AsyncMock, None, None]:
     """Mock setting up a config entry."""
     with patch(
         "homeassistant.components.energyzero.async_setup_entry", return_value=True
@@ -34,7 +33,7 @@ def mock_config_entry() -> MockConfigEntry:
 
 
 @pytest.fixture
-def mock_energyzero() -> Generator[MagicMock]:
+def mock_energyzero() -> Generator[MagicMock, None, None]:
     """Return a mocked EnergyZero client."""
     with patch(
         "homeassistant.components.energyzero.coordinator.EnergyZero", autospec=True

@@ -1,5 +1,4 @@
 """Tests for the Bluetooth integration PassiveBluetoothDataUpdateCoordinator."""
-
 from __future__ import annotations
 
 from datetime import timedelta
@@ -7,8 +6,6 @@ import logging
 import time
 from typing import Any
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from homeassistant.components.bluetooth import (
     DOMAIN,
@@ -25,11 +22,7 @@ from homeassistant.helpers.service_info.bluetooth import BluetoothServiceInfo
 from homeassistant.setup import async_setup_component
 from homeassistant.util import dt as dt_util
 
-from . import (
-    inject_bluetooth_service_info,
-    patch_all_discovered_devices,
-    patch_bluetooth_time,
-)
+from . import inject_bluetooth_service_info, patch_all_discovered_devices
 
 from tests.common import async_fire_time_changed
 
@@ -52,13 +45,7 @@ GENERIC_BLUETOOTH_SERVICE_INFO = BluetoothServiceInfo(
 class MyCoordinator(PassiveBluetoothDataUpdateCoordinator):
     """An example coordinator that subclasses PassiveBluetoothDataUpdateCoordinator."""
 
-    def __init__(
-        self,
-        hass: HomeAssistant,
-        logger: logging.Logger,
-        device_id: str,
-        mode: BluetoothScanningMode,
-    ) -> None:
+    def __init__(self, hass, logger, device_id, mode) -> None:
         """Initialize the coordinator."""
         super().__init__(hass, logger, device_id, mode)
         self.data: dict[str, Any] = {}
@@ -73,8 +60,11 @@ class MyCoordinator(PassiveBluetoothDataUpdateCoordinator):
         super()._async_handle_bluetooth_event(service_info, change)
 
 
-@pytest.mark.usefixtures("mock_bleak_scanner_start", "mock_bluetooth_adapters")
-async def test_basic_usage(hass: HomeAssistant) -> None:
+async def test_basic_usage(
+    hass: HomeAssistant,
+    mock_bleak_scanner_start: MagicMock,
+    mock_bluetooth_adapters: None,
+) -> None:
     """Test basic usage of the PassiveBluetoothDataUpdateCoordinator."""
     await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
     coordinator = MyCoordinator(
@@ -102,9 +92,10 @@ async def test_basic_usage(hass: HomeAssistant) -> None:
     cancel()
 
 
-@pytest.mark.usefixtures("mock_bleak_scanner_start", "mock_bluetooth_adapters")
 async def test_context_compatiblity_with_data_update_coordinator(
     hass: HomeAssistant,
+    mock_bleak_scanner_start: MagicMock,
+    mock_bluetooth_adapters: None,
 ) -> None:
     """Test contexts can be passed for compatibility with DataUpdateCoordinator."""
     await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
@@ -139,9 +130,10 @@ async def test_context_compatiblity_with_data_update_coordinator(
     assert not set(coordinator.async_contexts())
 
 
-@pytest.mark.usefixtures("mock_bleak_scanner_start", "mock_bluetooth_adapters")
 async def test_unavailable_callbacks_mark_the_coordinator_unavailable(
     hass: HomeAssistant,
+    mock_bleak_scanner_start: MagicMock,
+    mock_bluetooth_adapters: None,
 ) -> None:
     """Test that the coordinator goes unavailable when the bluetooth stack no longer sees the device."""
     start_monotonic = time.monotonic()
@@ -167,10 +159,10 @@ async def test_unavailable_callbacks_mark_the_coordinator_unavailable(
 
     monotonic_now = start_monotonic + FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS + 1
 
-    with (
-        patch_bluetooth_time(monotonic_now),
-        patch_all_discovered_devices([MagicMock(address="44:44:33:11:23:45")]),
-    ):
+    with patch(
+        "homeassistant.components.bluetooth.manager.MONOTONIC_TIME",
+        return_value=monotonic_now,
+    ), patch_all_discovered_devices([MagicMock(address="44:44:33:11:23:45")]):
         async_fire_time_changed(
             hass,
             dt_util.utcnow()
@@ -184,12 +176,10 @@ async def test_unavailable_callbacks_mark_the_coordinator_unavailable(
 
     monotonic_now = start_monotonic + FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS + 2
 
-    with (
-        patch_bluetooth_time(
-            monotonic_now,
-        ),
-        patch_all_discovered_devices([MagicMock(address="44:44:33:11:23:45")]),
-    ):
+    with patch(
+        "homeassistant.components.bluetooth.manager.MONOTONIC_TIME",
+        return_value=monotonic_now,
+    ), patch_all_discovered_devices([MagicMock(address="44:44:33:11:23:45")]):
         async_fire_time_changed(
             hass,
             dt_util.utcnow()
@@ -199,8 +189,11 @@ async def test_unavailable_callbacks_mark_the_coordinator_unavailable(
     assert coordinator.available is False
 
 
-@pytest.mark.usefixtures("mock_bleak_scanner_start", "mock_bluetooth_adapters")
-async def test_passive_bluetooth_coordinator_entity(hass: HomeAssistant) -> None:
+async def test_passive_bluetooth_coordinator_entity(
+    hass: HomeAssistant,
+    mock_bleak_scanner_start: MagicMock,
+    mock_bluetooth_adapters: None,
+) -> None:
     """Test integration of PassiveBluetoothDataUpdateCoordinator with PassiveBluetoothCoordinatorEntity."""
     await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
     coordinator = MyCoordinator(

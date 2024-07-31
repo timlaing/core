@@ -1,5 +1,4 @@
 """Initialization of ATAG One sensor platform."""
-
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (

@@ -1,16 +1,12 @@
 """Class for helpers and communication with the OverKiz API."""
-
 from __future__ import annotations
 
 from typing import Any, cast
 from urllib.parse import urlparse
 
 from pyoverkiz.enums import OverkizCommand, Protocol
-from pyoverkiz.exceptions import OverkizException
 from pyoverkiz.models import Command, Device, StateDefinition
 from pyoverkiz.types import StateType as OverkizStateType
-
-from homeassistant.exceptions import HomeAssistantError
 
 from .coordinator import OverkizDataUpdateCoordinator
 
@@ -41,9 +37,9 @@ class OverkizExecutor:
         """Return Overkiz device linked to this entity."""
         return self.coordinator.data[self.device_url]
 
-    def linked_device(self, index: int) -> Device | None:
+    def linked_device(self, index: int) -> Device:
         """Return Overkiz device sharing the same base url."""
-        return self.coordinator.data.get(f"{self.base_device_url}#{index}")
+        return self.coordinator.data[f"{self.base_device_url}#{index}"]
 
     def select_command(self, *commands: str) -> str | None:
         """Select first existing command in a list of commands."""
@@ -92,15 +88,11 @@ class OverkizExecutor:
         ):
             parameters.append(0)
 
-        try:
-            exec_id = await self.coordinator.client.execute_command(
-                self.device.device_url,
-                Command(command_name, parameters),
-                "Home Assistant",
-            )
-        # Catch Overkiz exceptions to support `continue_on_error` functionality
-        except OverkizException as exception:
-            raise HomeAssistantError(exception) from exception
+        exec_id = await self.coordinator.client.execute_command(
+            self.device.device_url,
+            Command(command_name, parameters),
+            "Home Assistant",
+        )
 
         # ExecutionRegisteredEvent doesn't contain the device_url, thus we need to register it here
         self.coordinator.executions[exec_id] = {

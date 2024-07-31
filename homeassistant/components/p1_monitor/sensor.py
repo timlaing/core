@@ -1,5 +1,4 @@
 """Support for P1 Monitor sensors."""
-
 from __future__ import annotations
 
 from typing import Literal
@@ -26,6 +25,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from . import P1MonitorDataUpdateCoordinator
 from .const import (
     DOMAIN,
     SERVICE_PHASES,
@@ -33,7 +33,6 @@ from .const import (
     SERVICE_SMARTMETER,
     SERVICE_WATERMETER,
 )
-from .coordinator import P1MonitorDataUpdateCoordinator
 
 SENSORS_SMARTMETER: tuple[SensorEntityDescription, ...] = (
     SensorEntityDescription(
@@ -89,6 +88,7 @@ SENSORS_SMARTMETER: tuple[SensorEntityDescription, ...] = (
     SensorEntityDescription(
         key="energy_tariff_period",
         translation_key="energy_tariff_period",
+        icon="mdi:calendar-clock",
     ),
 )
 
@@ -321,4 +321,4 @@ class P1MonitorSensorEntity(
         )
         if isinstance(value, str):
             return value.lower()
-        return value  # type: ignore[no-any-return]
+        return value

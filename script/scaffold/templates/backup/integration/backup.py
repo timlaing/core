@@ -1,5 +1,4 @@
 """Backup platform for the NEW_NAME integration."""
-
 from homeassistant.core import HomeAssistant
 
 

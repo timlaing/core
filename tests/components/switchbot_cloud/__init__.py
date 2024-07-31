@@ -1,5 +1,4 @@
 """Tests for the SwitchBot Cloud integration."""
-
 from homeassistant.components.switchbot_cloud.const import DOMAIN
 from homeassistant.const import CONF_API_KEY, CONF_API_TOKEN
 from homeassistant.core import HomeAssistant

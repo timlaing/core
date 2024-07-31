@@ -1,5 +1,4 @@
 """Test Dynalite bridge."""
-
 from unittest.mock import AsyncMock, Mock, patch
 
 from dynalite_devices_lib.dynalite_devices import (

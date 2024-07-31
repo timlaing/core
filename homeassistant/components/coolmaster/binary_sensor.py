@@ -1,5 +1,4 @@
 """Binary Sensor platform for CoolMasterNet integration."""
-
 from __future__ import annotations
 
 from homeassistant.components.binary_sensor import (
@@ -38,6 +37,7 @@ class CoolmasterCleanFilter(CoolmasterEntity, BinarySensorEntity):
         translation_key="clean_filter",
         device_class=BinarySensorDeviceClass.PROBLEM,
         entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:air-filter",
     )
 
     @property

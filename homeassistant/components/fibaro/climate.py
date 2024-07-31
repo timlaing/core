@@ -1,5 +1,4 @@
 """Support for Fibaro thermostats."""
-
 from __future__ import annotations
 
 from contextlib import suppress
@@ -127,8 +126,6 @@ async def async_setup_entry(
 class FibaroThermostat(FibaroDevice, ClimateEntity):
     """Representation of a Fibaro Thermostat."""
 
-    _enable_turn_on_off_backwards_compatibility = False
-
     def __init__(self, fibaro_device: DeviceModel) -> None:
         """Initialize the Fibaro device."""
         super().__init__(fibaro_device)
@@ -144,7 +141,10 @@ class FibaroThermostat(FibaroDevice, ClimateEntity):
         for device in siblings:
             # Detecting temperature device, one strong and one weak way of
             # doing so, so we prefer the hard evidence, if there is such.
-            if device.type == "com.fibaro.temperatureSensor" or (
+            if device.type == "com.fibaro.temperatureSensor":
+                self._temp_sensor_device = FibaroDevice(device)
+                tempunit = device.unit
+            elif (
                 self._temp_sensor_device is None
                 and device.has_unit
                 and (device.value.has_value or device.has_heating_thermostat_setpoint)
@@ -208,11 +208,6 @@ class FibaroThermostat(FibaroDevice, ClimateEntity):
                         self._attr_hvac_modes.append(mode_ha)
                     if mode in OPMODES_PRESET:
                         self._attr_preset_modes.append(OPMODES_PRESET[mode])
-
-        if HVACMode.OFF in self._attr_hvac_modes and len(self._attr_hvac_modes) > 1:
-            self._attr_supported_features |= (
-                ClimateEntityFeature.TURN_OFF | ClimateEntityFeature.TURN_ON
-            )
 
     async def async_added_to_hass(self) -> None:
         """Call when entity is added to hass."""

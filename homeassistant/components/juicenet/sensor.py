@@ -1,5 +1,4 @@
 """Support for monitoring juicenet/juicepoint/juicebox based EVSE sensors."""
-
 from __future__ import annotations
 
 from homeassistant.components.sensor import (

@@ -1,5 +1,4 @@
 """Support for Dialogflow webhook."""
-
 import logging
 
 from aiohttp import web
@@ -28,9 +27,7 @@ class DialogFlowError(HomeAssistantError):
     """Raised when a DialogFlow error happens."""
 
 
-async def handle_webhook(
-    hass: HomeAssistant, webhook_id: str, request: web.Request
-) -> web.Response | None:
+async def handle_webhook(hass, webhook_id, request):
     """Handle incoming webhook with Dialogflow requests."""
     message = await request.json()
 
@@ -38,7 +35,7 @@ async def handle_webhook(
 
     try:
         response = await async_handle_message(hass, message)
-        return None if response is None else web.json_response(response)
+        return b"" if response is None else web.json_response(response)
 
     except DialogFlowError as err:
         _LOGGER.warning(str(err))
@@ -103,8 +100,6 @@ def get_api_version(message):
     if message.get("responseId") is not None:
         return V2
 
-    raise ValueError(f"Unable to extract API version from message: {message}")
-
 
 async def async_handle_message(hass, message):
     """Handle a DialogFlow message."""
@@ -116,12 +111,12 @@ async def async_handle_message(hass, message):
         )
         req = message.get("result")
         if req.get("actionIncomplete", True):
-            return None
+            return
 
     elif _api_version is V2:
         req = message.get("queryResult")
         if req.get("allRequiredParamsPresent", False) is False:
-            return None
+            return
 
     action = req.get("action", "")
     parameters = req.get("parameters").copy()
@@ -175,5 +170,3 @@ class DialogflowResponse:
 
         if self.api_version is V2:
             return {"fulfillmentText": self.speech, "source": SOURCE}
-
-        raise ValueError(f"Invalid API version: {self.api_version}")

@@ -1,5 +1,4 @@
 """Support for SMS dongle sensor."""
-
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -26,6 +25,7 @@ SIGNAL_SENSORS = (
     ),
     SensorEntityDescription(
         key="SignalPercent",
+        icon="mdi:signal-cellular-3",
         translation_key="signal_percent",
         native_unit_of_measurement=PERCENTAGE,
         entity_registry_enabled_default=True,
@@ -62,6 +62,7 @@ NETWORK_SENSORS = (
     SensorEntityDescription(
         key="CID",
         translation_key="cid",
+        icon="mdi:radio-tower",
         entity_category=EntityCategory.DIAGNOSTIC,
         entity_registry_enabled_default=False,
     ),
@@ -85,14 +86,15 @@ async def async_setup_entry(
     network_coordinator = sms_data[NETWORK_COORDINATOR]
     gateway = sms_data[GATEWAY]
     unique_id = str(await gateway.get_imei_async())
-    entities = [
-        DeviceSensor(signal_coordinator, description, unique_id, gateway)
-        for description in SIGNAL_SENSORS
-    ]
-    entities.extend(
-        DeviceSensor(network_coordinator, description, unique_id, gateway)
-        for description in NETWORK_SENSORS
-    )
+    entities = []
+    for description in SIGNAL_SENSORS:
+        entities.append(
+            DeviceSensor(signal_coordinator, description, unique_id, gateway)
+        )
+    for description in NETWORK_SENSORS:
+        entities.append(
+            DeviceSensor(network_coordinator, description, unique_id, gateway)
+        )
     async_add_entities(entities, True)
 
 

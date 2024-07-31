@@ -1,7 +1,7 @@
 """Config flow for Control4 integration."""
-
 from __future__ import annotations
 
+from asyncio import TimeoutError as asyncioTimeoutError
 import logging
 
 from aiohttp.client_exceptions import ClientError
@@ -10,7 +10,7 @@ from pyControl4.director import C4Director
 from pyControl4.error_handling import NotFound, Unauthorized
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
+from homeassistant import config_entries, exceptions
 from homeassistant.const import (
     CONF_HOST,
     CONF_PASSWORD,
@@ -18,7 +18,6 @@ from homeassistant.const import (
     CONF_USERNAME,
 )
 from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import aiohttp_client, config_validation as cv
 from homeassistant.helpers.device_registry import format_mac
 
@@ -68,9 +67,9 @@ class Control4Validator:
             self.director_bearer_token = (
                 await account.getDirectorBearerToken(self.controller_unique_id)
             )["token"]
+            return True
         except (Unauthorized, NotFound):
             return False
-        return True
 
     async def connect_to_director(self) -> bool:
         """Test if we can connect to the local Control4 Director."""
@@ -82,13 +81,13 @@ class Control4Validator:
                 self.host, self.director_bearer_token, director_session
             )
             await director.getAllItemInfo()
-        except (Unauthorized, ClientError, TimeoutError):
+            return True
+        except (Unauthorized, ClientError, asyncioTimeoutError):
             _LOGGER.error("Failed to connect to the Control4 controller")
             return False
-        return True
 
 
-class Control4ConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Control4."""
 
     VERSION = 1
@@ -112,7 +111,7 @@ class Control4ConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "invalid_auth"
             except CannotConnect:
                 errors["base"] = "cannot_connect"
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
 
@@ -139,16 +138,16 @@ class Control4ConfigFlow(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: ConfigEntry,
+        config_entry: config_entries.ConfigEntry,
     ) -> OptionsFlowHandler:
         """Get the options flow for this handler."""
         return OptionsFlowHandler(config_entry)
 
 
-class OptionsFlowHandler(OptionsFlow):
+class OptionsFlowHandler(config_entries.OptionsFlow):
     """Handle a option flow for Control4."""
 
-    def __init__(self, config_entry: ConfigEntry) -> None:
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         self.config_entry = config_entry
 
@@ -170,9 +169,9 @@ class OptionsFlowHandler(OptionsFlow):
         return self.async_show_form(step_id="init", data_schema=data_schema)
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(exceptions.HomeAssistantError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(exceptions.HomeAssistantError):
     """Error to indicate there is invalid auth."""

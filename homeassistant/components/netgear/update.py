@@ -1,5 +1,4 @@
 """Update entities for Netgear devices."""
-
 from __future__ import annotations
 
 import logging

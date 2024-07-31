@@ -1,5 +1,4 @@
 """Demo platform for the geolocation component."""
-
 from __future__ import annotations
 
 from datetime import timedelta

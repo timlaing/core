@@ -1,24 +1,33 @@
 """Constants for the Google Generative AI Conversation integration."""
 
-import logging
-
 DOMAIN = "google_generative_ai_conversation"
-LOGGER = logging.getLogger(__package__)
 CONF_PROMPT = "prompt"
+DEFAULT_PROMPT = """This smart home is controlled by Home Assistant.
 
-CONF_RECOMMENDED = "recommended"
+An overview of the areas and the devices in this smart home:
+{%- for area in areas() %}
+  {%- set area_info = namespace(printed=false) %}
+  {%- for device in area_devices(area) -%}
+    {%- if not device_attr(device, "disabled_by") and not device_attr(device, "entry_type") and device_attr(device, "name") %}
+      {%- if not area_info.printed %}
+
+{{ area_name(area) }}:
+        {%- set area_info.printed = true %}
+      {%- endif %}
+- {{ device_attr(device, "name") }}{% if device_attr(device, "model") and (device_attr(device, "model") | string) not in (device_attr(device, "name") | string) %} ({{ device_attr(device, "model") }}){% endif %}
+    {%- endif %}
+  {%- endfor %}
+{%- endfor %}
+
+Answer the user's questions about the world truthfully.
+
+If the user wants to control a device, reject the request and suggest using the Home Assistant app.
+"""
 CONF_CHAT_MODEL = "chat_model"
-RECOMMENDED_CHAT_MODEL = "models/gemini-1.5-flash-latest"
+DEFAULT_CHAT_MODEL = "models/chat-bison-001"
 CONF_TEMPERATURE = "temperature"
-RECOMMENDED_TEMPERATURE = 1.0
+DEFAULT_TEMPERATURE = 0.25
 CONF_TOP_P = "top_p"
-RECOMMENDED_TOP_P = 0.95
+DEFAULT_TOP_P = 0.95
 CONF_TOP_K = "top_k"
-RECOMMENDED_TOP_K = 64
-CONF_MAX_TOKENS = "max_tokens"
-RECOMMENDED_MAX_TOKENS = 150
-CONF_HARASSMENT_BLOCK_THRESHOLD = "harassment_block_threshold"
-CONF_HATE_BLOCK_THRESHOLD = "hate_block_threshold"
-CONF_SEXUAL_BLOCK_THRESHOLD = "sexual_block_threshold"
-CONF_DANGEROUS_BLOCK_THRESHOLD = "dangerous_block_threshold"
-RECOMMENDED_HARM_BLOCK_THRESHOLD = "BLOCK_MEDIUM_AND_ABOVE"
+DEFAULT_TOP_K = 40

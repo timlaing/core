@@ -1,5 +1,4 @@
 """Test the NO-IP component."""
-
 from datetime import timedelta
 
 import pytest
@@ -22,7 +21,7 @@ USERNAME = "abc@123.com"
 
 
 @pytest.fixture
-def setup_no_ip(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
+def setup_no_ip(hass, aioclient_mock):
     """Fixture that sets up NO-IP."""
     aioclient_mock.get(UPDATE_URL, params={"hostname": DOMAIN}, text="good 0.0.0.0")
 

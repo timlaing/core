@@ -1,5 +1,4 @@
 """Tests for common vera code."""
-
 from datetime import timedelta
 from unittest.mock import MagicMock
 

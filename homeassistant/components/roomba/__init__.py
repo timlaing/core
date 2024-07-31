@@ -1,5 +1,4 @@
 """The roomba component."""
-
 import asyncio
 import contextlib
 from functools import partial
@@ -83,7 +82,7 @@ async def async_connect_or_timeout(
             _LOGGER.debug("Initialize connection to vacuum")
             await hass.async_add_executor_job(roomba.connect)
             while not roomba.roomba_connected or name is None:
-                # Waiting for connection and check data is ready
+                # Waiting for connection and check datas ready
                 name = roomba_reported_state(roomba).get("name", None)
                 if name:
                     break
@@ -91,7 +90,7 @@ async def async_connect_or_timeout(
     except RoombaConnectionError as err:
         _LOGGER.debug("Error to connect to vacuum: %s", err)
         raise CannotConnect from err
-    except TimeoutError as err:
+    except asyncio.TimeoutError as err:
         # api looping if user or password incorrect and roomba exist
         await async_disconnect_or_timeout(hass, roomba)
         _LOGGER.debug("Timeout expired: %s", err)
@@ -103,7 +102,7 @@ async def async_connect_or_timeout(
 async def async_disconnect_or_timeout(hass: HomeAssistant, roomba: Roomba) -> None:
     """Disconnect to vacuum."""
     _LOGGER.debug("Disconnect vacuum")
-    with contextlib.suppress(TimeoutError):
+    with contextlib.suppress(asyncio.TimeoutError):
         async with asyncio.timeout(3):
             await hass.async_add_executor_job(roomba.disconnect)
 

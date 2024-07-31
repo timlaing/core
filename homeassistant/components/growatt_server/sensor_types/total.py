@@ -1,5 +1,4 @@
 """Growatt Sensor definitions for Totals."""
-
 from __future__ import annotations
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass

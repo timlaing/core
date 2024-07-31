@@ -1,5 +1,4 @@
 """Support for HomematicIP Cloud cover devices."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -41,19 +40,15 @@ async def async_setup_entry(
 ) -> None:
     """Set up the HomematicIP cover from a config entry."""
     hap = hass.data[HMIPC_DOMAIN][config_entry.unique_id]
-    entities: list[HomematicipGenericEntity] = [
-        HomematicipCoverShutterGroup(hap, group)
-        for group in hap.home.groups
-        if isinstance(group, AsyncExtendedLinkedShutterGroup)
-    ]
+    entities: list[HomematicipGenericEntity] = []
     for device in hap.home.devices:
         if isinstance(device, AsyncBlindModule):
             entities.append(HomematicipBlindModule(hap, device))
         elif isinstance(device, AsyncDinRailBlind4):
-            entities.extend(
-                HomematicipMultiCoverSlats(hap, device, channel=channel)
-                for channel in range(1, 5)
-            )
+            for channel in range(1, 5):
+                entities.append(
+                    HomematicipMultiCoverSlats(hap, device, channel=channel)
+                )
         elif isinstance(device, AsyncFullFlushBlind):
             entities.append(HomematicipCoverSlats(hap, device))
         elif isinstance(device, AsyncFullFlushShutter):
@@ -62,6 +57,10 @@ async def async_setup_entry(
             device, (AsyncHoermannDrivesModule, AsyncGarageDoorModuleTormatic)
         ):
             entities.append(HomematicipGarageDoorModule(hap, device))
+
+    for group in hap.home.groups:
+        if isinstance(group, AsyncExtendedLinkedShutterGroup):
+            entities.append(HomematicipCoverShutterGroup(hap, group))
 
     async_add_entities(entities)
 

@@ -1,5 +1,6 @@
 """Tests for the ThermoBeacon integration."""
 
+
 from homeassistant.helpers.service_info.bluetooth import BluetoothServiceInfo
 
 NOT_THERMOBEACON_SERVICE_INFO = BluetoothServiceInfo(

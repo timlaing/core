@@ -1,5 +1,4 @@
 """The USB Discovery integration."""
-
 from __future__ import annotations
 
 from serial.tools.list_ports_common import ListPortInfo

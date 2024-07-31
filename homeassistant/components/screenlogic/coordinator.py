@@ -1,15 +1,9 @@
 """ScreenlogicDataUpdateCoordinator definition."""
-
 from datetime import timedelta
 import logging
 
-from screenlogicpy import ScreenLogicGateway
-from screenlogicpy.const.common import (
-    SL_GATEWAY_IP,
-    SL_GATEWAY_NAME,
-    SL_GATEWAY_PORT,
-    ScreenLogicCommunicationError,
-)
+from screenlogicpy import ScreenLogicError, ScreenLogicGateway
+from screenlogicpy.const.common import SL_GATEWAY_IP, SL_GATEWAY_NAME, SL_GATEWAY_PORT
 from screenlogicpy.device_const.system import EQUIPMENT_FLAG
 
 from homeassistant.config_entries import ConfigEntry
@@ -97,7 +91,7 @@ class ScreenlogicDataUpdateCoordinator(DataUpdateCoordinator[None]):
                 await self.gateway.async_connect(**connect_info)
 
             await self._async_update_configured_data()
-        except ScreenLogicCommunicationError as sle:
+        except ScreenLogicError as ex:
             if self.gateway.is_connected:
                 await self.gateway.async_disconnect()
-            raise UpdateFailed(sle.msg) from sle
+            raise UpdateFailed(ex.msg) from ex

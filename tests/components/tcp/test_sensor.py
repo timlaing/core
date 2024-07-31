@@ -1,5 +1,4 @@
 """The tests for the TCP sensor platform."""
-
 from copy import copy
 from unittest.mock import call, patch
 

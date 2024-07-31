@@ -18,7 +18,6 @@ from homeassistant.const import (
     STATE_JAMMED,
     STATE_LOCKED,
     STATE_LOCKING,
-    STATE_OPEN,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     STATE_UNLOCKED,
@@ -32,9 +31,7 @@ from homeassistant.setup import async_setup_component
 from tests.common import get_fixture_path
 
 
-async def test_default_state(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
-) -> None:
+async def test_default_state(hass: HomeAssistant) -> None:
     """Test lock group default state."""
     hass.states.async_set("lock.front", "locked")
     await async_setup_component(
@@ -58,6 +55,7 @@ async def test_default_state(
     assert state.state == STATE_LOCKED
     assert state.attributes.get(ATTR_ENTITY_ID) == ["lock.front", "lock.back"]
 
+    entity_registry = er.async_get(hass)
     entry = entity_registry.async_get("lock.door_group")
     assert entry
     assert entry.unique_id == "unique_identifier"
@@ -205,8 +203,8 @@ async def test_service_calls_openable(hass: HomeAssistant) -> None:
         {ATTR_ENTITY_ID: "lock.lock_group"},
         blocking=True,
     )
-    assert hass.states.get("lock.openable_lock").state == STATE_OPEN
-    assert hass.states.get("lock.another_openable_lock").state == STATE_OPEN
+    assert hass.states.get("lock.openable_lock").state == STATE_UNLOCKED
+    assert hass.states.get("lock.another_openable_lock").state == STATE_UNLOCKED
 
     await hass.services.async_call(
         LOCK_DOMAIN,

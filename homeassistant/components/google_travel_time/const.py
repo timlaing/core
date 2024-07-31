@@ -1,5 +1,4 @@
 """Constants for Google Travel Time."""
-
 DOMAIN = "google_travel_time"
 
 ATTRIBUTION = "Powered by Google"
@@ -8,6 +7,7 @@ CONF_DESTINATION = "destination"
 CONF_OPTIONS = "options"
 CONF_ORIGIN = "origin"
 CONF_TRAVEL_MODE = "travel_mode"
+CONF_LANGUAGE = "language"
 CONF_AVOID = "avoid"
 CONF_UNITS = "units"
 CONF_ARRIVAL_TIME = "arrival_time"
@@ -67,7 +67,7 @@ ALL_LANGUAGES = [
     "sr",
     "sv",
     "ta",
-    "te",  # codespell:ignore te
+    "te",
     "th",
     "tl",
     "tr",

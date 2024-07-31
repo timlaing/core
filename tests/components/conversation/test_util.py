@@ -1,5 +1,4 @@
 """Test the conversation utils."""
-
 from homeassistant.components.conversation.util import create_matcher
 
 

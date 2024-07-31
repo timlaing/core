@@ -1,5 +1,4 @@
 """Base entity for Tami4Edge."""
-
 from __future__ import annotations
 
 from Tami4EdgeAPI import Tami4EdgeAPI
@@ -21,14 +20,14 @@ class Tami4EdgeBaseEntity(Entity):
         """Initialize the Tami4Edge."""
         self._state = None
         self._api = api
-        device_id = api.device_metadata.psn
+        device_id = api.device.psn
         self.entity_description = entity_description
         self._attr_unique_id = f"{device_id}_{self.entity_description.key}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, device_id)},
             manufacturer="Stratuss",
-            name=api.device_metadata.name,
+            name=api.device.name,
             model="Tami4",
-            sw_version=api.device_metadata.device_firmware,
+            sw_version=api.device.device_firmware,
             suggested_area="Kitchen",
         )

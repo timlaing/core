@@ -1,5 +1,4 @@
 """The base entity for the rest component."""
-
 from __future__ import annotations
 
 from abc import abstractmethod

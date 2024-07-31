@@ -1,5 +1,4 @@
 """Constants for the Panasonic Viera integration."""
-
 DOMAIN = "panasonic_viera"
 
 DEVICE_MANUFACTURER = "Panasonic"

@@ -1,5 +1,4 @@
-"""The EnergyFlip integration."""
-
+"""The Huisbaasje integration."""
 import asyncio
 from datetime import timedelta
 import logging
@@ -31,8 +30,8 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up EnergyFlip from a config entry."""
-    # Create the EnergyFlip client
+    """Set up Huisbaasje from a config entry."""
+    # Create the Huisbaasje client
     energyflip = EnergyFlip(
         username=entry.data[CONF_USERNAME],
         password=entry.data[CONF_PASSWORD],
@@ -48,7 +47,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return False
 
     async def async_update_data() -> dict[str, dict[str, Any]]:
-        return await async_update_energyflip(energyflip)
+        return await async_update_huisbaasje(energyflip)
 
     # Create a coordinator for polling updates
     coordinator = DataUpdateCoordinator(
@@ -75,21 +74,21 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Forward the unloading of the entry to the platform
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
-    # If successful, unload the EnergyFlip client
+    # If successful, unload the Huisbaasje client
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
 
 
-async def async_update_energyflip(energyflip: EnergyFlip) -> dict[str, dict[str, Any]]:
-    """Update the data by performing a request to EnergyFlip."""
+async def async_update_huisbaasje(energyflip: EnergyFlip) -> dict[str, dict[str, Any]]:
+    """Update the data by performing a request to Huisbaasje."""
     try:
-        # Note: TimeoutError and aiohttp.ClientError are already
+        # Note: asyncio.TimeoutError and aiohttp.ClientError are already
         # handled by the data update coordinator.
         async with asyncio.timeout(FETCH_TIMEOUT):
             if not energyflip.is_authenticated():
-                _LOGGER.warning("EnergyFlip is unauthenticated. Reauthenticating")
+                _LOGGER.warning("Huisbaasje is unauthenticated. Reauthenticating")
                 await energyflip.authenticate()
 
             current_measurements = await energyflip.current_measurements()
@@ -125,7 +124,7 @@ def _get_cumulative_value(
 ):
     """Get the cumulative energy consumption for a certain period.
 
-    :param current_measurements: The result from the EnergyFlip client
+    :param current_measurements: The result from the Huisbaasje client
     :param source_type: The source of energy (electricity or gas)
     :param period_type: The period for which cumulative value should be given.
     """

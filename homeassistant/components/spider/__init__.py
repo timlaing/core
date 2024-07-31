@@ -1,5 +1,4 @@
 """Support for Spider Smart devices."""
-
 import logging
 
 from spiderpy.spiderapi import SpiderApi, SpiderApiException, UnauthorizedException

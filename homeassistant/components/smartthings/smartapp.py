@@ -1,5 +1,4 @@
 """SmartApp functionality to receive cloud-push notifications."""
-
 import asyncio
 import functools
 import logging
@@ -85,9 +84,11 @@ async def validate_installed_app(api, installed_app_id: str):
     installed_app = await api.installed_app(installed_app_id)
     if installed_app.installed_app_status != InstalledAppStatus.AUTHORIZED:
         raise RuntimeWarning(
-            f"Installed SmartApp instance '{installed_app.display_name}' "
-            f"({installed_app.installed_app_id}) is not AUTHORIZED "
-            f"but instead {installed_app.installed_app_status}"
+            "Installed SmartApp instance '{}' ({}) is not AUTHORIZED but instead {}".format(
+                installed_app.display_name,
+                installed_app.installed_app_id,
+                installed_app.installed_app_status,
+            )
         )
     return installed_app
 
@@ -326,7 +327,7 @@ async def smartapp_sync_subscriptions(
             _LOGGER.debug(
                 "Created subscription for '%s' under app '%s'", target, installed_app_id
             )
-        except Exception as error:  # noqa: BLE001
+        except Exception as error:  # pylint:disable=broad-except
             _LOGGER.error(
                 "Failed to create subscription for '%s' under app '%s': %s",
                 target,
@@ -345,7 +346,7 @@ async def smartapp_sync_subscriptions(
                 sub.capability,
                 installed_app_id,
             )
-        except Exception as error:  # noqa: BLE001
+        except Exception as error:  # pylint:disable=broad-except
             _LOGGER.error(
                 "Failed to remove subscription for '%s' under app '%s': %s",
                 sub.capability,

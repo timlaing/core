@@ -1,18 +1,12 @@
 """Support for Homekit sensors."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from enum import IntEnum
 
 from aiohomekit.model import Accessory, Transport
 from aiohomekit.model.characteristics import Characteristic, CharacteristicsTypes
-from aiohomekit.model.characteristics.const import (
-    CurrentAirPurifierStateValues,
-    ThreadNodeCapabilities,
-    ThreadStatus,
-)
+from aiohomekit.model.characteristics.const import ThreadNodeCapabilities, ThreadStatus
 from aiohomekit.model.services import Service, ServicesTypes
 
 from homeassistant.components.bluetooth import (
@@ -52,13 +46,12 @@ from .entity import CharacteristicEntity, HomeKitEntity
 from .utils import folded_name
 
 
-@dataclass(frozen=True)
+@dataclass
 class HomeKitSensorEntityDescription(SensorEntityDescription):
     """Describes Homekit sensor."""
 
     probe: Callable[[Characteristic], bool] | None = None
     format: Callable[[Characteristic], str] | None = None
-    enum: dict[IntEnum, str] | None = None
 
 
 def thread_node_capability_to_str(char: Characteristic) -> str:
@@ -171,7 +164,7 @@ SIMPLE_SENSOR: dict[str, HomeKitSensorEntityDescription] = {
         key=CharacteristicsTypes.VENDOR_CONNECTSENSE_ENERGY_KW_HOUR,
         name="Energy kWh",
         device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL_INCREASING,
+        state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
     ),
     CharacteristicsTypes.VENDOR_EVE_ENERGY_WATT: HomeKitSensorEntityDescription(
@@ -331,18 +324,6 @@ SIMPLE_SENSOR: dict[str, HomeKitSensorEntityDescription] = {
         ],
         translation_key="thread_status",
     ),
-    CharacteristicsTypes.AIR_PURIFIER_STATE_CURRENT: HomeKitSensorEntityDescription(
-        key=CharacteristicsTypes.AIR_PURIFIER_STATE_CURRENT,
-        name="Air Purifier Status",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        device_class=SensorDeviceClass.ENUM,
-        enum={
-            CurrentAirPurifierStateValues.INACTIVE: "inactive",
-            CurrentAirPurifierStateValues.IDLE: "idle",
-            CurrentAirPurifierStateValues.ACTIVE: "purifying",
-        },
-        translation_key="air_purifier_state_current",
-    ),
     CharacteristicsTypes.VENDOR_NETATMO_NOISE: HomeKitSensorEntityDescription(
         key=CharacteristicsTypes.VENDOR_NETATMO_NOISE,
         name="Noise",
@@ -359,7 +340,7 @@ SIMPLE_SENSOR: dict[str, HomeKitSensorEntityDescription] = {
     CharacteristicsTypes.VENDOR_EVE_THERMO_VALVE_POSITION: HomeKitSensorEntityDescription(
         key=CharacteristicsTypes.VENDOR_EVE_THERMO_VALVE_POSITION,
         name="Valve position",
-        translation_key="valve_position",
+        icon="mdi:pipe-valve",
         entity_category=EntityCategory.DIAGNOSTIC,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=PERCENTAGE,
@@ -521,7 +502,7 @@ class HomeKitBatterySensor(HomeKitSensor):
 
     @property
     def is_charging(self) -> bool:
-        """Return true if currently charging."""
+        """Return true if currently charing."""
         # 0 = not charging
         # 1 = charging
         # 2 = not chargeable
@@ -554,8 +535,6 @@ class SimpleSensor(CharacteristicEntity, SensorEntity):
     ) -> None:
         """Initialise a secondary HomeKit characteristic sensor."""
         self.entity_description = description
-        if self.entity_description.enum:
-            self._attr_options = list(self.entity_description.enum.values())
         super().__init__(conn, info, char)
 
     def get_characteristic_types(self) -> list[str]:
@@ -572,11 +551,10 @@ class SimpleSensor(CharacteristicEntity, SensorEntity):
     @property
     def native_value(self) -> str | int | float:
         """Return the current sensor value."""
-        if self.entity_description.enum:
-            return self.entity_description.enum[self._char.value]
+        val = self._char.value
         if self.entity_description.format:
-            return self.entity_description.format(self._char)
-        return self._char.value
+            return self.entity_description.format(val)
+        return val
 
 
 ENTITY_TYPES = {

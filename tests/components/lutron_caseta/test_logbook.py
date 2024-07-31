@@ -1,5 +1,4 @@
 """The tests for lutron caseta logbook."""
-
 from unittest.mock import patch
 
 from homeassistant.components.lutron_caseta.const import (
@@ -53,11 +52,7 @@ async def test_humanify_lutron_caseta_button_event(hass: HomeAssistant) -> None:
 
     await hass.async_block_till_done()
 
-    # Fetching the config entry runtime_data is a legacy pattern
-    # and should not be copied for new integrations
-    data: LutronCasetaData = hass.config_entries.async_get_entry(
-        config_entry.entry_id
-    ).runtime_data
+    data: LutronCasetaData = hass.data[DOMAIN][config_entry.entry_id]
     keypads = data.keypad_data.keypads
     keypad = keypads["9"]
     dr_device_id = keypad["dr_device_id"]
@@ -87,7 +82,7 @@ async def test_humanify_lutron_caseta_button_event(hass: HomeAssistant) -> None:
 
 
 async def test_humanify_lutron_caseta_button_event_integration_not_loaded(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    hass: HomeAssistant,
 ) -> None:
     """Test humanifying lutron_caseta_button_events when the integration fails to load."""
     hass.config.components.add("recorder")
@@ -114,6 +109,7 @@ async def test_humanify_lutron_caseta_button_event_integration_not_loaded(
         await hass.config_entries.async_unload(config_entry.entry_id)
         await hass.async_block_till_done()
 
+    device_registry = dr.async_get(hass)
     for device in device_registry.devices.values():
         if device.config_entries == {config_entry.entry_id}:
             dr_device_id = device.id
@@ -144,15 +140,14 @@ async def test_humanify_lutron_caseta_button_event_integration_not_loaded(
     assert event1["message"] == "press stop"
 
 
-async def test_humanify_lutron_caseta_button_event_ra3(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
-) -> None:
+async def test_humanify_lutron_caseta_button_event_ra3(hass: HomeAssistant) -> None:
     """Test humanifying lutron_caseta_button_events from an RA3 hub."""
     hass.config.components.add("recorder")
     assert await async_setup_component(hass, "logbook", {})
     await async_setup_integration(hass, MockBridge)
 
-    keypad = device_registry.async_get_device(
+    registry = dr.async_get(hass)
+    keypad = registry.async_get_device(
         identifiers={(DOMAIN, 66286451)}, connections=set()
     )
     assert keypad
@@ -181,15 +176,14 @@ async def test_humanify_lutron_caseta_button_event_ra3(
     assert event1["message"] == "press Kitchen Pendants"
 
 
-async def test_humanify_lutron_caseta_button_unknown_type(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
-) -> None:
+async def test_humanify_lutron_caseta_button_unknown_type(hass: HomeAssistant) -> None:
     """Test humanifying lutron_caseta_button_events with an unknown type."""
     hass.config.components.add("recorder")
     assert await async_setup_component(hass, "logbook", {})
     await async_setup_integration(hass, MockBridge)
 
-    keypad = device_registry.async_get_device(
+    registry = dr.async_get(hass)
+    keypad = registry.async_get_device(
         identifiers={(DOMAIN, 66286451)}, connections=set()
     )
     assert keypad

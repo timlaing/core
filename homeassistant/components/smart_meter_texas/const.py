@@ -1,5 +1,4 @@
 """Constants for the Smart Meter Texas integration."""
-
 from datetime import timedelta
 
 SCAN_INTERVAL = timedelta(hours=1)

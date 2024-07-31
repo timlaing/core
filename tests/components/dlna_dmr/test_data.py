@@ -1,8 +1,7 @@
 """Tests for the DLNA DMR data module."""
-
 from __future__ import annotations
 
-from collections.abc import Generator
+from collections.abc import Iterable
 from unittest.mock import ANY, Mock, patch
 
 from async_upnp_client.aiohttp import AiohttpNotifyServer
@@ -16,7 +15,7 @@ from homeassistant.core import Event, HomeAssistant
 
 
 @pytest.fixture
-def aiohttp_notify_servers_mock() -> Generator[Mock]:
+def aiohttp_notify_servers_mock() -> Iterable[Mock]:
     """Construct mock AiohttpNotifyServer on demand, eliminating network use.
 
     This fixture provides a list of the constructed servers.

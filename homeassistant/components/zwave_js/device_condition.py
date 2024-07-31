@@ -1,5 +1,4 @@
 """Provide the device conditions for Z-Wave JS."""
-
 from __future__ import annotations
 
 from typing import cast

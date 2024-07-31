@@ -1,5 +1,4 @@
 """Sensor for Steam account status."""
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -7,14 +6,15 @@ from time import localtime, mktime
 from typing import cast
 
 from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.util.dt import utc_from_timestamp
 
-from . import SteamConfigEntry
 from .const import (
     CONF_ACCOUNTS,
+    DOMAIN,
     STEAM_API_URL,
     STEAM_HEADER_IMAGE_FILE,
     STEAM_ICON_URL,
@@ -29,12 +29,12 @@ PARALLEL_UPDATES = 1
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: SteamConfigEntry,
+    entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Steam platform."""
     async_add_entities(
-        SteamSensor(entry.runtime_data, account)
+        SteamSensor(hass.data[DOMAIN][entry.entry_id], account)
         for account in entry.options[CONF_ACCOUNTS]
     )
 

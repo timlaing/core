@@ -1,5 +1,4 @@
 """Adds config flow for Trafikverket Train integration."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -10,6 +9,7 @@ from typing import Any
 from pytrafikverket import TrafikverketTrain
 from pytrafikverket.exceptions import (
     InvalidAuthentication,
+    MultipleTrainAnnouncementFound,
     MultipleTrainStationsFound,
     NoTrainAnnouncementFound,
     NoTrainStationFound,
@@ -17,14 +17,10 @@ from pytrafikverket.exceptions import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlowWithConfigEntry,
-)
+from homeassistant import config_entries
 from homeassistant.const import CONF_API_KEY, CONF_NAME, CONF_WEEKDAY, WEEKDAYS
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.selector import (
@@ -87,7 +83,7 @@ async def validate_input(
             when = datetime.combine(
                 departure_day,
                 _time,
-                dt_util.get_default_time_zone(),
+                dt_util.get_time_zone(hass.config.time_zone),
             )
 
     try:
@@ -111,34 +107,34 @@ async def validate_input(
         errors["base"] = "more_stations"
     except NoTrainAnnouncementFound:
         errors["base"] = "no_trains"
+    except MultipleTrainAnnouncementFound:
+        errors["base"] = "multiple_trains"
     except UnknownError as error:
         _LOGGER.error("Unknown error occurred during validation %s", str(error))
         errors["base"] = "cannot_connect"
-    except Exception as error:  # noqa: BLE001
+    except Exception as error:  # pylint: disable=broad-exception-caught
         _LOGGER.error("Unknown exception occurred during validation %s", str(error))
         errors["base"] = "cannot_connect"
 
     return errors
 
 
-class TVTrainConfigFlow(ConfigFlow, domain=DOMAIN):
+class TVTrainConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Trafikverket Train integration."""
 
     VERSION = 1
 
-    entry: ConfigEntry | None
+    entry: config_entries.ConfigEntry | None
 
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: ConfigEntry,
+        config_entry: config_entries.ConfigEntry,
     ) -> TVTrainOptionsFlowHandler:
         """Get the options flow for this handler."""
         return TVTrainOptionsFlowHandler(config_entry)
 
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Handle re-authentication with Trafikverket."""
 
         self.entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
@@ -146,7 +142,7 @@ class TVTrainConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Confirm re-authentication with Trafikverket."""
         errors: dict[str, str] = {}
 
@@ -182,7 +178,7 @@ class TVTrainConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the user step."""
         errors: dict[str, str] = {}
 
@@ -238,12 +234,12 @@ class TVTrainConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class TVTrainOptionsFlowHandler(OptionsFlowWithConfigEntry):
+class TVTrainOptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
     """Handle Trafikverket Train options."""
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Manage Trafikverket Train options."""
         errors: dict[str, Any] = {}
 

@@ -1,8 +1,7 @@
 """Fixtures for DLNA tests."""
-
 from __future__ import annotations
 
-from collections.abc import Generator
+from collections.abc import Iterable
 from socket import AddressFamily  # pylint: disable=no-name-in-module
 from unittest.mock import Mock, create_autospec, patch, seal
 
@@ -32,7 +31,7 @@ NEW_DEVICE_LOCATION = "http://198.51.100.7" + "/dmr_description.xml"
 
 
 @pytest.fixture
-def domain_data_mock(hass: HomeAssistant) -> Mock:
+def domain_data_mock(hass: HomeAssistant) -> Iterable[Mock]:
     """Mock the global data used by this component.
 
     This includes network clients and library object factories. Mocking it
@@ -72,18 +71,17 @@ def domain_data_mock(hass: HomeAssistant) -> Mock:
             service_id="urn:upnp-org:serviceId:RenderingControl",
         ),
     }
-    upnp_device.all_services = list(upnp_device.services.values())
     seal(upnp_device)
     domain_data.upnp_factory.async_create_device.return_value = upnp_device
 
-    hass.data[DLNA_DOMAIN] = domain_data
-    return domain_data
+    with patch.dict(hass.data, {DLNA_DOMAIN: domain_data}):
+        yield domain_data
 
 
 @pytest.fixture
 def config_entry_mock() -> MockConfigEntry:
     """Mock a config entry for this platform."""
-    return MockConfigEntry(
+    mock_entry = MockConfigEntry(
         unique_id=MOCK_DEVICE_UDN,
         domain=DLNA_DOMAIN,
         data={
@@ -95,12 +93,13 @@ def config_entry_mock() -> MockConfigEntry:
         title=MOCK_DEVICE_NAME,
         options={},
     )
+    return mock_entry
 
 
 @pytest.fixture
 def config_entry_mock_no_mac() -> MockConfigEntry:
     """Mock a config entry that does not already contain a MAC address."""
-    return MockConfigEntry(
+    mock_entry = MockConfigEntry(
         unique_id=MOCK_DEVICE_UDN,
         domain=DLNA_DOMAIN,
         data={
@@ -111,10 +110,11 @@ def config_entry_mock_no_mac() -> MockConfigEntry:
         title=MOCK_DEVICE_NAME,
         options={},
     )
+    return mock_entry
 
 
 @pytest.fixture
-def dmr_device_mock(domain_data_mock: Mock) -> Generator[Mock]:
+def dmr_device_mock(domain_data_mock: Mock) -> Iterable[Mock]:
     """Mock the async_upnp_client DMR device, initially connected."""
     with patch(
         "homeassistant.components.dlna_dmr.media_player.DmrDevice", autospec=True
@@ -129,13 +129,12 @@ def dmr_device_mock(domain_data_mock: Mock) -> Generator[Mock]:
         device.manufacturer = "device_manufacturer"
         device.model_name = "device_model_name"
         device.name = "device_name"
-        device.preset_names = ["preset1", "preset2"]
 
         yield device
 
 
 @pytest.fixture(autouse=True)
-def ssdp_scanner_mock() -> Generator[Mock]:
+def ssdp_scanner_mock() -> Iterable[Mock]:
     """Mock the SSDP Scanner."""
     with patch("homeassistant.components.ssdp.Scanner", autospec=True) as mock_scanner:
         reg_callback = mock_scanner.return_value.async_register_callback
@@ -144,14 +143,14 @@ def ssdp_scanner_mock() -> Generator[Mock]:
 
 
 @pytest.fixture(autouse=True)
-def ssdp_server_mock() -> Generator[None]:
+def ssdp_server_mock() -> Iterable[Mock]:
     """Mock the SSDP Server."""
     with patch("homeassistant.components.ssdp.Server", autospec=True):
         yield
 
 
 @pytest.fixture(autouse=True)
-def async_get_local_ip_mock() -> Generator[Mock]:
+def async_get_local_ip_mock() -> Iterable[Mock]:
     """Mock the async_get_local_ip utility function to prevent network access."""
     with patch(
         "homeassistant.components.dlna_dmr.media_player.async_get_local_ip",
@@ -159,3 +158,8 @@ def async_get_local_ip_mock() -> Generator[Mock]:
     ) as func:
         func.return_value = AddressFamily.AF_INET, LOCAL_IP
         yield func
+
+
+@pytest.fixture(autouse=True)
+def dlna_dmr_mock_get_source_ip(mock_get_source_ip):
+    """Mock network util's async_get_source_ip."""

@@ -1,5 +1,4 @@
 """BleBox devices setup tests."""
-
 import logging
 
 import blebox_uniapi

@@ -1,5 +1,4 @@
 """Config flow for Google Sheets integration."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -9,11 +8,11 @@ from typing import Any
 from google.oauth2.credentials import Credentials
 from gspread import Client, GSpreadException
 
-from homeassistant.config_entries import ConfigFlowResult
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ACCESS_TOKEN, CONF_TOKEN
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import config_entry_oauth2_flow
 
-from . import GoogleSheetsConfigEntry
 from .const import DEFAULT_ACCESS, DEFAULT_NAME, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -26,7 +25,7 @@ class OAuth2FlowHandler(
 
     DOMAIN = DOMAIN
 
-    reauth_entry: GoogleSheetsConfigEntry | None = None
+    reauth_entry: ConfigEntry | None = None
 
     @property
     def logger(self) -> logging.Logger:
@@ -43,9 +42,7 @@ class OAuth2FlowHandler(
             "prompt": "consent",
         }
 
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Perform reauth upon an API authentication error."""
         self.reauth_entry = self.hass.config_entries.async_get_entry(
             self.context["entry_id"]
@@ -54,17 +51,15 @@ class OAuth2FlowHandler(
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Confirm reauth dialog."""
         if user_input is None:
             return self.async_show_form(step_id="reauth_confirm")
         return await self.async_step_user()
 
-    async def async_oauth_create_entry(self, data: dict[str, Any]) -> ConfigFlowResult:
+    async def async_oauth_create_entry(self, data: dict[str, Any]) -> FlowResult:
         """Create an entry for the flow, or update existing entry."""
-        service = Client(
-            Credentials(data[CONF_TOKEN][CONF_ACCESS_TOKEN])  # type: ignore[no-untyped-call]
-        )
+        service = Client(Credentials(data[CONF_TOKEN][CONF_ACCESS_TOKEN]))
 
         if self.reauth_entry:
             _LOGGER.debug("service.open_by_key")

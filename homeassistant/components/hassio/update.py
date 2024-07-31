@@ -1,5 +1,4 @@
 """Update platform for Supervisor."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -17,8 +16,14 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import (
+from . import (
     ADDONS_COORDINATOR,
+    async_update_addon,
+    async_update_core,
+    async_update_os,
+    async_update_supervisor,
+)
+from .const import (
     ATTR_AUTO_UPDATE,
     ATTR_CHANGELOG,
     ATTR_VERSION,
@@ -34,13 +39,7 @@ from .entity import (
     HassioOSEntity,
     HassioSupervisorEntity,
 )
-from .handler import (
-    HassioAPIError,
-    async_update_addon,
-    async_update_core,
-    async_update_os,
-    async_update_supervisor,
-)
+from .handler import HassioAPIError
 
 ENTITY_DESCRIPTION = UpdateEntityDescription(
     name="Update",
@@ -67,14 +66,14 @@ async def async_setup_entry(
         ),
     ]
 
-    entities.extend(
-        SupervisorAddonUpdateEntity(
-            addon=addon,
-            coordinator=coordinator,
-            entity_description=ENTITY_DESCRIPTION,
+    for addon in coordinator.data[DATA_KEY_ADDONS].values():
+        entities.append(
+            SupervisorAddonUpdateEntity(
+                addon=addon,
+                coordinator=coordinator,
+                entity_description=ENTITY_DESCRIPTION,
+            )
         )
-        for addon in coordinator.data[DATA_KEY_ADDONS].values()
-    )
 
     if coordinator.is_hass_os:
         entities.append(

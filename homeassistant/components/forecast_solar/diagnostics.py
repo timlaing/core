@@ -1,14 +1,17 @@
 """Diagnostics support for Forecast.Solar integration."""
-
 from __future__ import annotations
 
 from typing import Any
 
+from forecast_solar import Estimate
+
 from homeassistant.components.diagnostics import async_redact_data
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from . import ForecastSolarConfigEntry
+from .const import DOMAIN
 
 TO_REDACT = {
     CONF_API_KEY,
@@ -18,10 +21,10 @@ TO_REDACT = {
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ForecastSolarConfigEntry
+    hass: HomeAssistant, entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    coordinator = entry.runtime_data
+    coordinator: DataUpdateCoordinator[Estimate] = hass.data[DOMAIN][entry.entry_id]
 
     return {
         "entry": {

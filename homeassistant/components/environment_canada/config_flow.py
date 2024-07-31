@@ -1,5 +1,4 @@
 """Config flow for Environment Canada integration."""
-
 import logging
 import xml.etree.ElementTree as et
 
@@ -7,11 +6,11 @@ import aiohttp
 from env_canada import ECWeather, ec_exc
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow
-from homeassistant.const import CONF_LANGUAGE, CONF_LATITUDE, CONF_LONGITUDE
+from homeassistant import config_entries
+from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
 from homeassistant.helpers import config_validation as cv
 
-from .const import CONF_STATION, CONF_TITLE, DOMAIN
+from .const import CONF_LANGUAGE, CONF_STATION, CONF_TITLE, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -41,7 +40,7 @@ async def validate_input(data):
     }
 
 
-class EnvironmentCanadaConfigFlow(ConfigFlow, domain=DOMAIN):
+class EnvironmentCanadaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Environment Canada weather."""
 
     VERSION = 1
@@ -61,7 +60,7 @@ class EnvironmentCanadaConfigFlow(ConfigFlow, domain=DOMAIN):
                     errors["base"] = "bad_station_id"
                 else:
                     errors["base"] = "error_response"
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
 

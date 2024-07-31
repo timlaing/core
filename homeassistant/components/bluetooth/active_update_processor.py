@@ -2,18 +2,17 @@
 
 Collects data from advertisements but can also poll.
 """
-
 from __future__ import annotations
 
 from collections.abc import Callable, Coroutine
 import logging
-from typing import Any
+from typing import Any, Generic, TypeVar
 
 from bleak import BleakError
-from bluetooth_data_tools import monotonic_time_coarse
 
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.debounce import Debouncer
+from homeassistant.util.dt import monotonic_time_coarse
 
 from . import BluetoothChange, BluetoothScanningMode, BluetoothServiceInfoBleak
 from .passive_update_processor import PassiveBluetoothProcessorCoordinator
@@ -21,9 +20,11 @@ from .passive_update_processor import PassiveBluetoothProcessorCoordinator
 POLL_DEFAULT_COOLDOWN = 10
 POLL_DEFAULT_IMMEDIATE = True
 
+_T = TypeVar("_T")
 
-class ActiveBluetoothProcessorCoordinator[_DataT](
-    PassiveBluetoothProcessorCoordinator[_DataT]
+
+class ActiveBluetoothProcessorCoordinator(
+    Generic[_T], PassiveBluetoothProcessorCoordinator[_T]
 ):
     """A processor coordinator that parses passive data.
 
@@ -61,11 +62,11 @@ class ActiveBluetoothProcessorCoordinator[_DataT](
         *,
         address: str,
         mode: BluetoothScanningMode,
-        update_method: Callable[[BluetoothServiceInfoBleak], _DataT],
+        update_method: Callable[[BluetoothServiceInfoBleak], _T],
         needs_poll_method: Callable[[BluetoothServiceInfoBleak, float | None], bool],
         poll_method: Callable[
             [BluetoothServiceInfoBleak],
-            Coroutine[Any, Any, _DataT],
+            Coroutine[Any, Any, _T],
         ]
         | None = None,
         poll_debouncer: Debouncer[Coroutine[Any, Any, None]] | None = None,
@@ -90,7 +91,6 @@ class ActiveBluetoothProcessorCoordinator[_DataT](
                 cooldown=POLL_DEFAULT_COOLDOWN,
                 immediate=POLL_DEFAULT_IMMEDIATE,
                 function=self._async_poll,
-                background=True,
             )
         else:
             poll_debouncer.function = self._async_poll
@@ -108,7 +108,7 @@ class ActiveBluetoothProcessorCoordinator[_DataT](
 
     async def _async_poll_data(
         self, last_service_info: BluetoothServiceInfoBleak
-    ) -> _DataT:
+    ) -> _T:
         """Fetch the latest data from the source."""
         if self._poll_method is None:
             raise NotImplementedError("Poll method not implemented")
@@ -127,7 +127,7 @@ class ActiveBluetoothProcessorCoordinator[_DataT](
                 )
                 self.last_poll_successful = False
             return
-        except Exception:  # noqa: BLE001
+        except Exception:  # pylint: disable=broad-except
             if self.last_poll_successful:
                 self.logger.exception("%s: Failure while polling", self.address)
                 self.last_poll_successful = False
@@ -157,7 +157,7 @@ class ActiveBluetoothProcessorCoordinator[_DataT](
         # We use bluetooth events to trigger the poll so that we scan as soon as
         # possible after a device comes online or back in range, if a poll is due
         if self.needs_poll(service_info):
-            self._debounced_poll.async_schedule_call()
+            self.hass.async_create_task(self._debounced_poll.async_call())
 
     @callback
     def _async_stop(self) -> None:

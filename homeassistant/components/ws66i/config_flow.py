@@ -1,5 +1,4 @@
 """Config flow for WS66i 6-Zone Amplifier integration."""
-
 from __future__ import annotations
 
 import logging
@@ -8,10 +7,8 @@ from typing import Any
 from pyws66i import WS66i, get_ws66i
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
+from homeassistant import config_entries, core, exceptions
 from homeassistant.const import CONF_IP_ADDRESS
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
     CONF_SOURCE_1,
@@ -43,7 +40,7 @@ DATA_SCHEMA = vol.Schema({vol.Required(CONF_IP_ADDRESS): str})
 FIRST_ZONE = 11
 
 
-@callback
+@core.callback
 def _sources_from_config(data):
     sources_config = {
         str(idx + 1): data.get(source) for idx, source in enumerate(SOURCES)
@@ -73,7 +70,7 @@ def _verify_connection(ws66i: WS66i) -> bool:
 
 
 async def validate_input(
-    hass: HomeAssistant, input_data: dict[str, Any]
+    hass: core.HomeAssistant, input_data: dict[str, Any]
 ) -> dict[str, Any]:
     """Validate the user input.
 
@@ -89,7 +86,7 @@ async def validate_input(
     return {CONF_IP_ADDRESS: input_data[CONF_IP_ADDRESS]}
 
 
-class WS66iConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for WS66i 6-Zone Amplifier."""
 
     VERSION = 1
@@ -102,7 +99,7 @@ class WS66iConfigFlow(ConfigFlow, domain=DOMAIN):
                 info = await validate_input(self.hass, user_input)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
@@ -118,25 +115,27 @@ class WS66iConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
     @staticmethod
-    @callback
+    @core.callback
     def async_get_options_flow(
-        config_entry: ConfigEntry,
+        config_entry: config_entries.ConfigEntry,
     ) -> Ws66iOptionsFlowHandler:
         """Define the config flow to handle options."""
         return Ws66iOptionsFlowHandler(config_entry)
 
 
-@callback
+@core.callback
 def _key_for_source(index, source, previous_sources):
-    return vol.Required(
+    key = vol.Required(
         source, description={"suggested_value": previous_sources[str(index)]}
     )
 
+    return key
 
-class Ws66iOptionsFlowHandler(OptionsFlow):
+
+class Ws66iOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle a WS66i options flow."""
 
-    def __init__(self, config_entry: ConfigEntry) -> None:
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize."""
         self.config_entry = config_entry
 
@@ -161,5 +160,5 @@ class Ws66iOptionsFlowHandler(OptionsFlow):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(exceptions.HomeAssistantError):
     """Error to indicate we cannot connect."""

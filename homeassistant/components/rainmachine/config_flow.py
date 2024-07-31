@@ -1,5 +1,4 @@
 """Config flow to configure the RainMachine component."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -9,19 +8,15 @@ from regenmaschine.controller import Controller
 from regenmaschine.errors import RainMachineError
 import voluptuous as vol
 
+from homeassistant import config_entries
 from homeassistant.components import zeroconf
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlow,
-)
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD, CONF_PORT, CONF_SSL
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import aiohttp_client, config_validation as cv
 
 from .const import (
-    CONF_ALLOW_INACTIVE_ZONES_TO_RUN,
     CONF_DEFAULT_ZONE_RUN_TIME,
     CONF_USE_APP_RUN_TIMES,
     DEFAULT_PORT,
@@ -50,7 +45,7 @@ async def async_get_controller(
     return get_client_controller(client)
 
 
-class RainMachineFlowHandler(ConfigFlow, domain=DOMAIN):
+class RainMachineFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a RainMachine config flow."""
 
     VERSION = 2
@@ -67,19 +62,19 @@ class RainMachineFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_homekit(
         self, discovery_info: zeroconf.ZeroconfServiceInfo
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow initialized by homekit discovery."""
         return await self.async_step_homekit_zeroconf(discovery_info)
 
     async def async_step_zeroconf(
         self, discovery_info: zeroconf.ZeroconfServiceInfo
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle discovery via zeroconf."""
         return await self.async_step_homekit_zeroconf(discovery_info)
 
     async def async_step_homekit_zeroconf(
         self, discovery_info: zeroconf.ZeroconfServiceInfo
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle discovery via zeroconf."""
         ip_address = discovery_info.host
 
@@ -121,7 +116,7 @@ class RainMachineFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the start of the config flow."""
         errors = {}
         if user_input:
@@ -165,7 +160,7 @@ class RainMachineFlowHandler(ConfigFlow, domain=DOMAIN):
         )
 
 
-class RainMachineOptionsFlowHandler(OptionsFlow):
+class RainMachineOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle a RainMachine options flow."""
 
     def __init__(self, config_entry: ConfigEntry) -> None:
@@ -174,7 +169,7 @@ class RainMachineOptionsFlowHandler(OptionsFlow):
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Manage the options."""
         if user_input is not None:
             return self.async_create_entry(data=user_input)
@@ -192,12 +187,6 @@ class RainMachineOptionsFlowHandler(OptionsFlow):
                     vol.Optional(
                         CONF_USE_APP_RUN_TIMES,
                         default=self.config_entry.options.get(CONF_USE_APP_RUN_TIMES),
-                    ): bool,
-                    vol.Optional(
-                        CONF_ALLOW_INACTIVE_ZONES_TO_RUN,
-                        default=self.config_entry.options.get(
-                            CONF_ALLOW_INACTIVE_ZONES_TO_RUN
-                        ),
                     ): bool,
                 }
             ),

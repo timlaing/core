@@ -1,5 +1,4 @@
 """Support for scenes through the SmartThings cloud API."""
-
 from typing import Any
 
 from homeassistant.components.scene import Scene
@@ -17,7 +16,7 @@ async def async_setup_entry(
 ) -> None:
     """Add switches for a config entry."""
     broker = hass.data[DOMAIN][DATA_BROKERS][config_entry.entry_id]
-    async_add_entities(SmartThingsScene(scene) for scene in broker.scenes.values())
+    async_add_entities([SmartThingsScene(scene) for scene in broker.scenes.values()])
 
 
 class SmartThingsScene(Scene):

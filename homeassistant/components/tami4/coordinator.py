@@ -1,5 +1,4 @@
 """Water quality coordinator for Tami4Edge."""
-
 from dataclasses import dataclass
 from datetime import date, timedelta
 import logging
@@ -17,23 +16,27 @@ _LOGGER = logging.getLogger(__name__)
 class FlattenedWaterQuality:
     """Flattened WaterQuality dataclass."""
 
+    uv_last_replacement: date
     uv_upcoming_replacement: date
-    uv_installed: bool
+    uv_status: str
+    filter_last_replacement: date
     filter_upcoming_replacement: date
-    filter_installed: bool
+    filter_status: str
     filter_litters_passed: float
 
     def __init__(self, water_quality: WaterQuality) -> None:
-        """Flattened WaterQuality dataclass."""
+        """Flatten WaterQuality dataclass."""
 
+        self.uv_last_replacement = water_quality.uv.last_replacement
         self.uv_upcoming_replacement = water_quality.uv.upcoming_replacement
-        self.uv_installed = water_quality.uv.installed
+        self.uv_status = water_quality.uv.status
+        self.filter_last_replacement = water_quality.filter.last_replacement
         self.filter_upcoming_replacement = water_quality.filter.upcoming_replacement
-        self.filter_installed = water_quality.filter.installed
+        self.filter_status = water_quality.filter.status
         self.filter_litters_passed = water_quality.filter.milli_litters_passed / 1000
 
 
-class Tami4EdgeCoordinator(DataUpdateCoordinator[FlattenedWaterQuality]):
+class Tami4EdgeWaterQualityCoordinator(DataUpdateCoordinator[FlattenedWaterQuality]):
     """Tami4Edge water quality coordinator."""
 
     def __init__(self, hass: HomeAssistant, api: Tami4EdgeAPI) -> None:
@@ -49,8 +52,10 @@ class Tami4EdgeCoordinator(DataUpdateCoordinator[FlattenedWaterQuality]):
     async def _async_update_data(self) -> FlattenedWaterQuality:
         """Fetch data from the API endpoint."""
         try:
-            device = await self.hass.async_add_executor_job(self._api.get_device)
+            water_quality = await self.hass.async_add_executor_job(
+                self._api.get_water_quality
+            )
 
-            return FlattenedWaterQuality(device.water_quality)
+            return FlattenedWaterQuality(water_quality)
         except exceptions.APIRequestFailedException as ex:
             raise UpdateFailed("Error communicating with API") from ex

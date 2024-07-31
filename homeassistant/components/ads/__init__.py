@@ -1,5 +1,4 @@
 """Support for Automation Device Specification (ADS)."""
-
 import asyncio
 from asyncio import timeout
 from collections import namedtuple
@@ -304,7 +303,7 @@ class AdsEntity(Entity):
         try:
             async with timeout(10):
                 await self._event.wait()
-        except TimeoutError:
+        except asyncio.TimeoutError:
             _LOGGER.debug("Variable %s: Timeout during first update", ads_var)
 
     @property

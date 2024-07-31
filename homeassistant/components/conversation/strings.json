@@ -10,16 +10,12 @@
           "description": "Transcribed text input."
         },
         "language": {
-          "name": "[%key:common::config_flow::data::language%]",
+          "name": "Language",
           "description": "Language of text. Defaults to server language."
         },
         "agent_id": {
           "name": "Agent",
           "description": "Conversation agent to process your request. The conversation agent is the brains of your assistant. It processes the incoming text commands."
-        },
-        "conversation_id": {
-          "name": "Conversation ID",
-          "description": "ID of the conversation, to be able to continue a previous conversation"
         }
       }
     },
@@ -28,7 +24,7 @@
       "description": "Reloads the intent configuration.",
       "fields": {
         "language": {
-          "name": "[%key:common::config_flow::data::language%]",
+          "name": "[%key:component::conversation::services::process::fields::language::name%]",
           "description": "Language to clear cached intents for. Defaults to server language."
         },
         "agent_id": {
@@ -36,11 +32,6 @@
           "description": "Conversation agent to reload."
         }
       }
-    }
-  },
-  "conversation": {
-    "agent": {
-      "done": "Done"
     }
   }
 }

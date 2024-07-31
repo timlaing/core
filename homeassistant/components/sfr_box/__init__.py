@@ -1,5 +1,4 @@
 """SFR Box."""
-
 from __future__ import annotations
 
 import asyncio
@@ -29,9 +28,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         try:
             await box.authenticate(username=username, password=password)
         except SFRBoxAuthenticationError as err:
-            raise ConfigEntryAuthFailed from err
+            raise ConfigEntryAuthFailed() from err
         except SFRBoxError as err:
-            raise ConfigEntryNotReady from err
+            raise ConfigEntryNotReady() from err
         platforms = PLATFORMS_WITH_AUTH
 
     data = DomainData(

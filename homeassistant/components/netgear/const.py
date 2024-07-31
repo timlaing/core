@@ -1,5 +1,4 @@
 """Netgear component constants."""
-
 from datetime import timedelta
 
 from homeassistant.const import Platform

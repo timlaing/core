@@ -1,5 +1,4 @@
 """Test the Kodi integration init."""
-
 from unittest.mock import patch
 
 from homeassistant.components.kodi.const import DOMAIN

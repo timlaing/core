@@ -1,5 +1,4 @@
 """Support for Honeywell (US) Total Connect Comfort sensors."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -37,12 +36,19 @@ def _get_temperature_sensor_unit(device: Device) -> str:
     return UnitOfTemperature.FAHRENHEIT
 
 
-@dataclass(frozen=True, kw_only=True)
-class HoneywellSensorEntityDescription(SensorEntityDescription):
-    """Describes a Honeywell sensor entity."""
+@dataclass
+class HoneywellSensorEntityDescriptionMixin:
+    """Mixin for required keys."""
 
     value_fn: Callable[[Device], Any]
     unit_fn: Callable[[Device], Any]
+
+
+@dataclass
+class HoneywellSensorEntityDescription(
+    SensorEntityDescription, HoneywellSensorEntityDescriptionMixin
+):
+    """Describes a Honeywell sensor entity."""
 
 
 SENSOR_TYPES: tuple[HoneywellSensorEntityDescription, ...] = (
@@ -86,13 +92,14 @@ async def async_setup_entry(
 ) -> None:
     """Set up the Honeywell thermostat."""
     data: HoneywellData = hass.data[DOMAIN][config_entry.entry_id]
+    sensors = []
 
-    async_add_entities(
-        HoneywellSensor(device, description)
-        for device in data.devices.values()
-        for description in SENSOR_TYPES
-        if getattr(device, description.key) is not None
-    )
+    for device in data.devices.values():
+        for description in SENSOR_TYPES:
+            if getattr(device, description.key) is not None:
+                sensors.append(HoneywellSensor(device, description))
+
+    async_add_entities(sensors)
 
 
 class HoneywellSensor(SensorEntity):

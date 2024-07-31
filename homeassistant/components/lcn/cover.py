@@ -1,5 +1,4 @@
 """Support for LCN covers."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -40,12 +39,13 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up LCN cover entities from a config entry."""
+    entities = []
 
-    async_add_entities(
-        create_lcn_cover_entity(hass, entity_config, config_entry)
-        for entity_config in config_entry.data[CONF_ENTITIES]
-        if entity_config[CONF_DOMAIN] == DOMAIN_COVER
-    )
+    for entity_config in config_entry.data[CONF_ENTITIES]:
+        if entity_config[CONF_DOMAIN] == DOMAIN_COVER:
+            entities.append(create_lcn_cover_entity(hass, entity_config, config_entry))
+
+    async_add_entities(entities)
 
 
 class LcnOutputsCover(LcnEntity, CoverEntity):

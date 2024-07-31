@@ -1,5 +1,4 @@
 """Tests for the WiLight integration."""
-
 from unittest.mock import patch
 
 import pytest

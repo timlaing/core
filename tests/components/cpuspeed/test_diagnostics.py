@@ -1,5 +1,4 @@
 """Tests for the diagnostics data provided by the CPU Speed integration."""
-
 from unittest.mock import patch
 
 from syrupy import SnapshotAssertion

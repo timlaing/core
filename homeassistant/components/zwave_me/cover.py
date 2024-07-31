@@ -1,5 +1,4 @@
 """Representation of a cover."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -67,7 +66,7 @@ class ZWaveMeCover(ZWaveMeEntity, CoverEntity):
         """Update the current value."""
         value = kwargs[ATTR_POSITION]
         self.controller.zwave_api.send_command(
-            self.device.id, f"exact?level={min(value, 99)!s}"
+            self.device.id, f"exact?level={str(min(value, 99))}"
         )
 
     def stop_cover(self, **kwargs: Any) -> None:

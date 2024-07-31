@@ -1,5 +1,4 @@
 """Map Matter Nodes and Attributes to Home Assistant entities."""
-
 from __future__ import annotations
 
 from collections.abc import Generator
@@ -14,35 +13,27 @@ from .binary_sensor import DISCOVERY_SCHEMAS as BINARY_SENSOR_SCHEMAS
 from .climate import DISCOVERY_SCHEMAS as CLIMATE_SENSOR_SCHEMAS
 from .cover import DISCOVERY_SCHEMAS as COVER_SCHEMAS
 from .event import DISCOVERY_SCHEMAS as EVENT_SCHEMAS
-from .fan import DISCOVERY_SCHEMAS as FAN_SCHEMAS
 from .light import DISCOVERY_SCHEMAS as LIGHT_SCHEMAS
 from .lock import DISCOVERY_SCHEMAS as LOCK_SCHEMAS
 from .models import MatterDiscoverySchema, MatterEntityInfo
-from .number import DISCOVERY_SCHEMAS as NUMBER_SCHEMAS
-from .select import DISCOVERY_SCHEMAS as SELECT_SCHEMAS
 from .sensor import DISCOVERY_SCHEMAS as SENSOR_SCHEMAS
 from .switch import DISCOVERY_SCHEMAS as SWITCH_SCHEMAS
-from .update import DISCOVERY_SCHEMAS as UPDATE_SCHEMAS
 
 DISCOVERY_SCHEMAS: dict[Platform, list[MatterDiscoverySchema]] = {
     Platform.BINARY_SENSOR: BINARY_SENSOR_SCHEMAS,
     Platform.CLIMATE: CLIMATE_SENSOR_SCHEMAS,
     Platform.COVER: COVER_SCHEMAS,
     Platform.EVENT: EVENT_SCHEMAS,
-    Platform.FAN: FAN_SCHEMAS,
     Platform.LIGHT: LIGHT_SCHEMAS,
     Platform.LOCK: LOCK_SCHEMAS,
-    Platform.NUMBER: NUMBER_SCHEMAS,
-    Platform.SELECT: SELECT_SCHEMAS,
     Platform.SENSOR: SENSOR_SCHEMAS,
     Platform.SWITCH: SWITCH_SCHEMAS,
-    Platform.UPDATE: UPDATE_SCHEMAS,
 }
 SUPPORTED_PLATFORMS = tuple(DISCOVERY_SCHEMAS)
 
 
 @callback
-def iter_schemas() -> Generator[MatterDiscoverySchema]:
+def iter_schemas() -> Generator[MatterDiscoverySchema, None, None]:
     """Iterate over all available discovery schemas."""
     for platform_schemas in DISCOVERY_SCHEMAS.values():
         yield from platform_schemas
@@ -51,7 +42,7 @@ def iter_schemas() -> Generator[MatterDiscoverySchema]:
 @callback
 def async_discover_entities(
     endpoint: MatterEndpoint,
-) -> Generator[MatterEntityInfo]:
+) -> Generator[MatterEntityInfo, None, None]:
     """Run discovery on MatterEndpoint and return matching MatterEntityInfo(s)."""
     discovered_attributes: set[type[ClusterAttributeDescriptor]] = set()
     device_info = endpoint.device_info
@@ -126,6 +117,6 @@ def async_discover_entities(
             entity_class=schema.entity_class,
         )
 
-        # prevent re-discovery of the primary attribute if not allowed
+        # prevent re-discovery of the same attributes
         if not schema.allow_multi:
-            discovered_attributes.update(schema.required_attributes)
+            discovered_attributes.update(attributes_to_watch)

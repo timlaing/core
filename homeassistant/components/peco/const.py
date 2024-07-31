@@ -1,5 +1,4 @@
 """Constants for the PECO Outage Counter integration."""
-
 import logging
 from typing import Final
 
@@ -15,8 +14,6 @@ COUNTY_LIST: Final = [
     "TOTAL",
 ]
 CONFIG_FLOW_COUNTIES: Final = [{county: county.capitalize()} for county in COUNTY_LIST]
-OUTAGE_SCAN_INTERVAL: Final = 9  # minutes
-SMART_METER_SCAN_INTERVAL: Final = 15  # minutes
+SCAN_INTERVAL: Final = 9
 CONF_COUNTY: Final = "county"
 ATTR_CONTENT: Final = "content"
-CONF_PHONE_NUMBER: Final = "phone_number"

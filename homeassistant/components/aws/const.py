@@ -1,5 +1,4 @@
 """Constant for AWS component."""
-
 DOMAIN = "aws"
 
 DATA_CONFIG = "aws_config"

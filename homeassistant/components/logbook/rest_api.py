@@ -1,5 +1,4 @@
 """Event parser and human readable log generator."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -10,7 +9,7 @@ from typing import Any, cast
 from aiohttp import web
 import voluptuous as vol
 
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
+from homeassistant.components.http import HomeAssistantView
 from homeassistant.components.recorder import get_instance
 from homeassistant.components.recorder.filters import Filters
 from homeassistant.core import HomeAssistant, callback
@@ -70,11 +69,11 @@ class LogbookView(HomeAssistantView):
         if entity_ids_str := request.query.get("entity"):
             try:
                 entity_ids = cv.entity_ids(entity_ids_str)
-            except vol.Invalid as ex:
+            except vol.Invalid:
                 raise InvalidEntityFormatError(
                     f"Invalid entity id(s) encountered: {entity_ids_str}. "
                     "Format should be <domain>.<object_id>"
-                ) from ex
+                ) from vol.Invalid
         else:
             entity_ids = None
 
@@ -87,7 +86,7 @@ class LogbookView(HomeAssistantView):
                 return self.json_message("Invalid end_time", HTTPStatus.BAD_REQUEST)
             end_day = end_day_dt
 
-        hass = request.app[KEY_HASS]
+        hass = request.app["hass"]
 
         context_id = request.query.get("context_id")
 

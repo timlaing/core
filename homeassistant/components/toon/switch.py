@@ -1,5 +1,4 @@
 """Support for Toon switches."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -95,14 +94,14 @@ class ToonHolidayModeSwitch(ToonSwitch, ToonDisplayDeviceEntity):
         )
 
 
-@dataclass(frozen=True)
+@dataclass
 class ToonSwitchRequiredKeysMixin(ToonRequiredKeysMixin):
     """Mixin for switch required keys."""
 
     cls: type[ToonSwitch]
 
 
-@dataclass(frozen=True)
+@dataclass
 class ToonSwitchEntityDescription(SwitchEntityDescription, ToonSwitchRequiredKeysMixin):
     """Describes Toon switch entity."""
 

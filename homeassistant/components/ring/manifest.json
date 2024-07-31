@@ -1,7 +1,7 @@
 {
   "domain": "ring",
   "name": "Ring",
-  "codeowners": ["@sdb9696"],
+  "codeowners": [],
   "config_flow": true,
   "dependencies": ["ffmpeg"],
   "dhcp": [
@@ -13,6 +13,5 @@
   "documentation": "https://www.home-assistant.io/integrations/ring",
   "iot_class": "cloud_polling",
   "loggers": ["ring_doorbell"],
-  "quality_scale": "silver",
-  "requirements": ["ring-doorbell[listen]==0.8.12"]
+  "requirements": ["ring-doorbell==0.7.3"]
 }

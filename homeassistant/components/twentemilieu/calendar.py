@@ -1,39 +1,46 @@
 """Support for Twente Milieu Calendar."""
-
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
+
+from twentemilieu import WasteType
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ID
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 import homeassistant.util.dt as dt_util
 
-from . import TwenteMilieuConfigEntry
-from .const import WASTE_TYPE_TO_DESCRIPTION
+from .const import DOMAIN, WASTE_TYPE_TO_DESCRIPTION
 from .entity import TwenteMilieuEntity
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: TwenteMilieuConfigEntry,
+    entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Twente Milieu calendar based on a config entry."""
-    async_add_entities([TwenteMilieuCalendar(entry)])
+    coordinator = hass.data[DOMAIN][entry.data[CONF_ID]]
+    async_add_entities([TwenteMilieuCalendar(coordinator, entry)])
 
 
 class TwenteMilieuCalendar(TwenteMilieuEntity, CalendarEntity):
     """Defines a Twente Milieu calendar."""
 
     _attr_has_entity_name = True
+    _attr_icon = "mdi:delete-empty"
     _attr_name = None
-    _attr_translation_key = "calendar"
 
-    def __init__(self, entry: TwenteMilieuConfigEntry) -> None:
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator[dict[WasteType, list[date]]],
+        entry: ConfigEntry,
+    ) -> None:
         """Initialize the Twente Milieu entity."""
-        super().__init__(entry)
+        super().__init__(coordinator, entry)
         self._attr_unique_id = str(entry.data[CONF_ID])
         self._event: CalendarEvent | None = None
 

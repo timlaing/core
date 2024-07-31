@@ -1,38 +1,53 @@
 """The tests for the Google speech platform."""
-
 from __future__ import annotations
 
 from collections.abc import Generator
-from http import HTTPStatus
-from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 from gtts import gTTSError
 import pytest
 
-from homeassistant.components import tts
+from homeassistant.components import media_source, tts
 from homeassistant.components.google_translate.const import CONF_TLD, DOMAIN
-from homeassistant.components.media_player import ATTR_MEDIA_CONTENT_ID
+from homeassistant.components.media_player import (
+    ATTR_MEDIA_CONTENT_ID,
+    DOMAIN as DOMAIN_MP,
+    SERVICE_PLAY_MEDIA,
+)
 from homeassistant.config import async_process_ha_core_config
 from homeassistant.const import ATTR_ENTITY_ID, CONF_PLATFORM
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.setup import async_setup_component
 
-from tests.common import MockConfigEntry
-from tests.components.tts.common import retrieve_media
-from tests.typing import ClientSessionGenerator
+from tests.common import MockConfigEntry, async_mock_service
 
 
 @pytest.fixture(autouse=True)
-def tts_mutagen_mock_fixture_autouse(tts_mutagen_mock: MagicMock) -> None:
+def tts_mutagen_mock_fixture_autouse(tts_mutagen_mock):
     """Mock writing tags."""
 
 
 @pytest.fixture(autouse=True)
-def mock_tts_cache_dir_autouse(mock_tts_cache_dir: Path) -> Path:
+def mock_tts_cache_dir_autouse(mock_tts_cache_dir):
     """Mock the TTS cache dir with empty dir."""
     return mock_tts_cache_dir
+
+
+async def get_media_source_url(hass: HomeAssistant, media_content_id: str) -> str:
+    """Get the media source url."""
+    if media_source.DOMAIN not in hass.config.components:
+        assert await async_setup_component(hass, media_source.DOMAIN, {})
+
+    resolved = await media_source.async_resolve_media(hass, media_content_id, None)
+    return resolved.url
+
+
+@pytest.fixture
+async def calls(hass: HomeAssistant) -> list[ServiceCall]:
+    """Mock media player calls."""
+    return async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
 
 @pytest.fixture(autouse=True)
@@ -44,7 +59,7 @@ async def setup_internal_url(hass: HomeAssistant) -> None:
 
 
 @pytest.fixture
-def mock_gtts() -> Generator[MagicMock]:
+def mock_gtts() -> Generator[MagicMock, None, None]:
     """Mock gtts."""
     with patch("homeassistant.components.google_translate.tts.gTTS") as mock_gtts:
         yield mock_gtts
@@ -63,8 +78,6 @@ async def setup_fixture(
         await mock_config_entry_setup(hass, config)
     else:
         raise RuntimeError("Invalid setup fixture")
-
-    await hass.async_block_till_done()
 
 
 @pytest.fixture(name="config")
@@ -115,8 +128,7 @@ async def mock_config_entry_setup(hass: HomeAssistant, config: dict[str, Any]) -
 async def test_tts_service(
     hass: HomeAssistant,
     mock_gtts: MagicMock,
-    hass_client: ClientSessionGenerator,
-    service_calls: list[ServiceCall],
+    calls: list[ServiceCall],
     setup: str,
     tts_service: str,
     service_data: dict[str, Any],
@@ -129,14 +141,10 @@ async def test_tts_service(
         blocking=True,
     )
 
-    assert len(service_calls) == 2
-    assert (
-        await retrieve_media(
-            hass, hass_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
-        )
-        == HTTPStatus.OK
-    )
+    assert len(calls) == 1
+    url = await get_media_source_url(hass, calls[0].data[ATTR_MEDIA_CONTENT_ID])
     assert len(mock_gtts.mock_calls) == 2
+    assert url.endswith(".mp3")
 
     assert mock_gtts.mock_calls[0][2] == {
         "text": "There is a person at the front door.",
@@ -172,8 +180,7 @@ async def test_tts_service(
 async def test_service_say_german_config(
     hass: HomeAssistant,
     mock_gtts: MagicMock,
-    hass_client: ClientSessionGenerator,
-    service_calls: list[ServiceCall],
+    calls: list[ServiceCall],
     setup: str,
     tts_service: str,
     service_data: dict[str, Any],
@@ -186,13 +193,8 @@ async def test_service_say_german_config(
         blocking=True,
     )
 
-    assert len(service_calls) == 2
-    assert (
-        await retrieve_media(
-            hass, hass_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
-        )
-        == HTTPStatus.OK
-    )
+    assert len(calls) == 1
+    await get_media_source_url(hass, calls[0].data[ATTR_MEDIA_CONTENT_ID])
     assert len(mock_gtts.mock_calls) == 2
     assert mock_gtts.mock_calls[0][2] == {
         "text": "There is a person at the front door.",
@@ -229,8 +231,7 @@ async def test_service_say_german_config(
 async def test_service_say_german_service(
     hass: HomeAssistant,
     mock_gtts: MagicMock,
-    hass_client: ClientSessionGenerator,
-    service_calls: list[ServiceCall],
+    calls: list[ServiceCall],
     setup: str,
     tts_service: str,
     service_data: dict[str, Any],
@@ -243,13 +244,8 @@ async def test_service_say_german_service(
         blocking=True,
     )
 
-    assert len(service_calls) == 2
-    assert (
-        await retrieve_media(
-            hass, hass_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
-        )
-        == HTTPStatus.OK
-    )
+    assert len(calls) == 1
+    await get_media_source_url(hass, calls[0].data[ATTR_MEDIA_CONTENT_ID])
     assert len(mock_gtts.mock_calls) == 2
     assert mock_gtts.mock_calls[0][2] == {
         "text": "There is a person at the front door.",
@@ -285,8 +281,7 @@ async def test_service_say_german_service(
 async def test_service_say_en_uk_config(
     hass: HomeAssistant,
     mock_gtts: MagicMock,
-    hass_client: ClientSessionGenerator,
-    service_calls: list[ServiceCall],
+    calls: list[ServiceCall],
     setup: str,
     tts_service: str,
     service_data: dict[str, Any],
@@ -299,13 +294,8 @@ async def test_service_say_en_uk_config(
         blocking=True,
     )
 
-    assert len(service_calls) == 2
-    assert (
-        await retrieve_media(
-            hass, hass_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
-        )
-        == HTTPStatus.OK
-    )
+    assert len(calls) == 1
+    await get_media_source_url(hass, calls[0].data[ATTR_MEDIA_CONTENT_ID])
     assert len(mock_gtts.mock_calls) == 2
     assert mock_gtts.mock_calls[0][2] == {
         "text": "There is a person at the front door.",
@@ -342,8 +332,7 @@ async def test_service_say_en_uk_config(
 async def test_service_say_en_uk_service(
     hass: HomeAssistant,
     mock_gtts: MagicMock,
-    hass_client: ClientSessionGenerator,
-    service_calls: list[ServiceCall],
+    calls: list[ServiceCall],
     setup: str,
     tts_service: str,
     service_data: dict[str, Any],
@@ -356,13 +345,8 @@ async def test_service_say_en_uk_service(
         blocking=True,
     )
 
-    assert len(service_calls) == 2
-    assert (
-        await retrieve_media(
-            hass, hass_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
-        )
-        == HTTPStatus.OK
-    )
+    assert len(calls) == 1
+    await get_media_source_url(hass, calls[0].data[ATTR_MEDIA_CONTENT_ID])
     assert len(mock_gtts.mock_calls) == 2
     assert mock_gtts.mock_calls[0][2] == {
         "text": "There is a person at the front door.",
@@ -399,8 +383,7 @@ async def test_service_say_en_uk_service(
 async def test_service_say_en_couk(
     hass: HomeAssistant,
     mock_gtts: MagicMock,
-    hass_client: ClientSessionGenerator,
-    service_calls: list[ServiceCall],
+    calls: list[ServiceCall],
     setup: str,
     tts_service: str,
     service_data: dict[str, Any],
@@ -413,14 +396,10 @@ async def test_service_say_en_couk(
         blocking=True,
     )
 
-    assert len(service_calls) == 2
-    assert (
-        await retrieve_media(
-            hass, hass_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
-        )
-        == HTTPStatus.OK
-    )
+    assert len(calls) == 1
+    url = await get_media_source_url(hass, calls[0].data[ATTR_MEDIA_CONTENT_ID])
     assert len(mock_gtts.mock_calls) == 2
+    assert url.endswith(".mp3")
 
     assert mock_gtts.mock_calls[0][2] == {
         "text": "There is a person at the front door.",
@@ -455,8 +434,7 @@ async def test_service_say_en_couk(
 async def test_service_say_error(
     hass: HomeAssistant,
     mock_gtts: MagicMock,
-    hass_client: ClientSessionGenerator,
-    service_calls: list[ServiceCall],
+    calls: list[ServiceCall],
     setup: str,
     tts_service: str,
     service_data: dict[str, Any],
@@ -471,11 +449,7 @@ async def test_service_say_error(
         blocking=True,
     )
 
-    assert len(service_calls) == 2
-    assert (
-        await retrieve_media(
-            hass, hass_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
-        )
-        == HTTPStatus.NOT_FOUND
-    )
+    assert len(calls) == 1
+    with pytest.raises(HomeAssistantError):
+        await get_media_source_url(hass, calls[0].data[ATTR_MEDIA_CONTENT_ID])
     assert len(mock_gtts.mock_calls) == 2

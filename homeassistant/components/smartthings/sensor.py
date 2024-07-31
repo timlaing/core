@@ -1,9 +1,8 @@
 """Support for sensors through the SmartThings cloud API."""
-
 from __future__ import annotations
 
+from collections import namedtuple
 from collections.abc import Sequence
-from typing import NamedTuple
 
 from pysmartthings import Attribute, Capability
 from pysmartthings.device import DeviceEntity
@@ -34,17 +33,9 @@ from homeassistant.util import dt as dt_util
 from . import SmartThingsEntity
 from .const import DATA_BROKERS, DOMAIN
 
-
-class Map(NamedTuple):
-    """Tuple for mapping Smartthings capabilities to Home Assistant sensors."""
-
-    attribute: str
-    name: str
-    default_unit: str | None
-    device_class: SensorDeviceClass | None
-    state_class: SensorStateClass | None
-    entity_category: EntityCategory | None
-
+Map = namedtuple(
+    "Map", "attribute name default_unit device_class state_class entity_category"
+)
 
 CAPABILITY_TO_SENSORS: dict[str, list[Map]] = {
     Capability.activity_lighting_mode: [
@@ -637,8 +628,8 @@ class SmartThingsSensor(SmartThingsEntity, SensorEntity):
         device: DeviceEntity,
         attribute: str,
         name: str,
-        default_unit: str | None,
-        device_class: SensorDeviceClass | None,
+        default_unit: str,
+        device_class: SensorDeviceClass,
         state_class: str | None,
         entity_category: EntityCategory | None,
     ) -> None:

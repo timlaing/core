@@ -1,5 +1,4 @@
 """Support for scanning a network with nmap."""
-
 from __future__ import annotations
 
 import logging
@@ -47,7 +46,6 @@ class NmapTrackerEntity(ScannerEntity):
     """An Nmap Tracker entity."""
 
     _attr_should_poll = False
-    _attr_translation_key = "device_tracker"
 
     def __init__(
         self, nmap_tracker: NmapDeviceScanner, mac_address: str, active: bool
@@ -99,6 +97,11 @@ class NmapTrackerEntity(ScannerEntity):
     def source_type(self) -> SourceType:
         """Return tracker source type."""
         return SourceType.ROUTER
+
+    @property
+    def icon(self) -> str:
+        """Return device icon."""
+        return "mdi:lan-connect" if self._active else "mdi:lan-disconnect"
 
     @callback
     def async_process_update(self, online: bool) -> None:

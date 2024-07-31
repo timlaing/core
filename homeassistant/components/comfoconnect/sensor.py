@@ -1,5 +1,4 @@
 """Platform to control a Zehnder ComfoAir Q350/450/600 ventilation unit."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -31,7 +30,7 @@ from pycomfoconnect import (
 import voluptuous as vol
 
 from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
@@ -80,11 +79,19 @@ ATTR_SUPPLY_TEMPERATURE = "supply_temperature"
 _LOGGER = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True, kw_only=True)
-class ComfoconnectSensorEntityDescription(SensorEntityDescription):
-    """Describes Comfoconnect sensor entity."""
+@dataclass
+class ComfoconnectRequiredKeysMixin:
+    """Mixin for required keys."""
 
     sensor_id: int
+
+
+@dataclass
+class ComfoconnectSensorEntityDescription(
+    SensorEntityDescription, ComfoconnectRequiredKeysMixin
+):
+    """Describes Comfoconnect sensor entity."""
+
     multiplier: float = 1
 
 
@@ -263,7 +270,7 @@ SENSOR_TYPES = (
     ),
 )
 
-PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Optional(CONF_RESOURCES, default=[]): vol.All(
             cv.ensure_list, [vol.In([desc.key for desc in SENSOR_TYPES])]
@@ -327,7 +334,7 @@ class ComfoConnectSensor(SensorEntity):
             self._ccb.comfoconnect.register_sensor, self.entity_description.sensor_id
         )
 
-    def _handle_update(self, value: float) -> None:
+    def _handle_update(self, value):
         """Handle update callbacks."""
         _LOGGER.debug(
             "Handle update for sensor %s (%d): %s",

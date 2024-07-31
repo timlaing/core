@@ -299,9 +299,7 @@ class SendKeys(LcnServiceCall):
 
         keys = [[False] * 8 for i in range(4)]
 
-        key_strings = zip(
-            service.data[CONF_KEYS][::2], service.data[CONF_KEYS][1::2], strict=False
-        )
+        key_strings = zip(service.data[CONF_KEYS][::2], service.data[CONF_KEYS][1::2])
 
         for table, key in key_strings:
             table_id = ord(table) - 65

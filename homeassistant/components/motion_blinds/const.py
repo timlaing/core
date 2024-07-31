@@ -1,10 +1,9 @@
-"""Constants for the Motionblinds component."""
-
+"""Constants for the Motion Blinds component."""
 from homeassistant.const import Platform
 
 DOMAIN = "motion_blinds"
-MANUFACTURER = "Motionblinds, Coulisse B.V."
-DEFAULT_GATEWAY_NAME = "Motionblinds Gateway"
+MANUFACTURER = "Motion Blinds, Coulisse B.V."
+DEFAULT_GATEWAY_NAME = "Motion Blinds Gateway"
 
 PLATFORMS = [Platform.COVER, Platform.SENSOR]
 

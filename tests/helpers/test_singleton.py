@@ -1,5 +1,4 @@
 """Test singleton helper."""
-
 from unittest.mock import Mock
 
 import pytest
@@ -13,7 +12,7 @@ def mock_hass():
     return Mock(data={})
 
 
-@pytest.mark.parametrize("result", [object(), {}, []])
+@pytest.mark.parametrize("result", (object(), {}, []))
 async def test_singleton_async(mock_hass, result) -> None:
     """Test singleton with async function."""
 
@@ -29,7 +28,7 @@ async def test_singleton_async(mock_hass, result) -> None:
     assert mock_hass.data["test_key"] is result1
 
 
-@pytest.mark.parametrize("result", [object(), {}, []])
+@pytest.mark.parametrize("result", (object(), {}, []))
 def test_singleton(mock_hass, result) -> None:
     """Test singleton with function."""
 

@@ -1,5 +1,4 @@
 """Tests for the jellyfin integration."""
-
 import json
 from typing import Any
 

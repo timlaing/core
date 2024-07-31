@@ -1,12 +1,11 @@
 """Fixtures for LaMetric integration tests."""
-
 from __future__ import annotations
 
 from collections.abc import Generator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from demetriek import CloudDevice, Device
-from pydantic import parse_raw_as  # pylint: disable=no-name-in-module
+from pydantic import parse_raw_as
 import pytest
 
 from homeassistant.components.application_credentials import (
@@ -46,7 +45,7 @@ def mock_config_entry() -> MockConfigEntry:
 
 
 @pytest.fixture
-def mock_setup_entry() -> Generator[AsyncMock]:
+def mock_setup_entry() -> Generator[AsyncMock, None, None]:
     """Mock setting up a config entry."""
     with patch(
         "homeassistant.components.lametric.async_setup_entry", return_value=True
@@ -55,7 +54,7 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 
 
 @pytest.fixture
-def mock_lametric_cloud() -> Generator[MagicMock]:
+def mock_lametric_cloud() -> Generator[MagicMock, None, None]:
     """Return a mocked LaMetric Cloud client."""
     with patch(
         "homeassistant.components.lametric.config_flow.LaMetricCloud", autospec=True
@@ -74,17 +73,13 @@ def device_fixture() -> str:
 
 
 @pytest.fixture
-def mock_lametric(device_fixture: str) -> Generator[MagicMock]:
+def mock_lametric(request, device_fixture: str) -> Generator[MagicMock, None, None]:
     """Return a mocked LaMetric TIME client."""
-    with (
-        patch(
-            "homeassistant.components.lametric.coordinator.LaMetricDevice",
-            autospec=True,
-        ) as lametric_mock,
-        patch(
-            "homeassistant.components.lametric.config_flow.LaMetricDevice",
-            new=lametric_mock,
-        ),
+    with patch(
+        "homeassistant.components.lametric.coordinator.LaMetricDevice", autospec=True
+    ) as lametric_mock, patch(
+        "homeassistant.components.lametric.config_flow.LaMetricDevice",
+        new=lametric_mock,
     ):
         lametric = lametric_mock.return_value
         lametric.api_key = "mock-api-key"

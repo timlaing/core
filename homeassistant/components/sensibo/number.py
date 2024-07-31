@@ -1,5 +1,4 @@
 """Number platform for Sensibo integration."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -13,23 +12,31 @@ from homeassistant.components.number import (
     NumberEntity,
     NumberEntityDescription,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import SensiboConfigEntry
+from .const import DOMAIN
 from .coordinator import SensiboDataUpdateCoordinator
 from .entity import SensiboDeviceBaseEntity, async_handle_api_call
 
 PARALLEL_UPDATES = 0
 
 
-@dataclass(frozen=True, kw_only=True)
-class SensiboNumberEntityDescription(NumberEntityDescription):
-    """Class describing Sensibo Number entities."""
+@dataclass
+class SensiboEntityDescriptionMixin:
+    """Mixin values for Sensibo entities."""
 
     remote_key: str
     value_fn: Callable[[SensiboDevice], float | None]
+
+
+@dataclass
+class SensiboNumberEntityDescription(
+    NumberEntityDescription, SensiboEntityDescriptionMixin
+):
+    """Class describing Sensibo Number entities."""
 
 
 DEVICE_NUMBER_TYPES = (
@@ -63,13 +70,11 @@ DEVICE_NUMBER_TYPES = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: SensiboConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up Sensibo number platform."""
 
-    coordinator = entry.runtime_data
+    coordinator: SensiboDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     async_add_entities(
         SensiboNumber(coordinator, device_id, description)

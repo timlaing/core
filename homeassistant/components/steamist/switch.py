@@ -1,5 +1,4 @@
 """Support for Steamist switches."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -14,8 +13,7 @@ from .coordinator import SteamistDataUpdateCoordinator
 from .entity import SteamistEntity
 
 ACTIVE_SWITCH = SwitchEntityDescription(
-    key="active",
-    translation_key="steam_active",
+    key="active", icon="mdi:pot-steam", name="Steam Active"
 )
 
 
@@ -32,7 +30,7 @@ async def async_setup_entry(
 
 
 class SteamistSwitchEntity(SteamistEntity, SwitchEntity):
-    """Representation of a Steamist steam switch."""
+    """Representation of an Steamist steam switch."""
 
     @property
     def is_on(self) -> bool:

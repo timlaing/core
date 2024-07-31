@@ -1,5 +1,4 @@
 """Support for GTFS (Google/General Transport Format Schema)."""
-
 from __future__ import annotations
 
 import datetime
@@ -270,7 +269,7 @@ def get_next_departure(
     schedule: Any,
     start_station_id: Any,
     end_station_id: Any,
-    offset: datetime.timedelta,
+    offset: cv.time_period,
     include_tomorrow: bool = False,
 ) -> dict:
     """Get the next departure for the given schedule."""
@@ -405,7 +404,7 @@ def get_next_departure(
 
     item = {}
     for key in sorted(timetable.keys()):
-        if (value := dt_util.parse_datetime(key)) is not None and value > now:
+        if dt_util.parse_datetime(key) > now:
             item = timetable[key]
             _LOGGER.debug(
                 "Departure found for station %s @ %s -> %s", start_station_id, key, item
@@ -737,10 +736,10 @@ class GTFSDepartureSensor(SensorEntity):
             self._attributes[ATTR_LOCATION_DESTINATION] = LOCATION_TYPE_OPTIONS.get(
                 self._destination.location_type, LOCATION_TYPE_DEFAULT
             )
-            self._attributes[ATTR_WHEELCHAIR_DESTINATION] = (
-                WHEELCHAIR_BOARDING_OPTIONS.get(
-                    self._destination.wheelchair_boarding, WHEELCHAIR_BOARDING_DEFAULT
-                )
+            self._attributes[
+                ATTR_WHEELCHAIR_DESTINATION
+            ] = WHEELCHAIR_BOARDING_OPTIONS.get(
+                self._destination.wheelchair_boarding, WHEELCHAIR_BOARDING_DEFAULT
             )
 
         # Manage Route metadata

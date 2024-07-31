@@ -1,5 +1,4 @@
 """Support for Velbus sensors."""
-
 from __future__ import annotations
 
 from velbusaio.channels import ButtonCounter, LightSensor, SensorNumber, Temperature

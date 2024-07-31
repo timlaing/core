@@ -1,5 +1,4 @@
 """Support for sensors from the Dovado router."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -9,7 +8,7 @@ import re
 import voluptuous as vol
 
 from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
@@ -31,11 +30,16 @@ SENSOR_NETWORK = "network"
 SENSOR_SMS_UNREAD = "sms"
 
 
-@dataclass(frozen=True, kw_only=True)
-class DovadoSensorEntityDescription(SensorEntityDescription):
-    """Describes Dovado sensor entity."""
+@dataclass
+class DovadoRequiredKeysMixin:
+    """Mixin for required keys."""
 
     identifier: str
+
+
+@dataclass
+class DovadoSensorEntityDescription(SensorEntityDescription, DovadoRequiredKeysMixin):
+    """Describes Dovado sensor entity."""
 
 
 SENSOR_TYPES: tuple[DovadoSensorEntityDescription, ...] = (
@@ -78,7 +82,7 @@ SENSOR_TYPES: tuple[DovadoSensorEntityDescription, ...] = (
 
 SENSOR_KEYS: list[str] = [desc.key for desc in SENSOR_TYPES]
 
-PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {vol.Required(CONF_SENSORS): vol.All(cv.ensure_list, [vol.In(SENSOR_KEYS)])}
 )
 

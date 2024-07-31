@@ -1,5 +1,4 @@
 """Helper methods for language selection in Home Assistant."""
-
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -139,7 +138,7 @@ class Dialect:
                 region_idx = pref_regions.index(dialect.region)
             else:
                 # Can't happen, but mypy is not smart enough
-                raise ValueError
+                raise ValueError()
 
             # More preferred regions are at the front.
             # Add 1 to boost above a weak match where no regions are set.

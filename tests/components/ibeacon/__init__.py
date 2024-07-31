@@ -1,5 +1,4 @@
 """Tests for the ibeacon integration."""
-
 from typing import Any
 
 from homeassistant.helpers.service_info.bluetooth import BluetoothServiceInfo

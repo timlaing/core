@@ -135,8 +135,7 @@
       "icon_code": "30",
       "temperature": -1,
       "temperature_class": "low",
-      "precip_probability": 0,
-      "timestamp": "2022-10-03 15:00:00+00:00"
+      "precip_probability": 0
     },
     {
       "period": "Tuesday",
@@ -144,8 +143,7 @@
       "icon_code": "00",
       "temperature": 18,
       "temperature_class": "high",
-      "precip_probability": 0,
-      "timestamp": "2022-10-04 15:00:00+00:00"
+      "precip_probability": 0
     },
     {
       "period": "Tuesday night",
@@ -153,8 +151,7 @@
       "icon_code": "30",
       "temperature": 3,
       "temperature_class": "low",
-      "precip_probability": 0,
-      "timestamp": "2022-10-04 15:00:00+00:00"
+      "precip_probability": 0
     },
     {
       "period": "Wednesday",
@@ -162,8 +159,7 @@
       "icon_code": "00",
       "temperature": 20,
       "temperature_class": "high",
-      "precip_probability": 0,
-      "timestamp": "2022-10-05 15:00:00+00:00"
+      "precip_probability": 0
     },
     {
       "period": "Wednesday night",
@@ -171,8 +167,7 @@
       "icon_code": "30",
       "temperature": 9,
       "temperature_class": "low",
-      "precip_probability": 0,
-      "timestamp": "2022-10-05 15:00:00+00:00"
+      "precip_probability": 0
     },
     {
       "period": "Thursday",
@@ -180,8 +175,7 @@
       "icon_code": "02",
       "temperature": 20,
       "temperature_class": "high",
-      "precip_probability": 0,
-      "timestamp": "2022-10-06 15:00:00+00:00"
+      "precip_probability": 0
     },
     {
       "period": "Thursday night",
@@ -189,8 +183,7 @@
       "icon_code": "12",
       "temperature": 7,
       "temperature_class": "low",
-      "precip_probability": 0,
-      "timestamp": "2022-10-06 15:00:00+00:00"
+      "precip_probability": 0
     },
     {
       "period": "Friday",
@@ -198,8 +191,7 @@
       "icon_code": "12",
       "temperature": 13,
       "temperature_class": "high",
-      "precip_probability": 40,
-      "timestamp": "2022-10-07 15:00:00+00:00"
+      "precip_probability": 40
     },
     {
       "period": "Friday night",
@@ -207,8 +199,7 @@
       "icon_code": "32",
       "temperature": 1,
       "temperature_class": "low",
-      "precip_probability": 0,
-      "timestamp": "2022-10-07 15:00:00+00:00"
+      "precip_probability": 0
     },
     {
       "period": "Saturday",
@@ -216,8 +207,7 @@
       "icon_code": "02",
       "temperature": 10,
       "temperature_class": "high",
-      "precip_probability": 0,
-      "timestamp": "2022-10-08 15:00:00+00:00"
+      "precip_probability": 0
     },
     {
       "period": "Saturday night",
@@ -225,8 +215,7 @@
       "icon_code": "32",
       "temperature": 3,
       "temperature_class": "low",
-      "precip_probability": 0,
-      "timestamp": "2022-10-08 15:00:00+00:00"
+      "precip_probability": 0
     },
     {
       "period": "Sunday",
@@ -234,8 +223,7 @@
       "icon_code": "02",
       "temperature": 12,
       "temperature_class": "high",
-      "precip_probability": 0,
-      "timestamp": "2022-10-09 15:00:00+00:00"
+      "precip_probability": 0
     }
   ],
   "metadata": {

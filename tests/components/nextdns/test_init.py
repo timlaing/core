@@ -1,10 +1,7 @@
 """Test init of NextDNS integration."""
-
 from unittest.mock import patch
 
 from nextdns import ApiError
-import pytest
-from tenacity import RetryError
 
 from homeassistant.components.nextdns.const import CONF_PROFILE_ID, DOMAIN
 from homeassistant.config_entries import ConfigEntryState
@@ -26,10 +23,7 @@ async def test_async_setup_entry(hass: HomeAssistant) -> None:
     assert state.state == "20.0"
 
 
-@pytest.mark.parametrize(
-    "exc", [ApiError("API Error"), RetryError("Retry Error"), TimeoutError]
-)
-async def test_config_not_ready(hass: HomeAssistant, exc: Exception) -> None:
+async def test_config_not_ready(hass: HomeAssistant) -> None:
     """Test for setup failure if the connection to the service fails."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -40,7 +34,7 @@ async def test_config_not_ready(hass: HomeAssistant, exc: Exception) -> None:
 
     with patch(
         "homeassistant.components.nextdns.NextDns.get_profiles",
-        side_effect=exc,
+        side_effect=ApiError("API Error"),
     ):
         entry.add_to_hass(hass)
         await hass.config_entries.async_setup(entry.entry_id)

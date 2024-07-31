@@ -1,5 +1,4 @@
 """Support for OpenTherm Gateway sensors."""
-
 import logging
 
 from homeassistant.components.sensor import ENTITY_ID_FORMAT, SensorEntity
@@ -23,21 +22,27 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the OpenTherm Gateway sensors."""
+    sensors = []
     gw_dev = hass.data[DATA_OPENTHERM_GW][DATA_GATEWAYS][config_entry.data[CONF_ID]]
+    for var, info in SENSOR_INFO.items():
+        device_class = info[0]
+        unit = info[1]
+        friendly_name_format = info[2]
+        status_sources = info[3]
 
-    async_add_entities(
-        OpenThermSensor(
-            gw_dev,
-            var,
-            source,
-            info[0],
-            info[1],
-            info[2],
-            info[3],
-        )
-        for var, info in SENSOR_INFO.items()
-        for source in info[4]
-    )
+        for source in status_sources:
+            sensors.append(
+                OpenThermSensor(
+                    gw_dev,
+                    var,
+                    source,
+                    device_class,
+                    unit,
+                    friendly_name_format,
+                )
+            )
+
+    async_add_entities(sensors)
 
 
 class OpenThermSensor(SensorEntity):
@@ -45,18 +50,8 @@ class OpenThermSensor(SensorEntity):
 
     _attr_should_poll = False
     _attr_entity_registry_enabled_default = False
-    _attr_available = False
 
-    def __init__(
-        self,
-        gw_dev,
-        var,
-        source,
-        device_class,
-        unit,
-        friendly_name_format,
-        suggested_display_precision,
-    ):
+    def __init__(self, gw_dev, var, source, device_class, unit, friendly_name_format):
         """Initialize the OpenTherm Gateway sensor."""
         self.entity_id = async_generate_entity_id(
             ENTITY_ID_FORMAT, f"{var}_{source}_{gw_dev.gw_id}", hass=gw_dev.hass
@@ -73,8 +68,6 @@ class OpenThermSensor(SensorEntity):
         self._attr_name = friendly_name_format.format(gw_dev.name)
         self._unsub_updates = None
         self._attr_unique_id = f"{gw_dev.gw_id}-{source}-{var}"
-        if suggested_display_precision:
-            self._attr_suggested_display_precision = suggested_display_precision
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, gw_dev.gw_id)},
             manufacturer="Schelte Bron",
@@ -95,10 +88,16 @@ class OpenThermSensor(SensorEntity):
         _LOGGER.debug("Removing OpenTherm Gateway sensor %s", self._attr_name)
         self._unsub_updates()
 
+    @property
+    def available(self):
+        """Return availability of the sensor."""
+        return self._attr_native_value is not None
+
     @callback
     def receive_report(self, status):
         """Handle status updates from the component."""
-        self._attr_available = self._gateway.connected
         value = status[self._source].get(self._var)
+        if isinstance(value, float):
+            value = f"{value:2.1f}"
         self._attr_native_value = value
         self.async_write_ha_state()

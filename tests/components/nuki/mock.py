@@ -1,29 +1,24 @@
 """Mockup Nuki device."""
 
-from homeassistant.components.nuki.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TOKEN
-from homeassistant.core import HomeAssistant
+from tests.common import MockConfigEntry
 
-from tests.common import MockConfigEntry, load_json_object_fixture
-
-NAME = "Nuki_Bridge_BC614E"
+NAME = "Nuki_Bridge_75BCD15"
 HOST = "1.1.1.1"
 MAC = "01:23:45:67:89:ab"
-DHCP_FORMATTED_MAC = "0123456789ab"
 
-HW_ID = 12345678
-ID_HEX = "BC614E"
+HW_ID = 123456789
+ID_HEX = "75BCD15"
 
-MOCK_INFO = load_json_object_fixture("info.json", DOMAIN)
+MOCK_INFO = {"ids": {"hardwareId": HW_ID}}
 
 
-async def setup_nuki_integration(hass: HomeAssistant) -> MockConfigEntry:
+async def setup_nuki_integration(hass):
     """Create the Nuki device."""
 
     entry = MockConfigEntry(
-        domain=DOMAIN,
+        domain="nuki",
         unique_id=ID_HEX,
-        data={CONF_HOST: HOST, CONF_PORT: 8080, CONF_TOKEN: "test-token"},
+        data={"host": HOST, "port": 8080, "token": "test-token"},
     )
     entry.add_to_hass(hass)
 

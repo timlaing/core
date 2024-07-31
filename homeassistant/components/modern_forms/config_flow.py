@@ -1,5 +1,4 @@
 """Config flow for Modern Forms."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -8,8 +7,9 @@ from aiomodernforms import ModernFormsConnectionError, ModernFormsDevice
 import voluptuous as vol
 
 from homeassistant.components import zeroconf
-from homeassistant.config_entries import SOURCE_ZEROCONF, ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import SOURCE_ZEROCONF, ConfigFlow
 from homeassistant.const import CONF_HOST, CONF_MAC, CONF_NAME
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
@@ -22,13 +22,13 @@ class ModernFormsFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle setup by user for Modern Forms integration."""
         return await self._handle_config_flow(user_input)
 
     async def async_step_zeroconf(
         self, discovery_info: zeroconf.ZeroconfServiceInfo
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle zeroconf discovery."""
         host = discovery_info.hostname.rstrip(".")
         name, _ = host.rsplit(".")
@@ -47,13 +47,13 @@ class ModernFormsFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_zeroconf_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow initiated by zeroconf."""
         return await self._handle_config_flow(user_input)
 
     async def _handle_config_flow(
         self, user_input: dict[str, Any] | None = None, prepare: bool = False
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Config flow handler for ModernForms."""
         source = self.context.get("source")
 
@@ -97,7 +97,7 @@ class ModernFormsFlowHandler(ConfigFlow, domain=DOMAIN):
             data={CONF_HOST: user_input[CONF_HOST], CONF_MAC: user_input[CONF_MAC]},
         )
 
-    def _show_setup_form(self, errors: dict | None = None) -> ConfigFlowResult:
+    def _show_setup_form(self, errors: dict | None = None) -> FlowResult:
         """Show the setup form to the user."""
         return self.async_show_form(
             step_id="user",
@@ -105,7 +105,7 @@ class ModernFormsFlowHandler(ConfigFlow, domain=DOMAIN):
             errors=errors or {},
         )
 
-    def _show_confirm_dialog(self, errors: dict | None = None) -> ConfigFlowResult:
+    def _show_confirm_dialog(self, errors: dict | None = None) -> FlowResult:
         """Show the confirm dialog to the user."""
         name = self.context.get(CONF_NAME)
         return self.async_show_form(

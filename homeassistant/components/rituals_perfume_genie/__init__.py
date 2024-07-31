@@ -1,5 +1,4 @@
 """The Rituals Perfume Genie integration."""
-
 import asyncio
 
 import aiohttp

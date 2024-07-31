@@ -1,5 +1,4 @@
 """Support for switch entities."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -50,7 +49,6 @@ class GardenaBluetoothValveSwitch(GardenaBluetoothEntity, SwitchEntity):
         self._attr_unique_id = f"{coordinator.address}-{Valve.state.uuid}"
         self._attr_translation_key = "state"
         self._attr_is_on = None
-        self._attr_entity_registry_enabled_default = False
 
     def _handle_coordinator_update(self) -> None:
         self._attr_is_on = self.coordinator.get_cached(Valve.state)

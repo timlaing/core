@@ -1,5 +1,4 @@
 """DataUpdateCoordinator for flipr integration."""
-
 from datetime import timedelta
 import logging
 

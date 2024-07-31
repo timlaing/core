@@ -1,5 +1,4 @@
 """Support for Meteoclimatic sensor."""
-
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,

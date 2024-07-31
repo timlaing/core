@@ -1,5 +1,4 @@
 """Support for Acmeda Roller Blinds."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -9,28 +8,29 @@ from homeassistant.components.cover import (
     CoverEntity,
     CoverEntityFeature,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import AcmedaConfigEntry
 from .base import AcmedaBase
-from .const import ACMEDA_HUB_UPDATE
+from .const import ACMEDA_HUB_UPDATE, DOMAIN
 from .helpers import async_add_acmeda_entities
+from .hub import PulseHub
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: AcmedaConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Acmeda Rollers from a config entry."""
-    hub = config_entry.runtime_data
+    hub: PulseHub = hass.data[DOMAIN][config_entry.entry_id]
 
     current: set[int] = set()
 
     @callback
-    def async_add_acmeda_covers() -> None:
+    def async_add_acmeda_covers():
         async_add_acmeda_entities(
             hass, AcmedaCover, config_entry, current, async_add_entities
         )
@@ -95,7 +95,7 @@ class AcmedaCover(AcmedaBase, CoverEntity):
     @property
     def is_closed(self) -> bool:
         """Return if the cover is closed."""
-        return self.roller.closed_percent == 100  # type: ignore[no-any-return]
+        return self.roller.closed_percent == 100
 
     async def async_close_cover(self, **kwargs: Any) -> None:
         """Close the roller."""

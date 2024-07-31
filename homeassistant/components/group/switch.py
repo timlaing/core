@@ -1,5 +1,4 @@
 """Platform allowing several switches to be grouped into one switch."""
-
 from __future__ import annotations
 
 import logging
@@ -7,11 +6,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.switch import (
-    DOMAIN,
-    PLATFORM_SCHEMA as SWITCH_PLATFORM_SCHEMA,
-    SwitchEntity,
-)
+from homeassistant.components.switch import DOMAIN, PLATFORM_SCHEMA, SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_ENTITY_ID,
@@ -29,7 +24,7 @@ from homeassistant.helpers import config_validation as cv, entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from .entity import GroupEntity
+from . import GroupEntity
 
 DEFAULT_NAME = "Switch Group"
 CONF_ALL = "all"
@@ -37,7 +32,7 @@ CONF_ALL = "all"
 # No limit on parallel updates to enable a group calling another group
 PARALLEL_UPDATES = 0
 
-PLATFORM_SCHEMA = SWITCH_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_ENTITIES): cv.entities_domain(DOMAIN),
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
@@ -92,7 +87,7 @@ async def async_setup_entry(
 
 @callback
 def async_create_preview_switch(
-    hass: HomeAssistant, name: str, validated_config: dict[str, Any]
+    name: str, validated_config: dict[str, Any]
 ) -> SwitchGroup:
     """Create a preview sensor."""
     return SwitchGroup(

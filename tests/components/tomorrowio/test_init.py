@@ -1,5 +1,4 @@
 """Tests for Tomorrow.io init."""
-
 from datetime import timedelta
 
 from freezegun.api import FrozenDateTimeFactory

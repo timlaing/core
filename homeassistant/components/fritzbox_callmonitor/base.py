@@ -1,5 +1,4 @@
 """Base class for fritzbox_callmonitor entities."""
-
 from __future__ import annotations
 
 from contextlib import suppress

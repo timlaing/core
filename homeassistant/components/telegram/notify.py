@@ -1,5 +1,4 @@
 """Telegram platform for notify component."""
-
 from __future__ import annotations
 
 import logging
@@ -11,14 +10,13 @@ from homeassistant.components.notify import (
     ATTR_MESSAGE,
     ATTR_TARGET,
     ATTR_TITLE,
-    PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     BaseNotificationService,
 )
 from homeassistant.components.telegram_bot import (
     ATTR_DISABLE_NOTIF,
     ATTR_DISABLE_WEB_PREV,
     ATTR_MESSAGE_TAG,
-    ATTR_MESSAGE_THREAD_ID,
     ATTR_PARSER,
 )
 from homeassistant.const import ATTR_LOCATION
@@ -40,9 +38,7 @@ ATTR_DOCUMENT = "document"
 
 CONF_CHAT_ID = "chat_id"
 
-PLATFORM_SCHEMA = NOTIFY_PLATFORM_SCHEMA.extend(
-    {vol.Required(CONF_CHAT_ID): vol.Coerce(int)}
-)
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({vol.Required(CONF_CHAT_ID): vol.Coerce(int)})
 
 
 def get_service(
@@ -94,11 +90,6 @@ class TelegramNotificationService(BaseNotificationService):
             disable_web_page_preview = data[ATTR_DISABLE_WEB_PREV]
             service_data.update({ATTR_DISABLE_WEB_PREV: disable_web_page_preview})
 
-        # Set message_thread_id
-        if data is not None and ATTR_MESSAGE_THREAD_ID in data:
-            message_thread_id = data[ATTR_MESSAGE_THREAD_ID]
-            service_data.update({ATTR_MESSAGE_THREAD_ID: message_thread_id})
-
         # Get keyboard info
         if data is not None and ATTR_KEYBOARD in data:
             keys = data.get(ATTR_KEYBOARD)
@@ -116,21 +107,21 @@ class TelegramNotificationService(BaseNotificationService):
             for photo_data in photos:
                 service_data.update(photo_data)
                 self.hass.services.call(DOMAIN, "send_photo", service_data=service_data)
-            return None
+            return
         if data is not None and ATTR_VIDEO in data:
             videos = data.get(ATTR_VIDEO)
             videos = videos if isinstance(videos, list) else [videos]
             for video_data in videos:
                 service_data.update(video_data)
                 self.hass.services.call(DOMAIN, "send_video", service_data=service_data)
-            return None
+            return
         if data is not None and ATTR_VOICE in data:
             voices = data.get(ATTR_VOICE)
             voices = voices if isinstance(voices, list) else [voices]
             for voice_data in voices:
                 service_data.update(voice_data)
                 self.hass.services.call(DOMAIN, "send_voice", service_data=service_data)
-            return None
+            return
         if data is not None and ATTR_LOCATION in data:
             service_data.update(data.get(ATTR_LOCATION))
             return self.hass.services.call(

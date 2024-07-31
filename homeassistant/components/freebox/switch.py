@@ -1,5 +1,4 @@
 """Support for Freebox Delta, Revolution and Mini 4K."""
-
 from __future__ import annotations
 
 import logging
@@ -52,7 +51,7 @@ class FreeboxSwitch(SwitchEntity):
         self._attr_device_info = router.device_info
         self._attr_unique_id = f"{router.mac} {entity_description.name}"
 
-    async def _async_set_state(self, enabled: bool) -> None:
+    async def _async_set_state(self, enabled: bool):
         """Turn the switch on or off."""
         try:
             await self._router.wifi.set_global_config({"enabled": enabled})
@@ -72,5 +71,5 @@ class FreeboxSwitch(SwitchEntity):
 
     async def async_update(self) -> None:
         """Get the state and update it."""
-        data = await self._router.wifi.get_global_config()
-        self._attr_is_on = bool(data["enabled"])
+        datas = await self._router.wifi.get_global_config()
+        self._attr_is_on = bool(datas["enabled"])

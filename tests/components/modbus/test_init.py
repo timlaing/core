@@ -12,7 +12,6 @@ This file is responsible for testing:
 
 It uses binary_sensors/sensors to do black box testing of the read calls.
 """
-
 from datetime import timedelta
 import logging
 from unittest import mock
@@ -25,7 +24,6 @@ import voluptuous as vol
 
 from homeassistant import config as hass_config
 from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
-from homeassistant.components.modbus import async_reset_platform
 from homeassistant.components.modbus.const import (
     ATTR_ADDRESS,
     ATTR_HUB,
@@ -42,27 +40,19 @@ from homeassistant.components.modbus.const import (
     CALL_TYPE_WRITE_REGISTERS,
     CONF_BAUDRATE,
     CONF_BYTESIZE,
-    CONF_CLIMATES,
+    CONF_CLOSE_COMM_ON_ERROR,
     CONF_DATA_TYPE,
     CONF_DEVICE_ADDRESS,
-    CONF_FAN_MODE_HIGH,
-    CONF_FAN_MODE_OFF,
-    CONF_FAN_MODE_ON,
-    CONF_FAN_MODE_VALUES,
     CONF_INPUT_TYPE,
     CONF_MSG_WAIT,
     CONF_PARITY,
-    CONF_RETRIES,
+    CONF_RETRY_ON_EMPTY,
     CONF_SLAVE_COUNT,
     CONF_STOPBITS,
     CONF_SWAP,
     CONF_SWAP_BYTE,
     CONF_SWAP_WORD,
     CONF_SWAP_WORD_BYTE,
-    CONF_SWING_MODE_SWING_BOTH,
-    CONF_SWING_MODE_SWING_OFF,
-    CONF_SWING_MODE_SWING_ON,
-    CONF_SWING_MODE_VALUES,
     CONF_VIRTUAL_COUNT,
     DEFAULT_SCAN_INTERVAL,
     MODBUS_DOMAIN as DOMAIN,
@@ -77,12 +67,10 @@ from homeassistant.components.modbus.const import (
     DataType,
 )
 from homeassistant.components.modbus.validators import (
-    check_config,
-    duplicate_fan_mode_validator,
-    duplicate_swing_mode_validator,
-    hvac_fixedsize_reglist_validator,
+    duplicate_entity_validator,
+    duplicate_modbus_validator,
     nan_validator,
-    register_int_list_validator,
+    number_validator,
     struct_validator,
 )
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
@@ -125,9 +113,7 @@ from tests.common import async_fire_time_changed, get_fixture_path
 
 
 @pytest.fixture(name="mock_modbus_with_pymodbus")
-async def mock_modbus_with_pymodbus_fixture(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, do_config, mock_pymodbus
-):
+async def mock_modbus_with_pymodbus_fixture(hass, caplog, do_config, mock_pymodbus):
     """Load integration modbus using mocked pymodbus."""
     caplog.clear()
     caplog.set_level(logging.ERROR)
@@ -139,38 +125,26 @@ async def mock_modbus_with_pymodbus_fixture(
     return mock_pymodbus
 
 
-async def test_fixedRegList_validator() -> None:
-    """Test fixed temp registers validator."""
+async def test_number_validator() -> None:
+    """Test number validator."""
 
-    for value in (
-        15,
-        [30, 31, 32, 33, 34, 35, 36],
-    ):
-        assert isinstance(hvac_fixedsize_reglist_validator(value), list)
-
-    with pytest.raises(vol.Invalid):
-        hvac_fixedsize_reglist_validator([15, "ab", 17, 18, 19, 20, 21])
-
-    with pytest.raises(vol.Invalid):
-        hvac_fixedsize_reglist_validator([15, 17])
-
-
-async def test_register_int_list_validator() -> None:
-    """Test conf address register validator."""
-    for value, vtype in (
+    for value, value_type in (
         (15, int),
-        ([15], list),
+        (15.1, float),
+        ("15", int),
+        ("15.1", float),
+        (-15, int),
+        (-15.1, float),
+        ("-15", int),
+        ("-15.1", float),
     ):
-        assert isinstance(register_int_list_validator(value), vtype)
+        assert isinstance(number_validator(value), value_type)
 
-    with pytest.raises(vol.Invalid):
-        register_int_list_validator([15, 16])
-
-    with pytest.raises(vol.Invalid):
-        register_int_list_validator(-15)
-
-    with pytest.raises(vol.Invalid):
-        register_int_list_validator(["aq"])
+    try:
+        number_validator("x15.1")
+    except vol.Invalid:
+        return
+    pytest.fail("Number_validator not throwing exception")
 
 
 async def test_nan_validator() -> None:
@@ -330,6 +304,11 @@ async def test_ok_struct_validator(do_config) -> None:
         {
             CONF_NAME: TEST_ENTITY_NAME,
             CONF_DATA_TYPE: DataType.INT16,
+            CONF_SWAP: CONF_SWAP_WORD,
+        },
+        {
+            CONF_NAME: TEST_ENTITY_NAME,
+            CONF_DATA_TYPE: DataType.INT16,
             CONF_SWAP: CONF_SWAP_WORD_BYTE,
         },
     ],
@@ -352,73 +331,33 @@ async def test_exception_struct_validator(do_config) -> None:
                 CONF_TYPE: TCP,
                 CONF_HOST: TEST_MODBUS_HOST,
                 CONF_PORT: TEST_PORT_TCP,
-                CONF_TIMEOUT: 3,
-                CONF_SENSORS: [
-                    {
-                        CONF_NAME: "dummy",
-                        CONF_ADDRESS: 9999,
-                    }
-                ],
             },
             {
                 CONF_NAME: TEST_MODBUS_NAME,
                 CONF_TYPE: TCP,
                 CONF_HOST: TEST_MODBUS_HOST + " 2",
                 CONF_PORT: TEST_PORT_TCP,
-                CONF_TIMEOUT: 3,
-                CONF_SENSORS: [
-                    {
-                        CONF_NAME: "dummy",
-                        CONF_ADDRESS: 9999,
-                    }
-                ],
-            },
-            {
-                CONF_NAME: TEST_MODBUS_NAME + "2",
-                CONF_TYPE: TCP,
-                CONF_HOST: TEST_MODBUS_HOST,
-                CONF_PORT: TEST_PORT_TCP,
-                CONF_TIMEOUT: 3,
-                CONF_SENSORS: [
-                    {
-                        CONF_NAME: "dummy",
-                        CONF_ADDRESS: 9999,
-                    }
-                ],
             },
         ],
         [
             {
+                CONF_NAME: TEST_MODBUS_NAME,
                 CONF_TYPE: TCP,
                 CONF_HOST: TEST_MODBUS_HOST,
                 CONF_PORT: TEST_PORT_TCP,
-                CONF_TIMEOUT: 3,
-                CONF_SENSORS: [
-                    {
-                        CONF_NAME: "dummy",
-                        CONF_ADDRESS: 9999,
-                    }
-                ],
             },
             {
                 CONF_NAME: TEST_MODBUS_NAME + " 2",
                 CONF_TYPE: TCP,
                 CONF_HOST: TEST_MODBUS_HOST,
                 CONF_PORT: TEST_PORT_TCP,
-                CONF_TIMEOUT: 3,
-                CONF_SENSORS: [
-                    {
-                        CONF_NAME: "dummy",
-                        CONF_ADDRESS: 9999,
-                    }
-                ],
             },
         ],
     ],
 )
-async def test_check_config(hass: HomeAssistant, do_config) -> None:
+async def test_duplicate_modbus_validator(do_config) -> None:
     """Test duplicate modbus validator."""
-    check_config(hass, do_config)
+    duplicate_modbus_validator(do_config)
     assert len(do_config) == 1
 
 
@@ -431,7 +370,6 @@ async def test_check_config(hass: HomeAssistant, do_config) -> None:
                 CONF_TYPE: TCP,
                 CONF_HOST: TEST_MODBUS_HOST,
                 CONF_PORT: TEST_PORT_TCP,
-                CONF_TIMEOUT: 3,
                 CONF_SENSORS: [
                     {
                         CONF_NAME: TEST_ENTITY_NAME,
@@ -446,33 +384,21 @@ async def test_check_config(hass: HomeAssistant, do_config) -> None:
                 ],
             }
         ],
-    ],
-)
-async def test_check_config_sensor(hass: HomeAssistant, do_config) -> None:
-    """Test duplicate entity validator."""
-    check_config(hass, do_config)
-    assert len(do_config[0][CONF_SENSORS]) == 1
-
-
-@pytest.mark.parametrize(
-    "do_config",
-    [
         [
             {
                 CONF_NAME: TEST_MODBUS_NAME,
                 CONF_TYPE: TCP,
                 CONF_HOST: TEST_MODBUS_HOST,
                 CONF_PORT: TEST_PORT_TCP,
-                CONF_TIMEOUT: 3,
-                CONF_CLIMATES: [
+                CONF_SENSORS: [
                     {
                         CONF_NAME: TEST_ENTITY_NAME,
                         CONF_ADDRESS: 117,
                         CONF_SLAVE: 0,
                     },
                     {
-                        CONF_NAME: TEST_ENTITY_NAME,
-                        CONF_ADDRESS: 119,
+                        CONF_NAME: TEST_ENTITY_NAME + " 2",
+                        CONF_ADDRESS: 117,
                         CONF_SLAVE: 0,
                     },
                 ],
@@ -480,83 +406,10 @@ async def test_check_config_sensor(hass: HomeAssistant, do_config) -> None:
         ],
     ],
 )
-async def test_check_config_climate(hass: HomeAssistant, do_config) -> None:
+async def test_duplicate_entity_validator(do_config) -> None:
     """Test duplicate entity validator."""
-    check_config(hass, do_config)
-    assert len(do_config[0][CONF_CLIMATES]) == 1
-
-
-@pytest.mark.parametrize(
-    "do_config",
-    [
-        {
-            CONF_ADDRESS: 11,
-            CONF_FAN_MODE_VALUES: {
-                CONF_FAN_MODE_ON: 7,
-                CONF_FAN_MODE_OFF: 9,
-                CONF_FAN_MODE_HIGH: 9,
-            },
-        }
-    ],
-)
-async def test_duplicate_fan_mode_validator(do_config) -> None:
-    """Test duplicate modbus validator."""
-    duplicate_fan_mode_validator(do_config)
-    assert len(do_config[CONF_FAN_MODE_VALUES]) == 2
-
-
-@pytest.mark.parametrize(
-    "do_config",
-    [
-        {
-            CONF_ADDRESS: 11,
-            CONF_SWING_MODE_VALUES: {
-                CONF_SWING_MODE_SWING_ON: 7,
-                CONF_SWING_MODE_SWING_OFF: 9,
-                CONF_SWING_MODE_SWING_BOTH: 9,
-            },
-        }
-    ],
-)
-async def test_duplicate_swing_mode_validator(do_config) -> None:
-    """Test duplicate modbus validator."""
-    duplicate_swing_mode_validator(do_config)
-    assert len(do_config[CONF_SWING_MODE_VALUES]) == 2
-
-
-@pytest.mark.parametrize(
-    "do_config",
-    [
-        [
-            {
-                CONF_NAME: TEST_MODBUS_NAME,
-                CONF_TYPE: TCP,
-                CONF_HOST: TEST_MODBUS_HOST,
-                CONF_PORT: TEST_PORT_TCP,
-                CONF_TIMEOUT: 3,
-                CONF_SENSORS: [
-                    {
-                        CONF_NAME: TEST_ENTITY_NAME,
-                        CONF_ADDRESS: 117,
-                        CONF_SLAVE: 0,
-                    },
-                ],
-                CONF_BINARY_SENSORS: [
-                    {
-                        CONF_NAME: TEST_ENTITY_NAME + "1",
-                        CONF_ADDRESS: 1179,
-                        CONF_SLAVE: 0,
-                    },
-                ],
-            },
-        ],
-    ],
-)
-async def test_no_duplicate_names(hass: HomeAssistant, do_config) -> None:
-    """Test duplicate entity validator."""
-    check_config(hass, do_config)
+    duplicate_entity_validator(do_config)
     assert len(do_config[0][CONF_SENSORS]) == 1
-    assert len(do_config[0][CONF_BINARY_SENSORS]) == 1
 
 
 @pytest.mark.parametrize(
@@ -566,24 +419,18 @@ async def test_no_duplicate_names(hass: HomeAssistant, do_config) -> None:
             CONF_TYPE: TCP,
             CONF_HOST: TEST_MODBUS_HOST,
             CONF_PORT: TEST_PORT_TCP,
-            CONF_SENSORS: [
-                {
-                    CONF_NAME: "dummy",
-                    CONF_ADDRESS: 9999,
-                }
-            ],
+            CONF_CLOSE_COMM_ON_ERROR: True,
         },
         {
             CONF_TYPE: TCP,
             CONF_HOST: TEST_MODBUS_HOST,
             CONF_PORT: TEST_PORT_TCP,
-            CONF_RETRIES: 3,
-            CONF_SENSORS: [
-                {
-                    CONF_NAME: "dummy",
-                    CONF_ADDRESS: 9999,
-                }
-            ],
+            CONF_RETRY_ON_EMPTY: True,
+        },
+        {
+            CONF_TYPE: TCP,
+            CONF_HOST: TEST_MODBUS_HOST,
+            CONF_PORT: TEST_PORT_TCP,
         },
         {
             CONF_TYPE: TCP,
@@ -592,23 +439,11 @@ async def test_no_duplicate_names(hass: HomeAssistant, do_config) -> None:
             CONF_NAME: TEST_MODBUS_NAME,
             CONF_TIMEOUT: 30,
             CONF_DELAY: 10,
-            CONF_SENSORS: [
-                {
-                    CONF_NAME: "dummy",
-                    CONF_ADDRESS: 9999,
-                }
-            ],
         },
         {
             CONF_TYPE: UDP,
             CONF_HOST: TEST_MODBUS_HOST,
             CONF_PORT: TEST_PORT_TCP,
-            CONF_SENSORS: [
-                {
-                    CONF_NAME: "dummy",
-                    CONF_ADDRESS: 9999,
-                }
-            ],
         },
         {
             CONF_TYPE: UDP,
@@ -617,23 +452,11 @@ async def test_no_duplicate_names(hass: HomeAssistant, do_config) -> None:
             CONF_NAME: TEST_MODBUS_NAME,
             CONF_TIMEOUT: 30,
             CONF_DELAY: 10,
-            CONF_SENSORS: [
-                {
-                    CONF_NAME: "dummy",
-                    CONF_ADDRESS: 9999,
-                }
-            ],
         },
         {
             CONF_TYPE: RTUOVERTCP,
             CONF_HOST: TEST_MODBUS_HOST,
             CONF_PORT: TEST_PORT_TCP,
-            CONF_SENSORS: [
-                {
-                    CONF_NAME: "dummy",
-                    CONF_ADDRESS: 9999,
-                }
-            ],
         },
         {
             CONF_TYPE: RTUOVERTCP,
@@ -642,12 +465,6 @@ async def test_no_duplicate_names(hass: HomeAssistant, do_config) -> None:
             CONF_NAME: TEST_MODBUS_NAME,
             CONF_TIMEOUT: 30,
             CONF_DELAY: 10,
-            CONF_SENSORS: [
-                {
-                    CONF_NAME: "dummy",
-                    CONF_ADDRESS: 9999,
-                }
-            ],
         },
         {
             CONF_TYPE: SERIAL,
@@ -658,12 +475,6 @@ async def test_no_duplicate_names(hass: HomeAssistant, do_config) -> None:
             CONF_PARITY: "E",
             CONF_STOPBITS: 1,
             CONF_MSG_WAIT: 100,
-            CONF_SENSORS: [
-                {
-                    CONF_NAME: "dummy",
-                    CONF_ADDRESS: 9999,
-                }
-            ],
         },
         {
             CONF_TYPE: SERIAL,
@@ -676,24 +487,12 @@ async def test_no_duplicate_names(hass: HomeAssistant, do_config) -> None:
             CONF_NAME: TEST_MODBUS_NAME,
             CONF_TIMEOUT: 30,
             CONF_DELAY: 10,
-            CONF_SENSORS: [
-                {
-                    CONF_NAME: "dummy",
-                    CONF_ADDRESS: 9999,
-                }
-            ],
         },
         {
             CONF_TYPE: TCP,
             CONF_HOST: TEST_MODBUS_HOST,
             CONF_PORT: TEST_PORT_TCP,
             CONF_DELAY: 5,
-            CONF_SENSORS: [
-                {
-                    CONF_NAME: "dummy",
-                    CONF_ADDRESS: 9999,
-                }
-            ],
         },
         [
             {
@@ -701,24 +500,12 @@ async def test_no_duplicate_names(hass: HomeAssistant, do_config) -> None:
                 CONF_HOST: TEST_MODBUS_HOST,
                 CONF_PORT: TEST_PORT_TCP,
                 CONF_NAME: TEST_MODBUS_NAME,
-                CONF_SENSORS: [
-                    {
-                        CONF_NAME: "dummy",
-                        CONF_ADDRESS: 9999,
-                    }
-                ],
             },
             {
                 CONF_TYPE: TCP,
                 CONF_HOST: TEST_MODBUS_HOST,
                 CONF_PORT: TEST_PORT_TCP,
                 CONF_NAME: f"{TEST_MODBUS_NAME} 2",
-                CONF_SENSORS: [
-                    {
-                        CONF_NAME: "dummy",
-                        CONF_ADDRESS: 9999,
-                    }
-                ],
             },
             {
                 CONF_TYPE: SERIAL,
@@ -729,12 +516,6 @@ async def test_no_duplicate_names(hass: HomeAssistant, do_config) -> None:
                 CONF_PARITY: "E",
                 CONF_STOPBITS: 1,
                 CONF_NAME: f"{TEST_MODBUS_NAME} 3",
-                CONF_SENSORS: [
-                    {
-                        CONF_NAME: "dummy",
-                        CONF_ADDRESS: 9999,
-                    }
-                ],
             },
         ],
         {
@@ -791,12 +572,6 @@ SERVICE = "service"
             CONF_PORT: TEST_PORT_SERIAL,
             CONF_PARITY: "E",
             CONF_STOPBITS: 1,
-            CONF_SENSORS: [
-                {
-                    CONF_NAME: "dummy",
-                    CONF_ADDRESS: 9999,
-                }
-            ],
         },
     ],
 )
@@ -884,18 +659,23 @@ async def test_pb_service_write(
 
 @pytest.fixture(name="mock_modbus_read_pymodbus")
 async def mock_modbus_read_pymodbus_fixture(
-    hass: HomeAssistant,
+    hass,
     do_group,
     do_type,
     do_scan_interval,
     do_return,
-    caplog: pytest.LogCaptureFixture,
+    do_exception,
+    caplog,
     mock_pymodbus,
     freezer: FrozenDateTimeFactory,
 ):
     """Load integration modbus using mocked pymodbus."""
     caplog.clear()
     caplog.set_level(logging.ERROR)
+    mock_pymodbus.read_coils.side_effect = do_exception
+    mock_pymodbus.read_discrete_inputs.side_effect = do_exception
+    mock_pymodbus.read_input_registers.side_effect = do_exception
+    mock_pymodbus.read_holding_registers.side_effect = do_exception
     mock_pymodbus.read_coils.return_value = do_return
     mock_pymodbus.read_discrete_inputs.return_value = do_return
     mock_pymodbus.read_input_registers.return_value = do_return
@@ -932,24 +712,24 @@ async def mock_modbus_read_pymodbus_fixture(
 @pytest.mark.parametrize(
     ("do_domain", "do_group", "do_type", "do_scan_interval"),
     [
-        (SENSOR_DOMAIN, CONF_SENSORS, CALL_TYPE_REGISTER_HOLDING, 10),
-        (SENSOR_DOMAIN, CONF_SENSORS, CALL_TYPE_REGISTER_INPUT, 10),
-        (BINARY_SENSOR_DOMAIN, CONF_BINARY_SENSORS, CALL_TYPE_DISCRETE, 10),
-        (BINARY_SENSOR_DOMAIN, CONF_BINARY_SENSORS, CALL_TYPE_COIL, 1),
+        [SENSOR_DOMAIN, CONF_SENSORS, CALL_TYPE_REGISTER_HOLDING, 10],
+        [SENSOR_DOMAIN, CONF_SENSORS, CALL_TYPE_REGISTER_INPUT, 10],
+        [BINARY_SENSOR_DOMAIN, CONF_BINARY_SENSORS, CALL_TYPE_DISCRETE, 10],
+        [BINARY_SENSOR_DOMAIN, CONF_BINARY_SENSORS, CALL_TYPE_COIL, 1],
     ],
 )
 @pytest.mark.parametrize(
     ("do_return", "do_exception", "do_expect_state", "do_expect_value"),
     [
-        (ReadResult([1]), None, STATE_ON, "1"),
-        (IllegalFunctionRequest(0x99), None, STATE_UNAVAILABLE, STATE_UNAVAILABLE),
-        (ExceptionResponse(0x99), None, STATE_UNAVAILABLE, STATE_UNAVAILABLE),
-        (
+        [ReadResult([1]), None, STATE_ON, "1"],
+        [IllegalFunctionRequest(0x99), None, STATE_UNAVAILABLE, STATE_UNAVAILABLE],
+        [ExceptionResponse(0x99), None, STATE_UNAVAILABLE, STATE_UNAVAILABLE],
+        [
             ReadResult([1]),
             ModbusException("fail read_"),
             STATE_UNAVAILABLE,
             STATE_UNAVAILABLE,
-        ),
+        ],
     ],
 )
 async def test_pb_read(
@@ -986,17 +766,11 @@ async def test_pymodbus_constructor_fail(
                 CONF_TYPE: TCP,
                 CONF_HOST: TEST_MODBUS_HOST,
                 CONF_PORT: TEST_PORT_TCP,
-                CONF_SENSORS: [
-                    {
-                        CONF_NAME: "dummy",
-                        CONF_ADDRESS: 9999,
-                    },
-                ],
             }
         ]
     }
     with mock.patch(
-        "homeassistant.components.modbus.modbus.AsyncModbusTcpClient", autospec=True
+        "homeassistant.components.modbus.modbus.ModbusTcpClient", autospec=True
     ) as mock_pb:
         caplog.set_level(logging.ERROR)
         mock_pb.side_effect = ModbusException("test no class")
@@ -1018,12 +792,6 @@ async def test_pymodbus_close_fail(
                 CONF_TYPE: TCP,
                 CONF_HOST: TEST_MODBUS_HOST,
                 CONF_PORT: TEST_PORT_TCP,
-                CONF_SENSORS: [
-                    {
-                        CONF_NAME: "dummy",
-                        CONF_ADDRESS: 9999,
-                    }
-                ],
             }
         ]
     }
@@ -1046,12 +814,6 @@ async def test_pymodbus_connect_fail(
                 CONF_TYPE: TCP,
                 CONF_HOST: TEST_MODBUS_HOST,
                 CONF_PORT: TEST_PORT_TCP,
-                CONF_SENSORS: [
-                    {
-                        CONF_NAME: "dummy",
-                        CONF_ADDRESS: 9999,
-                    }
-                ],
             }
         ]
     }
@@ -1208,7 +970,7 @@ async def test_stop_restart(
 async def test_write_no_client(hass: HomeAssistant, mock_modbus) -> None:
     """Run test for service stop and write without client."""
 
-    await mock_modbus.reset()
+    mock_modbus.reset()
     data = {
         ATTR_HUB: TEST_MODBUS_NAME,
     }
@@ -1257,10 +1019,9 @@ async def test_integration_reload_failed(
     caplog.clear()
 
     yaml_path = get_fixture_path("configuration.yaml", "modbus")
-    with (
-        mock.patch.object(hass_config, "YAML_CONFIG_FILE", yaml_path),
-        mock.patch.object(mock_modbus, "connect", side_effect=ModbusException("error")),
-    ):
+    with mock.patch.object(
+        hass_config, "YAML_CONFIG_FILE", yaml_path
+    ), mock.patch.object(mock_modbus, "connect", side_effect=ModbusException("error")):
         await hass.services.async_call(DOMAIN, SERVICE_RELOAD, blocking=True)
         await hass.async_block_till_done()
 
@@ -1283,24 +1044,3 @@ async def test_integration_setup_failed(
         )
         await hass.services.async_call(DOMAIN, SERVICE_RELOAD, blocking=True)
         await hass.async_block_till_done()
-
-
-async def test_no_entities(hass: HomeAssistant) -> None:
-    """Run test for failing pymodbus constructor."""
-    config = {
-        DOMAIN: [
-            {
-                CONF_NAME: TEST_MODBUS_NAME,
-                CONF_TYPE: TCP,
-                CONF_HOST: TEST_MODBUS_HOST,
-                CONF_PORT: TEST_PORT_TCP,
-            }
-        ]
-    }
-    assert await async_setup_component(hass, DOMAIN, config) is False
-
-
-async def test_reset_platform(hass: HomeAssistant) -> None:
-    """Run test for async_reset_platform."""
-    await async_reset_platform(hass, "modbus")
-    assert DOMAIN not in hass.data

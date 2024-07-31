@@ -1,5 +1,4 @@
 """The Renson integration."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -20,8 +19,6 @@ PLATFORMS = [
     Platform.FAN,
     Platform.NUMBER,
     Platform.SENSOR,
-    Platform.SWITCH,
-    Platform.TIME,
 ]
 
 

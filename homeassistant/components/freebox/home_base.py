@@ -1,8 +1,6 @@
 """Support for Freebox base features."""
-
 from __future__ import annotations
 
-from collections.abc import Callable
 import logging
 from typing import Any
 
@@ -44,7 +42,7 @@ class FreeboxHomeEntity(Entity):
         self._available = True
         self._firmware = node["props"].get("FwVersion")
         self._manufacturer = "Freebox SAS"
-        self._remove_signal_update: Callable[[], None] | None = None
+        self._remove_signal_update: Any
 
         self._model = CATEGORY_TO_MODEL.get(node["category"])
         if self._model is None:
@@ -67,7 +65,7 @@ class FreeboxHomeEntity(Entity):
             ),
         )
 
-    async def async_update_signal(self) -> None:
+    async def async_update_signal(self):
         """Update signal."""
         self._node = self._router.home_devices[self._id]
         # Update name
@@ -79,9 +77,7 @@ class FreeboxHomeEntity(Entity):
             )
         self.async_write_ha_state()
 
-    async def set_home_endpoint_value(
-        self, command_id: int | None, value: bool | None = None
-    ) -> bool:
+    async def set_home_endpoint_value(self, command_id: Any, value=None) -> bool:
         """Set Home endpoint value."""
         if command_id is None:
             _LOGGER.error("Unable to SET a value through the API. Command is None")
@@ -101,7 +97,7 @@ class FreeboxHomeEntity(Entity):
         node = await self._router.home.get_home_endpoint_value(self._id, command_id)
         return node.get("value")
 
-    def get_command_id(self, nodes, ep_type: str, name: str) -> int | None:
+    def get_command_id(self, nodes, ep_type, name) -> int | None:
         """Get the command id."""
         node = next(
             filter(lambda x: (x["name"] == name and x["ep_type"] == ep_type), nodes),
@@ -114,7 +110,7 @@ class FreeboxHomeEntity(Entity):
             return None
         return node["id"]
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_hass(self):
         """Register state update callback."""
         self.remove_signal_update(
             async_dispatcher_connect(
@@ -124,26 +120,24 @@ class FreeboxHomeEntity(Entity):
             )
         )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_hass(self):
         """When entity will be removed from hass."""
-        if self._remove_signal_update is not None:
-            self._remove_signal_update()
+        self._remove_signal_update()
 
-    def remove_signal_update(self, dispatcher: Callable[[], None]) -> None:
+    def remove_signal_update(self, dispacher: Any):
         """Register state update callback."""
-        self._remove_signal_update = dispatcher
+        self._remove_signal_update = dispacher
 
     def get_value(self, ep_type: str, name: str):
         """Get the value."""
         node = next(
-            (
-                endpoint
-                for endpoint in self._node["show_endpoints"]
-                if endpoint["name"] == name and endpoint["ep_type"] == ep_type
+            filter(
+                lambda x: (x["name"] == name and x["ep_type"] == ep_type),
+                self._node["show_endpoints"],
             ),
             None,
         )
-        if node is None:
+        if not node:
             _LOGGER.warning(
                 "The Freebox Home device has no node value for: %s/%s", ep_type, name
             )

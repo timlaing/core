@@ -1,5 +1,4 @@
 """Code to handle the api connection to a Roon server."""
-
 import asyncio
 import logging
 
@@ -106,7 +105,7 @@ class RoonServer:
         self._exit = True
 
     def roonapi_state_callback(self, event, changed_zones):
-        """Callbacks from the roon api websocket with state change."""
+        """Callbacks from the roon api websockets."""
         self.hass.add_job(self.async_update_changed_players(changed_zones))
 
     async def async_do_loop(self):

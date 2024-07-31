@@ -1,5 +1,4 @@
 """Test Local Media Source."""
-
 import ast
 
 import pytest

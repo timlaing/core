@@ -1,5 +1,4 @@
 """Offer sentence based automation rules."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -8,14 +7,14 @@ from hassil.recognize import PUNCTUATION, RecognizeResult
 import voluptuous as vol
 
 from homeassistant.const import CONF_COMMAND, CONF_PLATFORM
-from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant
+from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant, callback
 import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.script import ScriptRunResult
 from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import UNDEFINED, ConfigType
+from homeassistant.helpers.typing import ConfigType
 
+from . import HOME_ASSISTANT_AGENT, _get_agent_manager
 from .const import DOMAIN
-from .default_agent import DefaultAgent, async_get_default_agent
+from .default_agent import DefaultAgent
 
 
 def has_no_punctuation(value: list[str]) -> list[str]:
@@ -27,23 +26,11 @@ def has_no_punctuation(value: list[str]) -> list[str]:
     return value
 
 
-def has_one_non_empty_item(value: list[str]) -> list[str]:
-    """Validate result has at least one item."""
-    if len(value) < 1:
-        raise vol.Invalid("at least one sentence is required")
-
-    for sentence in value:
-        if not sentence:
-            raise vol.Invalid(f"sentence too short: '{sentence}'")
-
-    return value
-
-
 TRIGGER_SCHEMA = cv.TRIGGER_BASE_SCHEMA.extend(
     {
         vol.Required(CONF_PLATFORM): DOMAIN,
         vol.Required(CONF_COMMAND): vol.All(
-            cv.ensure_list, [cv.string], has_one_non_empty_item, has_no_punctuation
+            cv.ensure_list, [cv.string], has_no_punctuation
         ),
     }
 )
@@ -61,9 +48,8 @@ async def async_attach_trigger(
 
     job = HassJob(action)
 
-    async def call_action(
-        sentence: str, result: RecognizeResult, device_id: str | None
-    ) -> str | None:
+    @callback
+    async def call_action(sentence: str, result: RecognizeResult) -> str | None:
         """Call action with right context."""
 
         # Add slot values as extra trigger data
@@ -71,11 +57,9 @@ async def async_attach_trigger(
             entity_name: {
                 "name": entity_name,
                 "text": entity.text.strip(),  # remove whitespace
-                "value": (
-                    entity.value.strip()
-                    if isinstance(entity.value, str)
-                    else entity.value
-                ),
+                "value": entity.value.strip()
+                if isinstance(entity.value, str)
+                else entity.value,
             }
             for entity_name, entity in result.entities.items()
         }
@@ -88,7 +72,6 @@ async def async_attach_trigger(
             "slots": {  # direct access to values
                 entity_name: entity["value"] for entity_name, entity in details.items()
             },
-            "device_id": device_id,
         }
 
         # Wait for the automation to complete
@@ -96,21 +79,11 @@ async def async_attach_trigger(
             job,
             {"trigger": trigger_input},
         ):
-            automation_result = await future
-            if isinstance(
-                automation_result, ScriptRunResult
-            ) and automation_result.conversation_response not in (None, UNDEFINED):
-                # mypy does not understand the type narrowing, unclear why
-                return automation_result.conversation_response  # type: ignore[return-value]
+            await future
 
-        # It's important to return None here instead of a string.
-        #
-        # When editing in the UI, a copy of this trigger is registered.
-        # If we return a string from here, there is a race condition between the
-        # two trigger copies for who will provide a response.
-        return None
+        return "Done"
 
-    default_agent = async_get_default_agent(hass)
+    default_agent = await _get_agent_manager(hass).async_get_agent(HOME_ASSISTANT_AGENT)
     assert isinstance(default_agent, DefaultAgent)
 
     return default_agent.register_trigger(sentences, call_action)

@@ -1,5 +1,4 @@
 """Config flow for Plex."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -14,17 +13,10 @@ from plexauth import PlexAuth
 import requests.exceptions
 import voluptuous as vol
 
+from homeassistant import config_entries
 from homeassistant.components import http
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
+from homeassistant.components.http.view import HomeAssistantView
 from homeassistant.components.media_player import DOMAIN as MP_DOMAIN
-from homeassistant.config_entries import (
-    SOURCE_INTEGRATION_DISCOVERY,
-    SOURCE_REAUTH,
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlow,
-)
 from homeassistant.const import (
     CONF_CLIENT_ID,
     CONF_HOST,
@@ -36,6 +28,7 @@ from homeassistant.const import (
     CONF_VERIFY_SSL,
 )
 from homeassistant.core import callback
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import discovery_flow
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
@@ -87,12 +80,12 @@ async def async_discover(hass):
         discovery_flow.async_create_flow(
             hass,
             DOMAIN,
-            context={CONF_SOURCE: SOURCE_INTEGRATION_DISCOVERY},
+            context={CONF_SOURCE: config_entries.SOURCE_INTEGRATION_DISCOVERY},
             data=server_data,
         )
 
 
-class PlexFlowHandler(ConfigFlow, domain=DOMAIN):
+class PlexFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a Plex config flow."""
 
     VERSION = 1
@@ -100,7 +93,7 @@ class PlexFlowHandler(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: ConfigEntry,
+        config_entry: config_entries.ConfigEntry,
     ) -> PlexOptionsFlowHandler:
         """Get the options flow for this handler."""
         return PlexOptionsFlowHandler(config_entry)
@@ -216,8 +209,8 @@ class PlexFlowHandler(ConfigFlow, domain=DOMAIN):
             self.available_servers = available_servers.args[0]
             return await self.async_step_select_server()
 
-        except Exception:
-            _LOGGER.exception("Unknown error connecting to Plex server")
+        except Exception as error:  # pylint: disable=broad-except
+            _LOGGER.exception("Unknown error connecting to Plex server: %s", error)
             return self.async_abort(reason="unknown")
 
         if errors:
@@ -248,7 +241,7 @@ class PlexFlowHandler(ConfigFlow, domain=DOMAIN):
         }
 
         entry = await self.async_set_unique_id(server_id)
-        if self.context[CONF_SOURCE] == SOURCE_REAUTH:
+        if self.context[CONF_SOURCE] == config_entries.SOURCE_REAUTH:
             self.hass.config_entries.async_update_entry(entry, data=data)
             _LOGGER.debug("Updated config entry for %s", plex_server.friendly_name)
             await self.hass.config_entries.async_reload(entry.entry_id)
@@ -345,9 +338,7 @@ class PlexFlowHandler(ConfigFlow, domain=DOMAIN):
         server_config = {CONF_TOKEN: self.token}
         return await self.async_step_server_validate(server_config)
 
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Handle a reauthorization flow request."""
         self._reauth_config = {
             CONF_SERVER_IDENTIFIER: entry_data[CONF_SERVER_IDENTIFIER]
@@ -355,10 +346,10 @@ class PlexFlowHandler(ConfigFlow, domain=DOMAIN):
         return await self.async_step_user()
 
 
-class PlexOptionsFlowHandler(OptionsFlow):
+class PlexOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle Plex options."""
 
-    def __init__(self, config_entry: ConfigEntry) -> None:
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize Plex options flow."""
         self.options = copy.deepcopy(dict(config_entry.options))
         self.server_id = config_entry.data[CONF_SERVER_IDENTIFIER]
@@ -444,7 +435,7 @@ class PlexAuthorizationCallbackView(HomeAssistantView):
 
     async def get(self, request):
         """Receive authorization confirmation."""
-        hass = request.app[KEY_HASS]
+        hass = request.app["hass"]
         await hass.config_entries.flow.async_configure(
             flow_id=request.query["flow_id"], user_input=None
         )

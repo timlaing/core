@@ -1,5 +1,4 @@
 """Roomba binary sensor entities."""
-
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -29,6 +28,7 @@ async def async_setup_entry(
 class RoombaBinStatus(IRobotEntity, BinarySensorEntity):
     """Class to hold Roomba Sensor basic info."""
 
+    _attr_icon = "mdi:delete-variant"
     _attr_translation_key = "bin_full"
 
     @property

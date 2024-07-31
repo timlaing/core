@@ -1,5 +1,4 @@
 """Component that will help set the Microsoft face detect processing."""
-
 from __future__ import annotations
 
 import logging
@@ -10,7 +9,7 @@ from homeassistant.components.image_processing import (
     ATTR_AGE,
     ATTR_GENDER,
     ATTR_GLASSES,
-    PLATFORM_SCHEMA as IMAGE_PROCESSING_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     ImageProcessingFaceEntity,
 )
 from homeassistant.components.microsoft_face import DATA_MICROSOFT_FACE
@@ -37,7 +36,7 @@ def validate_attributes(list_attributes):
     return list_attributes
 
 
-PLATFORM_SCHEMA = IMAGE_PROCESSING_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Optional(CONF_ATTRIBUTES, default=DEFAULT_ATTRIBUTES): vol.All(
             cv.ensure_list, validate_attributes
@@ -56,12 +55,15 @@ async def async_setup_platform(
     api = hass.data[DATA_MICROSOFT_FACE]
     attributes = config[CONF_ATTRIBUTES]
 
-    async_add_entities(
-        MicrosoftFaceDetectEntity(
-            camera[CONF_ENTITY_ID], api, attributes, camera.get(CONF_NAME)
+    entities = []
+    for camera in config[CONF_SOURCE]:
+        entities.append(
+            MicrosoftFaceDetectEntity(
+                camera[CONF_ENTITY_ID], api, attributes, camera.get(CONF_NAME)
+            )
         )
-        for camera in config[CONF_SOURCE]
-    )
+
+    async_add_entities(entities)
 
 
 class MicrosoftFaceDetectEntity(ImageProcessingFaceEntity):

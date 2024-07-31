@@ -1,10 +1,8 @@
 """Test script variables."""
-
 import pytest
 
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import TemplateError
-from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import config_validation as cv, template
 
 
 async def test_static_vars() -> None:
@@ -111,5 +109,5 @@ async def test_template_vars_run_args_no_default(hass: HomeAssistant) -> None:
 async def test_template_vars_error(hass: HomeAssistant) -> None:
     """Test template vars."""
     var = cv.SCRIPT_VARIABLES_SCHEMA({"hello": "{{ canont.work }}"})
-    with pytest.raises(TemplateError):
+    with pytest.raises(template.TemplateError):
         var.async_render(hass, None)

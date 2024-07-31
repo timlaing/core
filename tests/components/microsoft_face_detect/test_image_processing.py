@@ -1,11 +1,10 @@
 """The tests for the microsoft face detect platform."""
-
 from unittest.mock import PropertyMock, patch
 
 import pytest
 
-from homeassistant.components.image_processing import DOMAIN as IP_DOMAIN
-from homeassistant.components.microsoft_face import DOMAIN as MF_DOMAIN, FACE_API_URL
+import homeassistant.components.image_processing as ip
+import homeassistant.components.microsoft_face as mf
 from homeassistant.const import ATTR_ENTITY_PICTURE
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.setup import async_setup_component
@@ -15,16 +14,16 @@ from tests.components.image_processing import common
 from tests.test_util.aiohttp import AiohttpClientMocker
 
 CONFIG = {
-    IP_DOMAIN: {
+    ip.DOMAIN: {
         "platform": "microsoft_face_detect",
         "source": {"entity_id": "camera.demo_camera", "name": "test local"},
         "attributes": ["age", "gender"],
     },
     "camera": {"platform": "demo"},
-    MF_DOMAIN: {"api_key": "12345678abcdef6"},
+    mf.DOMAIN: {"api_key": "12345678abcdef6"},
 }
 
-ENDPOINT_URL = f"https://westus.{FACE_API_URL}"
+ENDPOINT_URL = f"https://westus.{mf.FACE_API_URL}"
 
 
 @pytest.fixture(autouse=True)
@@ -57,17 +56,17 @@ def poll_mock():
 async def test_setup_platform(hass: HomeAssistant, store_mock) -> None:
     """Set up platform with one entity."""
     config = {
-        IP_DOMAIN: {
+        ip.DOMAIN: {
             "platform": "microsoft_face_detect",
             "source": {"entity_id": "camera.demo_camera"},
             "attributes": ["age", "gender"],
         },
         "camera": {"platform": "demo"},
-        MF_DOMAIN: {"api_key": "12345678abcdef6"},
+        mf.DOMAIN: {"api_key": "12345678abcdef6"},
     }
 
-    with assert_setup_component(1, IP_DOMAIN):
-        await async_setup_component(hass, IP_DOMAIN, config)
+    with assert_setup_component(1, ip.DOMAIN):
+        await async_setup_component(hass, ip.DOMAIN, config)
         await hass.async_block_till_done()
 
     assert hass.states.get("image_processing.microsoftface_demo_camera")
@@ -76,16 +75,16 @@ async def test_setup_platform(hass: HomeAssistant, store_mock) -> None:
 async def test_setup_platform_name(hass: HomeAssistant, store_mock) -> None:
     """Set up platform with one entity and set name."""
     config = {
-        IP_DOMAIN: {
+        ip.DOMAIN: {
             "platform": "microsoft_face_detect",
             "source": {"entity_id": "camera.demo_camera", "name": "test local"},
         },
         "camera": {"platform": "demo"},
-        MF_DOMAIN: {"api_key": "12345678abcdef6"},
+        mf.DOMAIN: {"api_key": "12345678abcdef6"},
     }
 
-    with assert_setup_component(1, IP_DOMAIN):
-        await async_setup_component(hass, IP_DOMAIN, config)
+    with assert_setup_component(1, ip.DOMAIN):
+        await async_setup_component(hass, ip.DOMAIN, config)
         await hass.async_block_till_done()
 
     assert hass.states.get("image_processing.test_local")
@@ -97,18 +96,18 @@ async def test_ms_detect_process_image(
     """Set up and scan a picture and test plates from event."""
     aioclient_mock.get(
         ENDPOINT_URL.format("persongroups"),
-        text=load_fixture("persongroups.json", "microsoft_face_detect"),
+        text=load_fixture("microsoft_face_persongroups.json"),
     )
     aioclient_mock.get(
         ENDPOINT_URL.format("persongroups/test_group1/persons"),
-        text=load_fixture("persons.json", "microsoft_face_detect"),
+        text=load_fixture("microsoft_face_persons.json"),
     )
     aioclient_mock.get(
         ENDPOINT_URL.format("persongroups/test_group2/persons"),
-        text=load_fixture("persons.json", "microsoft_face_detect"),
+        text=load_fixture("microsoft_face_persons.json"),
     )
 
-    await async_setup_component(hass, IP_DOMAIN, CONFIG)
+    await async_setup_component(hass, ip.DOMAIN, CONFIG)
     await hass.async_block_till_done()
 
     state = hass.states.get("camera.demo_camera")
@@ -127,7 +126,7 @@ async def test_ms_detect_process_image(
 
     aioclient_mock.post(
         ENDPOINT_URL.format("detect"),
-        text=load_fixture("detect.json", "microsoft_face_detect"),
+        text=load_fixture("microsoft_face_detect.json"),
         params={"returnFaceAttributes": "age,gender"},
     )
 

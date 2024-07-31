@@ -1,5 +1,4 @@
 """The Tasmota integration."""
-
 from __future__ import annotations
 
 import logging
@@ -16,7 +15,7 @@ from hatasmota.models import TasmotaDeviceConfig
 from hatasmota.mqtt import TasmotaMQTTClient
 
 from homeassistant.components import mqtt
-from homeassistant.components.mqtt import (
+from homeassistant.components.mqtt.subscription import (
     async_prepare_subscribe_topics,
     async_subscribe_topics,
     async_unsubscribe_topics,
@@ -24,7 +23,11 @@ from homeassistant.components.mqtt import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceRegistry
+from homeassistant.helpers.device_registry import (
+    CONNECTION_NETWORK_MAC,
+    DeviceRegistry,
+    async_entries_for_config_entry,
+)
 
 from . import device_automation, discovery
 from .const import (
@@ -101,7 +104,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # detach device triggers
     device_registry = dr.async_get(hass)
-    devices = dr.async_entries_for_config_entry(device_registry, entry.entry_id)
+    devices = async_entries_for_config_entry(device_registry, entry.entry_id)
     for device in devices:
         await device_automation.async_remove_automations(hass, device.id)
 

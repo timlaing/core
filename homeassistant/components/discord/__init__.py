@@ -1,5 +1,4 @@
 """The discord integration."""
-
 from aiohttp.client_exceptions import ClientConnectorError
 import nextcord
 

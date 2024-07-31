@@ -1,5 +1,4 @@
 """Services for the Plex integration."""
-
 import json
 import logging
 

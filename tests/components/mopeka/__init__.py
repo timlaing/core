@@ -1,5 +1,6 @@
 """Tests for the Mopeka integration."""
 
+
 from homeassistant.helpers.service_info.bluetooth import BluetoothServiceInfo
 
 NOT_MOPEKA_SERVICE_INFO = BluetoothServiceInfo(

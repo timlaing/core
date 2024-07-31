@@ -1,5 +1,4 @@
 """Tests for the Roku component."""
-
 from ipaddress import ip_address
 
 from homeassistant.components import ssdp, zeroconf

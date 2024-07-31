@@ -1,5 +1,4 @@
 """Support for Kaiterra Air Quality Sensors."""
-
 from __future__ import annotations
 
 from homeassistant.components.air_quality import AirQualityEntity
@@ -106,15 +105,18 @@ class KaiterraAirQuality(AirQualityEntity):
     @property
     def extra_state_attributes(self):
         """Return the device state attributes."""
-        return {
-            attr: value
-            for attr, value in (
-                (ATTR_VOC, self.volatile_organic_compounds),
-                (ATTR_AQI_LEVEL, self.air_quality_index_level),
-                (ATTR_AQI_POLLUTANT, self.air_quality_index_pollutant),
-            )
-            if value is not None
-        }
+        data = {}
+        attributes = [
+            (ATTR_VOC, self.volatile_organic_compounds),
+            (ATTR_AQI_LEVEL, self.air_quality_index_level),
+            (ATTR_AQI_POLLUTANT, self.air_quality_index_pollutant),
+        ]
+
+        for attr, value in attributes:
+            if value is not None:
+                data[attr] = value
+
+        return data
 
     async def async_added_to_hass(self):
         """Register callback."""

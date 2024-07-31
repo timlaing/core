@@ -1,5 +1,4 @@
 """The kraken integration."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -33,11 +32,16 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True, kw_only=True)
-class KrakenSensorEntityDescription(SensorEntityDescription):
-    """Describes Kraken sensor entity."""
+@dataclass
+class KrakenRequiredKeysMixin:
+    """Mixin for required keys."""
 
     value_fn: Callable[[DataUpdateCoordinator[KrakenResponse], str], float | int]
+
+
+@dataclass
+class KrakenSensorEntityDescription(SensorEntityDescription, KrakenRequiredKeysMixin):
+    """Describes Kraken sensor entity."""
 
 
 SENSOR_TYPES: tuple[KrakenSensorEntityDescription, ...] = (
@@ -255,8 +259,7 @@ class KrakenSensor(
             return
         try:
             self._attr_native_value = self.entity_description.value_fn(
-                self.coordinator,  # type: ignore[arg-type]
-                self.tracked_asset_pair_wsname,
+                self.coordinator, self.tracked_asset_pair_wsname  # type: ignore[arg-type]
             )
             self._received_data_at_least_once = True
         except KeyError:

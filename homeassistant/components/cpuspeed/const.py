@@ -1,5 +1,4 @@
 """Constants for the CPU Speed integration."""
-
 import logging
 from typing import Final
 

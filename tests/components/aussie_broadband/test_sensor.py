@@ -1,5 +1,4 @@
 """Aussie Broadband sensor platform tests."""
-
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
 from homeassistant.const import STATE_UNKNOWN
 from homeassistant.core import HomeAssistant

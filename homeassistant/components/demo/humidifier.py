@@ -1,5 +1,4 @@
 """Demo platform that offers a fake humidifier device."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -36,8 +35,8 @@ async def async_setup_entry(
             DemoHumidifier(
                 name="Dehumidifier",
                 mode=None,
-                target_humidity=54.2,
-                current_humidity=59.4,
+                target_humidity=54,
+                current_humidity=59,
                 action=HumidifierAction.DRYING,
                 device_class=HumidifierDeviceClass.DEHUMIDIFIER,
             ),
@@ -60,8 +59,8 @@ class DemoHumidifier(HumidifierEntity):
         self,
         name: str,
         mode: str | None,
-        target_humidity: float,
-        current_humidity: float | None = None,
+        target_humidity: int,
+        current_humidity: int | None = None,
         available_modes: list[str] | None = None,
         is_on: bool = True,
         action: HumidifierAction | None = None,

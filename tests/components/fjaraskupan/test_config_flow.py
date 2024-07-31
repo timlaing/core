@@ -1,9 +1,7 @@
 """Test the Fjäråskupan config flow."""
-
 from __future__ import annotations
 
-from collections.abc import Generator
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -16,7 +14,7 @@ from . import COOKER_SERVICE_INFO
 
 
 @pytest.fixture(name="mock_setup_entry", autouse=True)
-def fixture_mock_setup_entry() -> Generator[AsyncMock]:
+async def fixture_mock_setup_entry(hass):
     """Fixture for config entry."""
 
     with patch(
@@ -25,7 +23,7 @@ def fixture_mock_setup_entry() -> Generator[AsyncMock]:
         yield mock_setup_entry
 
 
-async def test_configure(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
+async def test_configure(hass: HomeAssistant, mock_setup_entry) -> None:
     """Test we get the form."""
     with patch(
         "homeassistant.components.fjaraskupan.config_flow.async_discovered_service_info",
@@ -35,10 +33,10 @@ async def test_configure(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> No
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == FlowResultType.FORM
         result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
 
-        assert result["type"] is FlowResultType.CREATE_ENTRY
+        assert result["type"] == FlowResultType.CREATE_ENTRY
         assert result["title"] == "Fjäråskupan"
         assert result["data"] == {}
 
@@ -57,8 +55,8 @@ async def test_scan_no_devices(hass: HomeAssistant) -> None:
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == FlowResultType.FORM
         result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
 
-        assert result["type"] is FlowResultType.ABORT
+        assert result["type"] == FlowResultType.ABORT
         assert result["reason"] == "no_devices_found"

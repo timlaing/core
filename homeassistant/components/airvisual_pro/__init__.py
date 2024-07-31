@@ -1,5 +1,4 @@
 """The AirVisual Pro integration."""
-
 from __future__ import annotations
 
 import asyncio
@@ -38,8 +37,6 @@ PLATFORMS = [Platform.SENSOR]
 
 UPDATE_INTERVAL = timedelta(minutes=1)
 
-type AirVisualProConfigEntry = ConfigEntry[AirVisualProData]
-
 
 @dataclass
 class AirVisualProData:
@@ -49,16 +46,14 @@ class AirVisualProData:
     node: NodeSamba
 
 
-async def async_setup_entry(
-    hass: HomeAssistant, entry: AirVisualProConfigEntry
-) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up AirVisual Pro from a config entry."""
     node = NodeSamba(entry.data[CONF_IP_ADDRESS], entry.data[CONF_PASSWORD])
 
     try:
         await node.async_connect()
     except NodeProError as err:
-        raise ConfigEntryNotReady from err
+        raise ConfigEntryNotReady() from err
 
     reload_task: asyncio.Task | None = None
 
@@ -93,7 +88,9 @@ async def async_setup_entry(
     )
 
     await coordinator.async_config_entry_first_refresh()
-    entry.runtime_data = AirVisualProData(coordinator=coordinator, node=node)
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = AirVisualProData(
+        coordinator=coordinator, node=node
+    )
 
     async def async_shutdown(_: Event) -> None:
         """Define an event handler to disconnect from the websocket."""
@@ -112,12 +109,11 @@ async def async_setup_entry(
     return True
 
 
-async def async_unload_entry(
-    hass: HomeAssistant, entry: AirVisualProConfigEntry
-) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        await entry.runtime_data.node.async_disconnect()
+        data = hass.data[DOMAIN].pop(entry.entry_id)
+        await data.node.async_disconnect()
 
     return unload_ok
 

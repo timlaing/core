@@ -1,5 +1,4 @@
 """Config flow for Steam integration."""
-
 from __future__ import annotations
 
 from collections.abc import Iterator, Mapping
@@ -8,17 +7,12 @@ from typing import Any
 import steam
 import voluptuous as vol
 
-from homeassistant.config_entries import (
-    SOURCE_REAUTH,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlow,
-)
+from homeassistant import config_entries
 from homeassistant.const import CONF_API_KEY, Platform
 from homeassistant.core import callback
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import config_validation as cv, entity_registry as er
 
-from . import SteamConfigEntry
 from .const import CONF_ACCOUNT, CONF_ACCOUNTS, DOMAIN, LOGGER, PLACEHOLDERS
 
 # To avoid too long request URIs, the amount of ids to request is limited
@@ -33,24 +27,24 @@ def validate_input(user_input: dict[str, str]) -> dict[str, str | int]:
     return names["response"]["players"]["player"][0]
 
 
-class SteamFlowHandler(ConfigFlow, domain=DOMAIN):
+class SteamFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Steam."""
 
     def __init__(self) -> None:
         """Initialize the flow."""
-        self.entry: SteamConfigEntry | None = None
+        self.entry: config_entries.ConfigEntry | None = None
 
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: SteamConfigEntry,
-    ) -> OptionsFlow:
+        config_entry: config_entries.ConfigEntry,
+    ) -> config_entries.OptionsFlow:
         """Get the options flow for this handler."""
         return SteamOptionsFlowHandler(config_entry)
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow initiated by the user."""
         errors = {}
         if user_input is None and self.entry:
@@ -66,12 +60,12 @@ class SteamFlowHandler(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
                 if "403" in str(ex):
                     errors["base"] = "invalid_auth"
-            except Exception as ex:  # noqa: BLE001
+            except Exception as ex:  # pylint:disable=broad-except
                 LOGGER.exception("Unknown exception: %s", ex)
                 errors["base"] = "unknown"
             if not errors:
                 entry = await self.async_set_unique_id(user_input[CONF_ACCOUNT])
-                if entry and self.source == SOURCE_REAUTH:
+                if entry and self.source == config_entries.SOURCE_REAUTH:
                     self.hass.config_entries.async_update_entry(entry, data=user_input)
                     await self.hass.config_entries.async_reload(entry.entry_id)
                     return self.async_abort(reason="reauth_successful")
@@ -98,9 +92,7 @@ class SteamFlowHandler(ConfigFlow, domain=DOMAIN):
             description_placeholders=PLACEHOLDERS,
         )
 
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Handle a reauthorization flow request."""
         self.entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
 
@@ -108,7 +100,7 @@ class SteamFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, str] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Confirm reauth dialog."""
         if user_input is not None:
             return await self.async_step_user()
@@ -124,17 +116,17 @@ def _batch_ids(ids: list[str]) -> Iterator[list[str]]:
         yield ids[i : i + MAX_IDS_TO_REQUEST]
 
 
-class SteamOptionsFlowHandler(OptionsFlow):
+class SteamOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle Steam client options."""
 
-    def __init__(self, entry: SteamConfigEntry) -> None:
+    def __init__(self, entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         self.entry = entry
         self.options = dict(entry.options)
 
     async def async_step_init(
         self, user_input: dict[str, dict[str, str]] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Manage Steam options."""
         if user_input is not None:
             await self.hass.config_entries.async_unload(self.entry.entry_id)

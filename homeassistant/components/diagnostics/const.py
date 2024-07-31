@@ -1,5 +1,4 @@
 """Constants for the Diagnostics integration."""
-
 from enum import StrEnum
 
 DOMAIN = "diagnostics"

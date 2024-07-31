@@ -1,5 +1,4 @@
 """Tests for HomematicIP Cloud locks."""
-
 from unittest.mock import patch
 
 from homematicip.base.enums import LockState, MotorState

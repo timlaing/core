@@ -1,5 +1,4 @@
 """SFR Box models."""
-
 from dataclasses import dataclass
 
 from sfrbox_api.bridge import SFRBox

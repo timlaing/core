@@ -1,5 +1,4 @@
 """Represent the Netgear router and its devices."""
-
 from __future__ import annotations
 
 import asyncio

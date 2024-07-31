@@ -1,11 +1,11 @@
 """Support for Big Ass Fans lights."""
-
 from __future__ import annotations
 
 from typing import Any
 
 from aiobafi6 import Device, OffOnAuto
 
+from homeassistant import config_entries
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP,
@@ -19,20 +19,21 @@ from homeassistant.util.color import (
     color_temperature_mired_to_kelvin,
 )
 
-from . import BAFConfigEntry
+from .const import DOMAIN
 from .entity import BAFEntity
+from .models import BAFData
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: BAFConfigEntry,
+    entry: config_entries.ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up BAF lights."""
-    device = entry.runtime_data
-    if device.has_light:
-        klass = BAFFanLight if device.has_fan else BAFStandaloneLight
-        async_add_entities([klass(device)])
+    data: BAFData = hass.data[DOMAIN][entry.entry_id]
+    if data.device.has_light:
+        klass = BAFFanLight if data.device.has_fan else BAFStandaloneLight
+        async_add_entities([klass(data.device)])
 
 
 class BAFLight(BAFEntity, LightEntity):

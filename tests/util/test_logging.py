@@ -1,5 +1,4 @@
 """Test Home Assistant logging util methods."""
-
 import asyncio
 from functools import partial
 import logging
@@ -8,28 +7,22 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.core import (
-    HomeAssistant,
-    callback,
-    is_callback,
-    is_callback_check_partial,
-)
+from homeassistant.core import HomeAssistant, callback, is_callback
 import homeassistant.util.logging as logging_util
 
 
 async def test_logging_with_queue_handler() -> None:
     """Test logging with HomeAssistantQueueHandler."""
 
-    simple_queue = queue.SimpleQueue()
+    simple_queue = queue.SimpleQueue()  # type: ignore
     handler = logging_util.HomeAssistantQueueHandler(simple_queue)
 
     log_record = logging.makeLogRecord({"msg": "Test Log Record"})
 
     handler.emit(log_record)
 
-    with (
-        pytest.raises(asyncio.CancelledError),
-        patch.object(handler, "enqueue", side_effect=asyncio.CancelledError),
+    with pytest.raises(asyncio.CancelledError), patch.object(
+        handler, "enqueue", side_effect=asyncio.CancelledError
     ):
         handler.emit(log_record)
 
@@ -37,18 +30,16 @@ async def test_logging_with_queue_handler() -> None:
         handler.handle(log_record)
         emit_mock.assert_called_once()
 
-    with (
-        patch.object(handler, "filter") as filter_mock,
-        patch.object(handler, "emit") as emit_mock,
-    ):
+    with patch.object(handler, "filter") as filter_mock, patch.object(
+        handler, "emit"
+    ) as emit_mock:
         filter_mock.return_value = False
         handler.handle(log_record)
         emit_mock.assert_not_called()
 
-    with (
-        patch.object(handler, "enqueue", side_effect=OSError),
-        patch.object(handler, "handleError") as mock_handle_error,
-    ):
+    with patch.object(handler, "enqueue", side_effect=OSError), patch.object(
+        handler, "handleError"
+    ) as mock_handle_error:
         handler.emit(log_record)
         mock_handle_error.assert_called_once()
 
@@ -80,7 +71,6 @@ async def test_async_create_catching_coro(
     """Test exception logging of wrapped coroutine."""
 
     async def job():
-        # pylint: disable-next=broad-exception-raised
         raise Exception("This is a bad coroutine")
 
     hass.async_create_task(logging_util.async_create_catching_coro(job()))
@@ -103,7 +93,7 @@ def test_catch_log_exception() -> None:
     def callback_meth():
         pass
 
-    assert is_callback_check_partial(
+    assert is_callback(
         logging_util.catch_log_exception(partial(callback_meth), lambda: None)
     )
 
@@ -114,39 +104,3 @@ def test_catch_log_exception() -> None:
 
     assert not is_callback(wrapped)
     assert not asyncio.iscoroutinefunction(wrapped)
-
-
-@pytest.mark.no_fail_on_log_exception
-async def test_catch_log_exception_catches_and_logs() -> None:
-    """Test it is still a callback after wrapping including partial."""
-    saved_args = []
-
-    def save_args(*args):
-        saved_args.append(args)
-
-    async def async_meth():
-        raise ValueError("failure async")
-
-    func = logging_util.catch_log_exception(async_meth, save_args)
-    await func("failure async passed")
-
-    assert saved_args == [("failure async passed",)]
-    saved_args.clear()
-
-    @callback
-    def callback_meth():
-        raise ValueError("failure callback")
-
-    func = logging_util.catch_log_exception(callback_meth, save_args)
-    func("failure callback passed")
-
-    assert saved_args == [("failure callback passed",)]
-    saved_args.clear()
-
-    def sync_meth():
-        raise ValueError("failure sync")
-
-    func = logging_util.catch_log_exception(sync_meth, save_args)
-    func("failure sync passed")
-
-    assert saved_args == [("failure sync passed",)]

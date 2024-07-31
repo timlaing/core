@@ -1,5 +1,4 @@
 """Constants for the iaqualink component."""
-
 from datetime import timedelta
 
 DOMAIN = "iaqualink"

@@ -4,7 +4,6 @@ from unittest.mock import MagicMock
 
 from kaleidescape import const as kaleidescape_const
 from kaleidescape.device import Movie
-import pytest
 
 from homeassistant.components.media_player import DOMAIN as MEDIA_PLAYER_DOMAIN
 from homeassistant.const import (
@@ -26,12 +25,17 @@ from homeassistant.helpers import device_registry as dr
 
 from . import MOCK_SERIAL
 
+from tests.common import MockConfigEntry
+
 ENTITY_ID = f"media_player.kaleidescape_device_{MOCK_SERIAL}"
 FRIENDLY_NAME = f"Kaleidescape Device {MOCK_SERIAL}"
 
 
-@pytest.mark.usefixtures("mock_device", "mock_integration")
-async def test_entity(hass: HomeAssistant) -> None:
+async def test_entity(
+    hass: HomeAssistant,
+    mock_device: MagicMock,
+    mock_integration: MockConfigEntry,
+) -> None:
     """Test entity attributes."""
     entity = hass.states.get(ENTITY_ID)
     assert entity is not None
@@ -39,8 +43,11 @@ async def test_entity(hass: HomeAssistant) -> None:
     assert entity.attributes["friendly_name"] == FRIENDLY_NAME
 
 
-@pytest.mark.usefixtures("mock_integration")
-async def test_update_state(hass: HomeAssistant, mock_device: MagicMock) -> None:
+async def test_update_state(
+    hass: HomeAssistant,
+    mock_device: MagicMock,
+    mock_integration: MockConfigEntry,
+) -> None:
     """Tests dispatched signals update player."""
     entity = hass.states.get(ENTITY_ID)
     assert entity is not None
@@ -98,8 +105,11 @@ async def test_update_state(hass: HomeAssistant, mock_device: MagicMock) -> None
     assert entity.state == STATE_PAUSED
 
 
-@pytest.mark.usefixtures("mock_integration")
-async def test_services(hass: HomeAssistant, mock_device: MagicMock) -> None:
+async def test_services(
+    hass: HomeAssistant,
+    mock_device: MagicMock,
+    mock_integration: MockConfigEntry,
+) -> None:
     """Test service calls."""
     await hass.services.async_call(
         MEDIA_PLAYER_DOMAIN,
@@ -158,9 +168,13 @@ async def test_services(hass: HomeAssistant, mock_device: MagicMock) -> None:
     assert mock_device.previous.call_count == 1
 
 
-@pytest.mark.usefixtures("mock_device", "mock_integration")
-async def test_device(device_registry: dr.DeviceRegistry) -> None:
+async def test_device(
+    hass: HomeAssistant,
+    mock_device: MagicMock,
+    mock_integration: MockConfigEntry,
+) -> None:
     """Test device attributes."""
+    device_registry = dr.async_get(hass)
     device = device_registry.async_get_device(
         identifiers={("kaleidescape", MOCK_SERIAL)}
     )

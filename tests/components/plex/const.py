@@ -1,5 +1,4 @@
 """Constants used by Plex tests."""
-
 from homeassistant.components.plex import const
 from homeassistant.const import (
     CONF_CLIENT_ID,

@@ -1,5 +1,4 @@
 """Generate bluetooth file."""
-
 from __future__ import annotations
 
 from .model import Config, Integration
@@ -16,13 +15,12 @@ def generate_and_validate(integrations: dict[str, Integration]) -> str:
         if not match_types:
             continue
 
-        match_list.extend({"domain": domain, **entry} for entry in match_types)
+        for entry in match_types:
+            match_list.append({"domain": domain, **entry})
 
     return format_python_namespace(
         {"BLUETOOTH": match_list},
-        annotations={
-            "BLUETOOTH": "Final[list[dict[str, bool | str | int | list[int]]]]"
-        },
+        annotations={"BLUETOOTH": "list[dict[str, bool | str | int | list[int]]]"},
     )
 
 

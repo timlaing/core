@@ -1,5 +1,4 @@
 """Support for HLK-SW16 switches."""
-
 from typing import Any
 
 from homeassistant.components.switch import SwitchEntity

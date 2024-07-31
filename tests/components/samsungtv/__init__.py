@@ -1,5 +1,4 @@
 """Tests for the samsungtv component."""
-
 from __future__ import annotations
 
 from datetime import timedelta

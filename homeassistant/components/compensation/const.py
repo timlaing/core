@@ -1,5 +1,4 @@
 """Compensation constants."""
-
 DOMAIN = "compensation"
 
 SENSOR = "compensation"

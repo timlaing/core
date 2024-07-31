@@ -1,11 +1,10 @@
 """The tests for the Buienradar sensor platform."""
-
 from http import HTTPStatus
 
 from homeassistant.components.buienradar.const import DOMAIN
 from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.entity_registry import async_get
 
 from tests.common import MockConfigEntry
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -18,9 +17,7 @@ TEST_CFG_DATA = {CONF_LATITUDE: TEST_LATITUDE, CONF_LONGITUDE: TEST_LONGITUDE}
 
 
 async def test_smoke_test_setup_component(
-    aioclient_mock: AiohttpClientMocker,
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
+    aioclient_mock: AiohttpClientMocker, hass: HomeAssistant
 ) -> None:
     """Smoke test for successfully set-up with default config."""
     aioclient_mock.get(
@@ -30,6 +27,7 @@ async def test_smoke_test_setup_component(
 
     mock_entry.add_to_hass(hass)
 
+    entity_registry = async_get(hass)
     for cond in CONDITIONS:
         entity_registry.async_get_or_create(
             domain="sensor",

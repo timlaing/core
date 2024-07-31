@@ -1,17 +1,15 @@
 """Support for the NextDNS service."""
-
 from __future__ import annotations
 
-from nextdns import AnalyticsStatus
-
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import NextDnsConfigEntry
-from .coordinator import NextDnsUpdateCoordinator
+from . import NextDnsStatusUpdateCoordinator
+from .const import ATTR_STATUS, DOMAIN
 
 PARALLEL_UPDATES = 1
 
@@ -23,26 +21,27 @@ CLEAR_LOGS_BUTTON = ButtonEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: NextDnsConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Add aNextDNS entities from a config_entry."""
-    coordinator = entry.runtime_data.status
+    coordinator: NextDnsStatusUpdateCoordinator = hass.data[DOMAIN][entry.entry_id][
+        ATTR_STATUS
+    ]
 
-    async_add_entities([NextDnsButton(coordinator, CLEAR_LOGS_BUTTON)])
+    buttons: list[NextDnsButton] = []
+    buttons.append(NextDnsButton(coordinator, CLEAR_LOGS_BUTTON))
+
+    async_add_entities(buttons)
 
 
-class NextDnsButton(
-    CoordinatorEntity[NextDnsUpdateCoordinator[AnalyticsStatus]], ButtonEntity
-):
+class NextDnsButton(CoordinatorEntity[NextDnsStatusUpdateCoordinator], ButtonEntity):
     """Define an NextDNS button."""
 
     _attr_has_entity_name = True
 
     def __init__(
         self,
-        coordinator: NextDnsUpdateCoordinator[AnalyticsStatus],
+        coordinator: NextDnsStatusUpdateCoordinator,
         description: ButtonEntityDescription,
     ) -> None:
         """Initialize."""

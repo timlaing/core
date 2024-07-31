@@ -1,5 +1,4 @@
 """Test the legacy stt setup."""
-
 from __future__ import annotations
 
 from pathlib import Path

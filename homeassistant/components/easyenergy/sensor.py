@@ -1,5 +1,4 @@
 """Support for easyEnergy sensors."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -30,12 +29,19 @@ from .const import DOMAIN, SERVICE_TYPE_DEVICE_NAMES
 from .coordinator import EasyEnergyData, EasyEnergyDataUpdateCoordinator
 
 
-@dataclass(frozen=True, kw_only=True)
-class EasyEnergySensorEntityDescription(SensorEntityDescription):
-    """Describes easyEnergy sensor entity."""
+@dataclass
+class EasyEnergySensorEntityDescriptionMixin:
+    """Mixin for required keys."""
 
     value_fn: Callable[[EasyEnergyData], float | datetime | None]
     service_type: str
+
+
+@dataclass
+class EasyEnergySensorEntityDescription(
+    SensorEntityDescription, EasyEnergySensorEntityDescriptionMixin
+):
+    """Describes easyEnergy sensor entity."""
 
 
 SENSORS: tuple[EasyEnergySensorEntityDescription, ...] = (
@@ -111,6 +117,7 @@ SENSORS: tuple[EasyEnergySensorEntityDescription, ...] = (
         translation_key="percentage_of_max",
         service_type="today_energy_usage",
         native_unit_of_measurement=PERCENTAGE,
+        icon="mdi:percent",
         value_fn=lambda data: data.energy_today.pct_of_max_usage,
     ),
     EasyEnergySensorEntityDescription(
@@ -170,6 +177,7 @@ SENSORS: tuple[EasyEnergySensorEntityDescription, ...] = (
         translation_key="percentage_of_max",
         service_type="today_energy_return",
         native_unit_of_measurement=PERCENTAGE,
+        icon="mdi:percent",
         value_fn=lambda data: data.energy_today.pct_of_max_return,
     ),
     EasyEnergySensorEntityDescription(
@@ -177,6 +185,7 @@ SENSORS: tuple[EasyEnergySensorEntityDescription, ...] = (
         translation_key="hours_priced_equal_or_lower",
         service_type="today_energy_usage",
         native_unit_of_measurement=UnitOfTime.HOURS,
+        icon="mdi:clock",
         value_fn=lambda data: data.energy_today.hours_priced_equal_or_lower_usage,
     ),
     EasyEnergySensorEntityDescription(
@@ -184,6 +193,7 @@ SENSORS: tuple[EasyEnergySensorEntityDescription, ...] = (
         translation_key="hours_priced_equal_or_higher",
         service_type="today_energy_return",
         native_unit_of_measurement=UnitOfTime.HOURS,
+        icon="mdi:clock",
         value_fn=lambda data: data.energy_today.hours_priced_equal_or_higher_return,
     ),
 )
@@ -198,7 +208,6 @@ def get_gas_price(data: EasyEnergyData, hours: int) -> float | None:
 
     Returns:
         The gas market price value.
-
     """
     if data.gas_today is None:
         return None

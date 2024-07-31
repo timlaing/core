@@ -1,5 +1,4 @@
 """Test VoIP devices."""
-
 from __future__ import annotations
 
 from voip_utils import CallInfo

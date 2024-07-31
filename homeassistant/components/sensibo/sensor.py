@@ -1,5 +1,4 @@
 """Sensor platform for Sensibo integration."""
-
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
@@ -15,6 +14,7 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     CONCENTRATION_PARTS_PER_BILLION,
@@ -29,32 +29,47 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 
-from . import SensiboConfigEntry
+from .const import DOMAIN
 from .coordinator import SensiboDataUpdateCoordinator
 from .entity import SensiboDeviceBaseEntity, SensiboMotionBaseEntity
 
 PARALLEL_UPDATES = 0
 
 
-@dataclass(frozen=True, kw_only=True)
-class SensiboMotionSensorEntityDescription(SensorEntityDescription):
-    """Describes Sensibo Motion sensor entity."""
+@dataclass
+class MotionBaseEntityDescriptionMixin:
+    """Mixin for required Sensibo base description keys."""
 
     value_fn: Callable[[MotionSensor], StateType]
 
 
-@dataclass(frozen=True, kw_only=True)
-class SensiboDeviceSensorEntityDescription(SensorEntityDescription):
-    """Describes Sensibo Device sensor entity."""
+@dataclass
+class DeviceBaseEntityDescriptionMixin:
+    """Mixin for required Sensibo base description keys."""
 
     value_fn: Callable[[SensiboDevice], StateType | datetime]
     extra_fn: Callable[[SensiboDevice], dict[str, str | bool | None] | None] | None
+
+
+@dataclass
+class SensiboMotionSensorEntityDescription(
+    SensorEntityDescription, MotionBaseEntityDescriptionMixin
+):
+    """Describes Sensibo Motion sensor entity."""
+
+
+@dataclass
+class SensiboDeviceSensorEntityDescription(
+    SensorEntityDescription, DeviceBaseEntityDescriptionMixin
+):
+    """Describes Sensibo Device sensor entity."""
 
 
 FILTER_LAST_RESET_DESCRIPTION = SensiboDeviceSensorEntityDescription(
     key="filter_last_reset",
     translation_key="filter_last_reset",
     device_class=SensorDeviceClass.TIMESTAMP,
+    icon="mdi:timer",
     value_fn=lambda data: data.filter_last_reset,
     extra_fn=None,
 )
@@ -67,6 +82,7 @@ MOTION_SENSOR_TYPES: tuple[SensiboMotionSensorEntityDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
         state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:wifi",
         value_fn=lambda data: data.rssi,
         entity_registry_enabled_default=False,
     ),
@@ -77,6 +93,7 @@ MOTION_SENSOR_TYPES: tuple[SensiboMotionSensorEntityDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:battery",
         value_fn=lambda data: data.battery_voltage,
     ),
     SensiboMotionSensorEntityDescription(
@@ -84,6 +101,7 @@ MOTION_SENSOR_TYPES: tuple[SensiboMotionSensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.HUMIDITY,
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:water",
         value_fn=lambda data: data.humidity,
     ),
     SensiboMotionSensorEntityDescription(
@@ -91,6 +109,7 @@ MOTION_SENSOR_TYPES: tuple[SensiboMotionSensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:thermometer",
         value_fn=lambda data: data.temperature,
     ),
 )
@@ -100,12 +119,14 @@ PURE_SENSOR_TYPES: tuple[SensiboDeviceSensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.PM25,
         native_unit_of_measurement=CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
         state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:air-filter",
         value_fn=lambda data: data.pm25,
         extra_fn=None,
     ),
     SensiboDeviceSensorEntityDescription(
         key="pure_sensitivity",
         translation_key="sensitivity",
+        icon="mdi:air-filter",
         value_fn=lambda data: data.pure_sensitivity,
         extra_fn=None,
     ),
@@ -117,6 +138,7 @@ DEVICE_SENSOR_TYPES: tuple[SensiboDeviceSensorEntityDescription, ...] = (
         key="timer_time",
         translation_key="timer_time",
         device_class=SensorDeviceClass.TIMESTAMP,
+        icon="mdi:timer",
         value_fn=lambda data: data.timer_time,
         extra_fn=lambda data: {"id": data.timer_id, "turn_on": data.timer_state_on},
     ),
@@ -166,6 +188,7 @@ AIRQ_SENSOR_TYPES: tuple[SensiboDeviceSensorEntityDescription, ...] = (
         translation_key="airq_tvoc",
         native_unit_of_measurement=CONCENTRATION_PARTS_PER_BILLION,
         state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:air-filter",
         value_fn=lambda data: data.tvoc,
         extra_fn=None,
     ),
@@ -230,13 +253,11 @@ DESCRIPTION_BY_MODELS = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: SensiboConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up Sensibo sensor platform."""
 
-    coordinator = entry.runtime_data
+    coordinator: SensiboDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     entities: list[SensiboMotionSensor | SensiboDeviceSensor] = []
 
@@ -312,7 +333,8 @@ class SensiboDeviceSensor(SensiboDeviceBaseEntity, SensorEntity):
     @property
     def native_value(self) -> StateType | datetime:
         """Return value of sensor."""
-        return self.entity_description.value_fn(self.device_data)
+        state = self.entity_description.value_fn(self.device_data)
+        return state
 
     @property
     def extra_state_attributes(self) -> Mapping[str, Any] | None:

@@ -1,12 +1,9 @@
 """Test config validators."""
-
 from collections import OrderedDict
 from datetime import date, datetime, timedelta
 import enum
-import logging
 import os
 from socket import _GLOBAL_DEFAULT_TIMEOUT
-from typing import Any
 from unittest.mock import Mock, patch
 import uuid
 
@@ -98,9 +95,8 @@ def test_isfile() -> None:
 
     # patching methods that allow us to fake a file existing
     # with write access
-    with (
-        patch("os.path.isfile", Mock(return_value=True)),
-        patch("os.access", Mock(return_value=True)),
+    with patch("os.path.isfile", Mock(return_value=True)), patch(
+        "os.access", Mock(return_value=True)
     ):
         schema("test.txt")
 
@@ -194,12 +190,12 @@ def test_platform_config() -> None:
 def test_ensure_list() -> None:
     """Test ensure_list."""
     schema = vol.Schema(cv.ensure_list)
-    assert schema(None) == []
-    assert schema(1) == [1]
-    assert schema([1]) == [1]
-    assert schema("1") == ["1"]
-    assert schema(["1"]) == ["1"]
-    assert schema({"1": "2"}) == [{"1": "2"}]
+    assert [] == schema(None)
+    assert [1] == schema(1)
+    assert [1] == schema([1])
+    assert ["1"] == schema("1")
+    assert ["1"] == schema(["1"])
+    assert [{"1": "2"}] == schema({"1": "2"})
 
 
 def test_entity_id() -> None:
@@ -417,9 +413,27 @@ def test_service() -> None:
     schema("homeassistant.turn_on")
 
 
-@pytest.mark.parametrize(
-    "config",
-    [
+def test_service_schema(hass: HomeAssistant) -> None:
+    """Test service_schema validation."""
+    options = (
+        {},
+        None,
+        {
+            "service": "homeassistant.turn_on",
+            "service_template": "homeassistant.turn_on",
+        },
+        {"data": {"entity_id": "light.kitchen"}},
+        {"service": "homeassistant.turn_on", "data": None},
+        {
+            "service": "homeassistant.turn_on",
+            "data_template": {"brightness": "{{ no_end"},
+        },
+    )
+    for value in options:
+        with pytest.raises(vol.MultipleInvalid):
+            cv.SERVICE_SCHEMA(value)
+
+    options = (
         {"service": "homeassistant.turn_on"},
         {"service": "homeassistant.turn_on", "entity_id": "light.kitchen"},
         {"service": "light.turn_on", "entity_id": "all"},
@@ -433,70 +447,14 @@ def test_service() -> None:
             "alias": "turn on kitchen lights",
         },
         {"service": "scene.turn_on", "metadata": {}},
-        {"action": "homeassistant.turn_on"},
-        {"action": "homeassistant.turn_on", "entity_id": "light.kitchen"},
-        {"action": "light.turn_on", "entity_id": "all"},
-        {
-            "action": "homeassistant.turn_on",
-            "entity_id": ["light.kitchen", "light.ceiling"],
-        },
-        {
-            "action": "light.turn_on",
-            "entity_id": "all",
-            "alias": "turn on kitchen lights",
-        },
-        {"action": "scene.turn_on", "metadata": {}},
-    ],
-)
-def test_service_schema(hass: HomeAssistant, config: dict[str, Any]) -> None:
-    """Test service_schema validation."""
-    validated = cv.SERVICE_SCHEMA(config)
+    )
+    for value in options:
+        cv.SERVICE_SCHEMA(value)
 
-    # Ensure metadata is removed from the validated output
-    assert "metadata" not in validated
-
-    # Ensure service is migrated to action
-    assert "service" not in validated
-    assert "action" in validated
-    assert validated["action"] == config.get("service", config["action"])
-
-
-@pytest.mark.parametrize(
-    "config",
-    [
-        {},
-        None,
-        {"data": {"entity_id": "light.kitchen"}},
-        {
-            "service": "homeassistant.turn_on",
-            "service_template": "homeassistant.turn_on",
-        },
-        {"service": "homeassistant.turn_on", "data": None},
-        {
-            "service": "homeassistant.turn_on",
-            "data_template": {"brightness": "{{ no_end"},
-        },
-        {
-            "service": "homeassistant.turn_on",
-            "action": "homeassistant.turn_on",
-        },
-        {
-            "action": "homeassistant.turn_on",
-            "service_template": "homeassistant.turn_on",
-        },
-        {"action": "homeassistant.turn_on", "data": None},
-        {
-            "action": "homeassistant.turn_on",
-            "data_template": {"brightness": "{{ no_end"},
-        },
-    ],
-)
-def test_invalid_service_schema(
-    hass: HomeAssistant, config: dict[str, Any] | None
-) -> None:
-    """Test service_schema validation fails."""
-    with pytest.raises(vol.MultipleInvalid):
-        cv.SERVICE_SCHEMA(config)
+    # Check metadata is removed from the validated output
+    assert cv.SERVICE_SCHEMA({"service": "scene.turn_on", "metadata": {}}) == {
+        "service": "scene.turn_on"
+    }
 
 
 def test_entity_service_schema() -> None:
@@ -581,13 +539,6 @@ def test_string(hass: HomeAssistant) -> None:
     for value in (True, 1, "hello"):
         schema(value)
 
-    # Test subclasses of str are returned
-    class MyString(str):
-        __slots__ = ()
-
-    my_string = MyString("hello")
-    assert schema(my_string) is my_string
-
     # Test template support
     for text, native in (
         ("[1, 2]", [1, 2]),
@@ -641,9 +592,7 @@ def test_x10_address() -> None:
     schema = vol.Schema(cv.x10_address)
     with pytest.raises(vol.Invalid):
         schema("Q1")
-    with pytest.raises(vol.Invalid):
         schema("q55")
-    with pytest.raises(vol.Invalid):
         schema("garbage_addr")
 
     schema("a1")
@@ -807,7 +756,7 @@ def test_date() -> None:
     """Test date validation."""
     schema = vol.Schema(cv.date)
 
-    for value in ("Not a date", "23:42", "2016-11-23T18:59:08"):
+    for value in ["Not a date", "23:42", "2016-11-23T18:59:08"]:
         with pytest.raises(vol.Invalid):
             schema(value)
 
@@ -819,7 +768,7 @@ def test_time() -> None:
     """Test date validation."""
     schema = vol.Schema(cv.time)
 
-    for value in ("Not a time", "2016-11-23", "2016-11-23T18:59:08"):
+    for value in ["Not a time", "2016-11-23", "2016-11-23T18:59:08"]:
         with pytest.raises(vol.Invalid):
             schema(value)
 
@@ -831,7 +780,7 @@ def test_time() -> None:
 def test_datetime() -> None:
     """Test date time validation."""
     schema = vol.Schema(cv.datetime)
-    for value in (date.today(), "Wrong DateTime"):
+    for value in [date.today(), "Wrong DateTime"]:
         with pytest.raises(vol.MultipleInvalid):
             schema(value)
 
@@ -850,7 +799,6 @@ def test_multi_select() -> None:
 
     with pytest.raises(vol.Invalid):
         schema("robban")
-    with pytest.raises(vol.Invalid):
         schema(["paulus", "martinhj"])
 
     schema(["robban", "paulus"])
@@ -884,7 +832,6 @@ def test_selector_in_serializer() -> None:
         "selector": {
             "text": {
                 "multiline": False,
-                "multiple": False,
             }
         }
     }
@@ -904,7 +851,7 @@ def schema():
 
 
 @pytest.fixture
-def version(monkeypatch: pytest.MonkeyPatch) -> None:
+def version(monkeypatch):
     """Patch the version used for testing to 0.5.0."""
     monkeypatch.setattr(homeassistant.const, "__version__", "0.5.0")
 
@@ -1004,7 +951,7 @@ def test_deprecated_with_replacement_key(
     assert (
         "The 'mars' option is deprecated, please replace it with 'jupiter'"
     ) in caplog.text
-    assert output == {"jupiter": True}
+    assert {"jupiter": True} == output
 
     caplog.clear()
     assert len(caplog.records) == 0
@@ -1031,11 +978,7 @@ def test_deprecated_with_default(caplog: pytest.LogCaptureFixture, schema) -> No
     deprecated_schema = vol.All(cv.deprecated("mars", default=False), schema)
 
     test_data = {"mars": True}
-    with patch(
-        "homeassistant.helpers.config_validation.get_integration_logger",
-        return_value=logging.getLogger(__name__),
-    ):
-        output = deprecated_schema(test_data.copy())
+    output = deprecated_schema(test_data.copy())
     assert len(caplog.records) == 1
     assert caplog.records[0].name == __name__
     assert (
@@ -1075,7 +1018,7 @@ def test_deprecated_with_replacement_key_and_default(
     assert (
         "The 'mars' option is deprecated, please replace it with 'jupiter'"
     ) in caplog.text
-    assert output == {"jupiter": True}
+    assert {"jupiter": True} == output
 
     caplog.clear()
     assert len(caplog.records) == 0
@@ -1088,7 +1031,7 @@ def test_deprecated_with_replacement_key_and_default(
     test_data = {"venus": True}
     output = deprecated_schema(test_data.copy())
     assert len(caplog.records) == 0
-    assert output == {"venus": True, "jupiter": False}
+    assert {"venus": True, "jupiter": False} == output
 
     deprecated_schema_with_default = vol.All(
         vol.Schema(
@@ -1107,23 +1050,25 @@ def test_deprecated_with_replacement_key_and_default(
     assert (
         "The 'mars' option is deprecated, please replace it with 'jupiter'"
     ) in caplog.text
-    assert output == {"jupiter": True}
+    assert {"jupiter": True} == output
 
 
 def test_deprecated_cant_find_module() -> None:
-    """Test if the current module cannot be found."""
-    # This used to raise.
-    cv.deprecated(
-        "mars",
-        replacement_key="jupiter",
-        default=False,
-    )
+    """Test if the current module cannot be inspected."""
+    with patch("inspect.getmodule", return_value=None):
+        # This used to raise.
+        cv.deprecated(
+            "mars",
+            replacement_key="jupiter",
+            default=False,
+        )
 
-    # This used to raise.
-    cv.removed(
-        "mars",
-        default=False,
-    )
+    with patch("inspect.getmodule", return_value=None):
+        # This used to raise.
+        cv.removed(
+            "mars",
+            default=False,
+        )
 
 
 def test_deprecated_or_removed_logger_with_config_attributes(
@@ -1279,7 +1224,7 @@ def test_enum() -> None:
         schema("value3")
 
 
-def test_socket_timeout() -> None:
+def test_socket_timeout():
     """Test socket timeout validator."""
     schema = vol.Schema(cv.socket_timeout)
 
@@ -1346,7 +1291,7 @@ def test_uuid4_hex(caplog: pytest.LogCaptureFixture) -> None:
     """Test uuid validation."""
     schema = vol.Schema(cv.uuid4_hex)
 
-    for value in ("Not a hex string", "0", 0):
+    for value in ["Not a hex string", "0", 0]:
         with pytest.raises(vol.Invalid):
             schema(value)
 
@@ -1377,7 +1322,7 @@ def test_key_value_schemas() -> None:
 
     with pytest.raises(vol.Invalid) as excinfo:
         schema(True)
-    assert str(excinfo.value) == "Expected a dictionary"
+        assert str(excinfo.value) == "Expected a dictionary"
 
     for mode in None, {"a": "dict"}, "invalid":
         with pytest.raises(vol.Invalid) as excinfo:
@@ -1415,7 +1360,7 @@ def test_key_value_schemas_with_default() -> None:
 
     with pytest.raises(vol.Invalid) as excinfo:
         schema(True)
-    assert str(excinfo.value) == "Expected a dictionary"
+        assert str(excinfo.value) == "Expected a dictionary"
 
     for mode in None, {"a": "dict"}, "invalid":
         with pytest.raises(vol.Invalid) as excinfo:
@@ -1440,7 +1385,7 @@ def test_key_value_schemas_with_default() -> None:
 
 @pytest.mark.parametrize(
     ("config", "error"),
-    [
+    (
         ({"delay": "{{ invalid"}, "should be format 'HH:MM'"),
         ({"wait_template": "{{ invalid"}, "invalid template"),
         ({"condition": "invalid"}, "Unexpected value for condition: 'invalid'"),
@@ -1475,7 +1420,7 @@ def test_key_value_schemas_with_default() -> None:
             },
             "not allowed to add a response to an error stop action",
         ),
-    ],
+    ),
 )
 def test_script(caplog: pytest.LogCaptureFixture, config: dict, error: str) -> None:
     """Test script validation is user friendly."""
@@ -1598,13 +1543,12 @@ def test_empty_schema(caplog: pytest.LogCaptureFixture) -> None:
 
 def test_empty_schema_cant_find_module() -> None:
     """Test if the current module cannot be inspected."""
-    cv.empty_config_schema("test_domain")({"test_domain": {"foo": "bar"}})
+    with patch("inspect.getmodule", return_value=None):
+        cv.empty_config_schema("test_domain")({"test_domain": {"foo": "bar"}})
 
 
 def test_config_entry_only_schema(
-    hass: HomeAssistant,
-    caplog: pytest.LogCaptureFixture,
-    issue_registry: ir.IssueRegistry,
+    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test config_entry_only_config_schema."""
     expected_issue = "config_entry_only_test_domain"
@@ -1612,6 +1556,7 @@ def test_config_entry_only_schema(
         "The test_domain integration does not support YAML setup, please remove "
         "it from your configuration"
     )
+    issue_registry = ir.async_get(hass)
 
     cv.config_entry_only_config_schema("test_domain")({})
     assert expected_message not in caplog.text
@@ -1629,15 +1574,16 @@ def test_config_entry_only_schema(
 
 def test_config_entry_only_schema_cant_find_module() -> None:
     """Test if the current module cannot be inspected."""
-    cv.config_entry_only_config_schema("test_domain")({"test_domain": {"foo": "bar"}})
+    with patch("inspect.getmodule", return_value=None):
+        cv.config_entry_only_config_schema("test_domain")(
+            {"test_domain": {"foo": "bar"}}
+        )
 
 
 def test_config_entry_only_schema_no_hass(
-    hass: HomeAssistant,
-    caplog: pytest.LogCaptureFixture,
-    issue_registry: ir.IssueRegistry,
+    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """Test if the hass context is not set in our context."""
+    """Test if the the hass context is not set in our context."""
     with patch(
         "homeassistant.helpers.config_validation.async_get_hass",
         side_effect=HomeAssistantError,
@@ -1650,13 +1596,12 @@ def test_config_entry_only_schema_no_hass(
         "it from your configuration"
     )
     assert expected_message in caplog.text
+    issue_registry = ir.async_get(hass)
     assert not issue_registry.issues
 
 
 def test_platform_only_schema(
-    hass: HomeAssistant,
-    caplog: pytest.LogCaptureFixture,
-    issue_registry: ir.IssueRegistry,
+    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test config_entry_only_config_schema."""
     expected_issue = "platform_only_test_domain"
@@ -1664,6 +1609,8 @@ def test_platform_only_schema(
         "The test_domain integration does not support YAML setup, please remove "
         "it from your configuration"
     )
+    issue_registry = ir.async_get(hass)
+
     cv.platform_only_config_schema("test_domain")({})
     assert expected_message not in caplog.text
     assert not issue_registry.async_get_issue(HOMEASSISTANT_DOMAIN, expected_issue)
@@ -1676,65 +1623,3 @@ def test_platform_only_schema(
     cv.platform_only_config_schema("test_domain")({"test_domain": {"foo": "bar"}})
     assert expected_message in caplog.text
     assert issue_registry.async_get_issue(HOMEASSISTANT_DOMAIN, expected_issue)
-
-
-def test_domain() -> None:
-    """Test domain."""
-    with pytest.raises(vol.Invalid):
-        cv.domain_key(5)
-    with pytest.raises(vol.Invalid):
-        cv.domain_key("")
-    with pytest.raises(vol.Invalid):
-        cv.domain_key("hue ")
-    with pytest.raises(vol.Invalid):
-        cv.domain_key("hue  ")
-    assert cv.domain_key("hue") == "hue"
-    assert cv.domain_key("hue1") == "hue1"
-    assert cv.domain_key("hue 1") == "hue"
-    assert cv.domain_key("hue  1") == "hue"
-
-
-def test_color_hex() -> None:
-    """Test color validation in hex format."""
-    assert cv.color_hex("#123456") == "#123456"
-    assert cv.color_hex("#FFaaFF") == "#FFaaFF"
-    assert cv.color_hex("#FFFFFF") == "#FFFFFF"
-    assert cv.color_hex("#000000") == "#000000"
-
-    msg = r"Color should be in the format #RRGGBB"
-    with pytest.raises(vol.Invalid, match=msg):
-        cv.color_hex("#777")
-
-    with pytest.raises(vol.Invalid, match=msg):
-        cv.color_hex("FFFFF")
-
-    with pytest.raises(vol.Invalid, match=msg):
-        cv.color_hex("FFFFFF")
-
-    with pytest.raises(vol.Invalid, match=msg):
-        cv.color_hex("#FFFFFFF")
-
-    with pytest.raises(vol.Invalid, match=msg):
-        cv.color_hex(123456)
-
-
-def test_determine_script_action_ambiguous() -> None:
-    """Test determine script action with ambiguous actions."""
-    assert (
-        cv.determine_script_action(
-            {
-                "type": "is_power",
-                "condition": "device",
-                "device_id": "9c2bda81bc7997c981f811c32cafdb22",
-                "entity_id": "2ee287ec70dd0c6db187b539bee429b7",
-                "domain": "sensor",
-                "below": "15",
-            }
-        )
-        == "condition"
-    )
-
-
-def test_determine_script_action_non_ambiguous() -> None:
-    """Test determine script action with a non ambiguous action."""
-    assert cv.determine_script_action({"delay": "00:00:05"}) == "delay"

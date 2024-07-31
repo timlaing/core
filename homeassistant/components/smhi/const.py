@@ -1,5 +1,4 @@
 """Constants in smhi component."""
-
 from typing import Final
 
 from homeassistant.components.weather import DOMAIN as WEATHER_DOMAIN

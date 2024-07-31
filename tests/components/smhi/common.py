@@ -1,5 +1,4 @@
 """Common test utilities."""
-
 from unittest.mock import Mock
 
 

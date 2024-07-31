@@ -16,16 +16,26 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
-from .coordinator import MelnorDataUpdateCoordinator
-from .models import MelnorZoneEntity, get_entities_for_valves
+from .models import (
+    MelnorDataUpdateCoordinator,
+    MelnorZoneEntity,
+    get_entities_for_valves,
+)
 
 
-@dataclass(frozen=True, kw_only=True)
-class MelnorZoneTimeEntityDescription(TimeEntityDescription):
-    """Describes Melnor number entity."""
+@dataclass
+class MelnorZoneTimeEntityDescriptionMixin:
+    """Mixin for required keys."""
 
     set_time_fn: Callable[[Valve, time], Coroutine[Any, Any, None]]
     state_fn: Callable[[Valve], Any]
+
+
+@dataclass
+class MelnorZoneTimeEntityDescription(
+    TimeEntityDescription, MelnorZoneTimeEntityDescriptionMixin
+):
+    """Describes Melnor number entity."""
 
 
 ZONE_ENTITY_DESCRIPTIONS: list[MelnorZoneTimeEntityDescription] = [

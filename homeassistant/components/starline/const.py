@@ -1,5 +1,4 @@
 """StarLine constants."""
-
 import logging
 
 from homeassistant.const import Platform
@@ -8,11 +7,10 @@ _LOGGER = logging.getLogger(__package__)
 
 DOMAIN = "starline"
 PLATFORMS = [
-    Platform.BINARY_SENSOR,
-    Platform.BUTTON,
     Platform.DEVICE_TRACKER,
-    Platform.LOCK,
+    Platform.BINARY_SENSOR,
     Platform.SENSOR,
+    Platform.LOCK,
     Platform.SWITCH,
 ]
 

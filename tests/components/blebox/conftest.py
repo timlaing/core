@@ -1,6 +1,4 @@
 """PyTest fixtures and test helpers."""
-
-from typing import Any
 from unittest import mock
 from unittest.mock import AsyncMock, PropertyMock, patch
 
@@ -72,7 +70,7 @@ def config_fixture():
 
 
 @pytest.fixture(name="feature")
-def feature_fixture(request: pytest.FixtureRequest) -> Any:
+def feature_fixture(request):
     """Return an entity wrapper from given fixture name."""
     return request.getfixturevalue(request.param)
 

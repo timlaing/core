@@ -1,5 +1,4 @@
 """Test system log component."""
-
 from __future__ import annotations
 
 import asyncio
@@ -10,10 +9,9 @@ import traceback
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+from homeassistant.bootstrap import async_setup_component
 from homeassistant.components import system_log
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.setup import async_setup_component
 
 from tests.common import async_capture_events
 from tests.typing import WebSocketGenerator
@@ -36,8 +34,8 @@ async def get_error_log(hass_ws_client):
 
 def _generate_and_log_exception(exception, log):
     try:
-        raise Exception(exception)  # pylint: disable=broad-exception-raised
-    except Exception:
+        raise Exception(exception)
+    except Exception:  # pylint: disable=broad-except
         _LOGGER.exception(log)
 
 
@@ -90,9 +88,7 @@ class WatchLogErrorHandler(system_log.LogErrorHandler):
             self.watch_event.set()
 
 
-async def async_setup_system_log(
-    hass: HomeAssistant, config: ConfigType
-) -> WatchLogErrorHandler:
+async def async_setup_system_log(hass, config) -> WatchLogErrorHandler:
     """Set up the system_log component."""
     WatchLogErrorHandler.instances = []
     with patch(
@@ -112,7 +108,7 @@ async def test_normal_logs(
     await async_setup_component(hass, system_log.DOMAIN, BASIC_CONFIG)
     await hass.async_block_till_done()
     _LOGGER.debug("debug")
-    _LOGGER.info("Info")
+    _LOGGER.info("info")
 
     # Assert done by get_error_log
     logs = await get_error_log(hass_ws_client)
@@ -136,10 +132,10 @@ async def test_warning(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) 
     """Test that warning are logged and retrieved correctly."""
     await async_setup_component(hass, system_log.DOMAIN, BASIC_CONFIG)
     await hass.async_block_till_done()
-    _LOGGER.warning("Warning message")
+    _LOGGER.warning("warning message")
 
     log = find_log(await get_error_log(hass_ws_client), "WARNING")
-    assert_log(log, "", "Warning message", "WARNING")
+    assert_log(log, "", "warning message", "WARNING")
 
 
 async def test_warning_good_format(
@@ -148,11 +144,11 @@ async def test_warning_good_format(
     """Test that warning with good format arguments are logged and retrieved correctly."""
     await async_setup_component(hass, system_log.DOMAIN, BASIC_CONFIG)
     await hass.async_block_till_done()
-    _LOGGER.warning("Warning message: %s", "test")
+    _LOGGER.warning("warning message: %s", "test")
     await hass.async_block_till_done()
 
     log = find_log(await get_error_log(hass_ws_client), "WARNING")
-    assert_log(log, "", "Warning message: test", "WARNING")
+    assert_log(log, "", "warning message: test", "WARNING")
 
 
 async def test_warning_missing_format_args(
@@ -161,11 +157,11 @@ async def test_warning_missing_format_args(
     """Test that warning with missing format arguments are logged and retrieved correctly."""
     await async_setup_component(hass, system_log.DOMAIN, BASIC_CONFIG)
     await hass.async_block_till_done()
-    _LOGGER.warning("Warning message missing a format arg %s")
+    _LOGGER.warning("warning message missing a format arg %s")
     await hass.async_block_till_done()
 
     log = find_log(await get_error_log(hass_ws_client), "WARNING")
-    assert_log(log, "", ["Warning message missing a format arg %s"], "WARNING")
+    assert_log(log, "", ["warning message missing a format arg %s"], "WARNING")
 
 
 async def test_error(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) -> None:
@@ -173,10 +169,10 @@ async def test_error(hass: HomeAssistant, hass_ws_client: WebSocketGenerator) ->
     await async_setup_component(hass, system_log.DOMAIN, BASIC_CONFIG)
     await hass.async_block_till_done()
 
-    _LOGGER.error("Error message")
+    _LOGGER.error("error message")
 
     log = find_log(await get_error_log(hass_ws_client), "ERROR")
-    assert_log(log, "", "Error message", "ERROR")
+    assert_log(log, "", "error message", "ERROR")
 
 
 async def test_config_not_fire_event(hass: HomeAssistant) -> None:
@@ -203,17 +199,17 @@ async def test_error_posted_as_event(hass: HomeAssistant) -> None:
     watcher = await async_setup_system_log(
         hass, {"system_log": {"max_entries": 2, "fire_event": True}}
     )
-    wait_empty = watcher.add_watcher("Error message")
+    wait_empty = watcher.add_watcher("error message")
 
     events = async_capture_events(hass, system_log.EVENT_SYSTEM_LOG)
 
-    _LOGGER.error("Error message")
+    _LOGGER.error("error message")
     await wait_empty
     await hass.async_block_till_done()
     await hass.async_block_till_done()
 
     assert len(events) == 1
-    assert_log(events[0].data, "", "Error message", "ERROR")
+    assert_log(events[0].data, "", "error message", "ERROR")
 
 
 async def test_critical(
@@ -223,10 +219,10 @@ async def test_critical(
     await async_setup_component(hass, system_log.DOMAIN, BASIC_CONFIG)
     await hass.async_block_till_done()
 
-    _LOGGER.critical("Critical message")
+    _LOGGER.critical("critical message")
 
     log = find_log(await get_error_log(hass_ws_client), "CRITICAL")
-    assert_log(log, "", "Critical message", "CRITICAL")
+    assert_log(log, "", "critical message", "CRITICAL")
 
 
 async def test_remove_older_logs(
@@ -235,18 +231,18 @@ async def test_remove_older_logs(
     """Test that older logs are rotated out."""
     await async_setup_component(hass, system_log.DOMAIN, BASIC_CONFIG)
     await hass.async_block_till_done()
-    _LOGGER.error("Error message 1")
-    _LOGGER.error("Error message 2")
-    _LOGGER.error("Error message 3")
+    _LOGGER.error("error message 1")
+    _LOGGER.error("error message 2")
+    _LOGGER.error("error message 3")
     await hass.async_block_till_done()
     log = await get_error_log(hass_ws_client)
-    assert_log(log[0], "", "Error message 3", "ERROR")
-    assert_log(log[1], "", "Error message 2", "ERROR")
+    assert_log(log[0], "", "error message 3", "ERROR")
+    assert_log(log[1], "", "error message 2", "ERROR")
 
 
 def log_msg(nr=2):
     """Log an error at same line."""
-    _LOGGER.error("Error message %s", nr)
+    _LOGGER.error("error message %s", nr)
 
 
 async def test_dedupe_logs(
@@ -255,19 +251,19 @@ async def test_dedupe_logs(
     """Test that duplicate log entries are dedupe."""
     await async_setup_component(hass, system_log.DOMAIN, BASIC_CONFIG)
     await hass.async_block_till_done()
-    _LOGGER.error("Error message 1")
+    _LOGGER.error("error message 1")
     log_msg()
     log_msg("2-2")
-    _LOGGER.error("Error message 3")
+    _LOGGER.error("error message 3")
 
     log = await get_error_log(hass_ws_client)
-    assert_log(log[0], "", "Error message 3", "ERROR")
+    assert_log(log[0], "", "error message 3", "ERROR")
     assert log[1]["count"] == 2
-    assert_log(log[1], "", ["Error message 2", "Error message 2-2"], "ERROR")
+    assert_log(log[1], "", ["error message 2", "error message 2-2"], "ERROR")
 
     log_msg()
     log = await get_error_log(hass_ws_client)
-    assert_log(log[0], "", ["Error message 2", "Error message 2-2"], "ERROR")
+    assert_log(log[0], "", ["error message 2", "error message 2-2"], "ERROR")
     assert log[0]["timestamp"] > log[0]["first_occurred"]
 
     log_msg("2-3")
@@ -280,11 +276,11 @@ async def test_dedupe_logs(
         log[0],
         "",
         [
-            "Error message 2-2",
-            "Error message 2-3",
-            "Error message 2-4",
-            "Error message 2-5",
-            "Error message 2-6",
+            "error message 2-2",
+            "error message 2-3",
+            "error message 2-4",
+            "error message 2-5",
+            "error message 2-6",
         ],
         "ERROR",
     )
@@ -296,7 +292,7 @@ async def test_clear_logs(
     """Test that the log can be cleared via a service call."""
     await async_setup_component(hass, system_log.DOMAIN, BASIC_CONFIG)
     await hass.async_block_till_done()
-    _LOGGER.error("Error message")
+    _LOGGER.error("error message")
 
     await hass.services.async_call(system_log.DOMAIN, system_log.SERVICE_CLEAR, {})
     await hass.async_block_till_done()
@@ -357,7 +353,7 @@ async def test_unknown_path(
     await async_setup_component(hass, system_log.DOMAIN, BASIC_CONFIG)
     await hass.async_block_till_done()
     _LOGGER.findCaller = MagicMock(return_value=("unknown_path", 0, None, None))
-    _LOGGER.error("Error message")
+    _LOGGER.error("error message")
     log = (await get_error_log(hass_ws_client))[0]
     assert log["source"] == ["unknown_path", 0]
 
@@ -379,17 +375,14 @@ async def async_log_error_from_test_path(hass, path, watcher):
     call_path_frame = get_frame(call_path, path_frame)
     logger_frame = get_frame("venv_path/logging/log.py", call_path_frame)
 
-    with (
-        patch.object(
-            _LOGGER, "findCaller", MagicMock(return_value=(call_path, 0, None, None))
-        ),
-        patch(
-            "homeassistant.components.system_log.sys._getframe",
-            return_value=logger_frame,
-        ),
+    with patch.object(
+        _LOGGER, "findCaller", MagicMock(return_value=(call_path, 0, None, None))
+    ), patch(
+        "homeassistant.components.system_log.sys._getframe",
+        return_value=logger_frame,
     ):
-        wait_empty = watcher.add_watcher("Error message")
-        _LOGGER.error("Error message")
+        wait_empty = watcher.add_watcher("error message")
+        _LOGGER.error("error message")
         await wait_empty
 
 
@@ -447,7 +440,7 @@ async def test_raise_during_log_capture(
 
     raise_during_repr = RaisesDuringRepr()
 
-    _LOGGER.error("Raise during repr: %s", raise_during_repr)
+    _LOGGER.error("raise during repr: %s", raise_during_repr)
     log = find_log(await get_error_log(hass_ws_client), "ERROR")
     assert log is not None
     assert_log(log, "", "Bad logger message: repr error", "ERROR")
@@ -465,44 +458,14 @@ async def test__figure_out_source(hass: HomeAssistant) -> None:
     except ValueError as ex:
         exc_info = (type(ex), ex, ex.__traceback__)
     mock_record = MagicMock(
-        pathname="figure_out_source is False",
+        pathname="should not hit",
         lineno=5,
         exc_info=exc_info,
     )
     regex_str = f"({__file__})"
-    paths_re = re.compile(regex_str)
     file, line_no = system_log._figure_out_source(
         mock_record,
-        paths_re,
-        list(traceback.walk_tb(exc_info[2])),
+        re.compile(regex_str),
     )
     assert file == __file__
     assert line_no != 5
-
-    entry = system_log.LogEntry(mock_record, paths_re, figure_out_source=False)
-    assert entry.source == ("figure_out_source is False", 5)
-
-
-async def test_formatting_exception(hass: HomeAssistant) -> None:
-    """Test that exceptions are formatted correctly."""
-    try:
-        raise ValueError("test")
-    except ValueError as ex:
-        exc_info = (type(ex), ex, ex.__traceback__)
-    mock_record = MagicMock(
-        pathname="figure_out_source is False",
-        lineno=5,
-        exc_info=exc_info,
-        exc_text=None,
-    )
-    regex_str = f"({__file__})"
-    paths_re = re.compile(regex_str)
-
-    mock_formatter = MagicMock(
-        formatException=MagicMock(return_value="formatted exception")
-    )
-    entry = system_log.LogEntry(
-        mock_record, paths_re, formatter=mock_formatter, figure_out_source=False
-    )
-    assert entry.exception == "formatted exception"
-    assert mock_record.exc_text == "formatted exception"

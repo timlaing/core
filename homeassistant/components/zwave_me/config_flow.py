@@ -1,5 +1,4 @@
 """Config flow to configure ZWaveMe integration."""
-
 from __future__ import annotations
 
 import logging
@@ -7,9 +6,10 @@ import logging
 from url_normalize import url_normalize
 import voluptuous as vol
 
+from homeassistant import config_entries
 from homeassistant.components.zeroconf import ZeroconfServiceInfo
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_TOKEN, CONF_URL
+from homeassistant.data_entry_flow import FlowResult
 
 from . import helpers
 from .const import DOMAIN
@@ -17,7 +17,7 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 
-class ZWaveMeConfigFlow(ConfigFlow, domain=DOMAIN):
+class ZWaveMeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """ZWaveMe integration config flow."""
 
     def __init__(self) -> None:
@@ -28,7 +28,7 @@ class ZWaveMeConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, str] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow initialized by the user or started with zeroconf."""
         errors = {}
         placeholders = {
@@ -88,7 +88,7 @@ class ZWaveMeConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_zeroconf(
         self, discovery_info: ZeroconfServiceInfo
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a discovered Z-Wave accessory - get url to pass into user step.
 
         This flow is triggered by the discovery component.

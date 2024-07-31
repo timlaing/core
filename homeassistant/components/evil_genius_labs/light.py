@@ -1,5 +1,4 @@
 """Light platform for Evil Genius Light."""
-
 from __future__ import annotations
 
 import asyncio
@@ -11,9 +10,8 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import EvilGeniusEntity
+from . import EvilGeniusEntity, EvilGeniusUpdateCoordinator
 from .const import DOMAIN
-from .coordinator import EvilGeniusUpdateCoordinator
 from .util import update_when_done
 
 HA_NO_EFFECT = "None"

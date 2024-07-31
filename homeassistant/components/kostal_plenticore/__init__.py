@@ -1,5 +1,4 @@
 """The Kostal Plenticore Solar Inverter integration."""
-
 import logging
 
 from pykoplenti import ApiException
@@ -9,7 +8,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
-from .coordinator import Plenticore
+from .helper import Plenticore
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -1,5 +1,4 @@
 """Config flow for UptimeRobot integration."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -15,8 +14,9 @@ from pyuptimerobot import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant import config_entries
 from homeassistant.const import CONF_API_KEY
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import API_ATTR_OK, DOMAIN, LOGGER
@@ -24,7 +24,7 @@ from .const import API_ATTR_OK, DOMAIN, LOGGER
 STEP_USER_DATA_SCHEMA = vol.Schema({vol.Required(CONF_API_KEY): str})
 
 
-class UptimeRobotConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for UptimeRobot."""
 
     VERSION = 1
@@ -36,7 +36,7 @@ class UptimeRobotConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         response: UptimeRobotApiResponse | UptimeRobotApiError | None = None
         key: str = data[CONF_API_KEY]
-        if key.startswith(("ur", "m")):
+        if key.startswith("ur") or key.startswith("m"):
             LOGGER.error("Wrong API key type detected, use the 'main' API key")
             errors["base"] = "not_main_key"
             return errors, None
@@ -50,7 +50,7 @@ class UptimeRobotConfigFlow(ConfigFlow, domain=DOMAIN):
         except UptimeRobotException as exception:
             LOGGER.error(exception)
             errors["base"] = "cannot_connect"
-        except Exception as exception:  # noqa: BLE001
+        except Exception as exception:  # pylint: disable=broad-except
             LOGGER.exception(exception)
             errors["base"] = "unknown"
         else:
@@ -68,7 +68,7 @@ class UptimeRobotConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         if user_input is None:
             return self.async_show_form(
@@ -85,15 +85,13 @@ class UptimeRobotConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
         )
 
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Return the reauth confirm step."""
         return await self.async_step_reauth_confirm()
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Dialog that informs the user that reauth is required."""
         if user_input is None:
             return self.async_show_form(

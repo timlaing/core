@@ -1,5 +1,5 @@
 """Config flow for Smart Meter Texas integration."""
-
+import asyncio
 import logging
 
 from aiohttp import ClientError
@@ -10,10 +10,8 @@ from smart_meter_texas.exceptions import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow
+from homeassistant import config_entries, core, exceptions
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import aiohttp_client
 
 from .const import DOMAIN
@@ -25,7 +23,7 @@ DATA_SCHEMA = vol.Schema(
 )
 
 
-async def validate_input(hass: HomeAssistant, data):
+async def validate_input(hass: core.HomeAssistant, data):
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
@@ -38,7 +36,7 @@ async def validate_input(hass: HomeAssistant, data):
 
     try:
         await client.authenticate()
-    except (TimeoutError, ClientError, SmartMeterTexasAPIError) as error:
+    except (asyncio.TimeoutError, ClientError, SmartMeterTexasAPIError) as error:
         raise CannotConnect from error
     except SmartMeterTexasAuthError as error:
         raise InvalidAuth(error) from error
@@ -47,7 +45,7 @@ async def validate_input(hass: HomeAssistant, data):
     return {"title": account.username}
 
 
-class SMTConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Smart Meter Texas."""
 
     VERSION = 1
@@ -63,7 +61,7 @@ class SMTConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
                 errors["base"] = "invalid_auth"
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
@@ -79,9 +77,9 @@ class SMTConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(exceptions.HomeAssistantError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(exceptions.HomeAssistantError):
     """Error to indicate there is invalid auth."""

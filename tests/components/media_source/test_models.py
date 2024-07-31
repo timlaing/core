@@ -1,5 +1,4 @@
 """Test Media Source model methods."""
-
 from homeassistant.components.media_player import MediaClass, MediaType
 from homeassistant.components.media_source import const, models
 

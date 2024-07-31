@@ -1,5 +1,4 @@
 """Config flow for duotecno integration."""
-
 from __future__ import annotations
 
 import logging
@@ -9,8 +8,9 @@ from duotecno.controller import PyDuotecno
 from duotecno.exceptions import InvalidPassword
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT
+from homeassistant.data_entry_flow import FlowResult
 
 from .const import DOMAIN
 
@@ -25,18 +25,15 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 )
 
 
-class DuoTecnoConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for duotecno."""
 
     VERSION = 1
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
-        if self._async_current_entries():
-            return self.async_abort(reason="single_instance_allowed")
-
         errors: dict[str, str] = {}
         if user_input is not None:
             try:
@@ -51,7 +48,7 @@ class DuoTecnoConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             except InvalidPassword:
                 errors["base"] = "invalid_auth"
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:

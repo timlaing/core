@@ -1,5 +1,4 @@
 """Wrapper for media_source around async_upnp_client's DmsDevice ."""
-
 from __future__ import annotations
 
 import asyncio
@@ -7,8 +6,7 @@ from collections.abc import Callable, Coroutine
 from dataclasses import dataclass
 from enum import StrEnum
 import functools
-from functools import cached_property
-from typing import Any, cast
+from typing import Any, TypeVar, cast
 
 from async_upnp_client.aiohttp import AiohttpSessionRequester
 from async_upnp_client.client import UpnpRequester
@@ -18,6 +16,7 @@ from async_upnp_client.exceptions import UpnpActionError, UpnpConnectionError, U
 from async_upnp_client.profiles.dlna import ContentDirectoryErrorCode, DmsDevice
 from didl_lite import didl_lite
 
+from homeassistant.backports.functools import cached_property
 from homeassistant.components import ssdp
 from homeassistant.components.media_player import BrowseError, MediaClass
 from homeassistant.components.media_source.error import Unresolvable
@@ -42,6 +41,9 @@ from .const import (
     ROOT_OBJECT_ID,
     STREAMABLE_PROTOCOLS,
 )
+
+_DlnaDmsDeviceMethod = TypeVar("_DlnaDmsDeviceMethod", bound="DmsDeviceSource")
+_R = TypeVar("_R")
 
 
 class DlnaDmsData:
@@ -121,8 +123,8 @@ class ActionError(DlnaDmsDeviceError):
     """Error when calling a UPnP Action on the device."""
 
 
-def catch_request_errors[_DlnaDmsDeviceMethod: DmsDeviceSource, _R](
-    func: Callable[[_DlnaDmsDeviceMethod, str], Coroutine[Any, Any, _R]],
+def catch_request_errors(
+    func: Callable[[_DlnaDmsDeviceMethod, str], Coroutine[Any, Any, _R]]
 ) -> Callable[[_DlnaDmsDeviceMethod, str], Coroutine[Any, Any, _R]]:
     """Catch UpnpError errors."""
 
@@ -330,7 +332,7 @@ class DmsDeviceSource:
     @property
     def usn(self) -> str:
         """Get the USN (Unique Service Name) for the wrapped UPnP device end-point."""
-        return self.config_entry.data[CONF_DEVICE_ID]  # type: ignore[no-any-return]
+        return self.config_entry.data[CONF_DEVICE_ID]
 
     @property
     def udn(self) -> str:
@@ -345,7 +347,7 @@ class DmsDeviceSource:
     @property
     def source_id(self) -> str:
         """Return a unique ID (slug) for this source for people to use in URLs."""
-        return self.config_entry.data[CONF_SOURCE_ID]  # type: ignore[no-any-return]
+        return self.config_entry.data[CONF_SOURCE_ID]
 
     @property
     def icon(self) -> str | None:
@@ -513,7 +515,7 @@ class DmsDeviceSource:
             if isinstance(child, didl_lite.DidlObject)
         ]
 
-        return BrowseMediaSource(
+        media_source = BrowseMediaSource(
             domain=DOMAIN,
             identifier=self._make_identifier(Action.SEARCH, query),
             media_class=MediaClass.DIRECTORY,
@@ -523,6 +525,8 @@ class DmsDeviceSource:
             can_expand=True,
             children=children,
         )
+
+        return media_source
 
     def _didl_to_play_media(self, item: didl_lite.DidlObject) -> DidlPlayMedia:
         """Return the first playable resource from a DIDL-Lite object."""
@@ -578,7 +582,7 @@ class DmsDeviceSource:
         mime_type = _resource_mime_type(item.res[0]) if item.res else None
         media_content_type = mime_type or item.upnp_class
 
-        return BrowseMediaSource(
+        media_source = BrowseMediaSource(
             domain=DOMAIN,
             identifier=self._make_identifier(Action.OBJECT, item.id),
             media_class=MEDIA_CLASS_MAP.get(item.upnp_class, ""),
@@ -589,6 +593,8 @@ class DmsDeviceSource:
             children=children,
             thumbnail=self._didl_thumbnail_url(item),
         )
+
+        return media_source
 
     def _didl_thumbnail_url(self, item: didl_lite.DidlObject) -> str | None:
         """Return absolute URL of a thumbnail for a DIDL-Lite object.

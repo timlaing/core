@@ -1,5 +1,4 @@
 """Test init of Nettigo Air Monitor integration."""
-
 from unittest.mock import patch
 
 from nettigo_air_monitor import ApiError, AuthFailedError
@@ -23,7 +22,7 @@ async def test_async_setup_entry(hass: HomeAssistant) -> None:
     state = hass.states.get("sensor.nettigo_air_monitor_sds011_pm2_5")
     assert state is not None
     assert state.state != STATE_UNAVAILABLE
-    assert state.state == "11.03"
+    assert state.state == "11.0"
 
 
 async def test_config_not_ready(hass: HomeAssistant) -> None:
@@ -54,12 +53,9 @@ async def test_config_not_ready_while_checking_credentials(hass: HomeAssistant) 
     )
     entry.add_to_hass(hass)
 
-    with (
-        patch("homeassistant.components.nam.NettigoAirMonitor.initialize"),
-        patch(
-            "homeassistant.components.nam.NettigoAirMonitor.async_check_credentials",
-            side_effect=ApiError("API Error"),
-        ),
+    with patch("homeassistant.components.nam.NettigoAirMonitor.initialize"), patch(
+        "homeassistant.components.nam.NettigoAirMonitor.async_check_credentials",
+        side_effect=ApiError("API Error"),
     ):
         await hass.config_entries.async_setup(entry.entry_id)
         assert entry.state is ConfigEntryState.SETUP_RETRY
@@ -97,11 +93,11 @@ async def test_unload_entry(hass: HomeAssistant) -> None:
     assert not hass.data.get(DOMAIN)
 
 
-async def test_remove_air_quality_entities(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
-) -> None:
+async def test_remove_air_quality_entities(hass: HomeAssistant) -> None:
     """Test remove air_quality entities from registry."""
-    entity_registry.async_get_or_create(
+    registry = er.async_get(hass)
+
+    registry.async_get_or_create(
         AIR_QUALITY_PLATFORM,
         DOMAIN,
         "aa:bb:cc:dd:ee:ff-sds011",
@@ -109,7 +105,7 @@ async def test_remove_air_quality_entities(
         disabled_by=None,
     )
 
-    entity_registry.async_get_or_create(
+    registry.async_get_or_create(
         AIR_QUALITY_PLATFORM,
         DOMAIN,
         "aa:bb:cc:dd:ee:ff-sps30",
@@ -119,8 +115,8 @@ async def test_remove_air_quality_entities(
 
     await init_integration(hass)
 
-    entry = entity_registry.async_get("air_quality.nettigo_air_monitor_sds011")
+    entry = registry.async_get("air_quality.nettigo_air_monitor_sds011")
     assert entry is None
 
-    entry = entity_registry.async_get("air_quality.nettigo_air_monitor_sps30")
+    entry = registry.async_get("air_quality.nettigo_air_monitor_sps30")
     assert entry is None

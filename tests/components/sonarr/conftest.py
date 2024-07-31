@@ -1,5 +1,4 @@
 """Fixtures for Sonarr integration tests."""
-
 from collections.abc import Generator
 import json
 from unittest.mock import MagicMock, patch
@@ -102,14 +101,14 @@ def mock_config_entry() -> MockConfigEntry:
 
 
 @pytest.fixture
-def mock_setup_entry() -> Generator[None]:
+def mock_setup_entry() -> Generator[None, None, None]:
     """Mock setting up a config entry."""
     with patch("homeassistant.components.sonarr.async_setup_entry", return_value=True):
         yield
 
 
 @pytest.fixture
-def mock_sonarr_config_flow() -> Generator[MagicMock]:
+def mock_sonarr_config_flow() -> Generator[None, MagicMock, None]:
     """Return a mocked Sonarr client."""
     with patch(
         "homeassistant.components.sonarr.config_flow.SonarrClient", autospec=True
@@ -127,7 +126,7 @@ def mock_sonarr_config_flow() -> Generator[MagicMock]:
 
 
 @pytest.fixture
-def mock_sonarr() -> Generator[MagicMock]:
+def mock_sonarr() -> Generator[None, MagicMock, None]:
     """Return a mocked Sonarr client."""
     with patch(
         "homeassistant.components.sonarr.SonarrClient", autospec=True

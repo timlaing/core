@@ -1,5 +1,4 @@
 """The tests for the demo water_heater component."""
-
 from unittest.mock import patch
 
 import pytest

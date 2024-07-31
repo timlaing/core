@@ -1,5 +1,4 @@
 """Config flow for Balboa Spa Client integration."""
-
 from __future__ import annotations
 
 import logging
@@ -9,10 +8,11 @@ from pybalboa import SpaClient
 from pybalboa.exceptions import SpaConnectionError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
+from homeassistant import exceptions
+from homeassistant.config_entries import ConfigEntry, ConfigFlow
 from homeassistant.const import CONF_HOST
 from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.device_registry import format_mac
 from homeassistant.helpers.schema_config_entry_flow import (
     SchemaFlowFormStep,
@@ -65,7 +65,7 @@ class BalboaSpaClientFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow initialized by the user."""
         errors = {}
         if user_input is not None:
@@ -74,7 +74,7 @@ class BalboaSpaClientFlowHandler(ConfigFlow, domain=DOMAIN):
                 info = await validate_input(user_input)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
@@ -87,5 +87,5 @@ class BalboaSpaClientFlowHandler(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(exceptions.HomeAssistantError):
     """Error to indicate we cannot connect."""

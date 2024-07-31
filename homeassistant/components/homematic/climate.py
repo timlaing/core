@@ -1,5 +1,4 @@
 """Support for Homematic thermostats."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -57,13 +56,9 @@ class HMThermostat(HMDevice, ClimateEntity):
     """Representation of a Homematic thermostat."""
 
     _attr_supported_features = (
-        ClimateEntityFeature.TARGET_TEMPERATURE
-        | ClimateEntityFeature.PRESET_MODE
-        | ClimateEntityFeature.TURN_OFF
-        | ClimateEntityFeature.TURN_ON
+        ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.PRESET_MODE
     )
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
-    _enable_turn_on_off_backwards_compatibility = False
 
     @property
     def hvac_mode(self) -> HVACMode:
@@ -113,11 +108,11 @@ class HMThermostat(HMDevice, ClimateEntity):
     @property
     def preset_modes(self):
         """Return a list of available preset modes."""
-        return [
-            HM_PRESET_MAP[mode]
-            for mode in self._hmdevice.ACTIONNODE
-            if mode in HM_PRESET_MAP
-        ]
+        preset_modes = []
+        for mode in self._hmdevice.ACTIONNODE:
+            if mode in HM_PRESET_MAP:
+                preset_modes.append(HM_PRESET_MAP[mode])
+        return preset_modes
 
     @property
     def current_humidity(self):

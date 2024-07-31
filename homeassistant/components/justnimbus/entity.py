@@ -1,5 +1,4 @@
 """Base Entity for JustNimbus sensors."""
-
 from __future__ import annotations
 
 from homeassistant.helpers.device_registry import DeviceInfo

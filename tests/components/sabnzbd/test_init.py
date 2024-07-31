@@ -1,5 +1,4 @@
 """Tests for the SABnzbd Integration."""
-
 from unittest.mock import patch
 
 from homeassistant.components.sabnzbd import DEFAULT_NAME, DOMAIN, OLD_SENSOR_KEYS

@@ -1,5 +1,4 @@
 """Test the Fronius update coordinators."""
-
 from unittest.mock import patch
 
 from freezegun.api import FrozenDateTimeFactory

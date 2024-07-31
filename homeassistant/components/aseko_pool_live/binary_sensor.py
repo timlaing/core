@@ -1,5 +1,4 @@
 """Support for Aseko Pool Live binary sensors."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -21,17 +20,25 @@ from .coordinator import AsekoDataUpdateCoordinator
 from .entity import AsekoEntity
 
 
-@dataclass(frozen=True, kw_only=True)
-class AsekoBinarySensorEntityDescription(BinarySensorEntityDescription):
-    """Describes an Aseko binary sensor entity."""
+@dataclass
+class AsekoBinarySensorDescriptionMixin:
+    """Mixin for required keys."""
 
     value_fn: Callable[[Unit], bool]
+
+
+@dataclass
+class AsekoBinarySensorEntityDescription(
+    BinarySensorEntityDescription, AsekoBinarySensorDescriptionMixin
+):
+    """Describes an Aseko binary sensor entity."""
 
 
 UNIT_BINARY_SENSORS: tuple[AsekoBinarySensorEntityDescription, ...] = (
     AsekoBinarySensorEntityDescription(
         key="water_flow",
         translation_key="water_flow",
+        icon="mdi:waves-arrow-right",
         value_fn=lambda unit: unit.water_flow,
     ),
     AsekoBinarySensorEntityDescription(
@@ -42,7 +49,6 @@ UNIT_BINARY_SENSORS: tuple[AsekoBinarySensorEntityDescription, ...] = (
     ),
     AsekoBinarySensorEntityDescription(
         key="has_error",
-        translation_key="error",
         value_fn=lambda unit: unit.has_error,
         device_class=BinarySensorDeviceClass.PROBLEM,
     ),
@@ -58,11 +64,11 @@ async def async_setup_entry(
     data: list[tuple[Unit, AsekoDataUpdateCoordinator]] = hass.data[DOMAIN][
         config_entry.entry_id
     ]
-    async_add_entities(
-        AsekoUnitBinarySensorEntity(unit, coordinator, description)
-        for unit, coordinator in data
-        for description in UNIT_BINARY_SENSORS
-    )
+    entities: list[BinarySensorEntity] = []
+    for unit, coordinator in data:
+        for description in UNIT_BINARY_SENSORS:
+            entities.append(AsekoUnitBinarySensorEntity(unit, coordinator, description))
+    async_add_entities(entities)
 
 
 class AsekoUnitBinarySensorEntity(AsekoEntity, BinarySensorEntity):
@@ -79,6 +85,7 @@ class AsekoUnitBinarySensorEntity(AsekoEntity, BinarySensorEntity):
         """Initialize the unit binary sensor."""
         super().__init__(unit, coordinator)
         self.entity_description = entity_description
+        self._attr_name = f"{self._device_name} {entity_description.name}"
         self._attr_unique_id = f"{self._unit.serial_number}_{entity_description.key}"
 
     @property

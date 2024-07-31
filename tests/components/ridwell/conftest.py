@@ -1,5 +1,4 @@
 """Define test fixtures for Ridwell."""
-
 from datetime import date
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -79,15 +78,12 @@ def config_fixture(hass):
 @pytest.fixture(name="mock_aioridwell")
 async def mock_aioridwell_fixture(hass, client, config):
     """Define a fixture to patch aioridwell."""
-    with (
-        patch(
-            "homeassistant.components.ridwell.config_flow.async_get_client",
-            return_value=client,
-        ),
-        patch(
-            "homeassistant.components.ridwell.coordinator.async_get_client",
-            return_value=client,
-        ),
+    with patch(
+        "homeassistant.components.ridwell.config_flow.async_get_client",
+        return_value=client,
+    ), patch(
+        "homeassistant.components.ridwell.coordinator.async_get_client",
+        return_value=client,
     ):
         yield
 

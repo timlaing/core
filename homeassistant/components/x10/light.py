@@ -1,5 +1,4 @@
 """Support for X10 lights."""
-
 from __future__ import annotations
 
 import logging
@@ -10,7 +9,7 @@ import voluptuous as vol
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
-    PLATFORM_SCHEMA as LIGHT_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     ColorMode,
     LightEntity,
 )
@@ -22,7 +21,7 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORM_SCHEMA = LIGHT_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_DEVICES): vol.All(
             cv.ensure_list,
@@ -34,7 +33,7 @@ PLATFORM_SCHEMA = LIGHT_PLATFORM_SCHEMA.extend(
 
 def x10_command(command):
     """Execute X10 command and check output."""
-    return check_output(["heyu", *command.split(" ")], stderr=STDOUT)
+    return check_output(["heyu"] + command.split(" "), stderr=STDOUT)
 
 
 def get_unit_status(code):

@@ -1,5 +1,4 @@
 """Representation of an RGB light."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -84,8 +83,9 @@ class ZWaveMeRGB(ZWaveMeEntity, LightEntity):
                     self.device.id, f"exact?level={round(brightness / 2.55)}"
                 )
             return
-        cmd = "exact?red={}&green={}&blue={}"
-        cmd = cmd.format(*color) if any(color) else cmd.format(*(255, 255, 255))
+        cmd = "exact?red={}&green={}&blue={}".format(
+            *color if any(color) else 255, 255, 255
+        )
         self.controller.zwave_api.send_command(self.device.id, cmd)
 
     @property

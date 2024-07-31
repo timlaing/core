@@ -1,5 +1,4 @@
 """Support for the IBM Watson IoT Platform."""
-
 import logging
 import queue
 import threading
@@ -100,12 +99,12 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
             or state.entity_id in exclude_e
             or state.domain in exclude_d
         ):
-            return None
+            return
 
         if (include_e and state.entity_id not in include_e) or (
             include_d and state.domain not in include_d
         ):
-            return None
+            return
 
         try:
             _state_as_value = float(state.state)

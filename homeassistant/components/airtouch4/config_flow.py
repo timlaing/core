@@ -1,9 +1,8 @@
 """Config flow for AirTouch4."""
-
 from airtouch4pyapi import AirTouch, AirTouchStatus
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow
+from homeassistant import config_entries
 from homeassistant.const import CONF_HOST
 
 from .const import DOMAIN
@@ -11,7 +10,7 @@ from .const import DOMAIN
 DATA_SCHEMA = vol.Schema({vol.Required(CONF_HOST): str})
 
 
-class AirtouchConfigFlow(ConfigFlow, domain=DOMAIN):
+class AirtouchConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle an Airtouch config flow."""
 
     VERSION = 1

@@ -1,5 +1,4 @@
 """Integration shared constants."""
-
 import logging
 
 DATA_VLC = "vlc"

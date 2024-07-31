@@ -1,5 +1,4 @@
 """Provides device triggers for binary sensors."""
-
 import voluptuous as vol
 
 from homeassistant.components.device_automation import (

@@ -1,5 +1,4 @@
 """Representation of Plex buttons."""
-
 from __future__ import annotations
 
 from homeassistant.components.button import ButtonEntity
@@ -10,9 +9,12 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import PlexServer
-from .const import CONF_SERVER_IDENTIFIER, DOMAIN, PLEX_UPDATE_PLATFORMS_SIGNAL
-from .helpers import get_plex_server
+from .const import (
+    CONF_SERVER,
+    CONF_SERVER_IDENTIFIER,
+    DOMAIN,
+    PLEX_UPDATE_PLATFORMS_SIGNAL,
+)
 
 
 async def async_setup_entry(
@@ -22,24 +24,22 @@ async def async_setup_entry(
 ) -> None:
     """Set up Plex button from config entry."""
     server_id: str = config_entry.data[CONF_SERVER_IDENTIFIER]
-    plex_server = get_plex_server(hass, server_id)
-    async_add_entities([PlexScanClientsButton(server_id, plex_server)])
+    server_name: str = config_entry.data[CONF_SERVER]
+    async_add_entities([PlexScanClientsButton(server_id, server_name)])
 
 
 class PlexScanClientsButton(ButtonEntity):
     """Representation of a scan_clients button entity."""
 
     _attr_entity_category = EntityCategory.CONFIG
-    _attr_has_entity_name = True
-    _attr_translation_key = "scan_clients"
 
-    def __init__(self, server_id: str, plex_server: PlexServer) -> None:
+    def __init__(self, server_id: str, server_name: str) -> None:
         """Initialize a scan_clients Plex button entity."""
         self.server_id = server_id
+        self._attr_name = f"Scan Clients ({server_name})"
         self._attr_unique_id = f"plex-scan_clients-{self.server_id}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, server_id)},
-            name=plex_server.friendly_name,
             manufacturer="Plex",
         )
 

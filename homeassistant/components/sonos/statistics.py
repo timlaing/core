@@ -1,5 +1,4 @@
 """Class to track subscription event statistics."""
-
 from __future__ import annotations
 
 import logging

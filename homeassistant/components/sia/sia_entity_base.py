@@ -1,5 +1,4 @@
 """Module for SIA Base Entity."""
-
 from __future__ import annotations
 
 from abc import abstractmethod
@@ -36,14 +35,14 @@ from .utils import (
 _LOGGER = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
+@dataclass
 class SIARequiredKeysMixin:
     """Required keys for SIA entities."""
 
     code_consequences: dict[str, StateType | bool]
 
 
-@dataclass(frozen=True)
+@dataclass
 class SIAEntityDescription(EntityDescription, SIARequiredKeysMixin):
     """Entity Description for SIA entities."""
 

@@ -1,15 +1,14 @@
 """Config flow for SiteSage Emonitor integration."""
-
 import logging
 
 from aioemonitor import Emonitor
 import aiohttp
 import voluptuous as vol
 
+from homeassistant import config_entries, core
 from homeassistant.components import dhcp
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_HOST, CONF_NAME
-from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import aiohttp_client
 from homeassistant.helpers.device_registry import format_mac
 
@@ -19,7 +18,7 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 
-async def fetch_mac_and_title(hass: HomeAssistant, host):
+async def fetch_mac_and_title(hass: core.HomeAssistant, host):
     """Validate the user input allows us to connect."""
     session = aiohttp_client.async_get_clientsession(hass)
     emonitor = Emonitor(host, session)
@@ -28,7 +27,7 @@ async def fetch_mac_and_title(hass: HomeAssistant, host):
     return {"title": name_short_mac(mac_address[-6:]), "mac_address": mac_address}
 
 
-class EmonitorConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for SiteSage Emonitor."""
 
     VERSION = 1
@@ -46,7 +45,7 @@ class EmonitorConfigFlow(ConfigFlow, domain=DOMAIN):
                 info = await fetch_mac_and_title(self.hass, user_input[CONF_HOST])
             except aiohttp.ClientError:
                 errors[CONF_HOST] = "cannot_connect"
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
@@ -64,9 +63,7 @@ class EmonitorConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_dhcp(
-        self, discovery_info: dhcp.DhcpServiceInfo
-    ) -> ConfigFlowResult:
+    async def async_step_dhcp(self, discovery_info: dhcp.DhcpServiceInfo) -> FlowResult:
         """Handle dhcp discovery."""
         self.discovered_ip = discovery_info.ip
         await self.async_set_unique_id(format_mac(discovery_info.macaddress))
@@ -77,7 +74,7 @@ class EmonitorConfigFlow(ConfigFlow, domain=DOMAIN):
             self.discovered_info = await fetch_mac_and_title(
                 self.hass, self.discovered_ip
             )
-        except Exception as ex:  # noqa: BLE001
+        except Exception as ex:  # pylint: disable=broad-except
             _LOGGER.debug(
                 "Unable to fetch status, falling back to manual entry", exc_info=ex
             )

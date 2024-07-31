@@ -1,5 +1,4 @@
 """Class representing a Sonos household storage helper."""
-
 from __future__ import annotations
 
 import asyncio
@@ -9,7 +8,7 @@ from typing import Any
 
 from soco import SoCo
 
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.debounce import Debouncer
 
 from .const import DATA_SONOS
@@ -35,8 +34,7 @@ class SonosHouseholdCoordinator:
         self.update_cache(soco)
         self.hass.add_job(self._async_setup)
 
-    @callback
-    def _async_setup(self) -> None:
+    async def _async_setup(self) -> None:
         """Finish setup in async context."""
         self.cache_update_lock = asyncio.Lock()
         self.async_poll = Debouncer[Coroutine[Any, Any, None]](
@@ -75,8 +73,8 @@ class SonosHouseholdCoordinator:
         self, soco: SoCo, update_id: int | None = None
     ) -> None:
         """Update the cache and update entities."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def update_cache(self, soco: SoCo, update_id: int | None = None) -> bool:
         """Update the cache of the household-level feature and return if cache has changed."""
-        raise NotImplementedError
+        raise NotImplementedError()

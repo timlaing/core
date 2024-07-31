@@ -1,5 +1,4 @@
 """Expose regular shell commands as services."""
-
 from __future__ import annotations
 
 import asyncio
@@ -15,7 +14,7 @@ from homeassistant.core import (
     ServiceResponse,
     SupportsResponse,
 )
-from homeassistant.exceptions import HomeAssistantError, TemplateError
+from homeassistant.exceptions import TemplateError
 from homeassistant.helpers import config_validation as cv, template
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.util.json import JsonObjectType
@@ -58,8 +57,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 rendered_args = args_compiled.async_render(
                     variables=service.data, parse_result=False
                 )
-            except TemplateError:
-                _LOGGER.exception("Error rendering command template")
+            except TemplateError as ex:
+                _LOGGER.exception("Error rendering command template: %s", ex)
                 raise
         else:
             rendered_args = None
@@ -77,7 +76,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         else:
             # Template used. Break into list and use create_subprocess_exec
             # (which uses shell=False) for security
-            shlexed_cmd = [prog, *shlex.split(rendered_args)]
+            shlexed_cmd = [prog] + shlex.split(rendered_args)
 
             create_process = asyncio.create_subprocess_exec(
                 *shlexed_cmd,
@@ -91,7 +90,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         try:
             async with asyncio.timeout(COMMAND_TIMEOUT):
                 stdout_data, stderr_data = await process.communicate()
-        except TimeoutError as err:
+        except asyncio.TimeoutError:
             _LOGGER.error(
                 "Timed out running command: `%s`, after: %ss", cmd, COMMAND_TIMEOUT
             )
@@ -99,17 +98,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 with suppress(TypeError):
                     process.kill()
                     # https://bugs.python.org/issue43884
-                    process._transport.close()  # type: ignore[attr-defined]  # noqa: SLF001
+                    # pylint: disable-next=protected-access
+                    process._transport.close()  # type: ignore[attr-defined]
                 del process
 
-            raise HomeAssistantError(
-                translation_domain=DOMAIN,
-                translation_key="timeout",
-                translation_placeholders={
-                    "command": cmd,
-                    "timeout": str(COMMAND_TIMEOUT),
-                },
-            ) from err
+            raise
 
         if stdout_data:
             _LOGGER.debug(
@@ -141,16 +134,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     service_response["stdout"] = stdout_data.decode("utf-8").strip()
                 if stderr_data:
                     service_response["stderr"] = stderr_data.decode("utf-8").strip()
-            except UnicodeDecodeError as err:
+                return service_response
+            except UnicodeDecodeError:
                 _LOGGER.exception(
                     "Unable to handle non-utf8 output of command: `%s`", cmd
                 )
-                raise HomeAssistantError(
-                    translation_domain=DOMAIN,
-                    translation_key="non_utf8_output",
-                    translation_placeholders={"command": cmd},
-                ) from err
-            return service_response
+                raise
         return None
 
     for name in conf:

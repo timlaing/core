@@ -1,5 +1,4 @@
 """Test the Ruuvi Gateway config flow."""
-
 from unittest.mock import patch
 
 from aioruuvigateway.excs import CannotConnect, InvalidAuth
@@ -35,7 +34,7 @@ DHCP_DATA = {**BASE_DATA, "host": DHCP_IP}
             dhcp.DhcpServiceInfo(
                 hostname="RuuviGateway1234",
                 ip=DHCP_IP,
-                macaddress="1234567890ab",
+                macaddress="12:34:56:78:90:ab",
             ),
             {"source": config_entries.SOURCE_DHCP},
             DHCP_DATA,
@@ -50,7 +49,7 @@ async def test_ok_setup(hass: HomeAssistant, init_data, init_context, entry) -> 
         data=init_data,
         context=init_context,
     )
-    assert init_result["type"] is FlowResultType.FORM
+    assert init_result["type"] == FlowResultType.FORM
     assert init_result["step_id"] == config_entries.SOURCE_USER
     assert init_result["errors"] is None
 
@@ -61,7 +60,7 @@ async def test_ok_setup(hass: HomeAssistant, init_data, init_context, entry) -> 
             entry,
         )
         await hass.async_block_till_done()
-    assert config_result["type"] is FlowResultType.CREATE_ENTRY
+    assert config_result["type"] == FlowResultType.CREATE_ENTRY
     assert config_result["title"] == EXPECTED_TITLE
     assert config_result["data"] == entry
     assert config_result["context"]["unique_id"] == GATEWAY_MAC_LOWER
@@ -80,7 +79,7 @@ async def test_form_invalid_auth(hass: HomeAssistant) -> None:
             BASE_DATA,
         )
 
-    assert config_result["type"] is FlowResultType.FORM
+    assert config_result["type"] == FlowResultType.FORM
     assert config_result["errors"] == {"base": "invalid_auth"}
 
     # Check that we still can finalize setup
@@ -90,7 +89,7 @@ async def test_form_invalid_auth(hass: HomeAssistant) -> None:
             BASE_DATA,
         )
         await hass.async_block_till_done()
-    assert config_result["type"] is FlowResultType.CREATE_ENTRY
+    assert config_result["type"] == FlowResultType.CREATE_ENTRY
     assert config_result["title"] == EXPECTED_TITLE
     assert config_result["data"] == BASE_DATA
     assert config_result["context"]["unique_id"] == GATEWAY_MAC_LOWER
@@ -109,7 +108,7 @@ async def test_form_cannot_connect(hass: HomeAssistant) -> None:
             BASE_DATA,
         )
 
-    assert config_result["type"] is FlowResultType.FORM
+    assert config_result["type"] == FlowResultType.FORM
     assert config_result["errors"] == {"base": "cannot_connect"}
 
     # Check that we still can finalize setup
@@ -119,7 +118,7 @@ async def test_form_cannot_connect(hass: HomeAssistant) -> None:
             BASE_DATA,
         )
         await hass.async_block_till_done()
-    assert config_result["type"] is FlowResultType.CREATE_ENTRY
+    assert config_result["type"] == FlowResultType.CREATE_ENTRY
     assert config_result["title"] == EXPECTED_TITLE
     assert config_result["data"] == BASE_DATA
     assert config_result["context"]["unique_id"] == GATEWAY_MAC_LOWER
@@ -138,7 +137,7 @@ async def test_form_unexpected(hass: HomeAssistant) -> None:
             BASE_DATA,
         )
 
-    assert config_result["type"] is FlowResultType.FORM
+    assert config_result["type"] == FlowResultType.FORM
     assert config_result["errors"] == {"base": "unknown"}
 
     # Check that we still can finalize setup
@@ -148,7 +147,7 @@ async def test_form_unexpected(hass: HomeAssistant) -> None:
             BASE_DATA,
         )
         await hass.async_block_till_done()
-    assert config_result["type"] is FlowResultType.CREATE_ENTRY
+    assert config_result["type"] == FlowResultType.CREATE_ENTRY
     assert config_result["title"] == EXPECTED_TITLE
     assert config_result["data"] == BASE_DATA
     assert config_result["context"]["unique_id"] == GATEWAY_MAC_LOWER

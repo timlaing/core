@@ -1,5 +1,4 @@
 """Support for Modbus switches."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -31,7 +30,7 @@ async def async_setup_platform(
 
     for entry in discovery_info[CONF_SWITCHES]:
         hub: ModbusHub = get_hub(hass, discovery_info[CONF_NAME])
-        switches.append(ModbusSwitch(hass, hub, entry))
+        switches.append(ModbusSwitch(hub, entry))
     async_add_entities(switches)
 
 

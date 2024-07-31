@@ -1,5 +1,4 @@
 """Alarm sensors for the Venstar Thermostat."""
-
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,

@@ -1,5 +1,4 @@
 """Component for the Slide API."""
-
 from datetime import timedelta
 import logging
 

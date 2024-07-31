@@ -1,5 +1,4 @@
 """Test real forwarded middleware."""
-
 from http import HTTPStatus
 from ipaddress import ip_network
 from unittest.mock import Mock, patch

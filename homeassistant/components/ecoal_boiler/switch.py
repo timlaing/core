@@ -1,5 +1,4 @@
 """Allows to configuration ecoal (esterownik.pl) pumps as switches."""
-
 from __future__ import annotations
 
 from typing import Any

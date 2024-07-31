@@ -1,5 +1,4 @@
 """Support for media browsing."""
-
 import contextlib
 
 from homeassistant.components import media_source
@@ -170,7 +169,8 @@ async def library_payload(hass, player):
         else:
             library_info["children"].append(item)
 
-    return BrowseMedia(**library_info)
+    response = BrowseMedia(**library_info)
+    return response
 
 
 def media_source_content_filter(item: BrowseMedia) -> bool:

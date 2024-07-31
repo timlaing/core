@@ -1,5 +1,4 @@
 """Support for MQTT room presence detection."""
-
 from __future__ import annotations
 
 from datetime import timedelta
@@ -11,10 +10,7 @@ import voluptuous as vol
 
 from homeassistant.components import mqtt
 from homeassistant.components.mqtt import CONF_STATE_TOPIC
-from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
-    SensorEntity,
-)
+from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 from homeassistant.const import (
     ATTR_DEVICE_ID,
     ATTR_ID,
@@ -43,7 +39,7 @@ DEFAULT_NAME = "Room Sensor"
 DEFAULT_TIMEOUT = 5
 DEFAULT_TOPIC = "room_presence"
 
-PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_DEVICE_ID): cv.string,
         vol.Required(CONF_TIMEOUT, default=DEFAULT_TIMEOUT): cv.positive_int,
@@ -51,7 +47,7 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
         vol.Optional(CONF_UNIQUE_ID): cv.string,
     }
-).extend(mqtt.MQTT_RO_SCHEMA.schema)
+).extend(mqtt.config.MQTT_RO_SCHEMA.schema)
 
 
 @lru_cache(maxsize=256)

@@ -1,5 +1,4 @@
 """Support for Rflink lights."""
-
 from __future__ import annotations
 
 import logging
@@ -10,7 +9,7 @@ import voluptuous as vol
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
-    PLATFORM_SCHEMA as LIGHT_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     ColorMode,
     LightEntity,
 )
@@ -46,7 +45,7 @@ TYPE_SWITCHABLE = "switchable"
 TYPE_HYBRID = "hybrid"
 TYPE_TOGGLE = "toggle"
 
-PLATFORM_SCHEMA = LIGHT_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Optional(
             CONF_DEVICE_DEFAULTS, default=DEVICE_DEFAULTS_SCHEMA({})

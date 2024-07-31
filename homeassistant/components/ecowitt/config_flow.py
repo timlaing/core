@@ -1,5 +1,4 @@
 """Config flow for ecowitt."""
-
 from __future__ import annotations
 
 import secrets
@@ -7,16 +6,17 @@ from typing import Any
 
 from yarl import URL
 
+from homeassistant import config_entries
 from homeassistant.components import webhook
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_WEBHOOK_ID
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.network import get_url
 
 from .const import DOMAIN
 
 
-class EcowittConfigFlow(ConfigFlow, domain=DOMAIN):
+class EcowittConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for the Ecowitt."""
 
     VERSION = 1
@@ -24,7 +24,7 @@ class EcowittConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         if user_input is None:
             self._webhook_id = secrets.token_hex(16)

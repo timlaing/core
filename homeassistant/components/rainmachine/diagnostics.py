@@ -1,5 +1,4 @@
 """Diagnostics support for RainMachine."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -7,6 +6,7 @@ from typing import Any
 from regenmaschine.errors import RainMachineError
 
 from homeassistant.components.diagnostics import async_redact_data
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     CONF_ELEVATION,
     CONF_LATITUDE,
@@ -16,8 +16,8 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 
-from . import RainMachineConfigEntry
-from .const import LOGGER
+from . import RainMachineData
+from .const import DOMAIN, LOGGER
 
 CONF_STATION_ID = "stationID"
 CONF_STATION_NAME = "stationName"
@@ -39,10 +39,10 @@ TO_REDACT = {
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: RainMachineConfigEntry
+    hass: HomeAssistant, entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    data = entry.runtime_data
+    data: RainMachineData = hass.data[DOMAIN][entry.entry_id]
 
     try:
         controller_diagnostics = await data.controller.diagnostics.current()

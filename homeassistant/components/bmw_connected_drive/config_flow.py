@@ -1,5 +1,4 @@
 """Config flow for BMW ConnectedDrive integration."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -11,16 +10,10 @@ from bimmer_connected.models import MyBMWAPIError, MyBMWAuthError
 from httpx import RequestError
 import voluptuous as vol
 
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlowWithConfigEntry,
-)
+from homeassistant import config_entries, core, exceptions
 from homeassistant.const import CONF_PASSWORD, CONF_REGION, CONF_SOURCE, CONF_USERNAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.selector import SelectSelector, SelectSelectorConfig
+from homeassistant.core import callback
+from homeassistant.data_entry_flow import FlowResult
 
 from . import DOMAIN
 from .const import CONF_ALLOWED_REGIONS, CONF_GCID, CONF_READ_ONLY, CONF_REFRESH_TOKEN
@@ -29,17 +22,14 @@ DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_USERNAME): str,
         vol.Required(CONF_PASSWORD): str,
-        vol.Required(CONF_REGION): SelectSelector(
-            SelectSelectorConfig(
-                options=CONF_ALLOWED_REGIONS,
-                translation_key="regions",
-            )
-        ),
+        vol.Required(CONF_REGION): vol.In(CONF_ALLOWED_REGIONS),
     }
 )
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, str]:
+async def validate_input(
+    hass: core.HomeAssistant, data: dict[str, Any]
+) -> dict[str, str]:
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
@@ -66,16 +56,16 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     return retval
 
 
-class BMWConfigFlow(ConfigFlow, domain=DOMAIN):
+class BMWConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for MyBMW."""
 
     VERSION = 1
 
-    _reauth_entry: ConfigEntry | None = None
+    _reauth_entry: config_entries.ConfigEntry | None = None
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         errors: dict[str, str] = {}
 
@@ -122,9 +112,7 @@ class BMWConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
 
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Handle configuration by re-auth."""
         self._reauth_entry = self.hass.config_entries.async_get_entry(
             self.context["entry_id"]
@@ -134,24 +122,24 @@ class BMWConfigFlow(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: ConfigEntry,
+        config_entry: config_entries.ConfigEntry,
     ) -> BMWOptionsFlow:
         """Return a MyBMW option flow."""
         return BMWOptionsFlow(config_entry)
 
 
-class BMWOptionsFlow(OptionsFlowWithConfigEntry):
+class BMWOptionsFlow(config_entries.OptionsFlowWithConfigEntry):
     """Handle a option flow for MyBMW."""
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Manage the options."""
         return await self.async_step_account_options()
 
     async def async_step_account_options(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         if user_input is not None:
             # Manually update & reload the config entry after options change.
@@ -178,9 +166,9 @@ class BMWOptionsFlow(OptionsFlowWithConfigEntry):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(exceptions.HomeAssistantError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(exceptions.HomeAssistantError):
     """Error to indicate there is invalid auth."""

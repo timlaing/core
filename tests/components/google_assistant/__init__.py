@@ -1,14 +1,12 @@
 """Tests for the Google Assistant integration."""
-
 from unittest.mock import MagicMock
 
-from homeassistant.components.google_assistant import http
-from homeassistant.core import HomeAssistant
+from homeassistant.components.google_assistant import helpers
 
 
 def mock_google_config_store(agent_user_ids=None):
     """Fake a storage for google assistant."""
-    store = MagicMock(spec=http.GoogleConfigStore)
+    store = MagicMock(spec=helpers.GoogleConfigStore)
     if agent_user_ids is not None:
         store.agent_user_ids = agent_user_ids
     else:
@@ -16,7 +14,7 @@ def mock_google_config_store(agent_user_ids=None):
     return store
 
 
-class MockConfig(http.GoogleConfig):
+class MockConfig(helpers.AbstractConfig):
     """Fake config that always exposes everything."""
 
     def __init__(
@@ -25,14 +23,14 @@ class MockConfig(http.GoogleConfig):
         agent_user_ids=None,
         enabled=True,
         entity_config=None,
-        hass: HomeAssistant | None = None,
+        hass=None,
         secure_devices_pin=None,
         should_2fa=None,
         should_expose=None,
         should_report_state=False,
-    ) -> None:
+    ):
         """Initialize config."""
-        super().__init__(hass, None)
+        super().__init__(hass)
         self._enabled = enabled
         self._entity_config = entity_config or {}
         self._secure_devices_pin = secure_devices_pin
@@ -56,7 +54,7 @@ class MockConfig(http.GoogleConfig):
         """Return secure devices pin."""
         return self._entity_config
 
-    def get_agent_user_id_from_context(self, context):
+    def get_agent_user_id(self, context):
         """Get agent user ID making request."""
         return context.user_id
 
@@ -240,26 +238,6 @@ DEMO_DEVICES = [
         "willReportState": False,
     },
     {
-        "id": "media_player.browse",
-        "name": {"name": "Browse"},
-        "traits": ["action.devices.traits.MediaState", "action.devices.traits.OnOff"],
-        "type": "action.devices.types.SETTOP",
-        "willReportState": False,
-    },
-    {
-        "id": "media_player.group",
-        "name": {"name": "Group"},
-        "traits": [
-            "action.devices.traits.OnOff",
-            "action.devices.traits.Volume",
-            "action.devices.traits.Modes",
-            "action.devices.traits.TransportControl",
-            "action.devices.traits.MediaState",
-        ],
-        "type": "action.devices.types.SETTOP",
-        "willReportState": False,
-    },
-    {
         "id": "fan.living_room_fan",
         "name": {"name": "Living Room Fan"},
         "traits": [
@@ -307,7 +285,6 @@ DEMO_DEVICES = [
         "id": "climate.hvac",
         "name": {"name": "Hvac"},
         "traits": [
-            "action.devices.traits.OnOff",
             "action.devices.traits.TemperatureSetting",
             "action.devices.traits.FanSpeed",
         ],
@@ -329,10 +306,7 @@ DEMO_DEVICES = [
     {
         "id": "climate.heatpump",
         "name": {"name": "HeatPump"},
-        "traits": [
-            "action.devices.traits.OnOff",
-            "action.devices.traits.TemperatureSetting",
-        ],
+        "traits": ["action.devices.traits.TemperatureSetting"],
         "type": "action.devices.types.THERMOSTAT",
         "willReportState": False,
     },
@@ -340,7 +314,6 @@ DEMO_DEVICES = [
         "id": "climate.ecobee",
         "name": {"name": "Ecobee"},
         "traits": [
-            "action.devices.traits.OnOff",
             "action.devices.traits.TemperatureSetting",
             "action.devices.traits.FanSpeed",
         ],

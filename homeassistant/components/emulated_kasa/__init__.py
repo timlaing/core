@@ -1,5 +1,4 @@
 """Support for local power state reporting of entities by emulating TP-Link Kasa smart plugs."""
-
 import logging
 
 from sense_energy import PlugInstance, SenseLink

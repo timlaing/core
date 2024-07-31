@@ -1,26 +1,27 @@
 """Support for pico and keypad buttons."""
-
 from __future__ import annotations
 
 from typing import Any
 
 from homeassistant.components.button import ButtonEntity
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import LutronCasetaDevice
+from .const import DOMAIN as CASETA_DOMAIN
 from .device_trigger import LEAP_TO_DEVICE_TYPE_SUBTYPE_MAP
-from .models import LutronCasetaConfigEntry, LutronCasetaData
+from .models import LutronCasetaData
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: LutronCasetaConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Lutron pico and keypad buttons."""
-    data = config_entry.runtime_data
+    data: LutronCasetaData = hass.data[CASETA_DOMAIN][config_entry.entry_id]
     bridge = data.bridge
     button_devices = bridge.get_buttons()
     all_devices = data.bridge.get_devices()

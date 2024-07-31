@@ -1,9 +1,8 @@
 """Tests for the mfa setup flow."""
-
+from homeassistant import data_entry_flow
 from homeassistant.auth import auth_manager_from_config
 from homeassistant.components.auth import mfa_setup_flow
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.setup import async_setup_component
 
 from tests.common import CLIENT_ID, MockUser, ensure_auth_manager_loaded
@@ -75,8 +74,7 @@ async def test_ws_setup_depose_mfa(
     assert result["success"]
 
     flow = result["result"]
-    # Cannot use identity `is` check here as the value is parsed from JSON
-    assert flow["type"] == FlowResultType.FORM.value
+    assert flow["type"] == data_entry_flow.FlowResultType.FORM
     assert flow["handler"] == "example_module"
     assert flow["step_id"] == "init"
     assert flow["data_schema"][0] == {"type": "string", "name": "pin", "required": True}
@@ -95,8 +93,7 @@ async def test_ws_setup_depose_mfa(
     assert result["success"]
 
     flow = result["result"]
-    # Cannot use identity `is` check here as the value is parsed from JSON
-    assert flow["type"] == FlowResultType.CREATE_ENTRY.value
+    assert flow["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
     assert flow["handler"] == "example_module"
     assert flow["data"]["result"] is None
 

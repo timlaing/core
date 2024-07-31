@@ -1,5 +1,4 @@
 """Support for Joaoapps Join services."""
-
 import logging
 
 from pyjoin import (

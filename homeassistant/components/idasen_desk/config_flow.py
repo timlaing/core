@@ -1,5 +1,4 @@
 """Config flow for Idasen Desk integration."""
-
 from __future__ import annotations
 
 import logging
@@ -11,19 +10,20 @@ from idasen_ha import Desk
 from idasen_ha.errors import AuthFailedError
 import voluptuous as vol
 
+from homeassistant import config_entries
 from homeassistant.components.bluetooth import (
     BluetoothServiceInfoBleak,
     async_discovered_service_info,
 )
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_ADDRESS
+from homeassistant.data_entry_flow import FlowResult
 
 from .const import DOMAIN, EXPECTED_SERVICE_UUID
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class IdasenDeskConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Idasen Desk integration."""
 
     VERSION = 1
@@ -35,7 +35,7 @@ class IdasenDeskConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_bluetooth(
         self, discovery_info: BluetoothServiceInfoBleak
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the bluetooth discovery step."""
         await self.async_set_unique_id(discovery_info.address)
         self._abort_if_unique_id_configured()
@@ -49,7 +49,7 @@ class IdasenDeskConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the user step to pick discovered device."""
         errors: dict[str, str] = {}
 
@@ -64,15 +64,17 @@ class IdasenDeskConfigFlow(ConfigFlow, domain=DOMAIN):
 
             desk = Desk(None, monitor_height=False)
             try:
-                await desk.connect(discovery_info.device, retry=False)
-            except AuthFailedError:
+                await desk.connect(discovery_info.device, auto_reconnect=False)
+            except AuthFailedError as err:
+                _LOGGER.exception("AuthFailedError", exc_info=err)
                 errors["base"] = "auth_failed"
-            except TimeoutError:
+            except TimeoutError as err:
+                _LOGGER.exception("TimeoutError", exc_info=err)
                 errors["base"] = "cannot_connect"
-            except BleakError:
-                _LOGGER.exception("Unexpected Bluetooth error")
+            except BleakError as err:
+                _LOGGER.exception("BleakError", exc_info=err)
                 errors["base"] = "cannot_connect"
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected error")
                 errors["base"] = "unknown"
             else:

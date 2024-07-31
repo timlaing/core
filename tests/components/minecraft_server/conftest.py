@@ -1,5 +1,4 @@
 """Fixtures for Minecraft Server integration tests."""
-
 import pytest
 
 from homeassistant.components.minecraft_server.api import MinecraftServerType
@@ -13,7 +12,7 @@ from tests.common import MockConfigEntry
 
 @pytest.fixture
 def java_mock_config_entry() -> MockConfigEntry:
-    """Create Java Edition mock config entry."""
+    """Create YouTube entry in Home Assistant."""
     return MockConfigEntry(
         domain=DOMAIN,
         unique_id=None,
@@ -29,7 +28,7 @@ def java_mock_config_entry() -> MockConfigEntry:
 
 @pytest.fixture
 def bedrock_mock_config_entry() -> MockConfigEntry:
-    """Create Bedrock Edition mock config entry."""
+    """Create YouTube entry in Home Assistant."""
     return MockConfigEntry(
         domain=DOMAIN,
         unique_id=None,

@@ -1,5 +1,4 @@
 """Test headers middleware."""
-
 from http import HTTPStatus
 
 from aiohttp import web

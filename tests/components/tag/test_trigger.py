@@ -1,15 +1,14 @@
 """Tests for tag triggers."""
-
-from typing import Any
-
 import pytest
 
-from homeassistant.components import automation
+import homeassistant.components.automation as automation
 from homeassistant.components.tag import async_scan_tag
 from homeassistant.components.tag.const import DEVICE_ID, DOMAIN, TAG_ID
 from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
+
+from tests.common import async_mock_service
 
 
 @pytest.fixture(autouse=True, name="stub_blueprint_populate")
@@ -18,7 +17,7 @@ def stub_blueprint_populate_autouse(stub_blueprint_populate: None) -> None:
 
 
 @pytest.fixture
-def tag_setup(hass: HomeAssistant, hass_storage: dict[str, Any]):
+def tag_setup(hass, hass_storage):
     """Tag setup."""
 
     async def _storage(items=None):
@@ -26,8 +25,7 @@ def tag_setup(hass: HomeAssistant, hass_storage: dict[str, Any]):
             hass_storage[DOMAIN] = {
                 "key": DOMAIN,
                 "version": 1,
-                "minor_version": 2,
-                "data": {"items": [{"id": "test tag", "tag_id": "test tag"}]},
+                "data": {"items": [{"id": "test tag"}]},
             }
         else:
             hass_storage[DOMAIN] = items
@@ -37,9 +35,13 @@ def tag_setup(hass: HomeAssistant, hass_storage: dict[str, Any]):
     return _storage
 
 
-async def test_triggers(
-    hass: HomeAssistant, tag_setup, service_calls: list[ServiceCall]
-) -> None:
+@pytest.fixture
+def calls(hass):
+    """Track calls to a mock service."""
+    return async_mock_service(hass, "test", "automation")
+
+
+async def test_triggers(hass: HomeAssistant, tag_setup, calls) -> None:
     """Test tag triggers."""
     assert await tag_setup()
     assert await async_setup_component(
@@ -67,9 +69,9 @@ async def test_triggers(
     await async_scan_tag(hass, "abc123", None)
     await hass.async_block_till_done()
 
-    assert len(service_calls) == 1
-    assert service_calls[0].data["message"] == "service called"
-    assert service_calls[0].data["id"] == 0
+    assert len(calls) == 1
+    assert calls[0].data["message"] == "service called"
+    assert calls[0].data["id"] == 0
 
     await hass.services.async_call(
         automation.DOMAIN,
@@ -77,16 +79,15 @@ async def test_triggers(
         {ATTR_ENTITY_ID: "automation.test"},
         blocking=True,
     )
-    assert len(service_calls) == 2
 
     await async_scan_tag(hass, "abc123", None)
     await hass.async_block_till_done()
 
-    assert len(service_calls) == 2
+    assert len(calls) == 1
 
 
 async def test_exception_bad_trigger(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    hass: HomeAssistant, calls, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test for exception on event triggers firing."""
 
@@ -110,7 +111,7 @@ async def test_exception_bad_trigger(
 
 
 async def test_multiple_tags_and_devices_trigger(
-    hass: HomeAssistant, tag_setup, service_calls: list[ServiceCall]
+    hass: HomeAssistant, tag_setup, calls
 ) -> None:
     """Test multiple tags and devices triggers."""
     assert await tag_setup()
@@ -151,8 +152,8 @@ async def test_multiple_tags_and_devices_trigger(
     await async_scan_tag(hass, "def456", device_id="jkl0123")
     await hass.async_block_till_done()
 
-    assert len(service_calls) == 4
-    assert service_calls[0].data["message"] == "service called"
-    assert service_calls[1].data["message"] == "service called"
-    assert service_calls[2].data["message"] == "service called"
-    assert service_calls[3].data["message"] == "service called"
+    assert len(calls) == 4
+    assert calls[0].data["message"] == "service called"
+    assert calls[1].data["message"] == "service called"
+    assert calls[2].data["message"] == "service called"
+    assert calls[3].data["message"] == "service called"

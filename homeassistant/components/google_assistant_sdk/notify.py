@@ -1,5 +1,4 @@
 """Support for Google Assistant SDK broadcast notifications."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -15,26 +14,23 @@ from .helpers import async_send_text_commands, default_language_code
 # https://support.google.com/assistant/answer/9071582?hl=en
 LANG_TO_BROADCAST_COMMAND = {
     "en": ("broadcast {0}", "broadcast to {1} {0}"),
-    "de": (
-        "Nachricht an alle {0}",  # codespell:ignore alle
-        "Nachricht an alle an {1} {0}",  # codespell:ignore alle
-    ),
+    "de": ("Nachricht an alle {0}", "Nachricht an alle an {1} {0}"),
     "es": ("Anuncia {0}", "Anuncia en {1} {0}"),
     "fr": ("Diffuse {0}", "Diffuse dans {1} {0}"),
-    "it": ("Trasmetti a tutti {0}", "Trasmetti in {1} {0}"),
+    "it": ("Trasmetti {0}", "Trasmetti in {1} {0}"),
     "ja": ("{0}とブロードキャストして", "{0}と{1}にブロードキャストして"),
     "ko": ("{0} 라고 방송해 줘", "{0} 라고 {1}에 방송해 줘"),
     "pt": ("Transmitir {0}", "Transmitir {0} para {1}"),
 }
 
 
-def broadcast_commands(language_code: str) -> tuple[str, str]:
+def broadcast_commands(language_code: str):
     """Get the commands for broadcasting a message for the given language code.
 
     Return type is a tuple where [0] is for broadcasting to your entire home,
     while [1] is for broadcasting to a specific target.
     """
-    return LANG_TO_BROADCAST_COMMAND[language_code.split("-", maxsplit=1)[0]]
+    return LANG_TO_BROADCAST_COMMAND.get(language_code.split("-", maxsplit=1)[0])
 
 
 async def async_get_service(
@@ -64,13 +60,13 @@ class BroadcastNotificationService(BaseNotificationService):
             CONF_LANGUAGE_CODE, default_language_code(self.hass)
         )
 
-        commands: list[str] = []
+        commands = []
         targets = kwargs.get(ATTR_TARGET)
         if not targets:
             commands.append(broadcast_commands(language_code)[0].format(message))
         else:
-            commands.extend(
-                broadcast_commands(language_code)[1].format(message, target)
-                for target in targets
-            )
+            for target in targets:
+                commands.append(
+                    broadcast_commands(language_code)[1].format(message, target)
+                )
         await async_send_text_commands(self.hass, commands)

@@ -1,5 +1,4 @@
 """Test the zwave_me config flow."""
-
 from ipaddress import ip_address
 from unittest.mock import patch
 
@@ -29,20 +28,17 @@ MOCK_ZEROCONF_DATA = zeroconf.ZeroconfServiceInfo(
 
 async def test_form(hass: HomeAssistant) -> None:
     """Test we get the form."""
-    with (
-        patch(
-            "homeassistant.components.zwave_me.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-        patch(
-            "homeassistant.components.zwave_me.helpers.get_uuid",
-            return_value="test_uuid",
-        ),
+    with patch(
+        "homeassistant.components.zwave_me.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry, patch(
+        "homeassistant.components.zwave_me.helpers.get_uuid",
+        return_value="test_uuid",
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == FlowResultType.FORM
         assert result["errors"] == {}
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
@@ -53,7 +49,7 @@ async def test_form(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
+    assert result2["type"] == FlowResultType.CREATE_ENTRY
     assert result2["title"] == "ws://192.168.1.14"
     assert result2["data"] == {
         "url": "ws://192.168.1.14",
@@ -64,22 +60,19 @@ async def test_form(hass: HomeAssistant) -> None:
 
 async def test_zeroconf(hass: HomeAssistant) -> None:
     """Test starting a flow from zeroconf."""
-    with (
-        patch(
-            "homeassistant.components.zwave_me.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-        patch(
-            "homeassistant.components.zwave_me.helpers.get_uuid",
-            return_value="test_uuid",
-        ),
+    with patch(
+        "homeassistant.components.zwave_me.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry, patch(
+        "homeassistant.components.zwave_me.helpers.get_uuid",
+        return_value="test_uuid",
     ):
         result: FlowResult = await hass.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_ZEROCONF},
             data=MOCK_ZEROCONF_DATA,
         )
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == FlowResultType.FORM
         assert result["step_id"] == "user"
 
         result2 = await hass.config_entries.flow.async_configure(
@@ -90,7 +83,7 @@ async def test_zeroconf(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
+    assert result2["type"] == FlowResultType.CREATE_ENTRY
     assert result2["title"] == "ws://192.168.1.14"
     assert result2["data"] == {
         "url": "ws://192.168.1.14",
@@ -107,7 +100,7 @@ async def test_error_handling_zeroconf(hass: HomeAssistant) -> None:
             context={"source": config_entries.SOURCE_ZEROCONF},
             data=MOCK_ZEROCONF_DATA,
         )
-        assert result["type"] is FlowResultType.ABORT
+        assert result["type"] == FlowResultType.ABORT
         assert result["reason"] == "no_valid_uuid_set"
 
 
@@ -117,7 +110,7 @@ async def test_handle_error_user(hass: HomeAssistant) -> None:
         result = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == FlowResultType.FORM
         assert result["errors"] == {}
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
@@ -148,7 +141,7 @@ async def test_duplicate_user(hass: HomeAssistant) -> None:
         result = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == FlowResultType.FORM
         assert result["errors"] == {}
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
@@ -157,7 +150,7 @@ async def test_duplicate_user(hass: HomeAssistant) -> None:
                 "token": "test-token",
             },
         )
-        assert result2["type"] is FlowResultType.ABORT
+        assert result2["type"] == FlowResultType.ABORT
         assert result2["reason"] == "already_configured"
 
 
@@ -183,5 +176,5 @@ async def test_duplicate_zeroconf(hass: HomeAssistant) -> None:
             context={"source": config_entries.SOURCE_ZEROCONF},
             data=MOCK_ZEROCONF_DATA,
         )
-        assert result["type"] is FlowResultType.ABORT
+        assert result["type"] == FlowResultType.ABORT
         assert result["reason"] == "already_configured"

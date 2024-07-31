@@ -1,5 +1,4 @@
 """Switch platform for Hyperion."""
-
 from __future__ import annotations
 
 import functools
@@ -100,16 +99,18 @@ async def async_setup_entry(
     def instance_add(instance_num: int, instance_name: str) -> None:
         """Add entities for a new Hyperion instance."""
         assert server_id
-        async_add_entities(
-            HyperionComponentSwitch(
-                server_id,
-                instance_num,
-                instance_name,
-                component,
-                entry_data[CONF_INSTANCE_CLIENTS][instance_num],
+        switches = []
+        for component in COMPONENT_SWITCHES:
+            switches.append(
+                HyperionComponentSwitch(
+                    server_id,
+                    instance_num,
+                    instance_name,
+                    component,
+                    entry_data[CONF_INSTANCE_CLIENTS][instance_num],
+                ),
             )
-            for component in COMPONENT_SWITCHES
-        )
+        async_add_entities(switches)
 
     @callback
     def instance_remove(instance_num: int) -> None:

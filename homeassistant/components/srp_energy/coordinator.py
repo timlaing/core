@@ -1,5 +1,4 @@
 """DataUpdateCoordinator for the srp_energy integration."""
-
 from __future__ import annotations
 
 import asyncio
@@ -15,7 +14,6 @@ from homeassistant.util import dt as dt_util
 from .const import DOMAIN, LOGGER, MIN_TIME_BETWEEN_UPDATES, PHOENIX_TIME_ZONE
 
 TIMEOUT = 10
-PHOENIX_ZONE_INFO = dt_util.get_time_zone(PHOENIX_TIME_ZONE)
 
 
 class SRPEnergyDataUpdateCoordinator(DataUpdateCoordinator[float]):
@@ -44,7 +42,8 @@ class SRPEnergyDataUpdateCoordinator(DataUpdateCoordinator[float]):
         """
         LOGGER.debug("async_update_data enter")
         # Fetch srp_energy data
-        end_date = dt_util.now(PHOENIX_ZONE_INFO)
+        phx_time_zone = dt_util.get_time_zone(PHOENIX_TIME_ZONE)
+        end_date = dt_util.now(phx_time_zone)
         start_date = end_date - timedelta(days=1)
         try:
             async with asyncio.timeout(TIMEOUT):

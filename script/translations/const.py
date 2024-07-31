@@ -1,5 +1,4 @@
 """Translation constants."""
-
 import pathlib
 
 CORE_PROJECT_ID = "130246255a974bd3b5e8a1.51616605"

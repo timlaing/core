@@ -1,48 +1,53 @@
 """Support for locks on Ubiquiti's UniFi Protect NVR."""
-
 from __future__ import annotations
 
 import logging
 from typing import Any, cast
 
-from uiprotect.data import (
+from pyunifiprotect.data import (
     Doorlock,
     LockStatusType,
     ModelType,
     ProtectAdoptableDeviceModel,
+    ProtectModelWithId,
 )
 
 from homeassistant.components.lock import LockEntity, LockEntityDescription
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .data import ProtectDeviceType, UFPConfigEntry
+from .const import DISPATCH_ADOPT, DOMAIN
+from .data import ProtectData
 from .entity import ProtectDeviceEntity
+from .utils import async_dispatch_id as _ufpd
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: UFPConfigEntry,
+    entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up locks on a UniFi Protect NVR."""
-    data = entry.runtime_data
+    data: ProtectData = hass.data[DOMAIN][entry.entry_id]
 
-    @callback
-    def _add_new_device(device: ProtectAdoptableDeviceModel) -> None:
+    async def _add_new_device(device: ProtectAdoptableDeviceModel) -> None:
         if isinstance(device, Doorlock):
             async_add_entities([ProtectLock(data, device)])
 
-    data.async_subscribe_adopt(_add_new_device)
-
-    async_add_entities(
-        ProtectLock(
-            data, cast(Doorlock, device), LockEntityDescription(key="lock", name="Lock")
-        )
-        for device in data.get_by_types({ModelType.DOORLOCK})
+    entry.async_on_unload(
+        async_dispatcher_connect(hass, _ufpd(entry, DISPATCH_ADOPT), _add_new_device)
     )
+
+    entities = []
+    for device in data.get_by_types({ModelType.DOORLOCK}):
+        device = cast(Doorlock, device)
+        entities.append(ProtectLock(data, device))
+
+    async_add_entities(entities)
 
 
 class ProtectLock(ProtectDeviceEntity, LockEntity):
@@ -50,16 +55,23 @@ class ProtectLock(ProtectDeviceEntity, LockEntity):
 
     device: Doorlock
     entity_description: LockEntityDescription
-    _state_attrs = (
-        "_attr_available",
-        "_attr_is_locked",
-        "_attr_is_locking",
-        "_attr_is_unlocking",
-        "_attr_is_jammed",
-    )
+
+    def __init__(
+        self,
+        data: ProtectData,
+        doorlock: Doorlock,
+    ) -> None:
+        """Initialize an UniFi lock."""
+        super().__init__(
+            data,
+            doorlock,
+            LockEntityDescription(key="lock"),
+        )
+
+        self._attr_name = f"{self.device.display_name} Lock"
 
     @callback
-    def _async_update_device_from_protect(self, device: ProtectDeviceType) -> None:
+    def _async_update_device_from_protect(self, device: ProtectModelWithId) -> None:
         super()._async_update_device_from_protect(device)
         lock_status = self.device.lock_status
 
@@ -67,11 +79,11 @@ class ProtectLock(ProtectDeviceEntity, LockEntity):
         self._attr_is_locking = False
         self._attr_is_unlocking = False
         self._attr_is_jammed = False
-        if lock_status is LockStatusType.CLOSED:
+        if lock_status == LockStatusType.CLOSED:
             self._attr_is_locked = True
-        elif lock_status is LockStatusType.CLOSING:
+        elif lock_status == LockStatusType.CLOSING:
             self._attr_is_locking = True
-        elif lock_status is LockStatusType.OPENING:
+        elif lock_status == LockStatusType.OPENING:
             self._attr_is_unlocking = True
         elif lock_status in (
             LockStatusType.FAILED_WHILE_CLOSING,

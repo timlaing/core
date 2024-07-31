@@ -1,5 +1,4 @@
 """Support for using humidifier with ecobee thermostats."""
-
 from __future__ import annotations
 
 from datetime import timedelta
@@ -109,14 +108,6 @@ class EcobeeHumidifier(HumidifierEntity):
     def target_humidity(self) -> int:
         """Return the desired humidity set point."""
         return int(self.thermostat["runtime"]["desiredHumidity"])
-
-    @property
-    def current_humidity(self) -> int | None:
-        """Return the current humidity."""
-        try:
-            return int(self.thermostat["runtime"]["actualHumidity"])
-        except KeyError:
-            return None
 
     def set_mode(self, mode):
         """Set humidifier mode (auto, off, manual)."""

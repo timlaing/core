@@ -1,12 +1,10 @@
 """Support for Xiaomi Yeelight WiFi color bulb."""
-
 from __future__ import annotations
 
 import asyncio
-from collections.abc import ValuesView
+from collections.abc import Callable, ValuesView
 import contextlib
 from datetime import datetime
-from functools import partial
 from ipaddress import IPv4Address
 import logging
 from typing import Self
@@ -20,7 +18,6 @@ from homeassistant.components import network, ssdp
 from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant, callback
 from homeassistant.helpers import discovery_flow
 from homeassistant.helpers.event import async_call_later, async_track_time_interval
-from homeassistant.util.async_ import create_eager_task
 
 from .const import (
     DISCOVERY_ATTEMPTS,
@@ -33,12 +30,6 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-
-
-@callback
-def _set_future_if_not_done(future: asyncio.Future[None]) -> None:
-    if not future.done():
-        future.set_result(None)
 
 
 class YeelightScanner:
@@ -62,18 +53,26 @@ class YeelightScanner:
         self._host_capabilities: dict[str, CaseInsensitiveDict] = {}
         self._track_interval: CALLBACK_TYPE | None = None
         self._listeners: list[SsdpSearchListener] = []
-        self._setup_future: asyncio.Future[None] | None = None
+        self._connected_events: list[asyncio.Event] = []
 
     async def async_setup(self) -> None:
         """Set up the scanner."""
-        if self._setup_future is not None:
-            return await self._setup_future
+        if self._connected_events:
+            await self._async_wait_connected()
+            return
 
-        self._setup_future = self._hass.loop.create_future()
-        connected_futures: list[asyncio.Future[None]] = []
-        for source_ip in await self._async_build_source_set():
-            future = self._hass.loop.create_future()
-            connected_futures.append(future)
+        for idx, source_ip in enumerate(await self._async_build_source_set()):
+            self._connected_events.append(asyncio.Event())
+
+            def _wrap_async_connected_idx(idx) -> Callable[[], None]:
+                """Create a function to capture the idx cell variable."""
+
+                @callback
+                def _async_connected() -> None:
+                    self._connected_events[idx].set()
+
+                return _async_connected
+
             source = (str(source_ip), 0)
             self._listeners.append(
                 SsdpSearchListener(
@@ -81,15 +80,12 @@ class YeelightScanner:
                     search_target=SSDP_ST,
                     target=SSDP_TARGET,
                     source=source,
-                    connect_callback=partial(_set_future_if_not_done, future),
+                    connect_callback=_wrap_async_connected_idx(idx),
                 )
             )
 
         results = await asyncio.gather(
-            *(
-                create_eager_task(listener.async_start())
-                for listener in self._listeners
-            ),
+            *(listener.async_start() for listener in self._listeners),
             return_exceptions=True,
         )
         failed_listeners = []
@@ -102,17 +98,20 @@ class YeelightScanner:
                 result,
             )
             failed_listeners.append(self._listeners[idx])
-            _set_future_if_not_done(connected_futures[idx])
+            self._connected_events[idx].set()
 
         for listener in failed_listeners:
             self._listeners.remove(listener)
 
-        await asyncio.wait(connected_futures)
+        await self._async_wait_connected()
         self._track_interval = async_track_time_interval(
             self._hass, self.async_scan, DISCOVERY_INTERVAL, cancel_on_shutdown=True
         )
         self.async_scan()
-        _set_future_if_not_done(self._setup_future)
+
+    async def _async_wait_connected(self):
+        """Wait for the listeners to be up and connected."""
+        await asyncio.gather(*(event.wait() for event in self._connected_events))
 
     async def _async_build_source_set(self) -> set[IPv4Address]:
         """Build the list of ssdp sources."""
@@ -156,7 +155,7 @@ class YeelightScanner:
         for listener in self._listeners:
             listener.async_search((host, SSDP_TARGET[1]))
 
-        with contextlib.suppress(TimeoutError):
+        with contextlib.suppress(asyncio.TimeoutError):
             async with asyncio.timeout(DISCOVERY_TIMEOUT):
                 await host_event.wait()
 

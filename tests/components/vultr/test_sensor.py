@@ -1,5 +1,4 @@
 """The tests for the Vultr sensor platform."""
-
 import pytest
 import voluptuous as vol
 

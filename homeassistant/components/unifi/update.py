@@ -1,11 +1,10 @@
 """Update entities for Ubiquiti network devices."""
-
 from __future__ import annotations
 
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass
 import logging
-from typing import Any, TypeVar
+from typing import Any, Generic, TypeVar
 
 import aiounifi
 from aiounifi.interfaces.api_handlers import ItemEvent
@@ -18,10 +17,11 @@ from homeassistant.components.update import (
     UpdateEntityDescription,
     UpdateEntityFeature,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import UnifiConfigEntry
+from .controller import UniFiController
 from .entity import (
     UnifiEntity,
     UnifiEntityDescription,
@@ -40,38 +40,54 @@ async def async_device_control_fn(api: aiounifi.Controller, obj_id: str) -> None
     await api.request(DeviceUpgradeRequest.create(obj_id))
 
 
-@dataclass(frozen=True, kw_only=True)
-class UnifiUpdateEntityDescription(
-    UpdateEntityDescription, UnifiEntityDescription[_HandlerT, _DataT]
-):
-    """Class describing UniFi update entity."""
+@dataclass
+class UnifiUpdateEntityDescriptionMixin(Generic[_HandlerT, _DataT]):
+    """Validate and load entities from different UniFi handlers."""
 
     control_fn: Callable[[aiounifi.Controller, str], Coroutine[Any, Any, None]]
     state_fn: Callable[[aiounifi.Controller, _DataT], bool]
+
+
+@dataclass
+class UnifiUpdateEntityDescription(
+    UpdateEntityDescription,
+    UnifiEntityDescription[_HandlerT, _DataT],
+    UnifiUpdateEntityDescriptionMixin[_HandlerT, _DataT],
+):
+    """Class describing UniFi update entity."""
 
 
 ENTITY_DESCRIPTIONS: tuple[UnifiUpdateEntityDescription, ...] = (
     UnifiUpdateEntityDescription[Devices, Device](
         key="Upgrade device",
         device_class=UpdateDeviceClass.FIRMWARE,
+        has_entity_name=True,
+        allowed_fn=lambda controller, obj_id: True,
         api_handler_fn=lambda api: api.devices,
         available_fn=async_device_available_fn,
         control_fn=async_device_control_fn,
         device_info_fn=async_device_device_info_fn,
+        event_is_on=None,
+        event_to_subscribe=None,
+        name_fn=lambda device: None,
         object_fn=lambda api, obj_id: api.devices[obj_id],
+        should_poll=False,
         state_fn=lambda api, device: device.state == 4,
-        unique_id_fn=lambda hub, obj_id: f"device_update-{obj_id}",
+        supported_fn=lambda controller, obj_id: True,
+        unique_id_fn=lambda controller, obj_id: f"device_update-{obj_id}",
     ),
 )
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: UnifiConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up update entities for UniFi Network integration."""
-    config_entry.runtime_data.entity_loader.register_platform(
+    UniFiController.register_platform(
+        hass,
+        config_entry,
         async_add_entities,
         UnifiDeviceUpdateEntity,
         ENTITY_DESCRIPTIONS,
@@ -87,7 +103,7 @@ class UnifiDeviceUpdateEntity(UnifiEntity[_HandlerT, _DataT], UpdateEntity):
     def async_initiate_state(self) -> None:
         """Initiate entity state."""
         self._attr_supported_features = UpdateEntityFeature.PROGRESS
-        if self.hub.is_admin:
+        if self.controller.is_admin:
             self._attr_supported_features |= UpdateEntityFeature.INSTALL
 
         self.async_update_state(ItemEvent.ADDED, self._obj_id)
@@ -96,7 +112,7 @@ class UnifiDeviceUpdateEntity(UnifiEntity[_HandlerT, _DataT], UpdateEntity):
         self, version: str | None, backup: bool, **kwargs: Any
     ) -> None:
         """Install an update."""
-        await self.entity_description.control_fn(self.api, self._obj_id)
+        await self.entity_description.control_fn(self.controller.api, self._obj_id)
 
     @callback
     def async_update_state(self, event: ItemEvent, obj_id: str) -> None:
@@ -106,7 +122,7 @@ class UnifiDeviceUpdateEntity(UnifiEntity[_HandlerT, _DataT], UpdateEntity):
         """
         description = self.entity_description
 
-        obj = description.object_fn(self.api, self._obj_id)
-        self._attr_in_progress = description.state_fn(self.api, obj)
+        obj = description.object_fn(self.controller.api, self._obj_id)
+        self._attr_in_progress = description.state_fn(self.controller.api, obj)
         self._attr_installed_version = obj.version
         self._attr_latest_version = obj.upgrade_to_firmware or obj.version

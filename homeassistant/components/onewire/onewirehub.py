@@ -1,5 +1,4 @@
 """Hub for communication with 1-Wire server or mount_dir."""
-
 from __future__ import annotations
 
 import logging
@@ -45,7 +44,7 @@ DEVICE_MANUFACTURER = {
 _LOGGER = logging.getLogger(__name__)
 
 
-def _is_known_device(device_family: str, device_type: str | None) -> bool:
+def _is_known_device(device_family: str, device_type: str) -> bool:
     """Check if device family/type is known to the library."""
     if device_family in ("7E", "EF"):  # EDS or HobbyBoard
         return device_type in DEVICE_SUPPORT[device_family]
@@ -144,15 +143,11 @@ class OneWireHub:
 
         return devices
 
-    def _get_device_type(self, device_path: str) -> str | None:
+    def _get_device_type(self, device_path: str) -> str:
         """Get device model."""
         if TYPE_CHECKING:
             assert self.owproxy
-        try:
-            device_type = self.owproxy.read(f"{device_path}type").decode()
-        except protocol.ProtocolError as exc:
-            _LOGGER.debug("Unable to read `%stype`: %s", device_path, exc)
-            return None
+        device_type = self.owproxy.read(f"{device_path}type").decode()
         _LOGGER.debug("read `%stype`: %s", device_path, device_type)
         if device_type == "EDS":
             device_type = self.owproxy.read(f"{device_path}device_type").decode()

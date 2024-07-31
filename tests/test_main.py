@@ -1,5 +1,4 @@
 """Test methods in __main__."""
-
 from unittest.mock import PropertyMock, patch
 
 from homeassistant import __main__ as main
@@ -69,7 +68,7 @@ def test_skip_pip_mutually_exclusive(mock_exit) -> None:
     """Test --skip-pip and --skip-pip-package are mutually exclusive."""
 
     def parse_args(*args):
-        with patch("sys.argv", ["python", *args]):
+        with patch("sys.argv", ["python"] + list(args)):
             return main.get_arguments()
 
     args = parse_args("--skip-pip")

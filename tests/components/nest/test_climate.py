@@ -39,7 +39,7 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.exceptions import HomeAssistantError
 
 from .common import (
     DEVICE_COMMAND,
@@ -52,7 +52,7 @@ from .conftest import FakeAuth
 
 from tests.components.climate import common
 
-type CreateEvent = Callable[[dict[str, Any]], Awaitable[None]]
+CreateEvent = Callable[[dict[str, Any]], Awaitable[None]]
 
 EVENT_ID = "some-event-id"
 
@@ -79,7 +79,7 @@ async def create_event(
 
     async def create_event(traits: dict[str, Any]) -> None:
         await subscriber.async_receive_event(
-            EventMessage.create_event(
+            EventMessage(
                 {
                     "eventId": EVENT_ID,
                     "timestamp": "2019-01-01T00:00:01Z",
@@ -516,6 +516,7 @@ async def test_thermostat_invalid_hvac_mode(
 
     with pytest.raises(ValueError):
         await common.async_set_hvac_mode(hass, HVACMode.DRY)
+        await hass.async_block_till_done()
 
     assert thermostat.state == HVACMode.OFF
     assert auth.method is None  # No communication with API
@@ -908,8 +909,6 @@ async def test_thermostat_fan_off(
         ClimateEntityFeature.TARGET_TEMPERATURE
         | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
         | ClimateEntityFeature.FAN_MODE
-        | ClimateEntityFeature.TURN_OFF
-        | ClimateEntityFeature.TURN_ON
     )
 
 
@@ -957,8 +956,6 @@ async def test_thermostat_fan_on(
         ClimateEntityFeature.TARGET_TEMPERATURE
         | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
         | ClimateEntityFeature.FAN_MODE
-        | ClimateEntityFeature.TURN_OFF
-        | ClimateEntityFeature.TURN_ON
     )
 
 
@@ -1002,8 +999,6 @@ async def test_thermostat_cool_with_fan(
         ClimateEntityFeature.TARGET_TEMPERATURE
         | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
         | ClimateEntityFeature.FAN_MODE
-        | ClimateEntityFeature.TURN_OFF
-        | ClimateEntityFeature.TURN_ON
     )
 
 
@@ -1041,8 +1036,6 @@ async def test_thermostat_set_fan(
         ClimateEntityFeature.TARGET_TEMPERATURE
         | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
         | ClimateEntityFeature.FAN_MODE
-        | ClimateEntityFeature.TURN_OFF
-        | ClimateEntityFeature.TURN_ON
     )
 
     # Turn off fan mode
@@ -1105,8 +1098,6 @@ async def test_thermostat_set_fan_when_off(
         ClimateEntityFeature.TARGET_TEMPERATURE
         | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
         | ClimateEntityFeature.FAN_MODE
-        | ClimateEntityFeature.TURN_OFF
-        | ClimateEntityFeature.TURN_ON
     )
 
     # Fan cannot be turned on when HVAC is off
@@ -1152,8 +1143,6 @@ async def test_thermostat_fan_empty(
     assert thermostat.attributes[ATTR_SUPPORTED_FEATURES] == (
         ClimateEntityFeature.TARGET_TEMPERATURE
         | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
-        | ClimateEntityFeature.TURN_OFF
-        | ClimateEntityFeature.TURN_ON
     )
 
     # Ignores set_fan_mode since it is lacking SUPPORT_FAN_MODE
@@ -1203,8 +1192,9 @@ async def test_thermostat_invalid_fan_mode(
     assert thermostat.attributes[ATTR_FAN_MODE] == FAN_ON
     assert thermostat.attributes[ATTR_FAN_MODES] == [FAN_ON, FAN_OFF]
 
-    with pytest.raises(ServiceValidationError):
+    with pytest.raises(ValueError):
         await common.async_set_fan_mode(hass, FAN_LOW)
+        await hass.async_block_till_done()
 
 
 async def test_thermostat_target_temp(
@@ -1376,6 +1366,7 @@ async def test_thermostat_unexpected_hvac_status(
 
     with pytest.raises(ValueError):
         await common.async_set_hvac_mode(hass, HVACMode.DRY)
+        await hass.async_block_till_done()
     assert thermostat.state == HVACMode.OFF
 
 
@@ -1483,8 +1474,9 @@ async def test_thermostat_invalid_set_preset_mode(
     assert thermostat.attributes[ATTR_PRESET_MODES] == [PRESET_ECO, PRESET_NONE]
 
     # Set preset mode that is invalid
-    with pytest.raises(ServiceValidationError):
+    with pytest.raises(ValueError):
         await common.async_set_preset_mode(hass, PRESET_SLEEP)
+        await hass.async_block_till_done()
 
     # No RPC sent
     assert auth.method is None
@@ -1534,6 +1526,7 @@ async def test_thermostat_hvac_mode_failure(
     auth.responses = [aiohttp.web.Response(status=HTTPStatus.BAD_REQUEST)]
     with pytest.raises(HomeAssistantError) as e_info:
         await common.async_set_hvac_mode(hass, HVACMode.HEAT)
+        await hass.async_block_till_done()
     assert "HVAC mode" in str(e_info)
     assert "climate.my_thermostat" in str(e_info)
     assert HVACMode.HEAT in str(e_info)
@@ -1541,6 +1534,7 @@ async def test_thermostat_hvac_mode_failure(
     auth.responses = [aiohttp.web.Response(status=HTTPStatus.BAD_REQUEST)]
     with pytest.raises(HomeAssistantError) as e_info:
         await common.async_set_temperature(hass, temperature=25.0)
+        await hass.async_block_till_done()
     assert "temperature" in str(e_info)
     assert "climate.my_thermostat" in str(e_info)
     assert "25.0" in str(e_info)
@@ -1548,6 +1542,7 @@ async def test_thermostat_hvac_mode_failure(
     auth.responses = [aiohttp.web.Response(status=HTTPStatus.BAD_REQUEST)]
     with pytest.raises(HomeAssistantError) as e_info:
         await common.async_set_fan_mode(hass, FAN_ON)
+        await hass.async_block_till_done()
     assert "fan mode" in str(e_info)
     assert "climate.my_thermostat" in str(e_info)
     assert FAN_ON in str(e_info)
@@ -1555,6 +1550,7 @@ async def test_thermostat_hvac_mode_failure(
     auth.responses = [aiohttp.web.Response(status=HTTPStatus.BAD_REQUEST)]
     with pytest.raises(HomeAssistantError) as e_info:
         await common.async_set_preset_mode(hass, PRESET_ECO)
+        await hass.async_block_till_done()
     assert "preset mode" in str(e_info)
     assert "climate.my_thermostat" in str(e_info)
     assert PRESET_ECO in str(e_info)

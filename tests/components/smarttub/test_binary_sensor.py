@@ -1,5 +1,4 @@
 """Test the SmartTub binary sensor platform."""
-
 from datetime import datetime
 from unittest.mock import create_autospec
 

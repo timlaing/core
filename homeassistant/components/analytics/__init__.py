@@ -1,5 +1,4 @@
 """Send instance and usage analytics."""
-
 from typing import Any
 
 import voluptuous as vol

@@ -16,7 +16,6 @@ send:
       selector:
         text:
     response:
-      required: true
       default: false
       selector:
         boolean:
@@ -41,7 +40,6 @@ event_register:
         text:
     remove:
       default: false
-      required: true
       selector:
         boolean:
 exposure_register:
@@ -70,7 +68,6 @@ exposure_register:
         object:
     remove:
       default: false
-      required: true
       selector:
         boolean:
 reload:

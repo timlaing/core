@@ -21,7 +21,10 @@ async def test_executor_shutdown_can_interrupt_threads(
         while True:
             time.sleep(0.1)
 
-    sleep_futures = [iexecutor.submit(_loop_sleep_in_executor) for _ in range(100)]
+    sleep_futures = []
+
+    for _ in range(100):
+        sleep_futures.append(iexecutor.submit(_loop_sleep_in_executor))
 
     iexecutor.shutdown()
 
@@ -74,21 +77,19 @@ async def test_executor_shutdown_does_not_log_shutdown_on_first_attempt(
 async def test_overall_timeout_reached(caplog: pytest.LogCaptureFixture) -> None:
     """Test that shutdown moves on when the overall timeout is reached."""
 
+    iexecutor = InterruptibleThreadPoolExecutor()
+
     def _loop_sleep_in_executor():
         time.sleep(1)
 
-    with patch.object(executor, "EXECUTOR_SHUTDOWN_TIMEOUT", 0.5):
-        iexecutor = InterruptibleThreadPoolExecutor()
-        for _ in range(6):
-            iexecutor.submit(_loop_sleep_in_executor)
-        start = time.monotonic()
-        iexecutor.shutdown()
-        finish = time.monotonic()
+    for _ in range(6):
+        iexecutor.submit(_loop_sleep_in_executor)
 
-    # Ideally execution time (finish - start) should be < 1.2 sec.
-    # CI tests might not run in an ideal environment and timing might
-    # not be accurate, so we let this test pass
-    # if the duration is below 3 seconds.
-    assert finish - start < 3.0
+    start = time.monotonic()
+    with patch.object(executor, "EXECUTOR_SHUTDOWN_TIMEOUT", 0.5):
+        iexecutor.shutdown()
+    finish = time.monotonic()
+
+    assert finish - start < 1.2
 
     iexecutor.shutdown()

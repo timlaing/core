@@ -2,14 +2,14 @@
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow
+from homeassistant import config_entries
 from homeassistant.const import CONF_DEVICE
 
 from . import dongle
 from .const import DOMAIN, ERROR_INVALID_DONGLE_PATH, LOGGER
 
 
-class EnOceanFlowHandler(ConfigFlow, domain=DOMAIN):
+class EnOceanFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle the enOcean config flows."""
 
     VERSION = 1
@@ -81,7 +81,10 @@ class EnOceanFlowHandler(ConfigFlow, domain=DOMAIN):
     async def validate_enocean_conf(self, user_input) -> bool:
         """Return True if the user_input contains a valid dongle path."""
         dongle_path = user_input[CONF_DEVICE]
-        return await self.hass.async_add_executor_job(dongle.validate_path, dongle_path)
+        path_is_valid = await self.hass.async_add_executor_job(
+            dongle.validate_path, dongle_path
+        )
+        return path_is_valid
 
     def create_enocean_entry(self, user_input):
         """Create an entry for the provided configuration."""

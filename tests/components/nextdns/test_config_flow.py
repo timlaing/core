@@ -1,16 +1,19 @@
 """Define tests for the NextDNS config flow."""
-
+import asyncio
 from unittest.mock import patch
 
 from nextdns import ApiError, InvalidApiKeyError
 import pytest
-from tenacity import RetryError
 
-from homeassistant.components.nextdns.const import CONF_PROFILE_ID, DOMAIN
+from homeassistant import data_entry_flow
+from homeassistant.components.nextdns.const import (
+    CONF_PROFILE_ID,
+    CONF_PROFILE_NAME,
+    DOMAIN,
+)
 from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_API_KEY, CONF_PROFILE_NAME
+from homeassistant.const import CONF_API_KEY
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
 
 from . import PROFILES, init_integration
 
@@ -20,25 +23,21 @@ async def test_form_create_entry(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    with (
-        patch(
-            "homeassistant.components.nextdns.NextDns.get_profiles",
-            return_value=PROFILES,
-        ),
-        patch(
-            "homeassistant.components.nextdns.async_setup_entry", return_value=True
-        ) as mock_setup_entry,
-    ):
+    with patch(
+        "homeassistant.components.nextdns.NextDns.get_profiles", return_value=PROFILES
+    ), patch(
+        "homeassistant.components.nextdns.async_setup_entry", return_value=True
+    ) as mock_setup_entry:
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: "fake_api_key"},
         )
 
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == data_entry_flow.FlowResultType.FORM
         assert result["step_id"] == "profiles"
 
         result = await hass.config_entries.flow.async_configure(
@@ -46,7 +45,7 @@ async def test_form_create_entry(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
     assert result["title"] == "Fake Profile"
     assert result["data"][CONF_API_KEY] == "fake_api_key"
     assert result["data"][CONF_PROFILE_ID] == "xyz12"
@@ -58,8 +57,7 @@ async def test_form_create_entry(hass: HomeAssistant) -> None:
     [
         (ApiError("API Error"), "cannot_connect"),
         (InvalidApiKeyError, "invalid_api_key"),
-        (RetryError("Retry Error"), "cannot_connect"),
-        (TimeoutError, "cannot_connect"),
+        (asyncio.TimeoutError, "cannot_connect"),
         (ValueError, "unknown"),
     ],
 )
@@ -99,5 +97,5 @@ async def test_form_already_configured(hass: HomeAssistant) -> None:
         result["flow_id"], {CONF_PROFILE_NAME: "Fake Profile"}
     )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == data_entry_flow.FlowResultType.ABORT
     assert result["reason"] == "already_configured"

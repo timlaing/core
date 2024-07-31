@@ -1,5 +1,4 @@
 """Tests for the Season integration."""
-
 from homeassistant.components.season.const import DOMAIN
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant

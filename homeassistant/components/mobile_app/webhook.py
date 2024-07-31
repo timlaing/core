@@ -1,5 +1,4 @@
 """Webhook handlers for mobile_app."""
-
 from __future__ import annotations
 
 import asyncio
@@ -100,6 +99,7 @@ from .const import (
     DATA_DEVICES,
     DOMAIN,
     ERR_ENCRYPTION_ALREADY_ENABLED,
+    ERR_ENCRYPTION_NOT_AVAILABLE,
     ERR_ENCRYPTION_REQUIRED,
     ERR_INVALID_FORMAT,
     ERR_SENSOR_NOT_REGISTERED,
@@ -114,6 +114,7 @@ from .helpers import (
     error_response,
     registration_context,
     safe_registration,
+    supports_encryption,
     webhook_response,
 )
 
@@ -296,7 +297,7 @@ async def webhook_call_service(
             config_entry.data[ATTR_DEVICE_NAME],
             ex,
         )
-        raise HTTPBadRequest from ex
+        raise HTTPBadRequest() from ex
 
     return empty_okay_response()
 
@@ -406,20 +407,18 @@ async def webhook_render_template(
 
 @WEBHOOK_COMMANDS.register("update_location")
 @validate_schema(
-    vol.All(
+    vol.Schema(
         cv.key_dependency(ATTR_GPS, ATTR_GPS_ACCURACY),
-        vol.Schema(
-            {
-                vol.Optional(ATTR_LOCATION_NAME): cv.string,
-                vol.Optional(ATTR_GPS): cv.gps,
-                vol.Optional(ATTR_GPS_ACCURACY): cv.positive_int,
-                vol.Optional(ATTR_BATTERY): cv.positive_int,
-                vol.Optional(ATTR_SPEED): cv.positive_int,
-                vol.Optional(ATTR_ALTITUDE): vol.Coerce(float),
-                vol.Optional(ATTR_COURSE): cv.positive_int,
-                vol.Optional(ATTR_VERTICAL_ACCURACY): cv.positive_int,
-            },
-        ),
+        {
+            vol.Optional(ATTR_LOCATION_NAME): cv.string,
+            vol.Optional(ATTR_GPS): cv.gps,
+            vol.Optional(ATTR_GPS_ACCURACY): cv.positive_int,
+            vol.Optional(ATTR_BATTERY): cv.positive_int,
+            vol.Optional(ATTR_SPEED): cv.positive_int,
+            vol.Optional(ATTR_ALTITUDE): vol.Coerce(float),
+            vol.Optional(ATTR_COURSE): cv.positive_int,
+            vol.Optional(ATTR_VERTICAL_ACCURACY): cv.positive_int,
+        },
     )
 )
 async def webhook_update_location(
@@ -483,6 +482,13 @@ async def webhook_enable_encryption(
         return error_response(
             ERR_ENCRYPTION_ALREADY_ENABLED, "Encryption already enabled"
         )
+
+    if not supports_encryption():
+        _LOGGER.warning(
+            "Unable to enable encryption for %s because libsodium is unavailable!",
+            config_entry.data[ATTR_DEVICE_NAME],
+        )
+        return error_response(ERR_ENCRYPTION_NOT_AVAILABLE, "Encryption is unavailable")
 
     secret = secrets.token_hex(SecretBox.KEY_SIZE)
 
@@ -604,9 +610,9 @@ async def webhook_register_sensor(
         async_dispatcher_send(hass, f"{SIGNAL_SENSOR_UPDATE}-{unique_store_key}", data)
     else:
         data[CONF_UNIQUE_ID] = unique_store_key
-        data[CONF_NAME] = (
-            f"{config_entry.data[ATTR_DEVICE_NAME]} {data[ATTR_SENSOR_NAME]}"
-        )
+        data[
+            CONF_NAME
+        ] = f"{config_entry.data[ATTR_DEVICE_NAME]} {data[ATTR_SENSOR_NAME]}"
 
         register_signal = f"{DOMAIN}_{data[ATTR_SENSOR_TYPE]}_register"
         async_dispatcher_send(hass, register_signal, data)
@@ -721,15 +727,10 @@ async def webhook_get_config(
     """Handle a get config webhook."""
     hass_config = hass.config.as_dict()
 
-    device: dr.DeviceEntry = hass.data[DOMAIN][DATA_DEVICES][
-        config_entry.data[CONF_WEBHOOK_ID]
-    ]
-
     resp = {
         "latitude": hass_config["latitude"],
         "longitude": hass_config["longitude"],
         "elevation": hass_config["elevation"],
-        "hass_device_id": device.id,
         "unit_system": hass_config["unit_system"],
         "location_name": hass_config["location_name"],
         "time_zone": hass_config["time_zone"],
@@ -742,7 +743,7 @@ async def webhook_get_config(
         resp[CONF_CLOUDHOOK_URL] = config_entry.data[CONF_CLOUDHOOK_URL]
 
     if cloud.async_active_subscription(hass):
-        with suppress(cloud.CloudNotAvailable):
+        with suppress(hass.components.cloud.CloudNotAvailable):
             resp[CONF_REMOTE_UI_URL] = cloud.async_remote_ui_url(hass)
 
     webhook_id = config_entry.data[CONF_WEBHOOK_ID]

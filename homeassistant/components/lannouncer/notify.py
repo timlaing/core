@@ -1,5 +1,4 @@
 """Lannouncer platform for notify component."""
-
 from __future__ import annotations
 
 import logging
@@ -10,7 +9,7 @@ import voluptuous as vol
 
 from homeassistant.components.notify import (
     ATTR_DATA,
-    PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     BaseNotificationService,
 )
 from homeassistant.const import CONF_HOST, CONF_PORT
@@ -24,7 +23,7 @@ ATTR_METHOD_ALLOWED = ["speak", "alarm"]
 
 DEFAULT_PORT = 1035
 
-PLATFORM_SCHEMA = NOTIFY_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_HOST): cv.string,
         vol.Optional(CONF_PORT, default=DEFAULT_PORT): cv.port,

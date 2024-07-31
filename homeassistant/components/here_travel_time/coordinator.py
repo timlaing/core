@@ -1,5 +1,4 @@
 """The HERE Travel Time integration."""
-
 from __future__ import annotations
 
 from datetime import datetime, time, timedelta

@@ -7,7 +7,6 @@
       }),
       'disabled_by': None,
       'domain': 'google_assistant',
-      'minor_version': 1,
       'options': dict({
       }),
       'pref_disable_new_entities': False,
@@ -103,8 +102,6 @@
         'sensor',
         'switch',
         'vacuum',
-        'valve',
-        'water_heater',
       ]),
       'project_id': '1234',
       'report_state': False,

@@ -1,5 +1,4 @@
 """Constants for the Azure DevOps integration."""
-
 DOMAIN = "azure_devops"
 
 CONF_ORG = "organization"

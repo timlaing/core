@@ -1,5 +1,4 @@
 """Plugwise Switch component for HomeAssistant."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -12,17 +11,18 @@ from homeassistant.components.switch import (
     SwitchEntity,
     SwitchEntityDescription,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import PlugwiseConfigEntry
+from .const import DOMAIN
 from .coordinator import PlugwiseDataUpdateCoordinator
 from .entity import PlugwiseEntity
 from .util import plugwise_command
 
 
-@dataclass(frozen=True)
+@dataclass
 class PlugwiseSwitchEntityDescription(SwitchEntityDescription):
     """Describes Plugwise switch entity."""
 
@@ -33,11 +33,13 @@ SWITCHES: tuple[PlugwiseSwitchEntityDescription, ...] = (
     PlugwiseSwitchEntityDescription(
         key="dhw_cm_switch",
         translation_key="dhw_cm_switch",
+        icon="mdi:water-plus",
         entity_category=EntityCategory.CONFIG,
     ),
     PlugwiseSwitchEntityDescription(
         key="lock",
         translation_key="lock",
+        icon="mdi:lock",
         entity_category=EntityCategory.CONFIG,
     ),
     PlugwiseSwitchEntityDescription(
@@ -49,6 +51,7 @@ SWITCHES: tuple[PlugwiseSwitchEntityDescription, ...] = (
         key="cooling_ena_switch",
         translation_key="cooling_ena_switch",
         name="Cooling",
+        icon="mdi:snowflake-thermometer",
         entity_category=EntityCategory.CONFIG,
     ),
 )
@@ -56,28 +59,20 @@ SWITCHES: tuple[PlugwiseSwitchEntityDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: PlugwiseConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Smile switches from a config entry."""
-    coordinator = entry.runtime_data
-
-    @callback
-    def _add_entities() -> None:
-        """Add Entities."""
-        if not coordinator.new_devices:
-            return
-
-        async_add_entities(
-            PlugwiseSwitchEntity(coordinator, device_id, description)
-            for device_id in coordinator.new_devices
-            if (switches := coordinator.data.devices[device_id].get("switches"))
-            for description in SWITCHES
-            if description.key in switches
-        )
-
-    _add_entities()
-    entry.async_on_unload(coordinator.async_add_listener(_add_entities))
+    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    entities: list[PlugwiseSwitchEntity] = []
+    for device_id, device in coordinator.data.devices.items():
+        if not (switches := device.get("switches")):
+            continue
+        for description in SWITCHES:
+            if description.key not in switches:
+                continue
+            entities.append(PlugwiseSwitchEntity(coordinator, device_id, description))
+    async_add_entities(entities)
 
 
 class PlugwiseSwitchEntity(PlugwiseEntity, SwitchEntity):

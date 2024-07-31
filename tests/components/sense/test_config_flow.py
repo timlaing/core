@@ -1,5 +1,4 @@
 """Test the Sense config flow."""
-
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -14,7 +13,6 @@ from homeassistant import config_entries
 from homeassistant.components.sense.const import DOMAIN
 from homeassistant.const import CONF_CODE
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -52,7 +50,7 @@ async def test_form(hass: HomeAssistant, mock_sense) -> None:
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["errors"] == {}
 
     with patch(
@@ -65,7 +63,7 @@ async def test_form(hass: HomeAssistant, mock_sense) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
+    assert result2["type"] == "create_entry"
     assert result2["title"] == "test-email"
     assert result2["data"] == MOCK_CONFIG
     assert len(mock_setup_entry.mock_calls) == 1
@@ -86,7 +84,7 @@ async def test_form_invalid_auth(hass: HomeAssistant) -> None:
             {"timeout": "6", "email": "test-email", "password": "test-password"},
         )
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == "form"
     assert result2["errors"] == {"base": "invalid_auth"}
 
 
@@ -103,7 +101,7 @@ async def test_form_mfa_required(hass: HomeAssistant, mock_sense) -> None:
         {"timeout": "6", "email": "test-email", "password": "test-password"},
     )
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == "form"
     assert result2["step_id"] == "validation"
 
     mock_sense.return_value.validate_mfa.side_effect = None
@@ -112,7 +110,7 @@ async def test_form_mfa_required(hass: HomeAssistant, mock_sense) -> None:
         {CONF_CODE: "012345"},
     )
 
-    assert result3["type"] is FlowResultType.CREATE_ENTRY
+    assert result3["type"] == "create_entry"
     assert result3["title"] == "test-email"
     assert result3["data"] == MOCK_CONFIG
 
@@ -130,7 +128,7 @@ async def test_form_mfa_required_wrong(hass: HomeAssistant, mock_sense) -> None:
         {"timeout": "6", "email": "test-email", "password": "test-password"},
     )
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == "form"
     assert result2["step_id"] == "validation"
 
     mock_sense.return_value.validate_mfa.side_effect = SenseAuthenticationException
@@ -140,7 +138,7 @@ async def test_form_mfa_required_wrong(hass: HomeAssistant, mock_sense) -> None:
         {CONF_CODE: "000000"},
     )
 
-    assert result3["type"] is FlowResultType.FORM
+    assert result3["type"] == "form"
     assert result3["errors"] == {"base": "invalid_auth"}
     assert result3["step_id"] == "validation"
 
@@ -158,7 +156,7 @@ async def test_form_mfa_required_timeout(hass: HomeAssistant, mock_sense) -> Non
         {"timeout": "6", "email": "test-email", "password": "test-password"},
     )
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == "form"
     assert result2["step_id"] == "validation"
 
     mock_sense.return_value.validate_mfa.side_effect = SenseAPITimeoutException
@@ -167,7 +165,7 @@ async def test_form_mfa_required_timeout(hass: HomeAssistant, mock_sense) -> Non
         {CONF_CODE: "000000"},
     )
 
-    assert result3["type"] is FlowResultType.FORM
+    assert result3["type"] == "form"
     assert result3["errors"] == {"base": "cannot_connect"}
 
 
@@ -184,7 +182,7 @@ async def test_form_mfa_required_exception(hass: HomeAssistant, mock_sense) -> N
         {"timeout": "6", "email": "test-email", "password": "test-password"},
     )
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == "form"
     assert result2["step_id"] == "validation"
 
     mock_sense.return_value.validate_mfa.side_effect = Exception
@@ -193,7 +191,7 @@ async def test_form_mfa_required_exception(hass: HomeAssistant, mock_sense) -> N
         {CONF_CODE: "000000"},
     )
 
-    assert result3["type"] is FlowResultType.FORM
+    assert result3["type"] == "form"
     assert result3["errors"] == {"base": "unknown"}
 
 
@@ -212,7 +210,7 @@ async def test_form_timeout(hass: HomeAssistant) -> None:
             {"timeout": "6", "email": "test-email", "password": "test-password"},
         )
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == "form"
     assert result2["errors"] == {"base": "cannot_connect"}
 
 
@@ -231,7 +229,7 @@ async def test_form_cannot_connect(hass: HomeAssistant) -> None:
             {"timeout": "6", "email": "test-email", "password": "test-password"},
         )
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == "form"
     assert result2["errors"] == {"base": "cannot_connect"}
 
 
@@ -250,7 +248,7 @@ async def test_form_unknown_exception(hass: HomeAssistant) -> None:
             {"timeout": "6", "email": "test-email", "password": "test-password"},
         )
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == "form"
     assert result2["errors"] == {"base": "unknown"}
 
 
@@ -271,7 +269,7 @@ async def test_reauth_no_form(hass: HomeAssistant, mock_sense) -> None:
         result = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_REAUTH}, data=MOCK_CONFIG
         )
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "reauth_successful"
 
 
@@ -291,7 +289,7 @@ async def test_reauth_password(hass: HomeAssistant, mock_sense) -> None:
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_REAUTH}, data=entry.data
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
 
     mock_sense.return_value.authenticate.side_effect = None
     with patch(
@@ -304,5 +302,5 @@ async def test_reauth_password(hass: HomeAssistant, mock_sense) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.ABORT
+    assert result2["type"] == "abort"
     assert result2["reason"] == "reauth_successful"

@@ -1,5 +1,4 @@
 """The elkm1 integration discovery."""
-
 from __future__ import annotations
 
 import asyncio
@@ -46,10 +45,8 @@ async def async_discover_devices(
         targets = [address]
     else:
         targets = [
-            str(broadcast_address)
-            for broadcast_address in await network.async_get_ipv4_broadcast_addresses(
-                hass
-            )
+            str(address)
+            for address in await network.async_get_ipv4_broadcast_addresses(hass)
         ]
 
     scanner = AIOELKDiscovery()
@@ -57,8 +54,8 @@ async def async_discover_devices(
     for idx, discovered in enumerate(
         await asyncio.gather(
             *[
-                scanner.async_scan(timeout=timeout, address=target_address)
-                for target_address in targets
+                scanner.async_scan(timeout=timeout, address=address)
+                for address in targets
             ],
             return_exceptions=True,
         )
@@ -66,8 +63,6 @@ async def async_discover_devices(
         if isinstance(discovered, Exception):
             _LOGGER.debug("Scanning %s failed with error: %s", targets[idx], discovered)
             continue
-        if isinstance(discovered, BaseException):
-            raise discovered from None
         for device in discovered:
             assert isinstance(device, ElkSystem)
             combined_discoveries[device.ip_address] = device

@@ -1,5 +1,4 @@
 """Support for Yardian integration."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -11,14 +10,13 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import VolDictType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DEFAULT_WATERING_DURATION, DOMAIN
 from .coordinator import YardianUpdateCoordinator
 
 SERVICE_START_IRRIGATION = "start_irrigation"
-SERVICE_SCHEMA_START_IRRIGATION: VolDictType = {
+SERVICE_SCHEMA_START_IRRIGATION = {
     vol.Required("duration"): cv.positive_int,
 }
 
@@ -49,8 +47,8 @@ async def async_setup_entry(
 class YardianSwitch(CoordinatorEntity[YardianUpdateCoordinator], SwitchEntity):
     """Representation of a Yardian switch."""
 
+    _attr_icon = "mdi:water"
     _attr_has_entity_name = True
-    _attr_translation_key = "switch"
 
     def __init__(self, coordinator: YardianUpdateCoordinator, zone_id) -> None:
         """Initialize a Yardian Switch Device."""

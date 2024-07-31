@@ -1,5 +1,4 @@
 """Support to interface with the Roon API."""
-
 import logging
 
 from homeassistant.components.media_player import BrowseMedia, MediaClass

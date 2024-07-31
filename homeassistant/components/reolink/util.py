@@ -1,5 +1,4 @@
 """Utility functions for the Reolink component."""
-
 from __future__ import annotations
 
 from homeassistant import config_entries

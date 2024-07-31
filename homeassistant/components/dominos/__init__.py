@@ -1,14 +1,13 @@
 """Support for Dominos Pizza ordering."""
-
 from datetime import timedelta
 import logging
 
 from pizzapi import Address, Customer, Order
+from pizzapi.address import StoreException
 import voluptuous as vol
 
 from homeassistant.components import http
 from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import HomeAssistantError
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_component import EntityComponent
@@ -118,7 +117,7 @@ class Dominos:
         self.country = conf.get(ATTR_COUNTRY)
         try:
             self.closest_store = self.address.closest_store()
-        except Exception:  # noqa: BLE001
+        except StoreException:
             self.closest_store = None
 
     def handle_order(self, call: ServiceCall) -> None:
@@ -139,10 +138,10 @@ class Dominos:
         """Update the shared closest store (if open)."""
         try:
             self.closest_store = self.address.closest_store()
-        except Exception:  # noqa: BLE001
+            return True
+        except StoreException:
             self.closest_store = None
             return False
-        return True
 
     def get_menu(self):
         """Return the products from the closest stores menu."""
@@ -219,7 +218,7 @@ class DominosOrder(Entity):
         """Update the order state and refreshes the store."""
         try:
             self.dominos.update_closest_store()
-        except Exception:  # noqa: BLE001
+        except StoreException:
             self._orderable = False
             return
 
@@ -227,13 +226,13 @@ class DominosOrder(Entity):
             order = self.order()
             order.pay_with()
             self._orderable = True
-        except Exception:  # noqa: BLE001
+        except StoreException:
             self._orderable = False
 
     def order(self):
         """Create the order object."""
         if self.dominos.closest_store is None:
-            raise HomeAssistantError("No store available")
+            raise StoreException
 
         order = Order(
             self.dominos.closest_store,
@@ -252,7 +251,7 @@ class DominosOrder(Entity):
         try:
             order = self.order()
             order.place()
-        except Exception:  # noqa: BLE001
+        except StoreException:
             self._orderable = False
             _LOGGER.warning(
                 "Attempted to order Dominos - Order invalid or store closed"

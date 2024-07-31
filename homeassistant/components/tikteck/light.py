@@ -1,5 +1,4 @@
 """Support for Tikteck lights."""
-
 from __future__ import annotations
 
 import logging
@@ -11,7 +10,7 @@ import voluptuous as vol
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_HS_COLOR,
-    PLATFORM_SCHEMA as LIGHT_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     ColorMode,
     LightEntity,
 )
@@ -28,7 +27,7 @@ DEVICE_SCHEMA = vol.Schema(
     {vol.Optional(CONF_NAME): cv.string, vol.Required(CONF_PASSWORD): cv.string}
 )
 
-PLATFORM_SCHEMA = LIGHT_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {vol.Optional(CONF_DEVICES, default={}): {cv.string: DEVICE_SCHEMA}}
 )
 

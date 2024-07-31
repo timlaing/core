@@ -2,16 +2,13 @@
   "config": {
     "step": {
       "user": {
-        "description": "Connect to the Venstar thermostat",
+        "title": "Connect to the Venstar Thermostat",
         "data": {
           "host": "[%key:common::config_flow::data::host%]",
           "username": "[%key:common::config_flow::data::username%]",
           "password": "[%key:common::config_flow::data::password%]",
           "pin": "[%key:common::config_flow::data::pin%]",
           "ssl": "[%key:common::config_flow::data::ssl%]"
-        },
-        "data_description": {
-          "host": "Hostname or IP address of your Venstar thermostat."
         }
       }
     },
@@ -26,21 +23,12 @@
   "entity": {
     "sensor": {
       "schedule_part": {
-        "name": "Schedule Part",
         "state": {
           "morning": "Morning",
           "day": "Day",
           "evening": "Evening",
           "night": "Night",
           "inactive": "Inactive"
-        }
-      },
-      "active_stage": {
-        "name": "Active stage",
-        "state": {
-          "idle": "Idle",
-          "first_stage": "First stage",
-          "second_stage": "Second stage"
         }
       }
     }

@@ -1,5 +1,4 @@
 """Support for EnergyZero sensors."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -30,12 +29,19 @@ from .const import DOMAIN, SERVICE_TYPE_DEVICE_NAMES
 from .coordinator import EnergyZeroData, EnergyZeroDataUpdateCoordinator
 
 
-@dataclass(frozen=True, kw_only=True)
-class EnergyZeroSensorEntityDescription(SensorEntityDescription):
-    """Describes an EnergyZero sensor entity."""
+@dataclass
+class EnergyZeroSensorEntityDescriptionMixin:
+    """Mixin for required keys."""
 
     value_fn: Callable[[EnergyZeroData], float | datetime | None]
     service_type: str
+
+
+@dataclass
+class EnergyZeroSensorEntityDescription(
+    SensorEntityDescription, EnergyZeroSensorEntityDescriptionMixin
+):
+    """Describes a Pure Energie sensor entity."""
 
 
 SENSORS: tuple[EnergyZeroSensorEntityDescription, ...] = (
@@ -111,6 +117,7 @@ SENSORS: tuple[EnergyZeroSensorEntityDescription, ...] = (
         translation_key="percentage_of_max",
         service_type="today_energy",
         native_unit_of_measurement=PERCENTAGE,
+        icon="mdi:percent",
         value_fn=lambda data: data.energy_today.pct_of_max_price,
     ),
     EnergyZeroSensorEntityDescription(
@@ -118,6 +125,7 @@ SENSORS: tuple[EnergyZeroSensorEntityDescription, ...] = (
         translation_key="hours_priced_equal_or_lower",
         service_type="today_energy",
         native_unit_of_measurement=UnitOfTime.HOURS,
+        icon="mdi:clock",
         value_fn=lambda data: data.energy_today.hours_priced_equal_or_lower,
     ),
 )
@@ -132,7 +140,6 @@ def get_gas_price(data: EnergyZeroData, hours: int) -> float | None:
 
     Returns:
         The gas market price value.
-
     """
     if data.gas_today is None:
         return None

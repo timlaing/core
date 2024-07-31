@@ -1,5 +1,4 @@
 """Config flow for Ridwell integration."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -9,8 +8,9 @@ from aioridwell import async_get_client
 from aioridwell.errors import InvalidCredentialsError, RidwellError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import aiohttp_client, config_validation as cv
 
 from .const import DOMAIN, LOGGER
@@ -29,8 +29,8 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 )
 
 
-class RidwellConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Ridwell."""
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for WattTime."""
 
     VERSION = 2
 
@@ -41,7 +41,7 @@ class RidwellConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _async_validate(
         self, error_step_id: str, error_schema: vol.Schema
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Validate input credentials and proceed accordingly."""
         errors = {}
         session = aiohttp_client.async_get_clientsession(self.hass)
@@ -81,16 +81,14 @@ class RidwellConfigFlow(ConfigFlow, domain=DOMAIN):
             data={CONF_USERNAME: self._username, CONF_PASSWORD: self._password},
         )
 
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Handle configuration by re-auth."""
         self._username = entry_data[CONF_USERNAME]
         return await self.async_step_reauth_confirm()
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle re-auth completion."""
         if not user_input:
             return self.async_show_form(
@@ -107,7 +105,7 @@ class RidwellConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         if not user_input:
             return self.async_show_form(

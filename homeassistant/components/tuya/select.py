@@ -1,18 +1,18 @@
 """Support for Tuya select."""
-
 from __future__ import annotations
 
-from tuya_sharing import CustomerDevice, Manager
+from tuya_iot import TuyaDevice, TuyaDeviceManager
 
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import TuyaConfigEntry
+from . import HomeAssistantTuyaData
 from .base import TuyaEntity
-from .const import TUYA_DISCOVERY_NEW, DPCode, DPType
+from .const import DOMAIN, TUYA_DISCOVERY_NEW, DPCode, DPType
 
 # All descriptions can be found here. Mostly the Enum data types in the
 # default instructions set of each category end up being a select.
@@ -33,10 +33,12 @@ SELECTS: dict[str, tuple[SelectEntityDescription, ...]] = {
         SelectEntityDescription(
             key=DPCode.CUP_NUMBER,
             translation_key="cups",
+            icon="mdi:numeric",
         ),
         SelectEntityDescription(
             key=DPCode.CONCENTRATION_SET,
             translation_key="concentration",
+            icon="mdi:altimeter",
             entity_category=EntityCategory.CONFIG,
         ),
         SelectEntityDescription(
@@ -47,6 +49,7 @@ SELECTS: dict[str, tuple[SelectEntityDescription, ...]] = {
         SelectEntityDescription(
             key=DPCode.MODE,
             translation_key="mode",
+            icon="mdi:coffee",
         ),
     ),
     # Switch
@@ -69,15 +72,7 @@ SELECTS: dict[str, tuple[SelectEntityDescription, ...]] = {
         SelectEntityDescription(
             key=DPCode.LEVEL,
             translation_key="temperature_level",
-        ),
-    ),
-    # Smart Water Timer
-    "sfkzq": (
-        # Irrigation will not be run within this set delay period
-        SelectEntityDescription(
-            key=DPCode.WEATHER_DELAY,
-            translation_key="weather_delay",
-            entity_category=EntityCategory.CONFIG,
+            icon="mdi:thermometer-lines",
         ),
     ),
     # Siren Alarm
@@ -104,26 +99,31 @@ SELECTS: dict[str, tuple[SelectEntityDescription, ...]] = {
         ),
         SelectEntityDescription(
             key=DPCode.DECIBEL_SENSITIVITY,
+            icon="mdi:volume-vibrate",
             entity_category=EntityCategory.CONFIG,
             translation_key="decibel_sensitivity",
         ),
         SelectEntityDescription(
             key=DPCode.RECORD_MODE,
+            icon="mdi:record-rec",
             entity_category=EntityCategory.CONFIG,
             translation_key="record_mode",
         ),
         SelectEntityDescription(
             key=DPCode.BASIC_NIGHTVISION,
+            icon="mdi:theme-light-dark",
             entity_category=EntityCategory.CONFIG,
             translation_key="basic_nightvision",
         ),
         SelectEntityDescription(
             key=DPCode.BASIC_ANTI_FLICKER,
+            icon="mdi:image-outline",
             entity_category=EntityCategory.CONFIG,
             translation_key="basic_anti_flicker",
         ),
         SelectEntityDescription(
             key=DPCode.MOTION_SENSITIVITY,
+            icon="mdi:motion-sensor",
             entity_category=EntityCategory.CONFIG,
             translation_key="motion_sensitivity",
         ),
@@ -199,16 +199,19 @@ SELECTS: dict[str, tuple[SelectEntityDescription, ...]] = {
         SelectEntityDescription(
             key=DPCode.CISTERN,
             entity_category=EntityCategory.CONFIG,
+            icon="mdi:water-opacity",
             translation_key="vacuum_cistern",
         ),
         SelectEntityDescription(
             key=DPCode.COLLECTION_MODE,
             entity_category=EntityCategory.CONFIG,
+            icon="mdi:air-filter",
             translation_key="vacuum_collection",
         ),
         SelectEntityDescription(
             key=DPCode.MODE,
             entity_category=EntityCategory.CONFIG,
+            icon="mdi:layers-outline",
             translation_key="vacuum_mode",
         ),
     ),
@@ -218,21 +221,25 @@ SELECTS: dict[str, tuple[SelectEntityDescription, ...]] = {
         SelectEntityDescription(
             key=DPCode.FAN_VERTICAL,
             entity_category=EntityCategory.CONFIG,
+            icon="mdi:format-vertical-align-center",
             translation_key="vertical_fan_angle",
         ),
         SelectEntityDescription(
             key=DPCode.FAN_HORIZONTAL,
             entity_category=EntityCategory.CONFIG,
+            icon="mdi:format-horizontal-align-center",
             translation_key="horizontal_fan_angle",
         ),
         SelectEntityDescription(
             key=DPCode.COUNTDOWN,
             entity_category=EntityCategory.CONFIG,
+            icon="mdi:timer-cog-outline",
             translation_key="countdown",
         ),
         SelectEntityDescription(
             key=DPCode.COUNTDOWN_SET,
             entity_category=EntityCategory.CONFIG,
+            icon="mdi:timer-cog-outline",
             translation_key="countdown",
         ),
     ),
@@ -242,6 +249,7 @@ SELECTS: dict[str, tuple[SelectEntityDescription, ...]] = {
         SelectEntityDescription(
             key=DPCode.CONTROL_BACK_MODE,
             entity_category=EntityCategory.CONFIG,
+            icon="mdi:swap-horizontal",
             translation_key="curtain_motor_mode",
         ),
         SelectEntityDescription(
@@ -256,26 +264,31 @@ SELECTS: dict[str, tuple[SelectEntityDescription, ...]] = {
         SelectEntityDescription(
             key=DPCode.SPRAY_MODE,
             entity_category=EntityCategory.CONFIG,
+            icon="mdi:spray",
             translation_key="humidifier_spray_mode",
         ),
         SelectEntityDescription(
             key=DPCode.LEVEL,
             entity_category=EntityCategory.CONFIG,
+            icon="mdi:spray",
             translation_key="humidifier_level",
         ),
         SelectEntityDescription(
             key=DPCode.MOODLIGHTING,
             entity_category=EntityCategory.CONFIG,
+            icon="mdi:lightbulb-multiple",
             translation_key="humidifier_moodlighting",
         ),
         SelectEntityDescription(
             key=DPCode.COUNTDOWN,
             entity_category=EntityCategory.CONFIG,
+            icon="mdi:timer-cog-outline",
             translation_key="countdown",
         ),
         SelectEntityDescription(
             key=DPCode.COUNTDOWN_SET,
             entity_category=EntityCategory.CONFIG,
+            icon="mdi:timer-cog-outline",
             translation_key="countdown",
         ),
     ),
@@ -285,11 +298,13 @@ SELECTS: dict[str, tuple[SelectEntityDescription, ...]] = {
         SelectEntityDescription(
             key=DPCode.COUNTDOWN,
             entity_category=EntityCategory.CONFIG,
+            icon="mdi:timer-cog-outline",
             translation_key="countdown",
         ),
         SelectEntityDescription(
             key=DPCode.COUNTDOWN_SET,
             entity_category=EntityCategory.CONFIG,
+            icon="mdi:timer-cog-outline",
             translation_key="countdown",
         ),
     ),
@@ -299,12 +314,14 @@ SELECTS: dict[str, tuple[SelectEntityDescription, ...]] = {
         SelectEntityDescription(
             key=DPCode.COUNTDOWN_SET,
             entity_category=EntityCategory.CONFIG,
+            icon="mdi:timer-cog-outline",
             translation_key="countdown",
         ),
         SelectEntityDescription(
             key=DPCode.DEHUMIDITY_SET_ENUM,
             translation_key="target_humidity",
             entity_category=EntityCategory.CONFIG,
+            icon="mdi:water-percent",
         ),
     ),
 }
@@ -319,27 +336,29 @@ SELECTS["pc"] = SELECTS["kg"]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: TuyaConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up Tuya select dynamically through Tuya discovery."""
-    hass_data = entry.runtime_data
+    hass_data: HomeAssistantTuyaData = hass.data[DOMAIN][entry.entry_id]
 
     @callback
     def async_discover_device(device_ids: list[str]) -> None:
         """Discover and add a discovered Tuya select."""
         entities: list[TuyaSelectEntity] = []
         for device_id in device_ids:
-            device = hass_data.manager.device_map[device_id]
+            device = hass_data.device_manager.device_map[device_id]
             if descriptions := SELECTS.get(device.category):
-                entities.extend(
-                    TuyaSelectEntity(device, hass_data.manager, description)
-                    for description in descriptions
-                    if description.key in device.status
-                )
+                for description in descriptions:
+                    if description.key in device.status:
+                        entities.append(
+                            TuyaSelectEntity(
+                                device, hass_data.device_manager, description
+                            )
+                        )
 
         async_add_entities(entities)
 
-    async_discover_device([*hass_data.manager.device_map])
+    async_discover_device([*hass_data.device_manager.device_map])
 
     entry.async_on_unload(
         async_dispatcher_connect(hass, TUYA_DISCOVERY_NEW, async_discover_device)
@@ -351,8 +370,8 @@ class TuyaSelectEntity(TuyaEntity, SelectEntity):
 
     def __init__(
         self,
-        device: CustomerDevice,
-        device_manager: Manager,
+        device: TuyaDevice,
+        device_manager: TuyaDeviceManager,
         description: SelectEntityDescription,
     ) -> None:
         """Init Tuya sensor."""

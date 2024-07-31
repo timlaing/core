@@ -1,12 +1,11 @@
 """Config flow to configure DSMR Reader."""
-
 from __future__ import annotations
 
 from collections.abc import Awaitable
 from typing import Any
 
-from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.config_entry_flow import DiscoveryFlowHandler
 
 from .const import DOMAIN
@@ -28,7 +27,7 @@ class DsmrReaderFlowHandler(DiscoveryFlowHandler[Awaitable[bool]], domain=DOMAIN
 
     async def async_step_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Confirm setup."""
         if user_input is None:
             return self.async_show_form(

@@ -6,6 +6,7 @@ from homeassistant.components.fritz.const import DOMAIN
 from homeassistant.components.update import DOMAIN as UPDATE_DOMAIN
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
+from homeassistant.setup import async_setup_component
 
 from .const import (
     MOCK_FB_SERVICES,
@@ -38,9 +39,9 @@ async def test_update_entities_initialized(
     entry = MockConfigEntry(domain=DOMAIN, data=MOCK_USER_DATA)
     entry.add_to_hass(hass)
 
-    await hass.config_entries.async_setup(entry.entry_id)
+    assert await async_setup_component(hass, DOMAIN, {})
     await hass.async_block_till_done()
-    assert entry.state is ConfigEntryState.LOADED
+    assert entry.state == ConfigEntryState.LOADED
 
     updates = hass.states.async_all(UPDATE_DOMAIN)
     assert len(updates) == 1
@@ -59,9 +60,9 @@ async def test_update_available(
     entry = MockConfigEntry(domain=DOMAIN, data=MOCK_USER_DATA)
     entry.add_to_hass(hass)
 
-    await hass.config_entries.async_setup(entry.entry_id)
+    assert await async_setup_component(hass, DOMAIN, {})
     await hass.async_block_till_done()
-    assert entry.state is ConfigEntryState.LOADED
+    assert entry.state == ConfigEntryState.LOADED
 
     update = hass.states.get("update.mock_title_fritz_os")
     assert update is not None
@@ -82,9 +83,9 @@ async def test_no_update_available(
     entry = MockConfigEntry(domain=DOMAIN, data=MOCK_USER_DATA)
     entry.add_to_hass(hass)
 
-    await hass.config_entries.async_setup(entry.entry_id)
+    assert await async_setup_component(hass, DOMAIN, {})
     await hass.async_block_till_done()
-    assert entry.state is ConfigEntryState.LOADED
+    assert entry.state == ConfigEntryState.LOADED
 
     update = hass.states.get("update.mock_title_fritz_os")
     assert update is not None
@@ -104,15 +105,15 @@ async def test_available_update_can_be_installed(
     fc_class_mock().override_services({**MOCK_FB_SERVICES, **AVAILABLE_UPDATE})
 
     with patch(
-        "homeassistant.components.fritz.coordinator.FritzBoxTools.async_trigger_firmware_update",
+        "homeassistant.components.fritz.common.FritzBoxTools.async_trigger_firmware_update",
         return_value=True,
     ) as mocked_update_call:
         entry = MockConfigEntry(domain=DOMAIN, data=MOCK_USER_DATA)
         entry.add_to_hass(hass)
 
-        await hass.config_entries.async_setup(entry.entry_id)
+        assert await async_setup_component(hass, DOMAIN, {})
         await hass.async_block_till_done()
-        assert entry.state is ConfigEntryState.LOADED
+        assert entry.state == ConfigEntryState.LOADED
 
         update = hass.states.get("update.mock_title_fritz_os")
         assert update is not None
@@ -124,4 +125,4 @@ async def test_available_update_can_be_installed(
             {"entity_id": "update.mock_title_fritz_os"},
             blocking=True,
         )
-        mocked_update_call.assert_called_once()
+        assert mocked_update_call.assert_called_once

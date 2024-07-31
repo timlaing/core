@@ -1,11 +1,10 @@
 """TOLO Sauna (non-binary, general) sensors."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from tololib import ToloSettings, ToloStatus
+from tololib.message_info import SettingsInfo, StatusInfo
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -27,12 +26,19 @@ from . import ToloSaunaCoordinatorEntity, ToloSaunaUpdateCoordinator
 from .const import DOMAIN
 
 
-@dataclass(frozen=True, kw_only=True)
-class ToloSensorEntityDescription(SensorEntityDescription):
-    """Class describing TOLO Sensor entities."""
+@dataclass
+class ToloSensorEntityDescriptionBase:
+    """Required values when describing TOLO Sensor entities."""
 
-    getter: Callable[[ToloStatus], int | None]
-    availability_checker: Callable[[ToloSettings, ToloStatus], bool] | None
+    getter: Callable[[StatusInfo], int | None]
+    availability_checker: Callable[[SettingsInfo, StatusInfo], bool] | None
+
+
+@dataclass
+class ToloSensorEntityDescription(
+    SensorEntityDescription, ToloSensorEntityDescriptionBase
+):
+    """Class describing TOLO Sensor entities."""
 
     state_class = SensorStateClass.MEASUREMENT
 
@@ -42,6 +48,7 @@ SENSORS = (
         key="water_level",
         translation_key="water_level",
         entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:waves-arrow-up",
         native_unit_of_measurement=PERCENTAGE,
         getter=lambda status: status.water_level_percent,
         availability_checker=None,
@@ -59,6 +66,7 @@ SENSORS = (
         key="power_timer_remaining",
         translation_key="power_timer_remaining",
         entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:power-settings",
         native_unit_of_measurement=UnitOfTime.MINUTES,
         getter=lambda status: status.power_timer,
         availability_checker=lambda settings, status: status.power_on
@@ -68,6 +76,7 @@ SENSORS = (
         key="salt_bath_timer_remaining",
         translation_key="salt_bath_timer_remaining",
         entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:shaker-outline",
         native_unit_of_measurement=UnitOfTime.MINUTES,
         getter=lambda status: status.salt_bath_timer,
         availability_checker=lambda settings, status: status.salt_bath_on
@@ -77,6 +86,7 @@ SENSORS = (
         key="fan_timer_remaining",
         translation_key="fan_timer_remaining",
         entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:fan-auto",
         native_unit_of_measurement=UnitOfTime.MINUTES,
         getter=lambda status: status.fan_timer,
         availability_checker=lambda settings, status: status.fan_on

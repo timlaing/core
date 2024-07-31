@@ -1,5 +1,4 @@
 """Config flow for myStrom integration."""
-
 from __future__ import annotations
 
 import logging
@@ -9,8 +8,9 @@ import pymystrom
 from pymystrom.exceptions import MyStromConnectionError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_NAME
+from homeassistant.data_entry_flow import FlowResult
 
 from .const import DOMAIN
 
@@ -26,14 +26,18 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 )
 
 
-class MyStromConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for myStrom."""
 
     VERSION = 1
 
+    async def async_step_import(self, import_config: dict[str, Any]) -> FlowResult:
+        """Handle import from config."""
+        return await self.async_step_user(import_config)
+
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         errors: dict[str, str] = {}
 

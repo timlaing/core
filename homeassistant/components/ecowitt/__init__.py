@@ -1,5 +1,4 @@
 """The Ecowitt Weather Station Component."""
-
 from __future__ import annotations
 
 from aioecowitt import EcoWittListener
@@ -14,12 +13,10 @@ from .const import DOMAIN
 
 PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
 
-type EcowittConfigEntry = ConfigEntry[EcoWittListener]
 
-
-async def async_setup_entry(hass: HomeAssistant, entry: EcowittConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up the Ecowitt component from UI."""
-    ecowitt = entry.runtime_data = EcoWittListener()
+    ecowitt = hass.data.setdefault(DOMAIN, {})[entry.entry_id] = EcoWittListener()
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -34,7 +31,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: EcowittConfigEntry) -> b
     )
 
     @callback
-    def _stop_ecowitt(_: Event) -> None:
+    def _stop_ecowitt(_: Event):
         """Stop the Ecowitt listener."""
         webhook.async_unregister(hass, entry.data[CONF_WEBHOOK_ID])
 
@@ -45,8 +42,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: EcowittConfigEntry) -> b
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: EcowittConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     webhook.async_unregister(hass, entry.data[CONF_WEBHOOK_ID])
 
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        hass.data[DOMAIN].pop(entry.entry_id)
+
+    return unload_ok

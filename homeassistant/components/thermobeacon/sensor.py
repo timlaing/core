@@ -1,5 +1,4 @@
 """Support for ThermoBeacon sensors."""
-
 from __future__ import annotations
 
 from thermobeacon_ble import (
@@ -77,8 +76,6 @@ SENSOR_DESCRIPTIONS = {
         device_class=SensorDeviceClass.VOLTAGE,
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         state_class=SensorStateClass.MEASUREMENT,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        entity_registry_enabled_default=False,
     ),
 }
 
@@ -129,9 +126,7 @@ async def async_setup_entry(
 
 
 class ThermoBeaconBluetoothSensorEntity(
-    PassiveBluetoothProcessorEntity[
-        PassiveBluetoothDataProcessor[float | int | None, SensorUpdate]
-    ],
+    PassiveBluetoothProcessorEntity[PassiveBluetoothDataProcessor[float | int | None]],
     SensorEntity,
 ):
     """Representation of a ThermoBeacon sensor."""

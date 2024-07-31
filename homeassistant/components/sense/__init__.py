@@ -1,9 +1,6 @@
 """Support for monitoring a Sense energy sensor."""
-
-from dataclasses import dataclass
 from datetime import timedelta
 import logging
-from typing import Any
 
 from sense_energy import (
     ASyncSenseable,
@@ -23,20 +20,24 @@ from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
     ACTIVE_UPDATE_RATE,
+    DOMAIN,
     SENSE_CONNECT_EXCEPTIONS,
+    SENSE_DATA,
     SENSE_DEVICE_UPDATE,
+    SENSE_DEVICES_DATA,
+    SENSE_DISCOVERED_DEVICES_DATA,
     SENSE_TIMEOUT_EXCEPTIONS,
+    SENSE_TRENDS_COORDINATOR,
     SENSE_WEBSOCKET_EXCEPTIONS,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR]
-type SenseConfigEntry = ConfigEntry[SenseData]
 
 
 class SenseDevicesData:
@@ -55,17 +56,7 @@ class SenseDevicesData:
         return self._data_by_device.get(sense_device_id)
 
 
-@dataclass(kw_only=True, slots=True)
-class SenseData:
-    """Sense data type."""
-
-    data: ASyncSenseable
-    device_data: SenseDevicesData
-    trends: DataUpdateCoordinator[None]
-    discovered: list[dict[str, Any]]
-
-
-async def async_setup_entry(hass: HomeAssistant, entry: SenseConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Sense from a config entry."""
 
     entry_data = entry.data
@@ -99,6 +90,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: SenseConfigEntry) -> boo
     except SENSE_CONNECT_EXCEPTIONS as err:
         raise ConfigEntryNotReady(str(err)) from err
 
+    sense_devices_data = SenseDevicesData()
     try:
         sense_discovered_devices = await gateway.get_discovered_device_data()
         await gateway.update_realtime()
@@ -116,8 +108,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: SenseConfigEntry) -> boo
         except (SenseAuthenticationException, SenseMFARequiredException) as err:
             _LOGGER.warning("Sense authentication expired")
             raise ConfigEntryAuthFailed(err) from err
-        except SENSE_CONNECT_EXCEPTIONS as err:
-            raise UpdateFailed(err) from err
 
     trends_coordinator: DataUpdateCoordinator[None] = DataUpdateCoordinator(
         hass,
@@ -139,12 +129,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: SenseConfigEntry) -> boo
         "sense.trends-coordinator-refresh",
     )
 
-    entry.runtime_data = SenseData(
-        data=gateway,
-        device_data=SenseDevicesData(),
-        trends=trends_coordinator,
-        discovered=sense_discovered_devices,
-    )
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
+        SENSE_DATA: gateway,
+        SENSE_DEVICES_DATA: sense_devices_data,
+        SENSE_TRENDS_COORDINATOR: trends_coordinator,
+        SENSE_DISCOVERED_DEVICES_DATA: sense_discovered_devices,
+    }
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -159,7 +149,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: SenseConfigEntry) -> boo
 
         data = gateway.get_realtime()
         if "devices" in data:
-            entry.runtime_data.device_data.set_devices_data(data["devices"])
+            sense_devices_data.set_devices_data(data["devices"])
         async_dispatcher_send(hass, f"{SENSE_DEVICE_UPDATE}-{gateway.sense_monitor_id}")
 
     remove_update_callback = async_track_time_interval(
@@ -180,6 +170,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: SenseConfigEntry) -> boo
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: SenseConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unload_ok:
+        hass.data[DOMAIN].pop(entry.entry_id)
+    return unload_ok

@@ -1,5 +1,4 @@
 """Generic Plugwise Entity Class."""
-
 from __future__ import annotations
 
 from plugwise.constants import DeviceData

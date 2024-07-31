@@ -1,5 +1,4 @@
 """Tests for the Rituals Perfume Genie binary sensor platform."""
-
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.const import ATTR_DEVICE_CLASS, STATE_ON, EntityCategory
 from homeassistant.core import HomeAssistant

@@ -12,12 +12,13 @@
 
 import logging
 
+from aurorapy.client import AuroraSerialClient
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ADDRESS, CONF_PORT, Platform
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
-from .coordinator import AuroraAbbDataUpdateCoordinator
 
 PLATFORMS = [Platform.SENSOR]
 
@@ -29,10 +30,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     comport = entry.data[CONF_PORT]
     address = entry.data[CONF_ADDRESS]
-    coordinator = AuroraAbbDataUpdateCoordinator(hass, comport, address)
-    await coordinator.async_config_entry_first_refresh()
-
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+    ser_client = AuroraSerialClient(address, comport, parity="N", timeout=1)
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = ser_client
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True

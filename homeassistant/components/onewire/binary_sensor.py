@@ -1,5 +1,4 @@
 """Support for 1-Wire binary sensors."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -10,17 +9,23 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import OneWireConfigEntry
-from .const import DEVICE_KEYS_0_3, DEVICE_KEYS_0_7, DEVICE_KEYS_A_B, READ_MODE_BOOL
+from .const import (
+    DEVICE_KEYS_0_3,
+    DEVICE_KEYS_0_7,
+    DEVICE_KEYS_A_B,
+    DOMAIN,
+    READ_MODE_BOOL,
+)
 from .onewire_entities import OneWireEntity, OneWireEntityDescription
 from .onewirehub import OneWireHub
 
 
-@dataclass(frozen=True)
+@dataclass
 class OneWireBinarySensorEntityDescription(
     OneWireEntityDescription, BinarySensorEntityDescription
 ):
@@ -30,33 +35,30 @@ class OneWireBinarySensorEntityDescription(
 DEVICE_BINARY_SENSORS: dict[str, tuple[OneWireBinarySensorEntityDescription, ...]] = {
     "12": tuple(
         OneWireBinarySensorEntityDescription(
-            key=f"sensed.{device_key}",
+            key=f"sensed.{id}",
             entity_registry_enabled_default=False,
             read_mode=READ_MODE_BOOL,
-            translation_key="sensed_id",
-            translation_placeholders={"id": str(device_key)},
+            translation_key=f"sensed_{id.lower()}",
         )
-        for device_key in DEVICE_KEYS_A_B
+        for id in DEVICE_KEYS_A_B
     ),
     "29": tuple(
         OneWireBinarySensorEntityDescription(
-            key=f"sensed.{device_key}",
+            key=f"sensed.{id}",
             entity_registry_enabled_default=False,
             read_mode=READ_MODE_BOOL,
-            translation_key="sensed_id",
-            translation_placeholders={"id": str(device_key)},
+            translation_key=f"sensed_{id}",
         )
-        for device_key in DEVICE_KEYS_0_7
+        for id in DEVICE_KEYS_0_7
     ),
     "3A": tuple(
         OneWireBinarySensorEntityDescription(
-            key=f"sensed.{device_key}",
+            key=f"sensed.{id}",
             entity_registry_enabled_default=False,
             read_mode=READ_MODE_BOOL,
-            translation_key="sensed_id",
-            translation_placeholders={"id": str(device_key)},
+            translation_key=f"sensed_{id.lower()}",
         )
-        for device_key in DEVICE_KEYS_A_B
+        for id in DEVICE_KEYS_A_B
     ),
     "EF": (),  # "HobbyBoard": special
 }
@@ -65,15 +67,14 @@ DEVICE_BINARY_SENSORS: dict[str, tuple[OneWireBinarySensorEntityDescription, ...
 HOBBYBOARD_EF: dict[str, tuple[OneWireBinarySensorEntityDescription, ...]] = {
     "HB_HUB": tuple(
         OneWireBinarySensorEntityDescription(
-            key=f"hub/short.{device_key}",
+            key=f"hub/short.{id}",
             entity_registry_enabled_default=False,
             read_mode=READ_MODE_BOOL,
             entity_category=EntityCategory.DIAGNOSTIC,
             device_class=BinarySensorDeviceClass.PROBLEM,
-            translation_key="hub_short_id",
-            translation_placeholders={"id": str(device_key)},
+            translation_key=f"hub_short_{id}",
         )
-        for device_key in DEVICE_KEYS_0_3
+        for id in DEVICE_KEYS_0_3
     ),
 }
 
@@ -89,13 +90,13 @@ def get_sensor_types(
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: OneWireConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up 1-Wire platform."""
-    entities = await hass.async_add_executor_job(
-        get_entities, config_entry.runtime_data
-    )
+    onewire_hub = hass.data[DOMAIN][config_entry.entry_id]
+
+    entities = await hass.async_add_executor_job(get_entities, onewire_hub)
     async_add_entities(entities, True)
 
 
@@ -111,7 +112,7 @@ def get_entities(onewire_hub: OneWireHub) -> list[OneWireBinarySensor]:
         device_type = device.type
         device_info = device.device_info
         device_sub_type = "std"
-        if device_type and "EF" in family:
+        if "EF" in family:
             device_sub_type = "HobbyBoard"
             family = device_type
 
@@ -138,8 +139,6 @@ class OneWireBinarySensor(OneWireEntity, BinarySensorEntity):
     entity_description: OneWireBinarySensorEntityDescription
 
     @property
-    def is_on(self) -> bool | None:
+    def is_on(self) -> bool:
         """Return true if sensor is on."""
-        if self._state is None:
-            return None
         return bool(self._state)

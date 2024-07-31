@@ -1,10 +1,9 @@
 """Test the Nmap Tracker config flow."""
-
 from unittest.mock import patch
 
 import pytest
 
-from homeassistant import config_entries
+from homeassistant import config_entries, data_entry_flow
 from homeassistant.components.device_tracker import (
     CONF_CONSIDER_HOME,
     CONF_SCAN_INTERVAL,
@@ -17,7 +16,6 @@ from homeassistant.components.nmap_tracker.const import (
 )
 from homeassistant.const import CONF_EXCLUDE, CONF_HOSTS
 from homeassistant.core import CoreState, HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -25,13 +23,13 @@ from tests.common import MockConfigEntry
 @pytest.mark.parametrize(
     "hosts", ["1.1.1.1", "192.168.1.0/24", "192.168.1.0/24,192.168.2.0/24"]
 )
-async def test_form(hass: HomeAssistant, hosts: str) -> None:
+async def test_form(hass: HomeAssistant, hosts: str, mock_get_source_ip) -> None:
     """Test we get the form."""
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["errors"] == {}
 
     schema_defaults = result["data_schema"]({})
@@ -52,7 +50,7 @@ async def test_form(hass: HomeAssistant, hosts: str) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
+    assert result2["type"] == "create_entry"
     assert result2["title"] == f"Nmap Tracker {hosts}"
     assert result2["data"] == {}
     assert result2["options"] == {
@@ -64,13 +62,13 @@ async def test_form(hass: HomeAssistant, hosts: str) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_range(hass: HomeAssistant) -> None:
+async def test_form_range(hass: HomeAssistant, mock_get_source_ip) -> None:
     """Test we get the form and can take an ip range."""
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["errors"] == {}
 
     with patch(
@@ -88,7 +86,7 @@ async def test_form_range(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
+    assert result2["type"] == "create_entry"
     assert result2["title"] == "Nmap Tracker 192.168.0.5-12"
     assert result2["data"] == {}
     assert result2["options"] == {
@@ -100,13 +98,13 @@ async def test_form_range(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_invalid_hosts(hass: HomeAssistant) -> None:
+async def test_form_invalid_hosts(hass: HomeAssistant, mock_get_source_ip) -> None:
     """Test invalid hosts passed in."""
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["errors"] == {}
 
     result2 = await hass.config_entries.flow.async_configure(
@@ -120,11 +118,11 @@ async def test_form_invalid_hosts(hass: HomeAssistant) -> None:
     )
     await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == "form"
     assert result2["errors"] == {CONF_HOSTS: "invalid_hosts"}
 
 
-async def test_form_already_configured(hass: HomeAssistant) -> None:
+async def test_form_already_configured(hass: HomeAssistant, mock_get_source_ip) -> None:
     """Test duplicate host list."""
 
     config_entry = MockConfigEntry(
@@ -141,7 +139,7 @@ async def test_form_already_configured(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["errors"] == {}
 
     result2 = await hass.config_entries.flow.async_configure(
@@ -155,17 +153,17 @@ async def test_form_already_configured(hass: HomeAssistant) -> None:
     )
     await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.ABORT
+    assert result2["type"] == "abort"
     assert result2["reason"] == "already_configured"
 
 
-async def test_form_invalid_excludes(hass: HomeAssistant) -> None:
+async def test_form_invalid_excludes(hass: HomeAssistant, mock_get_source_ip) -> None:
     """Test invalid excludes passed in."""
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == "form"
     assert result["errors"] == {}
 
     result2 = await hass.config_entries.flow.async_configure(
@@ -179,11 +177,11 @@ async def test_form_invalid_excludes(hass: HomeAssistant) -> None:
     )
     await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == "form"
     assert result2["errors"] == {CONF_EXCLUDE: "invalid_hosts"}
 
 
-async def test_options_flow(hass: HomeAssistant) -> None:
+async def test_options_flow(hass: HomeAssistant, mock_get_source_ip) -> None:
     """Test we can edit options."""
 
     config_entry = MockConfigEntry(
@@ -197,14 +195,14 @@ async def test_options_flow(hass: HomeAssistant) -> None:
         },
     )
     config_entry.add_to_hass(hass)
-    hass.set_state(CoreState.stopped)
+    hass.state = CoreState.stopped
 
     assert await hass.config_entries.async_setup(config_entry.entry_id)
     await hass.async_block_till_done()
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
     await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["step_id"] == "init"
 
     assert result["data_schema"]({}) == {
@@ -233,7 +231,7 @@ async def test_options_flow(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
     assert config_entry.options == {
         CONF_HOSTS: "192.168.1.0/24,192.168.2.0/24",
         CONF_HOME_INTERVAL: 5,

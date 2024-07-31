@@ -1,5 +1,4 @@
 """Support to keep track of user controlled booleans for within automation."""
-
 from __future__ import annotations
 
 import logging
@@ -26,7 +25,7 @@ from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.helpers.restore_state import RestoreEntity
 import homeassistant.helpers.service
 from homeassistant.helpers.storage import Store
-from homeassistant.helpers.typing import ConfigType, VolDictType
+from homeassistant.helpers.typing import ConfigType
 from homeassistant.loader import bind_hass
 
 DOMAIN = "input_boolean"
@@ -35,7 +34,7 @@ _LOGGER = logging.getLogger(__name__)
 
 CONF_INITIAL = "initial"
 
-STORAGE_FIELDS: VolDictType = {
+STORAGE_FIELDS = {
     vol.Required(CONF_NAME): vol.All(str, vol.Length(min=1)),
     vol.Optional(CONF_INITIAL): cv.boolean,
     vol.Optional(CONF_ICON): cv.icon,

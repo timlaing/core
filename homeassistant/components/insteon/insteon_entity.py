@@ -1,5 +1,4 @@
 """Insteon base entity."""
-
 import functools
 import logging
 
@@ -95,7 +94,6 @@ class InsteonEntity(Entity):
                 f" {self._insteon_device.engine_version}"
             ),
             via_device=(DOMAIN, str(devices.modem.address)),
-            configuration_url=f"homeassistant://insteon/device/config/{self._insteon_device.id}",
         )
 
     @callback

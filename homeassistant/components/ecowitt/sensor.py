@@ -1,12 +1,11 @@
 """Support for Ecowitt Weather Stations."""
-
 from __future__ import annotations
 
 import dataclasses
 from datetime import datetime
 from typing import Final
 
-from aioecowitt import EcoWittSensor, EcoWittSensorTypes
+from aioecowitt import EcoWittListener, EcoWittSensor, EcoWittSensorTypes
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -14,6 +13,7 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     CONCENTRATION_PARTS_PER_MILLION,
@@ -21,7 +21,6 @@ from homeassistant.const import (
     LIGHT_LUX,
     PERCENTAGE,
     UV_INDEX,
-    EntityCategory,
     UnitOfElectricPotential,
     UnitOfIrradiance,
     UnitOfLength,
@@ -36,7 +35,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.util.unit_system import METRIC_SYSTEM, US_CUSTOMARY_SYSTEM
 
-from . import EcowittConfigEntry
+from .const import DOMAIN
 from .entity import EcowittEntity
 
 _METRIC: Final = (
@@ -95,14 +94,12 @@ ECOWITT_SENSORS_MAPPING: Final = {
         device_class=SensorDeviceClass.BATTERY,
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     EcoWittSensorTypes.BATTERY_VOLTAGE: SensorEntityDescription(
         key="BATTERY_VOLTAGE",
         device_class=SensorDeviceClass.VOLTAGE,
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         state_class=SensorStateClass.MEASUREMENT,
-        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     EcoWittSensorTypes.CO2_PPM: SensorEntityDescription(
         key="CO2_PPM",
@@ -124,7 +121,6 @@ ECOWITT_SENSORS_MAPPING: Final = {
         device_class=SensorDeviceClass.VOLTAGE,
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         state_class=SensorStateClass.MEASUREMENT,
-        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     EcoWittSensorTypes.LIGHTNING_COUNT: SensorEntityDescription(
         key="LIGHTNING_COUNT",
@@ -177,12 +173,6 @@ ECOWITT_SENSORS_MAPPING: Final = {
         native_unit_of_measurement=UnitOfLength.MILES,
         state_class=SensorStateClass.MEASUREMENT,
     ),
-    EcoWittSensorTypes.SOIL_RAWADC: SensorEntityDescription(
-        key="SOIL_RAWADC",
-        entity_registry_enabled_default=False,
-        state_class=SensorStateClass.MEASUREMENT,
-        entity_category=EntityCategory.DIAGNOSTIC,
-    ),
     EcoWittSensorTypes.SPEED_KPH: SensorEntityDescription(
         key="SPEED_KPH",
         device_class=SensorDeviceClass.WIND_SPEED,
@@ -216,12 +206,10 @@ ECOWITT_SENSORS_MAPPING: Final = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: EcowittConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Add sensors if new."""
-    ecowitt = entry.runtime_data
+    ecowitt: EcoWittListener = hass.data[DOMAIN][entry.entry_id]
 
     def _new_sensor(sensor: EcoWittSensor) -> None:
         """Add new sensor."""
@@ -243,12 +231,7 @@ async def async_setup_entry(
         )
 
         # Hourly rain doesn't reset to fixed hours, it must be measurement state classes
-        if sensor.key in (
-            "hrain_piezomm",
-            "hrain_piezo",
-            "hourlyrainmm",
-            "hourlyrainin",
-        ):
+        if sensor.key in ("hrain_piezomm", "hrain_piezo"):
             description = dataclasses.replace(
                 description,
                 state_class=SensorStateClass.MEASUREMENT,

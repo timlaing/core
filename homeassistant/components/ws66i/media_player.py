@@ -1,5 +1,4 @@
 """Support for interfacing with WS66i 6 zone home audio controller."""
-
 from pyws66i import WS66i, ZoneStatus
 
 from homeassistant.components.media_player import (

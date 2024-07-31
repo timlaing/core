@@ -1,5 +1,4 @@
 """Fixtures for pywemo."""
-
 import contextlib
 from unittest.mock import create_autospec, patch
 
@@ -82,9 +81,8 @@ def create_pywemo_device(pywemo_registry, pywemo_model):
         device.switch_state = 0
 
     url = f"http://{MOCK_HOST}:{MOCK_PORT}/setup.xml"
-    with (
-        patch("pywemo.setup_url_for_address", return_value=url),
-        patch("pywemo.discovery.device_from_description", return_value=device),
+    with patch("pywemo.setup_url_for_address", return_value=url), patch(
+        "pywemo.discovery.device_from_description", return_value=device
     ):
         yield device
 

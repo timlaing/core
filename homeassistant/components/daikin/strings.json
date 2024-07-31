@@ -51,11 +51,6 @@
       "compressor_energy_consumption": {
         "name": "Compressor energy consumption"
       }
-    },
-    "switch": {
-      "toggle": {
-        "name": "Power"
-      }
     }
   }
 }

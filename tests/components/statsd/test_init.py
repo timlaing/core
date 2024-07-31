@@ -1,12 +1,11 @@
 """The tests for the StatsD feeder."""
-
 from unittest import mock
 from unittest.mock import patch
 
 import pytest
 import voluptuous as vol
 
-from homeassistant.components import statsd
+import homeassistant.components.statsd as statsd
 from homeassistant.const import STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component

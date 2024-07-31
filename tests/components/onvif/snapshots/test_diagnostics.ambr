@@ -13,7 +13,6 @@
       'disabled_by': None,
       'domain': 'onvif',
       'entry_id': '1',
-      'minor_version': 1,
       'options': dict({
         'enable_webhooks': True,
         'extra_arguments': '-pred 1',
@@ -23,7 +22,7 @@
       'pref_disable_polling': False,
       'source': 'user',
       'title': 'Mock Title',
-      'unique_id': 'aa:bb:cc:dd:ee:ff',
+      'unique_id': 'aa:bb:cc:dd:ee',
       'version': 1,
     }),
     'device': dict({
@@ -35,7 +34,7 @@
       }),
       'info': dict({
         'fw_version': 'TestFirmwareVersion',
-        'mac': 'aa:bb:cc:dd:ee:ff',
+        'mac': 'aa:bb:cc:dd:ee',
         'manufacturer': 'TestManufacturer',
         'model': 'TestModel',
         'serial_number': 'ABCDEFGHIJK',

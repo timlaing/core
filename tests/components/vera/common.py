@@ -1,5 +1,4 @@
 """Common code for tests."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -20,7 +19,7 @@ from homeassistant.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
-type SetupCallback = Callable[[pv.VeraController, dict], None]
+SetupCallback = Callable[[pv.VeraController, dict], None]
 
 
 class ControllerData(NamedTuple):
@@ -58,8 +57,8 @@ class ControllerConfig(NamedTuple):
 
 
 def new_simple_controller_config(
-    config: dict | None = None,
-    options: dict | None = None,
+    config: dict = None,
+    options: dict = None,
     config_source=ConfigSource.CONFIG_FLOW,
     serial_number="1111",
     devices: tuple[pv.VeraDevice, ...] = (),

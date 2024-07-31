@@ -1,5 +1,4 @@
 """Constants for the Honeywell Lyric integration."""
-
 from aiohttp.client_exceptions import ClientResponseError
 from aiolyric.exceptions import LyricAuthenticationException, LyricException
 

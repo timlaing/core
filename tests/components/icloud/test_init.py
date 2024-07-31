@@ -1,5 +1,4 @@
 """Tests for the iCloud config flow."""
-
 from unittest.mock import Mock, patch
 
 import pytest

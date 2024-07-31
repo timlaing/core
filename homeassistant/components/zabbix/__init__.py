@@ -1,6 +1,4 @@
 """Support for Zabbix."""
-
-from collections.abc import Callable
 from contextlib import suppress
 import json
 import logging
@@ -25,7 +23,7 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import event as event_helper, state as state_helper
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entityfilter import (
@@ -101,17 +99,15 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     hass.data[DOMAIN] = zapi
 
-    def event_to_metrics(
-        event: Event, float_keys: set[str], string_keys: set[str]
-    ) -> list[ZabbixMetric] | None:
+    def event_to_metrics(event, float_keys, string_keys):
         """Add an event to the outgoing Zabbix list."""
         state = event.data.get("new_state")
         if state is None or state.state in (STATE_UNKNOWN, "", STATE_UNAVAILABLE):
-            return None
+            return
 
         entity_id = state.entity_id
         if not entities_filter(entity_id):
-            return None
+            return
 
         floats = {}
         strings = {}
@@ -143,7 +139,9 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         float_keys_count = len(float_keys)
         float_keys.update(floats)
         if len(float_keys) != float_keys_count:
-            floats_discovery = [{"{#KEY}": float_key} for float_key in float_keys]
+            floats_discovery = []
+            for float_key in float_keys:
+                floats_discovery.append({"{#KEY}": float_key})
             metric = ZabbixMetric(
                 publish_states_host,
                 "homeassistant.floats_discovery",
@@ -161,7 +159,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     if publish_states_host:
         zabbix_sender = ZabbixSender(zabbix_server=conf[CONF_HOST])
-        instance = ZabbixThread(zabbix_sender, event_to_metrics)
+        instance = ZabbixThread(hass, zabbix_sender, event_to_metrics)
         instance.setup(hass)
 
     return True
@@ -172,47 +170,41 @@ class ZabbixThread(threading.Thread):
 
     MAX_TRIES = 3
 
-    def __init__(
-        self,
-        zabbix_sender: ZabbixSender,
-        event_to_metrics: Callable[
-            [Event, set[str], set[str]], list[ZabbixMetric] | None
-        ],
-    ) -> None:
+    def __init__(self, hass, zabbix_sender, event_to_metrics):
         """Initialize the listener."""
         threading.Thread.__init__(self, name="Zabbix")
-        self.queue: queue.Queue = queue.Queue()
+        self.queue = queue.Queue()
         self.zabbix_sender = zabbix_sender
         self.event_to_metrics = event_to_metrics
         self.write_errors = 0
         self.shutdown = False
-        self.float_keys: set[str] = set()
-        self.string_keys: set[str] = set()
+        self.float_keys = set()
+        self.string_keys = set()
 
-    def setup(self, hass: HomeAssistant) -> None:
+    def setup(self, hass):
         """Set up the thread and start it."""
         hass.bus.listen(EVENT_STATE_CHANGED, self._event_listener)
         hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, self._shutdown)
         self.start()
         _LOGGER.debug("Started publishing state changes to Zabbix")
 
-    def _shutdown(self, event: Event) -> None:
+    def _shutdown(self, event):
         """Shut down the thread."""
         self.queue.put(None)
         self.join()
 
     @callback
-    def _event_listener(self, event: Event[EventStateChangedData]) -> None:
+    def _event_listener(self, event):
         """Listen for new messages on the bus and queue them for Zabbix."""
         item = (time.monotonic(), event)
         self.queue.put(item)
 
-    def get_metrics(self) -> tuple[int, list[ZabbixMetric]]:
+    def get_metrics(self):
         """Return a batch of events formatted for writing."""
         queue_seconds = QUEUE_BACKLOG_SECONDS + self.MAX_TRIES * RETRY_DELAY
 
         count = 0
-        metrics: list[ZabbixMetric] = []
+        metrics = []
 
         dropped = 0
 
@@ -242,7 +234,7 @@ class ZabbixThread(threading.Thread):
 
         return count, metrics
 
-    def write_to_zabbix(self, metrics: list[ZabbixMetric]) -> None:
+    def write_to_zabbix(self, metrics):
         """Write preprocessed events to zabbix, with retry."""
 
         for retry in range(self.MAX_TRIES + 1):
@@ -263,7 +255,7 @@ class ZabbixThread(threading.Thread):
                         _LOGGER.error("Write error: %s", err)
                     self.write_errors += len(metrics)
 
-    def run(self) -> None:
+    def run(self):
         """Process incoming events."""
         while not self.shutdown:
             count, metrics = self.get_metrics()

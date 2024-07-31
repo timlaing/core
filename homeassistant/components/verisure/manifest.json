@@ -1,7 +1,7 @@
 {
   "domain": "verisure",
   "name": "Verisure",
-  "codeowners": [],
+  "codeowners": ["@frenck"],
   "config_flow": true,
   "dhcp": [
     {

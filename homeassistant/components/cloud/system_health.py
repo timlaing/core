@@ -1,11 +1,13 @@
 """Provide info to system health."""
-
 from typing import Any
+
+from hass_nabucasa import Cloud
 
 from homeassistant.components import system_health
 from homeassistant.core import HomeAssistant, callback
 
-from .const import DATA_CLOUD
+from .client import CloudClient
+from .const import DOMAIN
 
 
 @callback
@@ -18,7 +20,7 @@ def async_register(
 
 async def system_health_info(hass: HomeAssistant) -> dict[str, Any]:
     """Get info for the info page."""
-    cloud = hass.data[DATA_CLOUD]
+    cloud: Cloud[CloudClient] = hass.data[DOMAIN]
     client = cloud.client
 
     data: dict[str, Any] = {
@@ -35,7 +37,6 @@ async def system_health_info(hass: HomeAssistant) -> dict[str, Any]:
         data["google_enabled"] = client.prefs.google_enabled
         data["remote_server"] = cloud.remote.snitun_server
         data["certificate_status"] = cloud.remote.certificate_status
-        data["instance_id"] = client.prefs.instance_id
 
     data["can_reach_cert_server"] = system_health.async_check_can_reach_url(
         hass, f"https://{cloud.acme_server}/directory"

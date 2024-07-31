@@ -1,5 +1,4 @@
 """Constants for the Rollease Acmeda Automate integration."""
-
 import logging
 
 LOGGER = logging.getLogger(__package__)

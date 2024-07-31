@@ -1,5 +1,4 @@
 """Support for media browsing."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -40,7 +39,7 @@ EXPANDABLE_MEDIA_TYPES = [
     MediaType.CHANNELS,
 ]
 
-type GetBrowseImageUrlType = Callable[[str, str, str | None], str | None]
+GetBrowseImageUrlType = Callable[[str, str, "str | None"], str]
 
 
 def get_thumbnail_url_full(

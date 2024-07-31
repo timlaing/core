@@ -1,5 +1,4 @@
 """The tests for WS66i Media player platform."""
-
 from collections import defaultdict
 from unittest.mock import patch
 
@@ -86,7 +85,7 @@ class MockWs66i:
     def open(self):
         """Open socket. Do nothing."""
         if self.fail_open is True:
-            raise ConnectionError
+            raise ConnectionError()
 
     def close(self):
         """Close socket. Do nothing."""
@@ -138,7 +137,7 @@ async def test_setup_success(hass: HomeAssistant) -> None:
     assert hass.states.get(ZONE_1_ID) is not None
 
 
-async def _setup_ws66i(hass: HomeAssistant, ws66i) -> MockConfigEntry:
+async def _setup_ws66i(hass, ws66i) -> MockConfigEntry:
     config_entry = MockConfigEntry(
         domain=DOMAIN, data=MOCK_CONFIG, options=MOCK_DEFAULT_OPTIONS
     )
@@ -154,7 +153,7 @@ async def _setup_ws66i(hass: HomeAssistant, ws66i) -> MockConfigEntry:
     return config_entry
 
 
-async def _setup_ws66i_with_options(hass: HomeAssistant, ws66i) -> MockConfigEntry:
+async def _setup_ws66i_with_options(hass, ws66i) -> MockConfigEntry:
     config_entry = MockConfigEntry(
         domain=DOMAIN, data=MOCK_CONFIG, options=MOCK_OPTIONS
     )
@@ -195,7 +194,7 @@ async def test_update(hass: HomeAssistant, freezer: FrozenDateTimeFactory) -> No
     with patch.object(MockWs66i, "open") as method_call:
         freezer.tick(POLL_INTERVAL)
         async_fire_time_changed(hass)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await hass.async_block_till_done()
 
         assert not method_call.called
 
@@ -226,13 +225,13 @@ async def test_failed_update(
 
     freezer.tick(POLL_INTERVAL)
     async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await hass.async_block_till_done()
 
     # Failed update, close called
     with patch.object(MockWs66i, "zone_status", return_value=None):
         freezer.tick(POLL_INTERVAL)
         async_fire_time_changed(hass)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await hass.async_block_till_done()
 
     assert hass.states.is_state(ZONE_1_ID, STATE_UNAVAILABLE)
 
@@ -240,12 +239,12 @@ async def test_failed_update(
     with patch.object(MockWs66i, "zone_status", return_value=None):
         freezer.tick(POLL_INTERVAL)
         async_fire_time_changed(hass)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await hass.async_block_till_done()
 
     # A connection re-attempt succeeds
     freezer.tick(POLL_INTERVAL)
     async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await hass.async_block_till_done()
 
     # confirm entity is back on
     state = hass.states.get(ZONE_1_ID)
@@ -261,13 +260,13 @@ async def test_supported_features(hass: HomeAssistant) -> None:
 
     state = hass.states.get(ZONE_1_ID)
     assert (
-        state.attributes["supported_features"]
-        == MediaPlayerEntityFeature.VOLUME_MUTE
+        MediaPlayerEntityFeature.VOLUME_MUTE
         | MediaPlayerEntityFeature.VOLUME_SET
         | MediaPlayerEntityFeature.VOLUME_STEP
         | MediaPlayerEntityFeature.TURN_ON
         | MediaPlayerEntityFeature.TURN_OFF
         | MediaPlayerEntityFeature.SELECT_SOURCE
+        == state.attributes["supported_features"]
     )
 
 
@@ -315,7 +314,7 @@ async def test_source_select(
 
     freezer.tick(POLL_INTERVAL)
     async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await hass.async_block_till_done()
 
     state = hass.states.get(ZONE_1_ID)
 
@@ -370,14 +369,14 @@ async def test_volume_up_down(
     )
     freezer.tick(POLL_INTERVAL)
     async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await hass.async_block_till_done()
     # should not go below zero
     assert ws66i.zones[11].volume == 0
 
     await _call_media_player_service(hass, SERVICE_VOLUME_UP, {"entity_id": ZONE_1_ID})
     freezer.tick(POLL_INTERVAL)
     async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await hass.async_block_till_done()
     assert ws66i.zones[11].volume == 1
 
     await _call_media_player_service(
@@ -385,14 +384,14 @@ async def test_volume_up_down(
     )
     freezer.tick(POLL_INTERVAL)
     async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await hass.async_block_till_done()
     assert ws66i.zones[11].volume == MAX_VOL
 
     await _call_media_player_service(hass, SERVICE_VOLUME_UP, {"entity_id": ZONE_1_ID})
 
     freezer.tick(POLL_INTERVAL)
     async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await hass.async_block_till_done()
     # should not go above 38 (MAX_VOL)
     assert ws66i.zones[11].volume == MAX_VOL
 
@@ -457,59 +456,59 @@ async def test_volume_while_mute(hass: HomeAssistant) -> None:
     assert not ws66i.zones[11].mute
 
 
-async def test_first_run_with_available_zones(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
-) -> None:
+async def test_first_run_with_available_zones(hass: HomeAssistant) -> None:
     """Test first run with all zones available."""
     ws66i = MockWs66i()
     await _setup_ws66i(hass, ws66i)
 
-    entry = entity_registry.async_get(ZONE_7_ID)
+    registry = er.async_get(hass)
+
+    entry = registry.async_get(ZONE_7_ID)
     assert not entry.disabled
 
 
-async def test_first_run_with_failing_zones(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
-) -> None:
+async def test_first_run_with_failing_zones(hass: HomeAssistant) -> None:
     """Test first run with failed zones."""
     ws66i = MockWs66i()
 
     with patch.object(MockWs66i, "zone_status", return_value=None):
         await _setup_ws66i(hass, ws66i)
 
-    entry = entity_registry.async_get(ZONE_1_ID)
+    registry = er.async_get(hass)
+
+    entry = registry.async_get(ZONE_1_ID)
     assert entry is None
 
-    entry = entity_registry.async_get(ZONE_7_ID)
+    entry = registry.async_get(ZONE_7_ID)
     assert entry is None
 
 
-async def test_register_all_entities(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
-) -> None:
+async def test_register_all_entities(hass: HomeAssistant) -> None:
     """Test run with all entities registered."""
     ws66i = MockWs66i()
     await _setup_ws66i(hass, ws66i)
 
-    entry = entity_registry.async_get(ZONE_1_ID)
+    registry = er.async_get(hass)
+
+    entry = registry.async_get(ZONE_1_ID)
     assert not entry.disabled
 
-    entry = entity_registry.async_get(ZONE_7_ID)
+    entry = registry.async_get(ZONE_7_ID)
     assert not entry.disabled
 
 
-async def test_register_entities_in_1_amp_only(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
-) -> None:
+async def test_register_entities_in_1_amp_only(hass: HomeAssistant) -> None:
     """Test run with only zones 11-16 registered."""
     ws66i = MockWs66i(fail_zone_check=[21])
     await _setup_ws66i(hass, ws66i)
 
-    entry = entity_registry.async_get(ZONE_1_ID)
+    registry = er.async_get(hass)
+
+    entry = registry.async_get(ZONE_1_ID)
     assert not entry.disabled
 
-    entry = entity_registry.async_get(ZONE_2_ID)
+    entry = registry.async_get(ZONE_2_ID)
     assert not entry.disabled
 
-    entry = entity_registry.async_get(ZONE_7_ID)
+    entry = registry.async_get(ZONE_7_ID)
     assert entry is None

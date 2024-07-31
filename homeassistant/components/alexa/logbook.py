@@ -1,5 +1,4 @@
 """Describe logbook events."""
-
 from collections.abc import Callable
 from typing import Any
 

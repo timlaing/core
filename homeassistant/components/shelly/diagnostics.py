@@ -1,31 +1,29 @@
 """Diagnostics support for Shelly."""
-
 from __future__ import annotations
 
 from typing import Any
 
 from homeassistant.components.bluetooth import async_scanner_by_source
 from homeassistant.components.diagnostics import async_redact_data
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import format_mac
 
-from .coordinator import ShellyConfigEntry
+from .coordinator import get_entry_data
 
 TO_REDACT = {CONF_USERNAME, CONF_PASSWORD}
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ShellyConfigEntry
+    hass: HomeAssistant, entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    shelly_entry_data = entry.runtime_data
+    shelly_entry_data = get_entry_data(hass)[entry.entry_id]
 
     device_settings: str | dict = "not initialized"
     device_status: str | dict = "not initialized"
     bluetooth: str | dict = "not initialized"
-    last_error: str = "not initialized"
-
     if shelly_entry_data.block:
         block_coordinator = shelly_entry_data.block
         assert block_coordinator
@@ -57,10 +55,6 @@ async def async_get_config_entry_diagnostics(
                     "uptime",
                 ]
             }
-
-        if block_coordinator.device.last_error:
-            last_error = repr(block_coordinator.device.last_error)
-
     else:
         rpc_coordinator = shelly_entry_data.rpc
         assert rpc_coordinator
@@ -85,9 +79,6 @@ async def async_get_config_entry_diagnostics(
                 "scanner": await scanner.async_diagnostics(),
             }
 
-        if rpc_coordinator.device.last_error:
-            last_error = repr(rpc_coordinator.device.last_error)
-
     if isinstance(device_status, dict):
         device_status = async_redact_data(device_status, ["ssid"])
 
@@ -96,6 +87,5 @@ async def async_get_config_entry_diagnostics(
         "device_info": device_info,
         "device_settings": device_settings,
         "device_status": device_status,
-        "last_error": last_error,
         "bluetooth": bluetooth,
     }

@@ -1,5 +1,4 @@
 """The Stookwijzer integration."""
-
 from __future__ import annotations
 
 from stookwijzer import Stookwijzer

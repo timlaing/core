@@ -1,29 +1,20 @@
 """Support for fetching WiFi associations through SNMP."""
-
 from __future__ import annotations
 
 import binascii
 import logging
-from typing import TYPE_CHECKING
+import sys
 
-from pysnmp.error import PySnmpError
-from pysnmp.hlapi.asyncio import (
-    CommunityData,
-    Udp6TransportTarget,
-    UdpTransportTarget,
-    UsmUserData,
-    bulkWalkCmd,
-    isEndOfMib,
-)
 import voluptuous as vol
 
 from homeassistant.components.device_tracker import (
     DOMAIN,
-    PLATFORM_SCHEMA as DEVICE_TRACKER_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA as PARENT_PLATFORM_SCHEMA,
     DeviceScanner,
 )
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 
@@ -32,19 +23,17 @@ from .const import (
     CONF_BASEOID,
     CONF_COMMUNITY,
     CONF_PRIV_KEY,
-    DEFAULT_AUTH_PROTOCOL,
     DEFAULT_COMMUNITY,
-    DEFAULT_PORT,
-    DEFAULT_PRIV_PROTOCOL,
-    DEFAULT_TIMEOUT,
-    DEFAULT_VERSION,
-    SNMP_VERSIONS,
 )
-from .util import RequestArgsType, async_create_request_cmd_args
+
+if sys.version_info < (3, 12):
+    from pysnmp.entity import config as cfg
+    from pysnmp.entity.rfc3413.oneliner import cmdgen
+
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORM_SCHEMA = DEVICE_TRACKER_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PARENT_PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_BASEOID): cv.string,
         vol.Required(CONF_HOST): cv.string,
@@ -55,12 +44,13 @@ PLATFORM_SCHEMA = DEVICE_TRACKER_PLATFORM_SCHEMA.extend(
 )
 
 
-async def async_get_scanner(
-    hass: HomeAssistant, config: ConfigType
-) -> SnmpScanner | None:
+def get_scanner(hass: HomeAssistant, config: ConfigType) -> SnmpScanner | None:
     """Validate the configuration and return an SNMP scanner."""
+    if sys.version_info >= (3, 12):
+        raise HomeAssistantError(
+            "SNMP is not supported on Python 3.12. Please use Python 3.11."
+        )
     scanner = SnmpScanner(config[DOMAIN])
-    await scanner.async_init(hass)
 
     return scanner if scanner.success_init else None
 
@@ -69,71 +59,39 @@ class SnmpScanner(DeviceScanner):
     """Queries any SNMP capable Access Point for connected devices."""
 
     def __init__(self, config):
-        """Initialize the scanner and test the target device."""
-        host = config[CONF_HOST]
-        community = config[CONF_COMMUNITY]
-        baseoid = config[CONF_BASEOID]
-        authkey = config.get(CONF_AUTH_KEY)
-        authproto = DEFAULT_AUTH_PROTOCOL
-        privkey = config.get(CONF_PRIV_KEY)
-        privproto = DEFAULT_PRIV_PROTOCOL
+        """Initialize the scanner."""
 
-        try:
-            # Try IPv4 first.
-            target = UdpTransportTarget((host, DEFAULT_PORT), timeout=DEFAULT_TIMEOUT)
-        except PySnmpError:
-            # Then try IPv6.
-            try:
-                target = Udp6TransportTarget(
-                    (host, DEFAULT_PORT), timeout=DEFAULT_TIMEOUT
-                )
-            except PySnmpError as err:
-                _LOGGER.error("Invalid SNMP host: %s", err)
-                return
+        self.snmp = cmdgen.CommandGenerator()
 
-        if authkey is not None or privkey is not None:
-            if not authkey:
-                authproto = "none"
-            if not privkey:
-                privproto = "none"
-
-            self._auth_data = UsmUserData(
-                community,
-                authKey=authkey or None,
-                privKey=privkey or None,
-                authProtocol=authproto,
-                privProtocol=privproto,
-            )
+        self.host = cmdgen.UdpTransportTarget((config[CONF_HOST], 161))
+        if CONF_AUTH_KEY not in config or CONF_PRIV_KEY not in config:
+            self.auth = cmdgen.CommunityData(config[CONF_COMMUNITY])
         else:
-            self._auth_data = CommunityData(
-                community, mpModel=SNMP_VERSIONS[DEFAULT_VERSION]
+            self.auth = cmdgen.UsmUserData(
+                config[CONF_COMMUNITY],
+                config[CONF_AUTH_KEY],
+                config[CONF_PRIV_KEY],
+                authProtocol=cfg.usmHMACSHAAuthProtocol,
+                privProtocol=cfg.usmAesCfb128Protocol,
             )
-
-        self._target = target
-        self.request_args: RequestArgsType | None = None
-        self.baseoid = baseoid
+        self.baseoid = cmdgen.MibVariable(config[CONF_BASEOID])
         self.last_results = []
-        self.success_init = False
 
-    async def async_init(self, hass: HomeAssistant) -> None:
-        """Make a one-off read to check if the target device is reachable and readable."""
-        self.request_args = await async_create_request_cmd_args(
-            hass, self._auth_data, self._target, self.baseoid
-        )
-        data = await self.async_get_snmp_data()
+        # Test the router is accessible
+        data = self.get_snmp_data()
         self.success_init = data is not None
 
-    async def async_scan_devices(self):
+    def scan_devices(self):
         """Scan for new devices and return a list with found device IDs."""
-        await self._async_update_info()
+        self._update_info()
         return [client["mac"] for client in self.last_results if client.get("mac")]
 
-    async def async_get_device_name(self, device: str) -> str | None:
+    def get_device_name(self, device):
         """Return the name of the given device or None if we don't know."""
         # We have no names
         return None
 
-    async def _async_update_info(self):
+    def _update_info(self):
         """Ensure the information from the device is up to date.
 
         Return boolean if scanning successful.
@@ -141,48 +99,38 @@ class SnmpScanner(DeviceScanner):
         if not self.success_init:
             return False
 
-        if not (data := await self.async_get_snmp_data()):
+        if not (data := self.get_snmp_data()):
             return False
 
         self.last_results = data
         return True
 
-    async def async_get_snmp_data(self):
+    def get_snmp_data(self):
         """Fetch MAC addresses from access point via SNMP."""
         devices = []
-        if TYPE_CHECKING:
-            assert self.request_args is not None
 
-        engine, auth_data, target, context_data, object_type = self.request_args
-        walker = bulkWalkCmd(
-            engine,
-            auth_data,
-            target,
-            context_data,
-            0,
-            50,
-            object_type,
-            lexicographicMode=False,
+        errindication, errstatus, errindex, restable = self.snmp.nextCmd(
+            self.auth, self.host, self.baseoid
         )
-        async for errindication, errstatus, errindex, res in walker:
-            if errindication:
-                _LOGGER.error("SNMPLIB error: %s", errindication)
-                return None
-            if errstatus:
-                _LOGGER.error(
-                    "SNMP error: %s at %s",
-                    errstatus.prettyPrint(),
-                    errindex and res[int(errindex) - 1][0] or "?",
-                )
-                return None
 
-            for _oid, value in res:
-                if not isEndOfMib(res):
-                    try:
-                        mac = binascii.hexlify(value.asOctets()).decode("utf-8")
-                    except AttributeError:
-                        continue
-                    _LOGGER.debug("Found MAC address: %s", mac)
-                    mac = ":".join([mac[i : i + 2] for i in range(0, len(mac), 2)])
-                    devices.append({"mac": mac})
+        if errindication:
+            _LOGGER.error("SNMPLIB error: %s", errindication)
+            return
+        if errstatus:
+            _LOGGER.error(
+                "SNMP error: %s at %s",
+                errstatus.prettyPrint(),
+                errindex and restable[int(errindex) - 1][0] or "?",
+            )
+            return
+
+        for resrow in restable:
+            for _, val in resrow:
+                try:
+                    mac = binascii.hexlify(val.asOctets()).decode("utf-8")
+                except AttributeError:
+                    continue
+                _LOGGER.debug("Found MAC address: %s", mac)
+                mac = ":".join([mac[i : i + 2] for i in range(0, len(mac), 2)])
+                devices.append({"mac": mac})
         return devices

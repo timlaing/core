@@ -43,12 +43,8 @@ turn_off:
     entity: {}
 
 update_entity:
-  fields:
-    entity_id:
-      required: true
-      selector:
-        entity:
-          multiple: true
+  target:
+    entity: {}
 
 reload_custom_templates:
 reload_config_entry:

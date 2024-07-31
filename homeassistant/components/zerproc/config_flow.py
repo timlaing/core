@@ -1,5 +1,4 @@
 """Config flow for Zerproc."""
-
 import logging
 
 import pyzerproc

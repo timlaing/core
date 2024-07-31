@@ -1,5 +1,4 @@
 """Support for turning on and off Pi-hole system."""
-
 from __future__ import annotations
 
 import logging
@@ -9,29 +8,34 @@ from hole.exceptions import HoleError
 import voluptuous as vol
 
 from homeassistant.components.switch import SwitchEntity
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import PiHoleConfigEntry, PiHoleEntity
-from .const import SERVICE_DISABLE, SERVICE_DISABLE_ATTR_DURATION
+from . import PiHoleEntity
+from .const import (
+    DATA_KEY_API,
+    DATA_KEY_COORDINATOR,
+    DOMAIN as PIHOLE_DOMAIN,
+    SERVICE_DISABLE,
+    SERVICE_DISABLE_ATTR_DURATION,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: PiHoleConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up the Pi-hole switch."""
     name = entry.data[CONF_NAME]
-    hole_data = entry.runtime_data
+    hole_data = hass.data[PIHOLE_DOMAIN][entry.entry_id]
     switches = [
         PiHoleSwitch(
-            hole_data.api,
-            hole_data.coordinator,
+            hole_data[DATA_KEY_API],
+            hole_data[DATA_KEY_COORDINATOR],
             name,
             entry.entry_id,
         )

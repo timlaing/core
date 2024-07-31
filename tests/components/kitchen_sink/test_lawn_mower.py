@@ -1,5 +1,4 @@
 """The tests for the kitchen_sink lawn mower platform."""
-
 from unittest.mock import patch
 
 import pytest

@@ -1,14 +1,10 @@
 """Represent the AsusWrt router."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import datetime, timedelta
 import logging
-from types import MappingProxyType
 from typing import Any
-
-from pyasuswrt import AsusWrtError
 
 from homeassistant.components.device_tracker import (
     CONF_CONSIDER_HOME,
@@ -22,7 +18,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo, format_mac
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util, slugify
 
 from .bridge import AsusWrtBridge, WrtDevice
@@ -223,7 +219,7 @@ class AsusWrtRouter:
         """Set up a AsusWrt router."""
         try:
             await self._api.async_connect()
-        except (AsusWrtError, OSError) as exc:
+        except OSError as exc:
             raise ConfigEntryNotReady from exc
         if not self._api.is_connected:
             raise ConfigEntryNotReady
@@ -278,7 +274,7 @@ class AsusWrtRouter:
         _LOGGER.debug("Checking devices for ASUS router %s", self.host)
         try:
             wrt_devices = await self._api.async_get_connected_devices()
-        except (OSError, AsusWrtError) as exc:
+        except UpdateFailed as exc:
             if not self._connect_error:
                 self._connect_error = True
                 _LOGGER.error(
@@ -363,7 +359,7 @@ class AsusWrtRouter:
         """Add a function to call when router is closed."""
         self._on_close.append(func)
 
-    def update_options(self, new_options: MappingProxyType[str, Any]) -> bool:
+    def update_options(self, new_options: dict[str, Any]) -> bool:
         """Update router options."""
         req_reload = False
         for name, new_opt in new_options.items():

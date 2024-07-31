@@ -1,5 +1,4 @@
 """Constants for the iAlarm integration."""
-
 from pyialarm import IAlarm
 
 from homeassistant.const import (

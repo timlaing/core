@@ -1,5 +1,4 @@
 """Representation of a sirenBinary."""
-
 from typing import Any
 
 from homeassistant.components.siren import SirenEntity, SirenEntityFeature

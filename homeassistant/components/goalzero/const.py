@@ -1,5 +1,4 @@
 """Constants for the Goal Zero Yeti integration."""
-
 import logging
 from typing import Final
 

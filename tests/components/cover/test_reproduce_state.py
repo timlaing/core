@@ -1,5 +1,4 @@
 """Test reproduce state for Cover."""
-
 import pytest
 
 from homeassistant.components.cover import (

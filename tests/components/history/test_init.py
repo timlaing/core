@@ -1,5 +1,4 @@
 """The tests the History component."""
-
 from datetime import timedelta
 from http import HTTPStatus
 import json
@@ -24,6 +23,7 @@ from tests.components.recorder.common import (
     assert_multiple_states_equal_without_context_and_last_changed,
     assert_states_equal_without_context,
     async_wait_recording_done,
+    wait_recording_done,
 )
 from tests.typing import ClientSessionGenerator
 
@@ -38,26 +38,25 @@ def listeners_without_writes(listeners: dict[str, int]) -> dict[str, int]:
 
 
 @pytest.mark.usefixtures("hass_history")
-async def test_setup() -> None:
+def test_setup() -> None:
     """Test setup method of history."""
     # Verification occurs in the fixture
 
 
-async def test_get_significant_states(hass: HomeAssistant, hass_history) -> None:
+def test_get_significant_states(hass_history) -> None:
     """Test that only significant states are returned.
 
     We should get back every thermostat change that
     includes an attribute change, but only the state updates for
     media player (attribute changes are not significant and not returned).
     """
-    zero, four, states = await async_record_states(hass)
+    hass = hass_history
+    zero, four, states = record_states(hass)
     hist = get_significant_states(hass, zero, four, entity_ids=list(states))
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
 
-async def test_get_significant_states_minimal_response(
-    hass: HomeAssistant, hass_history
-) -> None:
+def test_get_significant_states_minimal_response(hass_history) -> None:
     """Test that only significant states are returned.
 
     When minimal responses is set only the first and
@@ -67,7 +66,8 @@ async def test_get_significant_states_minimal_response(
     includes an attribute change, but only the state updates for
     media player (attribute changes are not significant and not returned).
     """
-    zero, four, states = await async_record_states(hass)
+    hass = hass_history
+    zero, four, states = record_states(hass)
     hist = get_significant_states(
         hass, zero, four, minimal_response=True, entity_ids=list(states)
     )
@@ -86,7 +86,7 @@ async def test_get_significant_states_minimal_response(
         entity_states = states[entity_id]
         for state_idx in range(1, len(entity_states)):
             input_state = entity_states[state_idx]
-            orig_last_changed = json.dumps(
+            orig_last_changed = orig_last_changed = json.dumps(
                 process_timestamp(input_state.last_changed),
                 cls=JSONEncoder,
             ).replace('"', "")
@@ -121,16 +121,15 @@ async def test_get_significant_states_minimal_response(
     )
 
 
-async def test_get_significant_states_with_initial(
-    hass: HomeAssistant, hass_history
-) -> None:
+def test_get_significant_states_with_initial(hass_history) -> None:
     """Test that only significant states are returned.
 
     We should get back every thermostat change that
     includes an attribute change, but only the state updates for
     media player (attribute changes are not significant and not returned).
     """
-    zero, four, states = await async_record_states(hass)
+    hass = hass_history
+    zero, four, states = record_states(hass)
     one_and_half = zero + timedelta(seconds=1.5)
     for entity_id in states:
         if entity_id == "media_player.test":
@@ -149,25 +148,26 @@ async def test_get_significant_states_with_initial(
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
 
-async def test_get_significant_states_without_initial(
-    hass: HomeAssistant, hass_history
-) -> None:
+def test_get_significant_states_without_initial(hass_history) -> None:
     """Test that only significant states are returned.
 
     We should get back every thermostat change that
     includes an attribute change, but only the state updates for
     media player (attribute changes are not significant and not returned).
     """
-    zero, four, states = await async_record_states(hass)
+    hass = hass_history
+    zero, four, states = record_states(hass)
     one = zero + timedelta(seconds=1)
     one_with_microsecond = zero + timedelta(seconds=1, microseconds=1)
     one_and_half = zero + timedelta(seconds=1.5)
     for entity_id in states:
-        states[entity_id] = [
-            s
-            for s in states[entity_id]
-            if s.last_changed not in (one, one_with_microsecond)
-        ]
+        states[entity_id] = list(
+            filter(
+                lambda s: s.last_changed != one
+                and s.last_changed != one_with_microsecond,
+                states[entity_id],
+            )
+        )
     del states["media_player.test2"]
 
     hist = get_significant_states(
@@ -180,11 +180,10 @@ async def test_get_significant_states_without_initial(
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
 
-async def test_get_significant_states_entity_id(
-    hass: HomeAssistant, hass_history
-) -> None:
+def test_get_significant_states_entity_id(hass_history) -> None:
     """Test that only significant states are returned for one entity."""
-    zero, four, states = await async_record_states(hass)
+    hass = hass_history
+    zero, four, states = record_states(hass)
     del states["media_player.test2"]
     del states["media_player.test3"]
     del states["thermostat.test"]
@@ -195,11 +194,10 @@ async def test_get_significant_states_entity_id(
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
 
-async def test_get_significant_states_multiple_entity_ids(
-    hass: HomeAssistant, hass_history
-) -> None:
+def test_get_significant_states_multiple_entity_ids(hass_history) -> None:
     """Test that only significant states are returned for one entity."""
-    zero, four, states = await async_record_states(hass)
+    hass = hass_history
+    zero, four, states = record_states(hass)
     del states["media_player.test2"]
     del states["media_player.test3"]
     del states["thermostat.test2"]
@@ -214,15 +212,14 @@ async def test_get_significant_states_multiple_entity_ids(
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
 
-async def test_get_significant_states_are_ordered(
-    hass: HomeAssistant, hass_history
-) -> None:
+def test_get_significant_states_are_ordered(hass_history) -> None:
     """Test order of results from get_significant_states.
 
     When entity ids are given, the results should be returned with the data
     in the same order.
     """
-    zero, four, _states = await async_record_states(hass)
+    hass = hass_history
+    zero, four, _states = record_states(hass)
     entity_ids = ["media_player.test", "media_player.test2"]
     hist = get_significant_states(hass, zero, four, entity_ids)
     assert list(hist.keys()) == entity_ids
@@ -231,34 +228,37 @@ async def test_get_significant_states_are_ordered(
     assert list(hist.keys()) == entity_ids
 
 
-async def test_get_significant_states_only(hass: HomeAssistant, hass_history) -> None:
+def test_get_significant_states_only(hass_history) -> None:
     """Test significant states when significant_states_only is set."""
+    hass = hass_history
     entity_id = "sensor.test"
 
-    async def set_state(state, **kwargs):
+    def set_state(state, **kwargs):
         """Set the state."""
-        hass.states.async_set(entity_id, state, **kwargs)
-        await async_wait_recording_done(hass)
+        hass.states.set(entity_id, state, **kwargs)
+        wait_recording_done(hass)
         return hass.states.get(entity_id)
 
     start = dt_util.utcnow() - timedelta(minutes=4)
-    points = [start + timedelta(minutes=i) for i in range(1, 4)]
+    points = []
+    for i in range(1, 4):
+        points.append(start + timedelta(minutes=i))
 
     states = []
     with freeze_time(start) as freezer:
-        await set_state("123", attributes={"attribute": 10.64})
+        set_state("123", attributes={"attribute": 10.64})
 
         freezer.move_to(points[0])
         # Attributes are different, state not
-        states.append(await set_state("123", attributes={"attribute": 21.42}))
+        states.append(set_state("123", attributes={"attribute": 21.42}))
 
         freezer.move_to(points[1])
         # state is different, attributes not
-        states.append(await set_state("32", attributes={"attribute": 21.42}))
+        states.append(set_state("32", attributes={"attribute": 21.42}))
 
         freezer.move_to(points[2])
         # everything is different
-        states.append(await set_state("412", attributes={"attribute": 54.23}))
+        states.append(set_state("412", attributes={"attribute": 54.23}))
 
     hist = get_significant_states(
         hass,
@@ -291,13 +291,13 @@ async def test_get_significant_states_only(hass: HomeAssistant, hass_history) ->
     )
 
 
-async def check_significant_states(hass, zero, four, states, config):
+def check_significant_states(hass, zero, four, states, config):
     """Check if significant states are retrieved."""
     hist = get_significant_states(hass, zero, four)
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
 
-async def async_record_states(hass):
+def record_states(hass):
     """Record some test states.
 
     We inject a bunch of state updates from media player, zone and
@@ -311,10 +311,10 @@ async def async_record_states(hass):
     zone = "zone.home"
     script_c = "script.can_cancel_this_one"
 
-    async def set_state(entity_id, state, **kwargs):
+    def set_state(entity_id, state, **kwargs):
         """Set the state."""
-        hass.states.async_set(entity_id, state, **kwargs)
-        await async_wait_recording_done(hass)
+        hass.states.set(entity_id, state, **kwargs)
+        wait_recording_done(hass)
         return hass.states.get(entity_id)
 
     zero = dt_util.utcnow()
@@ -326,63 +326,55 @@ async def async_record_states(hass):
     states = {therm: [], therm2: [], mp: [], mp2: [], mp3: [], script_c: []}
     with freeze_time(one) as freezer:
         states[mp].append(
-            await set_state(mp, "idle", attributes={"media_title": str(sentinel.mt1)})
+            set_state(mp, "idle", attributes={"media_title": str(sentinel.mt1)})
         )
         states[mp2].append(
-            await set_state(
-                mp2, "YouTube", attributes={"media_title": str(sentinel.mt2)}
-            )
+            set_state(mp2, "YouTube", attributes={"media_title": str(sentinel.mt2)})
         )
         states[mp3].append(
-            await set_state(mp3, "idle", attributes={"media_title": str(sentinel.mt1)})
+            set_state(mp3, "idle", attributes={"media_title": str(sentinel.mt1)})
         )
         states[therm].append(
-            await set_state(therm, 20, attributes={"current_temperature": 19.5})
+            set_state(therm, 20, attributes={"current_temperature": 19.5})
         )
 
         freezer.move_to(one + timedelta(microseconds=1))
         states[mp].append(
-            await set_state(
-                mp, "YouTube", attributes={"media_title": str(sentinel.mt2)}
-            )
+            set_state(mp, "YouTube", attributes={"media_title": str(sentinel.mt2)})
         )
 
         freezer.move_to(two)
         # This state will be skipped only different in time
-        await set_state(mp, "YouTube", attributes={"media_title": str(sentinel.mt3)})
+        set_state(mp, "YouTube", attributes={"media_title": str(sentinel.mt3)})
         # This state will be skipped because domain is excluded
-        await set_state(zone, "zoning")
+        set_state(zone, "zoning")
         states[script_c].append(
-            await set_state(script_c, "off", attributes={"can_cancel": True})
+            set_state(script_c, "off", attributes={"can_cancel": True})
         )
         states[therm].append(
-            await set_state(therm, 21, attributes={"current_temperature": 19.8})
+            set_state(therm, 21, attributes={"current_temperature": 19.8})
         )
         states[therm2].append(
-            await set_state(therm2, 20, attributes={"current_temperature": 19})
+            set_state(therm2, 20, attributes={"current_temperature": 19})
         )
 
         freezer.move_to(three)
         states[mp].append(
-            await set_state(
-                mp, "Netflix", attributes={"media_title": str(sentinel.mt4)}
-            )
+            set_state(mp, "Netflix", attributes={"media_title": str(sentinel.mt4)})
         )
         states[mp3].append(
-            await set_state(
-                mp3, "Netflix", attributes={"media_title": str(sentinel.mt3)}
-            )
+            set_state(mp3, "Netflix", attributes={"media_title": str(sentinel.mt3)})
         )
         # Attributes changed even though state is the same
         states[therm].append(
-            await set_state(therm, 21, attributes={"current_temperature": 20})
+            set_state(therm, 21, attributes={"current_temperature": 20})
         )
 
     return zero, four, states
 
 
 async def test_fetch_period_api(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_client: ClientSessionGenerator
+    recorder_mock: Recorder, hass: HomeAssistant, hass_client: ClientSessionGenerator
 ) -> None:
     """Test the fetch period view for history."""
     await async_setup_component(hass, "history", {})
@@ -394,8 +386,8 @@ async def test_fetch_period_api(
 
 
 async def test_fetch_period_api_with_use_include_order(
-    hass: HomeAssistant,
     recorder_mock: Recorder,
+    hass: HomeAssistant,
     hass_client: ClientSessionGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -413,7 +405,7 @@ async def test_fetch_period_api_with_use_include_order(
 
 
 async def test_fetch_period_api_with_minimal_response(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_client: ClientSessionGenerator
+    recorder_mock: Recorder, hass: HomeAssistant, hass_client: ClientSessionGenerator
 ) -> None:
     """Test the fetch period view for history with minimal_response."""
     now = dt_util.utcnow()
@@ -455,7 +447,7 @@ async def test_fetch_period_api_with_minimal_response(
 
 
 async def test_fetch_period_api_with_no_timestamp(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_client: ClientSessionGenerator
+    recorder_mock: Recorder, hass: HomeAssistant, hass_client: ClientSessionGenerator
 ) -> None:
     """Test the fetch period view for history with no timestamp."""
     await async_setup_component(hass, "history", {})
@@ -465,8 +457,8 @@ async def test_fetch_period_api_with_no_timestamp(
 
 
 async def test_fetch_period_api_with_include_order(
-    hass: HomeAssistant,
     recorder_mock: Recorder,
+    hass: HomeAssistant,
     hass_client: ClientSessionGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -493,7 +485,7 @@ async def test_fetch_period_api_with_include_order(
 
 
 async def test_entity_ids_limit_via_api(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_client: ClientSessionGenerator
+    recorder_mock: Recorder, hass: HomeAssistant, hass_client: ClientSessionGenerator
 ) -> None:
     """Test limiting history to entity_ids."""
     await async_setup_component(
@@ -519,7 +511,7 @@ async def test_entity_ids_limit_via_api(
 
 
 async def test_entity_ids_limit_via_api_with_skip_initial_state(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_client: ClientSessionGenerator
+    recorder_mock: Recorder, hass: HomeAssistant, hass_client: ClientSessionGenerator
 ) -> None:
     """Test limiting history to entity_ids with skip_initial_state."""
     await async_setup_component(
@@ -553,7 +545,7 @@ async def test_entity_ids_limit_via_api_with_skip_initial_state(
 
 
 async def test_fetch_period_api_before_history_started(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_client: ClientSessionGenerator
+    recorder_mock: Recorder, hass: HomeAssistant, hass_client: ClientSessionGenerator
 ) -> None:
     """Test the fetch period view for history for the far past."""
     await async_setup_component(
@@ -574,7 +566,7 @@ async def test_fetch_period_api_before_history_started(
 
 
 async def test_fetch_period_api_far_future(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_client: ClientSessionGenerator
+    recorder_mock: Recorder, hass: HomeAssistant, hass_client: ClientSessionGenerator
 ) -> None:
     """Test the fetch period view for history for the far future."""
     await async_setup_component(
@@ -595,7 +587,7 @@ async def test_fetch_period_api_far_future(
 
 
 async def test_fetch_period_api_with_invalid_datetime(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_client: ClientSessionGenerator
+    recorder_mock: Recorder, hass: HomeAssistant, hass_client: ClientSessionGenerator
 ) -> None:
     """Test the fetch period view for history with an invalid date time."""
     await async_setup_component(
@@ -614,7 +606,7 @@ async def test_fetch_period_api_with_invalid_datetime(
 
 
 async def test_fetch_period_api_invalid_end_time(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_client: ClientSessionGenerator
+    recorder_mock: Recorder, hass: HomeAssistant, hass_client: ClientSessionGenerator
 ) -> None:
     """Test the fetch period view for history with an invalid end time."""
     await async_setup_component(
@@ -636,7 +628,7 @@ async def test_fetch_period_api_invalid_end_time(
 
 
 async def test_entity_ids_limit_via_api_with_end_time(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_client: ClientSessionGenerator
+    recorder_mock: Recorder, hass: HomeAssistant, hass_client: ClientSessionGenerator
 ) -> None:
     """Test limiting history to entity_ids with end_time."""
     await async_setup_component(
@@ -682,7 +674,7 @@ async def test_entity_ids_limit_via_api_with_end_time(
 
 
 async def test_fetch_period_api_with_no_entity_ids(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_client: ClientSessionGenerator
+    recorder_mock: Recorder, hass: HomeAssistant, hass_client: ClientSessionGenerator
 ) -> None:
     """Test the fetch period view for history with minimal_response."""
     await async_setup_component(hass, "history", {})
@@ -735,13 +727,13 @@ async def test_fetch_period_api_with_no_entity_ids(
     ],
 )
 async def test_history_with_invalid_entity_ids(
-    hass: HomeAssistant,
-    recorder_mock: Recorder,
-    hass_client: ClientSessionGenerator,
     filter_entity_id,
     status_code,
     response_contains1,
     response_contains2,
+    recorder_mock: Recorder,
+    hass: HomeAssistant,
+    hass_client: ClientSessionGenerator,
 ) -> None:
     """Test sending valid and invalid entity_ids to the API."""
     await async_setup_component(

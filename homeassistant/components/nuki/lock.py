@@ -1,9 +1,8 @@
 """Nuki.io lock platform."""
-
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Any
+from typing import Any, TypeVar
 
 from pynuki import NukiLock, NukiOpener
 from pynuki.constants import MODE_OPENER_CONTINUOUS
@@ -17,30 +16,35 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import NukiEntity, NukiEntryData
+from . import NukiCoordinator, NukiEntity
 from .const import (
     ATTR_BATTERY_CRITICAL,
     ATTR_ENABLE,
     ATTR_NUKI_ID,
     ATTR_UNLATCH,
+    DATA_COORDINATOR,
+    DATA_LOCKS,
+    DATA_OPENERS,
     DOMAIN as NUKI_DOMAIN,
     ERROR_STATES,
 )
 from .helpers import CannotConnect
+
+_NukiDeviceT = TypeVar("_NukiDeviceT", bound=NukiDevice)
 
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up the Nuki lock platform."""
-    entry_data: NukiEntryData = hass.data[NUKI_DOMAIN][entry.entry_id]
-    coordinator = entry_data.coordinator
+    data = hass.data[NUKI_DOMAIN][entry.entry_id]
+    coordinator: NukiCoordinator = data[DATA_COORDINATOR]
 
     entities: list[NukiDeviceEntity] = [
-        NukiLockEntity(coordinator, lock) for lock in entry_data.locks
+        NukiLockEntity(coordinator, lock) for lock in data[DATA_LOCKS]
     ]
     entities.extend(
-        [NukiOpenerEntity(coordinator, opener) for opener in entry_data.openers]
+        [NukiOpenerEntity(coordinator, opener) for opener in data[DATA_OPENERS]]
     )
     async_add_entities(entities)
 
@@ -62,7 +66,7 @@ async def async_setup_entry(
     )
 
 
-class NukiDeviceEntity[_NukiDeviceT: NukiDevice](NukiEntity[_NukiDeviceT], LockEntity):
+class NukiDeviceEntity(NukiEntity[_NukiDeviceT], LockEntity):
     """Representation of a Nuki device."""
 
     _attr_has_entity_name = True
@@ -75,7 +79,6 @@ class NukiDeviceEntity[_NukiDeviceT: NukiDevice](NukiEntity[_NukiDeviceT], LockE
         """Return a unique ID."""
         return self._nuki_device.nuki_id
 
-    # Deprecated, can be removed in 2024.10
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the device specific state attributes."""

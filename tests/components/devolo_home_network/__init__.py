@@ -1,5 +1,4 @@
 """Tests for the devolo Home Network integration."""
-
 from homeassistant.components.devolo_home_network.const import DOMAIN
 from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD
 from homeassistant.core import HomeAssistant

@@ -1,5 +1,4 @@
 """Support for Apple TV media player."""
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -17,15 +16,7 @@ from pyatv.const import (
     ShuffleState,
 )
 from pyatv.helpers import is_streamable
-from pyatv.interface import (
-    AppleTV,
-    AudioListener,
-    OutputDevice,
-    Playing,
-    PowerListener,
-    PushListener,
-    PushUpdater,
-)
+from pyatv.interface import AppleTV, Playing
 
 from homeassistant.components import media_source
 from homeassistant.components.media_player import (
@@ -37,13 +28,15 @@ from homeassistant.components.media_player import (
     RepeatMode,
     async_process_play_media_url,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 import homeassistant.util.dt as dt_util
 
-from . import AppleTvConfigEntry, AppleTVEntity, AppleTVManager
+from . import AppleTVEntity, AppleTVManager
 from .browse_media import build_app_list
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -98,19 +91,17 @@ SUPPORT_FEATURE_MAPPING = {
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: AppleTvConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Load Apple TV media player based on a config entry."""
     name: str = config_entry.data[CONF_NAME]
     assert config_entry.unique_id is not None
-    manager = config_entry.runtime_data
+    manager: AppleTVManager = hass.data[DOMAIN][config_entry.unique_id]
     async_add_entities([AppleTvMediaPlayer(name, config_entry.unique_id, manager)])
 
 
-class AppleTvMediaPlayer(
-    AppleTVEntity, MediaPlayerEntity, PowerListener, AudioListener, PushListener
-):
+class AppleTvMediaPlayer(AppleTVEntity, MediaPlayerEntity):
     """Representation of an Apple TV media player."""
 
     _attr_supported_features = SUPPORT_APPLE_TV
@@ -125,9 +116,9 @@ class AppleTvMediaPlayer(
     def async_device_connected(self, atv: AppleTV) -> None:
         """Handle when connection is made to device."""
         # NB: Do not use _is_feature_available here as it only works when playing
-        if atv.features.in_state(FeatureState.Available, FeatureName.PushUpdates):
-            atv.push_updater.listener = self
-            atv.push_updater.start()
+        if self.atv.features.in_state(FeatureState.Available, FeatureName.PushUpdates):
+            self.atv.push_updater.listener = self
+            self.atv.push_updater.start()
 
         self._attr_supported_features = SUPPORT_BASE
 
@@ -135,7 +126,7 @@ class AppleTvMediaPlayer(
         # "Unsupported" are considered here as the state of such a feature can never
         # change after a connection has been established, i.e. an unsupported feature
         # can never change to be supported.
-        all_features = atv.features.all_features()
+        all_features = self.atv.features.all_features()
         for feature_name, support_flag in SUPPORT_FEATURE_MAPPING.items():
             feature_info = all_features.get(feature_name)
             if feature_info and feature_info.state != FeatureState.Unsupported:
@@ -145,20 +136,16 @@ class AppleTvMediaPlayer(
         # metadata update arrives (sometime very soon after this callback returns)
 
         # Listen to power updates
-        atv.power.listener = self
+        self.atv.power.listener = self
 
         # Listen to volume updates
-        atv.audio.listener = self
+        self.atv.audio.listener = self
 
-        if atv.features.in_state(FeatureState.Available, FeatureName.AppList):
-            self.manager.config_entry.async_create_task(
-                self.hass, self._update_app_list(), eager_start=True
-            )
+        if self.atv.features.in_state(FeatureState.Available, FeatureName.AppList):
+            self.hass.create_task(self._update_app_list())
 
     async def _update_app_list(self) -> None:
         _LOGGER.debug("Updating app list")
-        if not self.atv:
-            return
         try:
             apps = await self.atv.apps.app_list()
         except exceptions.NotSupportedError:
@@ -167,9 +154,9 @@ class AppleTvMediaPlayer(
             _LOGGER.exception("Failed to update app list")
         else:
             self._app_list = {
-                app_name: app.identifier
-                for app in sorted(apps, key=lambda app: (app.name or "").lower())
-                if (app_name := app.name) is not None
+                app.name: app.identifier
+                for app in sorted(apps, key=lambda app: app.name.lower())
+                if app.name is not None
             }
             self.async_write_ha_state()
 
@@ -202,69 +189,40 @@ class AppleTvMediaPlayer(
         return None
 
     @callback
-    def playstatus_update(self, updater: PushUpdater, playstatus: Playing) -> None:
-        """Print what is currently playing when it changes.
-
-        This is a callback function from pyatv.interface.PushListener.
-        """
-        self._playing = playstatus
+    def playstatus_update(self, _, playing: Playing) -> None:
+        """Print what is currently playing when it changes."""
+        self._playing = playing
         self.async_write_ha_state()
 
     @callback
-    def playstatus_error(self, updater: PushUpdater, exception: Exception) -> None:
-        """Inform about an error and restart push updates.
-
-        This is a callback function from pyatv.interface.PushListener.
-        """
+    def playstatus_error(self, _, exception: Exception) -> None:
+        """Inform about an error and restart push updates."""
         _LOGGER.warning("A %s error occurred: %s", exception.__class__, exception)
         self._playing = None
         self.async_write_ha_state()
 
     @callback
     def powerstate_update(self, old_state: PowerState, new_state: PowerState) -> None:
-        """Update power state when it changes.
-
-        This is a callback function from pyatv.interface.PowerListener.
-        """
+        """Update power state when it changes."""
         self.async_write_ha_state()
 
     @callback
     def volume_update(self, old_level: float, new_level: float) -> None:
-        """Update volume when it changes.
-
-        This is a callback function from pyatv.interface.AudioListener.
-        """
+        """Update volume when it changes."""
         self.async_write_ha_state()
-
-    @callback
-    def outputdevices_update(
-        self, old_devices: list[OutputDevice], new_devices: list[OutputDevice]
-    ) -> None:
-        """Output devices were updated.
-
-        This is a callback function from pyatv.interface.AudioListener.
-        """
 
     @property
     def app_id(self) -> str | None:
         """ID of the current running app."""
-        if (
-            self.atv
-            and self._is_feature_available(FeatureName.App)
-            and (app := self.atv.metadata.app) is not None
-        ):
-            return app.identifier
+        if self._is_feature_available(FeatureName.App):
+            return self.atv.metadata.app.identifier
         return None
 
     @property
     def app_name(self) -> str | None:
         """Name of the current running app."""
-        if (
-            self.atv
-            and self._is_feature_available(FeatureName.App)
-            and (app := self.atv.metadata.app) is not None
-        ):
-            return app.name
+        if self._is_feature_available(FeatureName.App):
+            return self.atv.metadata.app.name
         return None
 
     @property
@@ -293,7 +251,7 @@ class AppleTvMediaPlayer(
     @property
     def volume_level(self) -> float | None:
         """Volume level of the media player (0..1)."""
-        if self.atv and self._is_feature_available(FeatureName.Volume):
+        if self._is_feature_available(FeatureName.Volume):
             return self.atv.audio.volume / 100.0  # from percent
         return None
 
@@ -324,8 +282,6 @@ class AppleTvMediaPlayer(
         """Send the play_media command to the media player."""
         # If input (file) has a file format supported by pyatv, then stream it with
         # RAOP. Otherwise try to play it with regular AirPlay.
-        if not self.atv:
-            return
         if media_type in {MediaType.APP, MediaType.URL}:
             await self.atv.apps.launch_app(media_id)
             return
@@ -353,8 +309,7 @@ class AppleTvMediaPlayer(
         """Hash value for media image."""
         state = self.state
         if (
-            self.atv
-            and self._playing
+            self._playing
             and self._is_feature_available(FeatureName.Artwork)
             and state not in {None, MediaPlayerState.OFF, MediaPlayerState.IDLE}
         ):
@@ -364,11 +319,7 @@ class AppleTvMediaPlayer(
     async def async_get_media_image(self) -> tuple[bytes | None, str | None]:
         """Fetch media image of current playing image."""
         state = self.state
-        if (
-            self.atv
-            and self._playing
-            and state not in {MediaPlayerState.OFF, MediaPlayerState.IDLE}
-        ):
+        if self._playing and state not in {MediaPlayerState.OFF, MediaPlayerState.IDLE}:
             artwork = await self.atv.metadata.artwork()
             if artwork:
                 return artwork.bytes, artwork.mimetype
@@ -420,15 +371,11 @@ class AppleTvMediaPlayer(
     @property
     def repeat(self) -> RepeatMode | None:
         """Return current repeat mode."""
-        if (
-            self._playing
-            and self._is_feature_available(FeatureName.Repeat)
-            and (repeat := self._playing.repeat)
-        ):
+        if self._playing and self._is_feature_available(FeatureName.Repeat):
             return {
                 RepeatState.Track: RepeatMode.ONE,
                 RepeatState.All: RepeatMode.ALL,
-            }.get(repeat, RepeatMode.OFF)
+            }.get(self._playing.repeat, RepeatMode.OFF)
         return None
 
     @property
@@ -484,24 +431,20 @@ class AppleTvMediaPlayer(
 
     async def async_turn_on(self) -> None:
         """Turn the media player on."""
-        if self.atv and self._is_feature_available(FeatureName.TurnOn):
+        if self._is_feature_available(FeatureName.TurnOn):
             await self.atv.power.turn_on()
 
     async def async_turn_off(self) -> None:
         """Turn the media player off."""
-        if (
-            self.atv
-            and (self._is_feature_available(FeatureName.TurnOff))
-            and (
-                not self._is_feature_available(FeatureName.PowerState)
-                or self.atv.power.power_state == PowerState.On
-            )
+        if (self._is_feature_available(FeatureName.TurnOff)) and (
+            not self._is_feature_available(FeatureName.PowerState)
+            or self.atv.power.power_state == PowerState.On
         ):
             await self.atv.power.turn_off()
 
     async def async_media_play_pause(self) -> None:
         """Pause media on media player."""
-        if self.atv and self._playing:
+        if self._playing:
             await self.atv.remote_control.play_pause()
 
     async def async_media_play(self) -> None:
@@ -532,7 +475,7 @@ class AppleTvMediaPlayer(
     async def async_media_seek(self, position: float) -> None:
         """Send seek command."""
         if self.atv:
-            await self.atv.remote_control.set_position(round(position))
+            await self.atv.remote_control.set_position(position)
 
     async def async_volume_up(self) -> None:
         """Turn volume up for media player."""
@@ -568,6 +511,5 @@ class AppleTvMediaPlayer(
 
     async def async_select_source(self, source: str) -> None:
         """Select input source."""
-        if self.atv:
-            if app_id := self._app_list.get(source):
-                await self.atv.apps.launch_app(app_id)
+        if app_id := self._app_list.get(source):
+            await self.atv.apps.launch_app(app_id)

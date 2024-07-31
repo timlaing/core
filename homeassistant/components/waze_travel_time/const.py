@@ -1,5 +1,4 @@
 """Constants for waze_travel_time."""
-
 from __future__ import annotations
 
 DOMAIN = "waze_travel_time"

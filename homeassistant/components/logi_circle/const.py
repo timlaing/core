@@ -1,5 +1,4 @@
 """Constants in Logi Circle component."""
-
 from __future__ import annotations
 
 DOMAIN = "logi_circle"

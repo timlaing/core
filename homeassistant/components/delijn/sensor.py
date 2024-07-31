@@ -1,5 +1,4 @@
 """Support for De Lijn (Flemish public transport) information."""
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -10,7 +9,7 @@ from pydelijn.common import HttpException
 import voluptuous as vol
 
 from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
 )
@@ -31,7 +30,7 @@ CONF_NUMBER_OF_DEPARTURES = "number_of_departures"
 
 DEFAULT_NAME = "De Lijn"
 
-PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_API_KEY): cv.string,
         vol.Required(CONF_NEXT_DEPARTURE): [
@@ -64,8 +63,9 @@ async def async_setup_platform(
 
     session = async_get_clientsession(hass)
 
-    async_add_entities(
-        (
+    sensors = []
+    for nextpassage in config[CONF_NEXT_DEPARTURE]:
+        sensors.append(
             DeLijnPublicTransportSensor(
                 Passages(
                     nextpassage[CONF_STOP_ID],
@@ -75,10 +75,9 @@ async def async_setup_platform(
                     True,
                 )
             )
-            for nextpassage in config[CONF_NEXT_DEPARTURE]
-        ),
-        True,
-    )
+        )
+
+    async_add_entities(sensors, True)
 
 
 class DeLijnPublicTransportSensor(SensorEntity):

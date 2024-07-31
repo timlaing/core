@@ -1,5 +1,4 @@
 """Implement the auth feature from Hass.io for Add-ons."""
-
 from http import HTTPStatus
 from ipaddress import ip_address
 import logging
@@ -11,7 +10,7 @@ import voluptuous as vol
 
 from homeassistant.auth.models import User
 from homeassistant.auth.providers import homeassistant as auth_ha
-from homeassistant.components.http import KEY_HASS, KEY_HASS_USER, HomeAssistantView
+from homeassistant.components.http import KEY_HASS_USER, HomeAssistantView
 from homeassistant.components.http.data_validator import RequestDataValidator
 from homeassistant.core import HomeAssistant, callback
 import homeassistant.helpers.config_validation as cv
@@ -22,7 +21,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 @callback
-def async_setup_auth_view(hass: HomeAssistant, user: User) -> None:
+def async_setup_auth_view(hass: HomeAssistant, user: User):
     """Auth setup."""
     hassio_auth = HassIOAuth(hass, user)
     hassio_password_reset = HassIOPasswordReset(hass, user)
@@ -39,7 +38,7 @@ class HassIOBaseAuth(HomeAssistantView):
         self.hass = hass
         self.user = user
 
-    def _check_access(self, request: web.Request) -> None:
+    def _check_access(self, request: web.Request):
         """Check if this call is from Supervisor."""
         # Check caller IP
         hassio_ip = os.environ["SUPERVISOR"].split(":")[0]
@@ -48,12 +47,12 @@ class HassIOBaseAuth(HomeAssistantView):
             hassio_ip
         ):
             _LOGGER.error("Invalid auth request from %s", request.remote)
-            raise HTTPUnauthorized
+            raise HTTPUnauthorized()
 
         # Check caller token
         if request[KEY_HASS_USER].id != self.user.id:
             _LOGGER.error("Invalid auth request from %s", request[KEY_HASS_USER].name)
-            raise HTTPUnauthorized
+            raise HTTPUnauthorized()
 
 
 class HassIOAuth(HassIOBaseAuth):
@@ -72,17 +71,17 @@ class HassIOAuth(HassIOBaseAuth):
             extra=vol.ALLOW_EXTRA,
         )
     )
-    async def post(self, request: web.Request, data: dict[str, str]) -> web.Response:
+    async def post(self, request, data):
         """Handle auth requests."""
         self._check_access(request)
-        provider = auth_ha.async_get_provider(request.app[KEY_HASS])
+        provider = auth_ha.async_get_provider(request.app["hass"])
 
         try:
             await provider.async_validate_login(
                 data[ATTR_USERNAME], data[ATTR_PASSWORD]
             )
         except auth_ha.InvalidAuth:
-            raise HTTPNotFound from None
+            raise HTTPNotFound() from None
 
         return web.Response(status=HTTPStatus.OK)
 
@@ -102,16 +101,16 @@ class HassIOPasswordReset(HassIOBaseAuth):
             extra=vol.ALLOW_EXTRA,
         )
     )
-    async def post(self, request: web.Request, data: dict[str, str]) -> web.Response:
+    async def post(self, request, data):
         """Handle password reset requests."""
         self._check_access(request)
-        provider = auth_ha.async_get_provider(request.app[KEY_HASS])
+        provider = auth_ha.async_get_provider(request.app["hass"])
 
         try:
             await provider.async_change_password(
                 data[ATTR_USERNAME], data[ATTR_PASSWORD]
             )
         except auth_ha.InvalidUser as err:
-            raise HTTPNotFound from err
+            raise HTTPNotFound() from err
 
         return web.Response(status=HTTPStatus.OK)

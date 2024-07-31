@@ -1,5 +1,4 @@
 """Support for Sensor.Community sensors."""
-
 from __future__ import annotations
 
 from typing import cast

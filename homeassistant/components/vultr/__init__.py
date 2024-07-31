@@ -1,5 +1,4 @@
 """Support for Vultr."""
-
 from datetime import timedelta
 import logging
 

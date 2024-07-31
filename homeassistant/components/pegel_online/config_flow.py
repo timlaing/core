@@ -1,5 +1,4 @@
 """Config flow for PEGELONLINE."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -7,7 +6,7 @@ from typing import Any
 from aiopegelonline import CONNECT_ERRORS, PegelOnline
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant import config_entries
 from homeassistant.const import (
     CONF_LATITUDE,
     CONF_LOCATION,
@@ -15,6 +14,7 @@ from homeassistant.const import (
     CONF_RADIUS,
     UnitOfLength,
 )
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
     LocationSelector,
@@ -29,7 +29,7 @@ from homeassistant.helpers.selector import (
 from .const import CONF_STATION, DEFAULT_RADIUS, DOMAIN
 
 
-class FlowHandler(ConfigFlow, domain=DOMAIN):
+class FlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow."""
 
     VERSION = 1
@@ -42,7 +42,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow initialized by the user."""
         if not user_input:
             return self._show_form_user()
@@ -69,7 +69,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_select_station(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the step select_station of a flow initialized by the user."""
         if not user_input:
             stations = [
@@ -101,7 +101,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
         self,
         user_input: dict[str, Any] | None = None,
         errors: dict[str, Any] | None = None,
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         if user_input is None:
             user_input = {}
         return self.async_show_form(

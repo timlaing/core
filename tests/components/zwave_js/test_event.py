@@ -1,5 +1,4 @@
 """Test the Z-Wave JS event platform."""
-
 from datetime import timedelta
 
 from freezegun import freeze_time

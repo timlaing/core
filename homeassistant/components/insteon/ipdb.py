@@ -1,5 +1,4 @@
 """Utility methods for the Insteon platform."""
-
 from collections.abc import Iterable
 
 from pyinsteon.device_types.device_base import Device

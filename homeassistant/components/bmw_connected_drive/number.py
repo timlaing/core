@@ -14,23 +14,30 @@ from homeassistant.components.number import (
     NumberEntityDescription,
     NumberMode,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import BMWConfigEntry
+from . import BMWBaseEntity
+from .const import DOMAIN
 from .coordinator import BMWDataUpdateCoordinator
-from .entity import BMWBaseEntity
 
 _LOGGER = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True, kw_only=True)
-class BMWNumberEntityDescription(NumberEntityDescription):
-    """Describes BMW number entity."""
+@dataclass
+class BMWRequiredKeysMixin:
+    """Mixin for required keys."""
 
     value_fn: Callable[[MyBMWVehicle], float | int | None]
     remote_service: Callable[[MyBMWVehicle, float | int], Coroutine[Any, Any, Any]]
+
+
+@dataclass
+class BMWNumberEntityDescription(NumberEntityDescription, BMWRequiredKeysMixin):
+    """Describes BMW number entity."""
+
     is_available: Callable[[MyBMWVehicle], bool] = lambda _: False
     dynamic_options: Callable[[MyBMWVehicle], list[str]] | None = None
 
@@ -49,17 +56,18 @@ NUMBER_TYPES: list[BMWNumberEntityDescription] = [
         remote_service=lambda v, o: v.remote_services.trigger_charging_settings_update(
             target_soc=int(o)
         ),
+        icon="mdi:battery-charging-medium",
     ),
 ]
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: BMWConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the MyBMW number from config entry."""
-    coordinator = config_entry.runtime_data.coordinator
+    coordinator: BMWDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
 
     entities: list[BMWNumber] = []
 

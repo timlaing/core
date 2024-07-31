@@ -1,5 +1,4 @@
 """Support for manual alarms controllable via MQTT."""
-
 from __future__ import annotations
 
 import datetime
@@ -9,11 +8,8 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant.components import mqtt
-from homeassistant.components.alarm_control_panel import (
-    AlarmControlPanelEntity,
-    AlarmControlPanelEntityFeature,
-    CodeFormat,
-)
+import homeassistant.components.alarm_control_panel as alarm
+from homeassistant.components.alarm_control_panel import AlarmControlPanelEntityFeature
 from homeassistant.const import (
     CONF_CODE,
     CONF_DELAY_TIME,
@@ -31,15 +27,16 @@ from homeassistant.const import (
     STATE_ALARM_PENDING,
     STATE_ALARM_TRIGGERED,
 )
-from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import (
+    EventStateChangedData,
     async_track_point_in_time,
     async_track_state_change_event,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType, EventType
 import homeassistant.util.dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
@@ -227,7 +224,7 @@ async def async_setup_platform(
     )
 
 
-class ManualMQTTAlarm(AlarmControlPanelEntity):
+class ManualMQTTAlarm(alarm.AlarmControlPanelEntity):
     """Representation of an alarm status.
 
     When armed, will be pending for 'pending_time', after that armed.
@@ -345,20 +342,20 @@ class ManualMQTTAlarm(AlarmControlPanelEntity):
         return self._state_ts + self._pending_time(state) > dt_util.utcnow()
 
     @property
-    def code_format(self) -> CodeFormat | None:
+    def code_format(self) -> alarm.CodeFormat | None:
         """Return one or more digits/characters."""
         if self._code is None:
             return None
         if isinstance(self._code, str) and self._code.isdigit():
-            return CodeFormat.NUMBER
-        return CodeFormat.TEXT
+            return alarm.CodeFormat.NUMBER
+        return alarm.CodeFormat.TEXT
 
     async def async_alarm_disarm(self, code: str | None = None) -> None:
         """Send disarm command."""
         self._async_validate_code(code, STATE_ALARM_DISARMED)
         self._state = STATE_ALARM_DISARMED
         self._state_ts = dt_util.utcnow()
-        self.async_write_ha_state()
+        self.async_schedule_update_ha_state()
 
     async def async_alarm_arm_home(self, code: str | None = None) -> None:
         """Send arm home command."""
@@ -485,7 +482,7 @@ class ManualMQTTAlarm(AlarmControlPanelEntity):
         )
 
     async def _async_state_changed_listener(
-        self, event: Event[EventStateChangedData]
+        self, event: EventType[EventStateChangedData]
     ) -> None:
         """Publish state change to MQTT."""
         if (new_state := event.data["new_state"]) is None:

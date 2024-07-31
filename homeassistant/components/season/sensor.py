@@ -1,5 +1,4 @@
 """Support for Season sensors."""
-
 from __future__ import annotations
 
 from datetime import date, datetime
@@ -31,6 +30,13 @@ HEMISPHERE_SEASON_SWAP = {
     STATE_SPRING: STATE_AUTUMN,
     STATE_AUTUMN: STATE_SPRING,
     STATE_SUMMER: STATE_WINTER,
+}
+
+SEASON_ICONS = {
+    STATE_SPRING: "mdi:flower",
+    STATE_SUMMER: "mdi:sunglasses",
+    STATE_AUTUMN: "mdi:leaf",
+    STATE_WINTER: "mdi:snowflake",
 }
 
 
@@ -107,3 +113,7 @@ class SeasonSensorEntity(SensorEntity):
         self._attr_native_value = get_season(
             utcnow().replace(tzinfo=None), self.hemisphere, self.type
         )
+
+        self._attr_icon = "mdi:cloud"
+        if self._attr_native_value:
+            self._attr_icon = SEASON_ICONS[self._attr_native_value]

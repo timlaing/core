@@ -1,5 +1,6 @@
 """Tests for the Rainforest Eagle integration."""
 
+
 MOCK_CLOUD_ID = "12345"
 MOCK_200_RESPONSE_WITH_PRICE = {
     "zigbee:InstantaneousDemand": {

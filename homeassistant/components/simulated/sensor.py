@@ -1,5 +1,4 @@
 """Adds a simulated sensor."""
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -8,13 +7,9 @@ from random import Random
 
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
-    SensorEntity,
-)
+from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import issue_registry as ir
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
@@ -39,9 +34,7 @@ DEFAULT_SEED = 999
 DEFAULT_UNIT = "value"
 DEFAULT_RELATIVE_TO_EPOCH = True
 
-DOMAIN = "simulated"
-
-PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Optional(CONF_AMP, default=DEFAULT_AMP): vol.Coerce(float),
         vol.Optional(CONF_FWHM, default=DEFAULT_FWHM): vol.Coerce(float),
@@ -58,27 +51,13 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 )
 
 
-async def async_setup_platform(
+def setup_platform(
     hass: HomeAssistant,
     config: ConfigType,
-    async_add_entities: AddEntitiesCallback,
+    add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the simulated sensor."""
-    # Simulated has been deprecated and will be removed in 2025.1
-
-    ir.async_create_issue(
-        hass,
-        DOMAIN,
-        DOMAIN,
-        breaks_in_ha_version="2025.1.0",
-        is_fixable=False,
-        severity=ir.IssueSeverity.WARNING,
-        translation_key="simulated_deprecation",
-        translation_placeholders={"integration": DOMAIN},
-        learn_more_url="https://www.home-assistant.io/integrations/simulated",
-    )
-
     name = config.get(CONF_NAME)
     unit = config.get(CONF_UNIT)
     amp = config.get(CONF_AMP)
@@ -92,7 +71,7 @@ async def async_setup_platform(
     sensor = SimulatedSensor(
         name, unit, amp, mean, period, phase, fwhm, seed, relative_to_epoch
     )
-    async_add_entities([sensor], True)
+    add_entities([sensor], True)
 
 
 class SimulatedSensor(SensorEntity):

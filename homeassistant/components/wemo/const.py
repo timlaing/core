@@ -1,5 +1,4 @@
 """Constants for the Belkin Wemo component."""
-
 DOMAIN = "wemo"
 
 SERVICE_SET_HUMIDITY = "set_humidity"

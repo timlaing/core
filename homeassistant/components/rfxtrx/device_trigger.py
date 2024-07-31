@@ -1,5 +1,4 @@
 """Provides device automations for RFXCOM RFXtrx."""
-
 from __future__ import annotations
 
 import voluptuous as vol
@@ -51,17 +50,20 @@ async def async_get_triggers(
     """List device triggers for RFXCOM RFXtrx devices."""
     device = async_get_device_object(hass, device_id)
 
-    return [
-        {
-            CONF_PLATFORM: "device",
-            CONF_DEVICE_ID: device_id,
-            CONF_DOMAIN: DOMAIN,
-            CONF_TYPE: conf_type,
-            CONF_SUBTYPE: command,
-        }
-        for conf_type in TRIGGER_TYPES
-        for command in getattr(device, TRIGGER_SELECTION[conf_type], {}).values()
-    ]
+    triggers = []
+    for conf_type in TRIGGER_TYPES:
+        data: dict[int, str] = getattr(device, TRIGGER_SELECTION[conf_type], {})
+        for command in data.values():
+            triggers.append(
+                {
+                    CONF_PLATFORM: "device",
+                    CONF_DEVICE_ID: device_id,
+                    CONF_DOMAIN: DOMAIN,
+                    CONF_TYPE: conf_type,
+                    CONF_SUBTYPE: command,
+                }
+            )
+    return triggers
 
 
 async def async_validate_trigger_config(

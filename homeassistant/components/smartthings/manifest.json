@@ -2,7 +2,7 @@
   "domain": "smartthings",
   "name": "SmartThings",
   "after_dependencies": ["cloud"],
-  "codeowners": [],
+  "codeowners": ["@andrewsayre"],
   "config_flow": true,
   "dependencies": ["webhook"],
   "dhcp": [

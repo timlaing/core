@@ -1,5 +1,4 @@
 """Config flow for foscam integration."""
-
 from libpyfoscam import FoscamCamera
 from libpyfoscam.foscam import (
     ERROR_FOSCAM_AUTH,
@@ -8,7 +7,7 @@ from libpyfoscam.foscam import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow
+from homeassistant import config_entries, exceptions
 from homeassistant.const import (
     CONF_HOST,
     CONF_NAME,
@@ -17,7 +16,6 @@ from homeassistant.const import (
     CONF_USERNAME,
 )
 from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.exceptions import HomeAssistantError
 
 from .const import CONF_RTSP_PORT, CONF_STREAM, DOMAIN, LOGGER
 
@@ -39,7 +37,7 @@ DATA_SCHEMA = vol.Schema(
 )
 
 
-class FoscamConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for foscam."""
 
     VERSION = 2
@@ -110,7 +108,7 @@ class FoscamConfigFlow(ConfigFlow, domain=DOMAIN):
             except AbortFlow:
                 raise
 
-            except Exception:  # noqa: BLE001
+            except Exception:  # pylint: disable=broad-except
                 LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
 
@@ -119,13 +117,13 @@ class FoscamConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(exceptions.HomeAssistantError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(exceptions.HomeAssistantError):
     """Error to indicate there is invalid auth."""
 
 
-class InvalidResponse(HomeAssistantError):
+class InvalidResponse(exceptions.HomeAssistantError):
     """Error to indicate there is invalid response."""

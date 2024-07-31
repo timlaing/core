@@ -1,16 +1,12 @@
 """Tests for the Cloudflare integration."""
-
 from __future__ import annotations
 
-from typing import Any
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, patch
 
-import pycfdns
+from pycfdns import CFRecord
 
 from homeassistant.components.cloudflare.const import CONF_RECORDS, DOMAIN
 from homeassistant.const import CONF_API_TOKEN, CONF_ZONE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import UNDEFINED, UndefinedType
 
 from tests.common import MockConfigEntry
 
@@ -30,8 +26,9 @@ USER_INPUT_ZONE = {CONF_ZONE: "mock.com"}
 
 USER_INPUT_RECORDS = {CONF_RECORDS: ["ha.mock.com", "homeassistant.mock.com"]}
 
-MOCK_ZONE: pycfdns.ZoneModel = {"name": "mock.com", "id": "mock-zone-id"}
-MOCK_ZONE_RECORDS: list[pycfdns.RecordModel] = [
+MOCK_ZONE = "mock.com"
+MOCK_ZONE_ID = "mock-zone-id"
+MOCK_ZONE_RECORDS = [
     {
         "id": "zone-record-id",
         "type": "A",
@@ -57,18 +54,18 @@ MOCK_ZONE_RECORDS: list[pycfdns.RecordModel] = [
 
 
 async def init_integration(
-    hass: HomeAssistant,
+    hass,
     *,
-    data: dict[str, Any] | UndefinedType = UNDEFINED,
-    options: dict[str, Any] | UndefinedType = UNDEFINED,
-    unique_id: str = MOCK_ZONE["name"],
+    data: dict = ENTRY_CONFIG,
+    options: dict = ENTRY_OPTIONS,
+    unique_id: str = MOCK_ZONE,
     skip_setup: bool = False,
 ) -> MockConfigEntry:
     """Set up the Cloudflare integration in Home Assistant."""
     entry = MockConfigEntry(
         domain=DOMAIN,
-        data=ENTRY_CONFIG if data is UNDEFINED else data,
-        options=ENTRY_OPTIONS if options is UNDEFINED else options,
+        data=data,
+        options=options,
         unique_id=unique_id,
     )
     entry.add_to_hass(hass)
@@ -80,20 +77,27 @@ async def init_integration(
     return entry
 
 
-def get_mock_client() -> Mock:
-    """Return of Mock of pycfdns.Client."""
-    client = Mock()
+def _get_mock_cfupdate(
+    zone: str = MOCK_ZONE,
+    zone_id: str = MOCK_ZONE_ID,
+    records: list = MOCK_ZONE_RECORDS,
+):
+    client = AsyncMock()
 
-    client.list_zones = AsyncMock(return_value=[MOCK_ZONE])
-    client.list_dns_records = AsyncMock(return_value=MOCK_ZONE_RECORDS)
-    client.update_dns_record = AsyncMock(return_value=None)
+    zone_records = [record["name"] for record in records]
+    cf_records = [CFRecord(record) for record in records]
+
+    client.get_zones = AsyncMock(return_value=[zone])
+    client.get_zone_records = AsyncMock(return_value=zone_records)
+    client.get_record_info = AsyncMock(return_value=cf_records)
+    client.get_zone_id = AsyncMock(return_value=zone_id)
+    client.update_records = AsyncMock(return_value=None)
 
     return client
 
 
-def patch_async_setup_entry() -> AsyncMock:
-    """Patch the async_setup_entry method and return a mock."""
+def _patch_async_setup_entry(return_value=True):
     return patch(
         "homeassistant.components.cloudflare.async_setup_entry",
-        return_value=True,
+        return_value=return_value,
     )

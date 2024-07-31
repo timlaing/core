@@ -1,5 +1,4 @@
 """Support for Digital Ocean."""
-
 from datetime import timedelta
 import logging
 

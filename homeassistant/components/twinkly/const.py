@@ -2,6 +2,11 @@
 
 DOMAIN = "twinkly"
 
+# Keys of the config entry
+CONF_ID = "id"
+CONF_HOST = "host"
+CONF_NAME = "name"
+
 # Strongly named HA attributes keys
 ATTR_HOST = "host"
 ATTR_VERSION = "version"

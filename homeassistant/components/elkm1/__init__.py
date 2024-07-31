@@ -1,5 +1,4 @@
 """Support the ElkM1 Gold and ElkM1 EZ8 alarm/integration panels."""
-
 from __future__ import annotations
 
 import asyncio
@@ -11,14 +10,13 @@ from types import MappingProxyType
 from typing import Any
 
 from elkm1_lib.elements import Element
-from elkm1_lib.elk import Elk, Panel
+from elkm1_lib.elk import Elk
 from elkm1_lib.util import parse_url
 import voluptuous as vol
 
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import (
     ATTR_CONNECTIONS,
-    CONF_ENABLED,
     CONF_EXCLUDE,
     CONF_HOST,
     CONF_INCLUDE,
@@ -48,6 +46,7 @@ from .const import (
     CONF_AREA,
     CONF_AUTO_CONFIGURE,
     CONF_COUNTER,
+    CONF_ENABLED,
     CONF_KEYPAD,
     CONF_OUTPUT,
     CONF_PLC,
@@ -68,8 +67,6 @@ from .discovery import (
     async_update_entry_from_discovery,
 )
 from .models import ELKM1Data
-
-type ElkM1ConfigEntry = ConfigEntry[ELKM1Data]
 
 SYNC_TIMEOUT = 120
 
@@ -171,8 +168,8 @@ DEVICE_SCHEMA = vol.All(
             vol.Optional(CONF_THERMOSTAT, default={}): DEVICE_SCHEMA_SUBDOMAIN,
             vol.Optional(CONF_ZONE, default={}): DEVICE_SCHEMA_SUBDOMAIN,
         },
+        _host_validator,
     ),
-    _host_validator,
 )
 
 CONFIG_SCHEMA = vol.Schema(
@@ -183,6 +180,7 @@ CONFIG_SCHEMA = vol.Schema(
 
 async def async_setup(hass: HomeAssistant, hass_config: ConfigType) -> bool:
     """Set up the Elk M1 platform."""
+    hass.data.setdefault(DOMAIN, {})
     _create_elk_services(hass)
 
     async def _async_discovery(*_: Any) -> None:
@@ -236,7 +234,7 @@ def _async_find_matching_config_entry(
     return None
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ElkM1ConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Elk-M1 Control from a config entry."""
     conf: MappingProxyType[str, Any] = entry.data
 
@@ -298,7 +296,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ElkM1ConfigEntry) -> boo
     try:
         if not await async_wait_for_elk_to_sync(elk, LOGIN_TIMEOUT, SYNC_TIMEOUT):
             return False
-    except TimeoutError as exc:
+    except asyncio.TimeoutError as exc:
         raise ConfigEntryNotReady(f"Timed out connecting to {conf[CONF_HOST]}") from exc
 
     elk_temp_unit = elk.panel.temperature_units
@@ -309,7 +307,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ElkM1ConfigEntry) -> boo
     config["temperature_unit"] = temperature_unit
     prefix: str = conf[CONF_PREFIX]
     auto_configure: bool = conf[CONF_AUTO_CONFIGURE]
-    entry.runtime_data = ELKM1Data(
+    hass.data[DOMAIN][entry.entry_id] = ELKM1Data(
         elk=elk,
         prefix=prefix,
         mac=entry.unique_id,
@@ -332,20 +330,24 @@ def _included(ranges: list[tuple[int, int]], set_to: bool, values: list[bool]) -
 
 def _find_elk_by_prefix(hass: HomeAssistant, prefix: str) -> Elk | None:
     """Search all config entries for a given prefix."""
-    for entry in hass.config_entries.async_entries(DOMAIN):
-        if not entry.runtime_data:
-            continue
-        elk_data: ELKM1Data = entry.runtime_data
+    all_elk: dict[str, ELKM1Data] = hass.data[DOMAIN]
+    for elk_data in all_elk.values():
         if elk_data.prefix == prefix:
             return elk_data.elk
     return None
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ElkM1ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    all_elk: dict[str, ELKM1Data] = hass.data[DOMAIN]
+
     # disconnect cleanly
-    entry.runtime_data.elk.disconnect()
+    all_elk[entry.entry_id].elk.disconnect()
+
+    if unload_ok:
+        all_elk.pop(entry.entry_id)
+
     return unload_ok
 
 
@@ -387,7 +389,7 @@ async def async_wait_for_elk_to_sync(
         try:
             async with asyncio.timeout(timeout):
                 await event.wait()
-        except TimeoutError:
+        except asyncio.TimeoutError:
             _LOGGER.debug("Timed out waiting for %s event", name)
             elk.disconnect()
             raise
@@ -396,30 +398,22 @@ async def async_wait_for_elk_to_sync(
     return success
 
 
-@callback
-def _async_get_elk_panel(hass: HomeAssistant, service: ServiceCall) -> Panel:
-    """Get the ElkM1 panel from a service call."""
-    prefix = service.data["prefix"]
-    elk = _find_elk_by_prefix(hass, prefix)
-    if elk is None:
-        raise HomeAssistantError(f"No ElkM1 with prefix '{prefix}' found")
-    return elk.panel
-
-
 def _create_elk_services(hass: HomeAssistant) -> None:
-    """Create ElkM1 services."""
+    def _getelk(service: ServiceCall) -> Elk:
+        prefix = service.data["prefix"]
+        elk = _find_elk_by_prefix(hass, prefix)
+        if elk is None:
+            raise HomeAssistantError(f"No ElkM1 with prefix '{prefix}' found")
+        return elk
 
-    @callback
     def _speak_word_service(service: ServiceCall) -> None:
-        _async_get_elk_panel(hass, service).speak_word(service.data["number"])
+        _getelk(service).panel.speak_word(service.data["number"])
 
-    @callback
     def _speak_phrase_service(service: ServiceCall) -> None:
-        _async_get_elk_panel(hass, service).speak_phrase(service.data["number"])
+        _getelk(service).panel.speak_phrase(service.data["number"])
 
-    @callback
     def _set_time_service(service: ServiceCall) -> None:
-        _async_get_elk_panel(hass, service).set_time(dt_util.now())
+        _getelk(service).panel.set_time(dt_util.now())
 
     hass.services.async_register(
         DOMAIN, "speak_word", _speak_word_service, SPEAK_SERVICE_SCHEMA

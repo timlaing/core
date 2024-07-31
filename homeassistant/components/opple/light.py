@@ -1,5 +1,4 @@
 """Support for the Opple light."""
-
 from __future__ import annotations
 
 import logging
@@ -11,7 +10,7 @@ import voluptuous as vol
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP,
-    PLATFORM_SCHEMA as LIGHT_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     ColorMode,
     LightEntity,
 )
@@ -29,7 +28,7 @@ _LOGGER = logging.getLogger(__name__)
 
 DEFAULT_NAME = "opple light"
 
-PLATFORM_SCHEMA = LIGHT_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_HOST): cv.string,
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,

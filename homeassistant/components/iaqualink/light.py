@@ -1,5 +1,4 @@
 """Support for Aqualink pool lights."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -31,9 +30,10 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up discovered lights."""
-    async_add_entities(
-        (HassAqualinkLight(dev) for dev in hass.data[AQUALINK_DOMAIN][DOMAIN]), True
-    )
+    devs = []
+    for dev in hass.data[AQUALINK_DOMAIN][DOMAIN]:
+        devs.append(HassAqualinkLight(dev))
+    async_add_entities(devs, True)
 
 
 class HassAqualinkLight(AqualinkEntity, LightEntity):

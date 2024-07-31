@@ -1,5 +1,4 @@
 """Event parser and human readable log generator."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -31,7 +30,6 @@ from homeassistant.helpers.integration_platform import (
 )
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.loader import bind_hass
-from homeassistant.util.event_type import EventType
 
 from . import rest_api, websocket_api
 from .const import (  # noqa: F401
@@ -135,8 +133,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         entities_filter = None
 
     external_events: dict[
-        EventType[Any] | str,
-        tuple[str, Callable[[LazyEventPartialState], dict[str, Any]]],
+        str, tuple[str, Callable[[LazyEventPartialState], dict[str, Any]]]
     ] = {}
     hass.data[DOMAIN] = LogbookConfig(external_events, filters, entities_filter)
     websocket_api.async_setup(hass)
@@ -148,8 +145,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-@callback
-def _process_logbook_platform(hass: HomeAssistant, domain: str, platform: Any) -> None:
+async def _process_logbook_platform(
+    hass: HomeAssistant, domain: str, platform: Any
+) -> None:
     """Process a logbook platform."""
     logbook_config: LogbookConfig = hass.data[DOMAIN]
     external_events = logbook_config.external_events

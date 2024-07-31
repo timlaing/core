@@ -1,5 +1,4 @@
 """Exceptions for the Reolink Camera integration."""
-
 from homeassistant.exceptions import HomeAssistantError
 
 
@@ -17,7 +16,3 @@ class ReolinkWebhookException(ReolinkException):
 
 class UserNotAdmin(ReolinkException):
     """Raised when user is not admin."""
-
-
-class PasswordIncompatible(ReolinkException):
-    """Raised when the password contains special chars that are incompatible."""

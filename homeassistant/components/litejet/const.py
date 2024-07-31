@@ -1,5 +1,4 @@
 """LiteJet constants."""
-
 from homeassistant.const import Platform
 
 DOMAIN = "litejet"

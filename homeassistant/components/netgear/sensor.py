@@ -1,5 +1,4 @@
 """Support for Netgear routers."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -47,33 +46,38 @@ SENSOR_TYPES = {
         key="type",
         translation_key="link_type",
         entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:lan",
     ),
     "link_rate": SensorEntityDescription(
         key="link_rate",
         translation_key="link_rate",
         native_unit_of_measurement="Mbps",
         entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:speedometer",
     ),
     "signal": SensorEntityDescription(
         key="signal",
         translation_key="signal_strength",
         native_unit_of_measurement=PERCENTAGE,
         entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:wifi",
     ),
     "ssid": SensorEntityDescription(
         key="ssid",
         translation_key="ssid",
         entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:wifi-marker",
     ),
     "conn_ap_mac": SensorEntityDescription(
         key="conn_ap_mac",
         translation_key="access_point_mac",
         entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:router-network",
     ),
 }
 
 
-@dataclass(frozen=True)
+@dataclass
 class NetgearSensorEntityDescription(SensorEntityDescription):
     """Class describing Netgear sensor entities."""
 
@@ -88,6 +92,7 @@ SENSOR_TRAFFIC_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement=UnitOfInformation.MEGABYTES,
         device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:upload",
     ),
     NetgearSensorEntityDescription(
         key="NewTodayDownload",
@@ -95,6 +100,7 @@ SENSOR_TRAFFIC_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement=UnitOfInformation.MEGABYTES,
         device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:download",
     ),
     NetgearSensorEntityDescription(
         key="NewYesterdayUpload",
@@ -102,6 +108,7 @@ SENSOR_TRAFFIC_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement=UnitOfInformation.MEGABYTES,
         device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:upload",
     ),
     NetgearSensorEntityDescription(
         key="NewYesterdayDownload",
@@ -109,6 +116,7 @@ SENSOR_TRAFFIC_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement=UnitOfInformation.MEGABYTES,
         device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:download",
     ),
     NetgearSensorEntityDescription(
         key="NewWeekUpload",
@@ -116,6 +124,7 @@ SENSOR_TRAFFIC_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement=UnitOfInformation.MEGABYTES,
         device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:upload",
         index=0,
         value=lambda data: data[0],
     ),
@@ -125,6 +134,7 @@ SENSOR_TRAFFIC_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement=UnitOfInformation.MEGABYTES,
         device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:upload",
         index=1,
         value=lambda data: data[1],
     ),
@@ -134,6 +144,7 @@ SENSOR_TRAFFIC_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement=UnitOfInformation.MEGABYTES,
         device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:download",
         index=0,
         value=lambda data: data[0],
     ),
@@ -143,6 +154,7 @@ SENSOR_TRAFFIC_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement=UnitOfInformation.MEGABYTES,
         device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:download",
         index=1,
         value=lambda data: data[1],
     ),
@@ -152,6 +164,7 @@ SENSOR_TRAFFIC_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement=UnitOfInformation.MEGABYTES,
         device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:upload",
         index=0,
         value=lambda data: data[0],
     ),
@@ -161,6 +174,7 @@ SENSOR_TRAFFIC_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement=UnitOfInformation.MEGABYTES,
         device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:upload",
         index=1,
         value=lambda data: data[1],
     ),
@@ -170,6 +184,7 @@ SENSOR_TRAFFIC_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement=UnitOfInformation.MEGABYTES,
         device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:download",
         index=0,
         value=lambda data: data[0],
     ),
@@ -179,6 +194,7 @@ SENSOR_TRAFFIC_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement=UnitOfInformation.MEGABYTES,
         device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:download",
         index=1,
         value=lambda data: data[1],
     ),
@@ -188,6 +204,7 @@ SENSOR_TRAFFIC_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement=UnitOfInformation.MEGABYTES,
         device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:upload",
         index=0,
         value=lambda data: data[0],
     ),
@@ -197,6 +214,7 @@ SENSOR_TRAFFIC_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement=UnitOfInformation.MEGABYTES,
         device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:upload",
         index=1,
         value=lambda data: data[1],
     ),
@@ -206,6 +224,7 @@ SENSOR_TRAFFIC_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement=UnitOfInformation.MEGABYTES,
         device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:download",
         index=0,
         value=lambda data: data[0],
     ),
@@ -215,6 +234,7 @@ SENSOR_TRAFFIC_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement=UnitOfInformation.MEGABYTES,
         device_class=SensorDeviceClass.DATA_SIZE,
+        icon="mdi:download",
         index=1,
         value=lambda data: data[1],
     ),
@@ -227,6 +247,7 @@ SENSOR_SPEED_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement=UnitOfDataRate.MEGABITS_PER_SECOND,
         device_class=SensorDeviceClass.DATA_RATE,
+        icon="mdi:upload",
     ),
     NetgearSensorEntityDescription(
         key="NewOOKLADownlinkBandwidth",
@@ -234,12 +255,14 @@ SENSOR_SPEED_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement=UnitOfDataRate.MEGABITS_PER_SECOND,
         device_class=SensorDeviceClass.DATA_RATE,
+        icon="mdi:download",
     ),
     NetgearSensorEntityDescription(
         key="AveragePing",
         translation_key="average_ping",
         entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement=UnitOfTime.MILLISECONDS,
+        icon="mdi:wan",
     ),
 ]
 
@@ -249,6 +272,7 @@ SENSOR_UTILIZATION = [
         translation_key="cpu_utilization",
         entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement=PERCENTAGE,
+        icon="mdi:cpu-64-bit",
         state_class=SensorStateClass.MEASUREMENT,
     ),
     NetgearSensorEntityDescription(
@@ -256,6 +280,7 @@ SENSOR_UTILIZATION = [
         translation_key="memory_utilization",
         entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement=PERCENTAGE,
+        icon="mdi:memory",
         state_class=SensorStateClass.MEASUREMENT,
     ),
 ]
@@ -265,6 +290,7 @@ SENSOR_LINK_TYPES = [
         key="NewEthernetLinkStatus",
         translation_key="ethernet_link_status",
         entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:ethernet",
     ),
 ]
 
@@ -280,16 +306,30 @@ async def async_setup_entry(
     coordinator_utilization = hass.data[DOMAIN][entry.entry_id][KEY_COORDINATOR_UTIL]
     coordinator_link = hass.data[DOMAIN][entry.entry_id][KEY_COORDINATOR_LINK]
 
-    async_add_entities(
-        NetgearRouterSensorEntity(coordinator, router, description)
-        for (coordinator, descriptions) in (
-            (coordinator_traffic, SENSOR_TRAFFIC_TYPES),
-            (coordinator_speed, SENSOR_SPEED_TYPES),
-            (coordinator_utilization, SENSOR_UTILIZATION),
-            (coordinator_link, SENSOR_LINK_TYPES),
+    # Router entities
+    router_entities = []
+
+    for description in SENSOR_TRAFFIC_TYPES:
+        router_entities.append(
+            NetgearRouterSensorEntity(coordinator_traffic, router, description)
         )
-        for description in descriptions
-    )
+
+    for description in SENSOR_SPEED_TYPES:
+        router_entities.append(
+            NetgearRouterSensorEntity(coordinator_speed, router, description)
+        )
+
+    for description in SENSOR_UTILIZATION:
+        router_entities.append(
+            NetgearRouterSensorEntity(coordinator_utilization, router, description)
+        )
+
+    for description in SENSOR_LINK_TYPES:
+        router_entities.append(
+            NetgearRouterSensorEntity(coordinator_link, router, description)
+        )
+
+    async_add_entities(router_entities)
 
     # Entities per network device
     tracked = set()
@@ -303,15 +343,17 @@ async def async_setup_entry(
         if not coordinator.data:
             return
 
-        new_entities: list[NetgearSensorEntity] = []
+        new_entities = []
 
         for mac, device in router.devices.items():
             if mac in tracked:
                 continue
 
             new_entities.extend(
-                NetgearSensorEntity(coordinator, router, device, attribute)
-                for attribute in sensors
+                [
+                    NetgearSensorEntity(coordinator, router, device, attribute)
+                    for attribute in sensors
+                ]
             )
             tracked.add(mac)
 

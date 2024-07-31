@@ -1,5 +1,4 @@
 """Switchbot integration light platform."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -13,6 +12,7 @@ from homeassistant.components.light import (
     ColorMode,
     LightEntity,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util.color import (
@@ -20,7 +20,8 @@ from homeassistant.util.color import (
     color_temperature_mired_to_kelvin,
 )
 
-from .coordinator import SwitchbotConfigEntry, SwitchbotDataUpdateCoordinator
+from .const import DOMAIN
+from .coordinator import SwitchbotDataUpdateCoordinator
 from .entity import SwitchbotEntity
 
 SWITCHBOT_COLOR_MODE_TO_HASS = {
@@ -33,11 +34,12 @@ PARALLEL_UPDATES = 0
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: SwitchbotConfigEntry,
+    entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the switchbot light."""
-    async_add_entities([SwitchbotLightEntity(entry.runtime_data)])
+    coordinator: SwitchbotDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    async_add_entities([SwitchbotLightEntity(coordinator)])
 
 
 class SwitchbotLightEntity(SwitchbotEntity, LightEntity):

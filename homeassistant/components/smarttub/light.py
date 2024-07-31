@@ -1,5 +1,4 @@
 """Platform for light integration."""
-
 from typing import Any
 
 from smarttub import SpaLight
@@ -96,11 +95,13 @@ class SmartTubLight(SmartTubEntity, LightEntity):
     @property
     def effect_list(self):
         """Return the list of supported effects."""
-        return [
+        effects = [
             effect
             for effect in map(self._light_mode_to_effect, SpaLight.LightMode)
             if effect is not None
         ]
+
+        return effects
 
     @staticmethod
     def _light_mode_to_effect(light_mode: SpaLight.LightMode):

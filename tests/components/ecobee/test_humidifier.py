@@ -1,5 +1,4 @@
 """The test for the ecobee thermostat humidifier module."""
-
 from unittest.mock import patch
 
 import pytest
@@ -7,7 +6,6 @@ import pytest
 from homeassistant.components.ecobee.humidifier import MODE_MANUAL, MODE_OFF
 from homeassistant.components.humidifier import (
     ATTR_AVAILABLE_MODES,
-    ATTR_CURRENT_HUMIDITY,
     ATTR_HUMIDITY,
     ATTR_MAX_HUMIDITY,
     ATTR_MIN_HUMIDITY,
@@ -44,18 +42,19 @@ async def test_attributes(hass: HomeAssistant) -> None:
 
     state = hass.states.get(DEVICE_ID)
     assert state.state == STATE_ON
-    assert state.attributes[ATTR_CURRENT_HUMIDITY] == 15
-    assert state.attributes[ATTR_MIN_HUMIDITY] == DEFAULT_MIN_HUMIDITY
-    assert state.attributes[ATTR_MAX_HUMIDITY] == DEFAULT_MAX_HUMIDITY
-    assert state.attributes[ATTR_HUMIDITY] == 40
-    assert state.attributes[ATTR_AVAILABLE_MODES] == [
+    assert state.attributes.get(ATTR_MIN_HUMIDITY) == DEFAULT_MIN_HUMIDITY
+    assert state.attributes.get(ATTR_MAX_HUMIDITY) == DEFAULT_MAX_HUMIDITY
+    assert state.attributes.get(ATTR_HUMIDITY) == 40
+    assert state.attributes.get(ATTR_AVAILABLE_MODES) == [
         MODE_OFF,
         MODE_AUTO,
         MODE_MANUAL,
     ]
-    assert state.attributes[ATTR_FRIENDLY_NAME] == "ecobee"
-    assert state.attributes[ATTR_DEVICE_CLASS] == HumidifierDeviceClass.HUMIDIFIER
-    assert state.attributes[ATTR_SUPPORTED_FEATURES] == HumidifierEntityFeature.MODES
+    assert state.attributes.get(ATTR_FRIENDLY_NAME) == "ecobee"
+    assert state.attributes.get(ATTR_DEVICE_CLASS) == HumidifierDeviceClass.HUMIDIFIER
+    assert (
+        state.attributes.get(ATTR_SUPPORTED_FEATURES) == HumidifierEntityFeature.MODES
+    )
 
 
 async def test_turn_on(hass: HomeAssistant) -> None:

@@ -1,5 +1,4 @@
 """YoLink BinarySensor."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -29,7 +28,7 @@ from .coordinator import YoLinkCoordinator
 from .entity import YoLinkEntity
 
 
-@dataclass(frozen=True)
+@dataclass
 class YoLinkBinarySensorEntityDescription(BinarySensorEntityDescription):
     """YoLink BinarySensorEntityDescription."""
 
@@ -50,6 +49,7 @@ SENSOR_DEVICE_TYPE = [
 SENSOR_TYPES: tuple[YoLinkBinarySensorEntityDescription, ...] = (
     YoLinkBinarySensorEntityDescription(
         key="door_state",
+        icon="mdi:door",
         device_class=BinarySensorDeviceClass.DOOR,
         value=lambda value: value == "open" if value is not None else None,
         exists_fn=lambda device: device.device_type == ATTR_DEVICE_DOOR_SENSOR,
@@ -63,7 +63,7 @@ SENSOR_TYPES: tuple[YoLinkBinarySensorEntityDescription, ...] = (
     YoLinkBinarySensorEntityDescription(
         key="leak_state",
         device_class=BinarySensorDeviceClass.MOISTURE,
-        value=lambda value: value in ("alert", "full") if value is not None else None,
+        value=lambda value: value == "alert" if value is not None else None,
         exists_fn=lambda device: device.device_type == ATTR_DEVICE_LEAK_SENSOR,
     ),
     YoLinkBinarySensorEntityDescription(
@@ -99,14 +99,16 @@ async def async_setup_entry(
         for device_coordinator in device_coordinators.values()
         if device_coordinator.device.device_type in SENSOR_DEVICE_TYPE
     ]
-    async_add_entities(
-        YoLinkBinarySensorEntity(
-            config_entry, binary_sensor_device_coordinator, description
-        )
-        for binary_sensor_device_coordinator in binary_sensor_device_coordinators
-        for description in SENSOR_TYPES
-        if description.exists_fn(binary_sensor_device_coordinator.device)
-    )
+    entities = []
+    for binary_sensor_device_coordinator in binary_sensor_device_coordinators:
+        for description in SENSOR_TYPES:
+            if description.exists_fn(binary_sensor_device_coordinator.device):
+                entities.append(
+                    YoLinkBinarySensorEntity(
+                        config_entry, binary_sensor_device_coordinator, description
+                    )
+                )
+    async_add_entities(entities)
 
 
 class YoLinkBinarySensorEntity(YoLinkEntity, BinarySensorEntity):

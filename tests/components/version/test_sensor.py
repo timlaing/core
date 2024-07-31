@@ -1,5 +1,4 @@
 """The test for the version sensor platform."""
-
 from __future__ import annotations
 
 from freezegun.api import FrozenDateTimeFactory

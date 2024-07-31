@@ -1,7 +1,6 @@
 """Test AccuWeather system health."""
-
 import asyncio
-from unittest.mock import AsyncMock
+from unittest.mock import Mock
 
 from aiohttp import ClientError
 
@@ -9,23 +8,21 @@ from homeassistant.components.accuweather.const import DOMAIN
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 
-from . import init_integration
-
 from tests.common import get_system_health_info
 from tests.test_util.aiohttp import AiohttpClientMocker
 
 
 async def test_accuweather_system_health(
-    hass: HomeAssistant,
-    aioclient_mock: AiohttpClientMocker,
-    mock_accuweather_client: AsyncMock,
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test AccuWeather system health."""
     aioclient_mock.get("https://dataservice.accuweather.com/", text="")
-
-    await init_integration(hass)
+    hass.config.components.add(DOMAIN)
     assert await async_setup_component(hass, "system_health", {})
-    await hass.async_block_till_done()
+
+    hass.data[DOMAIN] = {}
+    hass.data[DOMAIN]["0123xyz"] = {}
+    hass.data[DOMAIN]["0123xyz"] = Mock(accuweather=Mock(requests_remaining="42"))
 
     info = await get_system_health_info(hass, DOMAIN)
 
@@ -35,21 +32,21 @@ async def test_accuweather_system_health(
 
     assert info == {
         "can_reach_server": "ok",
-        "remaining_requests": 10,
+        "remaining_requests": "42",
     }
 
 
 async def test_accuweather_system_health_fail(
-    hass: HomeAssistant,
-    aioclient_mock: AiohttpClientMocker,
-    mock_accuweather_client: AsyncMock,
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test AccuWeather system health."""
     aioclient_mock.get("https://dataservice.accuweather.com/", exc=ClientError)
-
-    await init_integration(hass)
+    hass.config.components.add(DOMAIN)
     assert await async_setup_component(hass, "system_health", {})
-    await hass.async_block_till_done()
+
+    hass.data[DOMAIN] = {}
+    hass.data[DOMAIN]["0123xyz"] = {}
+    hass.data[DOMAIN]["0123xyz"] = Mock(accuweather=Mock(requests_remaining="0"))
 
     info = await get_system_health_info(hass, DOMAIN)
 
@@ -59,5 +56,5 @@ async def test_accuweather_system_health_fail(
 
     assert info == {
         "can_reach_server": {"type": "failed", "error": "unreachable"},
-        "remaining_requests": 10,
+        "remaining_requests": "0",
     }

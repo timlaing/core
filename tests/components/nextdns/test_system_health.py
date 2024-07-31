@@ -1,5 +1,4 @@
 """Test NextDNS system health."""
-
 import asyncio
 
 from aiohttp import ClientError
@@ -20,7 +19,6 @@ async def test_nextdns_system_health(
     aioclient_mock.get(API_ENDPOINT, text="")
     hass.config.components.add(DOMAIN)
     assert await async_setup_component(hass, "system_health", {})
-    await hass.async_block_till_done()
 
     info = await get_system_health_info(hass, DOMAIN)
 
@@ -38,7 +36,6 @@ async def test_nextdns_system_health_fail(
     aioclient_mock.get(API_ENDPOINT, exc=ClientError)
     hass.config.components.add(DOMAIN)
     assert await async_setup_component(hass, "system_health", {})
-    await hass.async_block_till_done()
 
     info = await get_system_health_info(hass, DOMAIN)
 

@@ -1,5 +1,4 @@
 """Freebox component constants."""
-
 from __future__ import annotations
 
 import enum
@@ -19,13 +18,12 @@ APP_DESC = {
 API_VERSION = "v6"
 
 PLATFORMS = [
-    Platform.ALARM_CONTROL_PANEL,
-    Platform.BINARY_SENSOR,
     Platform.BUTTON,
-    Platform.CAMERA,
     Platform.DEVICE_TRACKER,
     Platform.SENSOR,
+    Platform.BINARY_SENSOR,
     Platform.SWITCH,
+    Platform.CAMERA,
 ]
 
 DEFAULT_DEVICE_NAME = "Unknown device"
@@ -86,7 +84,6 @@ CATEGORY_TO_MODEL = {
 }
 
 HOME_COMPATIBLE_CATEGORIES = [
-    FreeboxHomeCategory.ALARM,
     FreeboxHomeCategory.CAMERA,
     FreeboxHomeCategory.DWS,
     FreeboxHomeCategory.IOHOME,

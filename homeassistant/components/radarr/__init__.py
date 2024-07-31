@@ -1,9 +1,7 @@
 """The Radarr component."""
-
 from __future__ import annotations
 
-from dataclasses import dataclass, fields
-from typing import cast
+from typing import Any, cast
 
 from aiopyarr.models.host_configuration import PyArrHostConfiguration
 from aiopyarr.radarr_client import RadarrClient
@@ -24,7 +22,6 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DEFAULT_NAME, DOMAIN
 from .coordinator import (
-    CalendarUpdateCoordinator,
     DiskSpaceDataUpdateCoordinator,
     HealthDataUpdateCoordinator,
     MoviesDataUpdateCoordinator,
@@ -34,23 +31,10 @@ from .coordinator import (
     T,
 )
 
-PLATFORMS = [Platform.BINARY_SENSOR, Platform.CALENDAR, Platform.SENSOR]
-type RadarrConfigEntry = ConfigEntry[RadarrData]
+PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR]
 
 
-@dataclass(kw_only=True, slots=True)
-class RadarrData:
-    """Radarr data type."""
-
-    calendar: CalendarUpdateCoordinator
-    disk_space: DiskSpaceDataUpdateCoordinator
-    health: HealthDataUpdateCoordinator
-    movie: MoviesDataUpdateCoordinator
-    queue: QueueDataUpdateCoordinator
-    status: StatusDataUpdateCoordinator
-
-
-async def async_setup_entry(hass: HomeAssistant, entry: RadarrConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Radarr from a config entry."""
     host_configuration = PyArrHostConfiguration(
         api_token=entry.data[CONF_API_KEY],
@@ -61,34 +45,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: RadarrConfigEntry) -> bo
         host_configuration=host_configuration,
         session=async_get_clientsession(hass, entry.data[CONF_VERIFY_SSL]),
     )
-    data = RadarrData(
-        calendar=CalendarUpdateCoordinator(hass, host_configuration, radarr),
-        disk_space=DiskSpaceDataUpdateCoordinator(hass, host_configuration, radarr),
-        health=HealthDataUpdateCoordinator(hass, host_configuration, radarr),
-        movie=MoviesDataUpdateCoordinator(hass, host_configuration, radarr),
-        queue=QueueDataUpdateCoordinator(hass, host_configuration, radarr),
-        status=StatusDataUpdateCoordinator(hass, host_configuration, radarr),
-    )
-    for field in fields(data):
-        coordinator: RadarrDataUpdateCoordinator = getattr(data, field.name)
-        # Movie update can take a while depending on Radarr database size
-        if field.name == "movie":
-            entry.async_create_background_task(
-                hass,
-                coordinator.async_config_entry_first_refresh(),
-                "radarr.movie-coordinator-first-refresh",
-            )
-            continue
+    coordinators: dict[str, RadarrDataUpdateCoordinator[Any]] = {
+        "disk_space": DiskSpaceDataUpdateCoordinator(hass, host_configuration, radarr),
+        "health": HealthDataUpdateCoordinator(hass, host_configuration, radarr),
+        "movie": MoviesDataUpdateCoordinator(hass, host_configuration, radarr),
+        "queue": QueueDataUpdateCoordinator(hass, host_configuration, radarr),
+        "status": StatusDataUpdateCoordinator(hass, host_configuration, radarr),
+    }
+    for coordinator in coordinators.values():
         await coordinator.async_config_entry_first_refresh()
-    entry.runtime_data = data
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinators
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: RadarrConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        hass.data[DOMAIN].pop(entry.entry_id)
+    return unload_ok
 
 
 class RadarrEntity(CoordinatorEntity[RadarrDataUpdateCoordinator[T]]):

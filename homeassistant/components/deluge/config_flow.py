@@ -1,15 +1,15 @@
 """Config flow for the Deluge integration."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
+import socket
 from ssl import SSLError
 from typing import Any
 
 from deluge_client.client import DelugeRPCClient
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow
 from homeassistant.const import (
     CONF_HOST,
     CONF_PASSWORD,
@@ -17,6 +17,7 @@ from homeassistant.const import (
     CONF_SOURCE,
     CONF_USERNAME,
 )
+from homeassistant.data_entry_flow import FlowResult
 import homeassistant.helpers.config_validation as cv
 
 from .const import (
@@ -33,7 +34,7 @@ class DelugeFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow initiated by the user."""
         errors = {}
 
@@ -75,9 +76,7 @@ class DelugeFlowHandler(ConfigFlow, domain=DOMAIN):
         )
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
 
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Handle a reauthorization flow request."""
         return await self.async_step_user()
 
@@ -92,9 +91,13 @@ class DelugeFlowHandler(ConfigFlow, domain=DOMAIN):
         )
         try:
             await self.hass.async_add_executor_job(api.connect)
-        except (ConnectionRefusedError, TimeoutError, SSLError):
+        except (
+            ConnectionRefusedError,
+            socket.timeout,
+            SSLError,
+        ):
             return "cannot_connect"
-        except Exception as ex:  # noqa: BLE001
+        except Exception as ex:  # pylint:disable=broad-except
             if type(ex).__name__ == "BadLoginError":
                 return "invalid_auth"
             return "unknown"

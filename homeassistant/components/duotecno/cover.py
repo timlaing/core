@@ -1,10 +1,8 @@
 """Support for Velbus covers."""
-
 from __future__ import annotations
 
 from typing import Any
 
-from duotecno.controller import PyDuotecno
 from duotecno.unit import DuoswitchUnit
 
 from homeassistant.components.cover import CoverEntity, CoverEntityFeature
@@ -22,7 +20,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the duoswitch endities."""
-    cntrl: PyDuotecno = hass.data[DOMAIN][entry.entry_id]
+    cntrl = hass.data[DOMAIN][entry.entry_id]
     async_add_entities(
         DuotecnoCover(channel) for channel in cntrl.get_units("DuoswitchUnit")
     )
@@ -32,9 +30,13 @@ class DuotecnoCover(DuotecnoEntity, CoverEntity):
     """Representation a Velbus cover."""
 
     _unit: DuoswitchUnit
-    _attr_supported_features = (
-        CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.STOP
-    )
+
+    def __init__(self, unit: DuoswitchUnit) -> None:
+        """Initialize the cover."""
+        super().__init__(unit)
+        self._attr_supported_features = (
+            CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.STOP
+        )
 
     @property
     def is_closed(self) -> bool | None:

@@ -1,5 +1,4 @@
 """Support for Envisalink zone states- represented as binary sensors."""
-
 from __future__ import annotations
 
 import datetime

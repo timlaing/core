@@ -1,5 +1,4 @@
 """Support for Synology DSM update platform."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -20,7 +19,7 @@ from .entity import SynologyDSMBaseEntity, SynologyDSMEntityDescription
 from .models import SynologyDSMData
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass
 class SynologyDSMUpdateEntityEntityDescription(
     UpdateEntityDescription, SynologyDSMEntityDescription
 ):
@@ -59,34 +58,29 @@ class SynoDSMUpdateEntity(
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
-        return bool(self._api.upgrade) and super().available
+        return bool(self._api.upgrade)
 
     @property
     def installed_version(self) -> str | None:
         """Version installed and in use."""
-        assert self._api.information is not None
-        return self._api.information.version_string
+        return self._api.information.version_string  # type: ignore[no-any-return]
 
     @property
     def latest_version(self) -> str | None:
         """Latest version available for install."""
-        assert self._api.upgrade is not None
         if not self._api.upgrade.update_available:
             return self.installed_version
-        return self._api.upgrade.available_version
+        return self._api.upgrade.available_version  # type: ignore[no-any-return]
 
     @property
     def release_url(self) -> str | None:
         """URL to the full release notes of the latest version available."""
-        assert self._api.information is not None
-        assert self._api.upgrade is not None
-
         if (details := self._api.upgrade.available_version_details) is None:
             return None
 
         url = URL("http://update.synology.com/autoupdate/whatsnew.php")
         query = {"model": self._api.information.model}
-        if details["nano"] > 0:
+        if details.get("nano") > 0:
             query["update_version"] = f"{details['buildnumber']}-{details['nano']}"
         else:
             query["update_version"] = details["buildnumber"]

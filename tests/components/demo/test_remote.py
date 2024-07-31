@@ -1,10 +1,9 @@
 """The tests for the demo remote component."""
-
 from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components import remote
+import homeassistant.components.remote as remote
 from homeassistant.components.remote import ATTR_COMMAND
 from homeassistant.const import (
     ATTR_ENTITY_ID,

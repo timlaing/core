@@ -10,21 +10,16 @@ from homeassistant import data_entry_flow
 from homeassistant.auth import AuthManager, auth_store, models as auth_models
 from homeassistant.auth.providers import command_line
 from homeassistant.const import CONF_TYPE
-from homeassistant.core import HomeAssistant
 
 
 @pytest.fixture
-async def store(hass: HomeAssistant) -> auth_store.AuthStore:
+def store(hass):
     """Mock store."""
-    store = auth_store.AuthStore(hass)
-    await store.async_load()
-    return store
+    return auth_store.AuthStore(hass)
 
 
 @pytest.fixture
-def provider(
-    hass: HomeAssistant, store: auth_store.AuthStore
-) -> command_line.CommandLineAuthProvider:
+def provider(hass, store):
     """Mock provider."""
     return command_line.CommandLineAuthProvider(
         hass,
@@ -41,18 +36,12 @@ def provider(
 
 
 @pytest.fixture
-def manager(
-    hass: HomeAssistant,
-    store: auth_store.AuthStore,
-    provider: command_line.CommandLineAuthProvider,
-) -> AuthManager:
+def manager(hass, store, provider):
     """Mock manager."""
     return AuthManager(hass, store, {(provider.type, provider.id): provider}, {})
 
 
-async def test_create_new_credential(
-    manager: AuthManager, provider: command_line.CommandLineAuthProvider
-) -> None:
+async def test_create_new_credential(manager, provider) -> None:
     """Test that we create a new credential."""
     credentials = await provider.async_get_or_create_credentials(
         {"username": "good-user", "password": "good-pass"}
@@ -61,14 +50,9 @@ async def test_create_new_credential(
 
     user = await manager.async_get_or_create_user(credentials)
     assert user.is_active
-    assert len(user.groups) == 1
-    assert user.groups[0].id == "system-admin"
-    assert not user.local_only
 
 
-async def test_match_existing_credentials(
-    provider: command_line.CommandLineAuthProvider,
-) -> None:
+async def test_match_existing_credentials(store, provider) -> None:
     """See if we match existing users."""
     existing = auth_models.Credentials(
         id=uuid.uuid4(),
@@ -84,26 +68,24 @@ async def test_match_existing_credentials(
     assert credentials is existing
 
 
-async def test_invalid_username(provider: command_line.CommandLineAuthProvider) -> None:
+async def test_invalid_username(provider) -> None:
     """Test we raise if incorrect user specified."""
     with pytest.raises(command_line.InvalidAuthError):
         await provider.async_validate_login("bad-user", "good-pass")
 
 
-async def test_invalid_password(provider: command_line.CommandLineAuthProvider) -> None:
+async def test_invalid_password(provider) -> None:
     """Test we raise if incorrect password specified."""
     with pytest.raises(command_line.InvalidAuthError):
         await provider.async_validate_login("good-user", "bad-pass")
 
 
-async def test_good_auth(provider: command_line.CommandLineAuthProvider) -> None:
+async def test_good_auth(provider) -> None:
     """Test nothing is raised with good credentials."""
     await provider.async_validate_login("good-user", "good-pass")
 
 
-async def test_good_auth_with_meta(
-    manager: AuthManager, provider: command_line.CommandLineAuthProvider
-) -> None:
+async def test_good_auth_with_meta(manager, provider) -> None:
     """Test metadata is added upon successful authentication."""
     provider.config[command_line.CONF_ARGS] = ["--with-meta"]
     provider.config[command_line.CONF_META] = True
@@ -118,14 +100,9 @@ async def test_good_auth_with_meta(
     user = await manager.async_get_or_create_user(credentials)
     assert user.name == "Bob"
     assert user.is_active
-    assert len(user.groups) == 1
-    assert user.groups[0].id == "system-users"
-    assert user.local_only
 
 
-async def test_utf_8_username_password(
-    provider: command_line.CommandLineAuthProvider,
-) -> None:
+async def test_utf_8_username_password(provider) -> None:
     """Test that we create a new credential."""
     credentials = await provider.async_get_or_create_credentials(
         {"username": "ßßß", "password": "äöü"}
@@ -133,9 +110,7 @@ async def test_utf_8_username_password(
     assert credentials.is_new is True
 
 
-async def test_login_flow_validates(
-    provider: command_line.CommandLineAuthProvider,
-) -> None:
+async def test_login_flow_validates(provider) -> None:
     """Test login flow."""
     flow = await provider.async_login_flow({})
     result = await flow.async_step_init()
@@ -154,7 +129,7 @@ async def test_login_flow_validates(
     assert result["data"]["username"] == "good-user"
 
 
-async def test_strip_username(provider: command_line.CommandLineAuthProvider) -> None:
+async def test_strip_username(provider) -> None:
     """Test authentication works with username with whitespace around."""
     flow = await provider.async_login_flow({})
     result = await flow.async_step_init(

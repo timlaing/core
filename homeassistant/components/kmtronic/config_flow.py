@@ -1,5 +1,4 @@
 """Config flow for kmtronic integration."""
-
 from __future__ import annotations
 
 import logging
@@ -9,10 +8,9 @@ from pykmtronic.auth import Auth
 from pykmtronic.hub import KMTronicHubAPI
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
+from homeassistant import config_entries, core, exceptions
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.core import callback
 from homeassistant.helpers import aiohttp_client
 
 from .const import CONF_REVERSE, DOMAIN
@@ -28,7 +26,7 @@ DATA_SCHEMA = vol.Schema(
 )
 
 
-async def validate_input(hass: HomeAssistant, data):
+async def validate_input(hass: core.HomeAssistant, data):
     """Validate the user input allows us to connect."""
     session = aiohttp_client.async_get_clientsession(hass)
     auth = Auth(
@@ -49,7 +47,7 @@ async def validate_input(hass: HomeAssistant, data):
     return data
 
 
-class KmtronicConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for kmtronic."""
 
     VERSION = 1
@@ -57,7 +55,7 @@ class KmtronicConfigFlow(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: ConfigEntry,
+        config_entry: config_entries.ConfigEntry,
     ) -> KMTronicOptionsFlow:
         """Get the options flow for this handler."""
         return KMTronicOptionsFlow(config_entry)
@@ -74,7 +72,7 @@ class KmtronicConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
                 errors["base"] = "invalid_auth"
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
 
@@ -83,18 +81,18 @@ class KmtronicConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(exceptions.HomeAssistantError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(exceptions.HomeAssistantError):
     """Error to indicate there is invalid auth."""
 
 
-class KMTronicOptionsFlow(OptionsFlow):
+class KMTronicOptionsFlow(config_entries.OptionsFlow):
     """Handle options."""
 
-    def __init__(self, config_entry: ConfigEntry) -> None:
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         self.config_entry = config_entry
 

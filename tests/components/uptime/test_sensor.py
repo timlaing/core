@@ -1,5 +1,4 @@
 """The tests for the uptime sensor platform."""
-
 import pytest
 from syrupy.assertion import SnapshotAssertion
 from syrupy.filters import props

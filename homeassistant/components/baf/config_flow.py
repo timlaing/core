@@ -1,7 +1,7 @@
 """Config flow for baf."""
-
 from __future__ import annotations
 
+import asyncio
 from asyncio import timeout
 import logging
 from typing import Any
@@ -10,9 +10,10 @@ from aiobafi6 import Device, Service
 from aiobafi6.discovery import PORT
 import voluptuous as vol
 
+from homeassistant import config_entries
 from homeassistant.components import zeroconf
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_IP_ADDRESS
+from homeassistant.data_entry_flow import FlowResult
 
 from .const import DOMAIN, RUN_TIMEOUT
 from .models import BAFDiscovery
@@ -27,14 +28,14 @@ async def async_try_connect(ip_address: str) -> Device:
     try:
         async with timeout(RUN_TIMEOUT):
             await device.async_wait_available()
-    except TimeoutError as ex:
+    except asyncio.TimeoutError as ex:
         raise CannotConnect from ex
     finally:
         run_future.cancel()
     return device
 
 
-class BAFFlowHandler(ConfigFlow, domain=DOMAIN):
+class BAFFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle BAF discovery config flow."""
 
     VERSION = 1
@@ -45,7 +46,7 @@ class BAFFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_zeroconf(
         self, discovery_info: zeroconf.ZeroconfServiceInfo
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle zeroconf discovery."""
         if discovery_info.ip_address.version == 6:
             return self.async_abort(reason="ipv6_not_supported")
@@ -61,7 +62,7 @@ class BAFFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_discovery_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Confirm discovery."""
         assert self.discovery is not None
         discovery = self.discovery
@@ -83,7 +84,7 @@ class BAFFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         errors = {}
         ip_address = (user_input or {}).get(CONF_IP_ADDRESS, "")
@@ -92,7 +93,7 @@ class BAFFlowHandler(ConfigFlow, domain=DOMAIN):
                 device = await async_try_connect(ip_address)
             except CannotConnect:
                 errors[CONF_IP_ADDRESS] = "cannot_connect"
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception(
                     "Unknown exception during connection test to %s", ip_address
                 )

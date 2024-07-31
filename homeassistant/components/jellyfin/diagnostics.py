@@ -1,23 +1,24 @@
 """Diagnostics support for Jellyfin."""
-
 from __future__ import annotations
 
 from typing import Any
 
 from homeassistant.components.diagnostics import async_redact_data
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD
 from homeassistant.core import HomeAssistant
 
-from . import JellyfinConfigEntry
+from .const import DOMAIN
+from .models import JellyfinData
 
 TO_REDACT = {CONF_PASSWORD}
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: JellyfinConfigEntry
+    hass: HomeAssistant, entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    data = entry.runtime_data
+    data: JellyfinData = hass.data[DOMAIN][entry.entry_id]
     sessions = data.coordinators["sessions"]
 
     return {

@@ -1,5 +1,4 @@
 """Test Home Assistant exposed entities helper."""
-
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
@@ -32,9 +31,10 @@ def entities_fixture(
     """Set up the test environment."""
     if request.param == "entities_unique_id":
         return entities_unique_id(entity_registry)
-    if request.param == "entities_no_unique_id":
+    elif request.param == "entities_no_unique_id":
         return entities_no_unique_id(hass)
-    raise RuntimeError("Invalid setup fixture")
+    else:
+        raise RuntimeError("Invalid setup fixture")
 
 
 def entities_unique_id(entity_registry: er.EntityRegistry) -> dict[str, str]:
@@ -57,11 +57,8 @@ def entities_unique_id(entity_registry: er.EntityRegistry) -> dict[str, str]:
     entry_sensor_temperature = entity_registry.async_get_or_create(
         "sensor",
         "test",
-        "unique3",
+        "unique2",
         original_device_class="temperature",
-    )
-    entry_media_player = entity_registry.async_get_or_create(
-        "media_player", "test", "unique4", original_device_class="media_player"
     )
     return {
         "blocked": entry_blocked.entity_id,
@@ -70,7 +67,6 @@ def entities_unique_id(entity_registry: er.EntityRegistry) -> dict[str, str]:
         "door_sensor": entry_binary_sensor_door.entity_id,
         "sensor": entry_sensor.entity_id,
         "temperature_sensor": entry_sensor_temperature.entity_id,
-        "media_player": entry_media_player.entity_id,
     }
 
 
@@ -82,12 +78,10 @@ def entities_no_unique_id(hass: HomeAssistant) -> dict[str, str]:
     door_sensor = "binary_sensor.door"
     sensor = "sensor.test"
     sensor_temperature = "sensor.temperature"
-    media_player = "media_player.test"
     hass.states.async_set(binary_sensor, "on", {})
     hass.states.async_set(door_sensor, "on", {"device_class": "door"})
     hass.states.async_set(sensor, "on", {})
     hass.states.async_set(sensor_temperature, "on", {"device_class": "temperature"})
-    hass.states.async_set(media_player, "idle", {})
     return {
         "blocked": blocked,
         "lock": lock,
@@ -95,7 +89,6 @@ def entities_no_unique_id(hass: HomeAssistant) -> dict[str, str]:
         "door_sensor": door_sensor,
         "sensor": sensor,
         "temperature_sensor": sensor_temperature,
-        "media_player": media_player,
     }
 
 
@@ -103,7 +96,7 @@ async def test_load_preferences(hass: HomeAssistant) -> None:
     """Make sure that we can load/save data correctly."""
     assert await async_setup_component(hass, "homeassistant", {})
 
-    exposed_entities = hass.data[DATA_EXPOSED_ENTITIES]
+    exposed_entities: ExposedEntities = hass.data[DATA_EXPOSED_ENTITIES]
     assert exposed_entities._assistants == {}
 
     exposed_entities.async_set_expose_new_entities("test1", True)
@@ -139,7 +132,7 @@ async def test_expose_entity(
     entry1 = entity_registry.async_get_or_create("test", "test", "unique1")
     entry2 = entity_registry.async_get_or_create("test", "test", "unique2")
 
-    exposed_entities = hass.data[DATA_EXPOSED_ENTITIES]
+    exposed_entities: ExposedEntities = hass.data[DATA_EXPOSED_ENTITIES]
     assert len(exposed_entities.entities) == 0
 
     # Set options
@@ -196,7 +189,7 @@ async def test_expose_entity_unknown(
     assert await async_setup_component(hass, "homeassistant", {})
     await hass.async_block_till_done()
 
-    exposed_entities = hass.data[DATA_EXPOSED_ENTITIES]
+    exposed_entities: ExposedEntities = hass.data[DATA_EXPOSED_ENTITIES]
     assert len(exposed_entities.entities) == 0
 
     # Set options
@@ -416,8 +409,8 @@ async def test_should_expose(
     # Blocked entity is not exposed
     assert async_should_expose(hass, "cloud.alexa", entities["blocked"]) is False
 
-    # Lock is not exposed
-    assert async_should_expose(hass, "cloud.alexa", entities["lock"]) is False
+    # Lock is exposed
+    assert async_should_expose(hass, "cloud.alexa", entities["lock"]) is True
 
     # Binary sensor without device class is not exposed
     assert async_should_expose(hass, "cloud.alexa", entities["binary_sensor"]) is False
@@ -433,16 +426,13 @@ async def test_should_expose(
         async_should_expose(hass, "cloud.alexa", entities["temperature_sensor"]) is True
     )
 
-    # Media player is exposed
-    assert async_should_expose(hass, "cloud.alexa", entities["media_player"]) is True
-
     # The second time we check, it should load it from storage
     assert (
         async_should_expose(hass, "cloud.alexa", entities["temperature_sensor"]) is True
     )
 
     # Check with a different assistant
-    exposed_entities = hass.data[DATA_EXPOSED_ENTITIES]
+    exposed_entities: ExposedEntities = hass.data[DATA_EXPOSED_ENTITIES]
     exposed_entities.async_set_expose_new_entities("cloud.no_default_expose", False)
     assert (
         async_should_expose(
@@ -545,7 +535,7 @@ async def test_listeners(
     """Make sure we call entity listeners."""
     assert await async_setup_component(hass, "homeassistant", {})
 
-    exposed_entities = hass.data[DATA_EXPOSED_ENTITIES]
+    exposed_entities: ExposedEntities = hass.data[DATA_EXPOSED_ENTITIES]
 
     callbacks = []
     exposed_entities.async_listen_entity_updates("test1", lambda: callbacks.append(1))

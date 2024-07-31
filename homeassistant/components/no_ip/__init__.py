@@ -1,5 +1,4 @@
 """Integrate with NO-IP Dynamic DNS service."""
-
 import asyncio
 import base64
 from datetime import datetime, timedelta
@@ -94,7 +93,7 @@ async def _update_no_ip(
 
     params = {"hostname": domain}
 
-    headers: dict[str, str] = {
+    headers = {
         AUTHORIZATION: f"Basic {auth_str.decode('utf-8')}",
         USER_AGENT: HA_USER_AGENT,
     }
@@ -104,7 +103,7 @@ async def _update_no_ip(
             resp = await session.get(url, params=params, headers=headers)
             body = await resp.text()
 
-            if body.startswith(("good", "nochg")):
+            if body.startswith("good") or body.startswith("nochg"):
                 _LOGGER.debug("Updating NO-IP success: %s", domain)
                 return True
 
@@ -115,7 +114,7 @@ async def _update_no_ip(
     except aiohttp.ClientError:
         _LOGGER.warning("Can't connect to NO-IP API")
 
-    except TimeoutError:
+    except asyncio.TimeoutError:
         _LOGGER.warning("Timeout from NO-IP API for domain: %s", domain)
 
     return False

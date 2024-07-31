@@ -1,5 +1,4 @@
 """Control switches."""
-
 import asyncio
 from datetime import timedelta
 import logging
@@ -30,6 +29,7 @@ async def async_setup_entry(
     """Set up the switches from a config entry."""
     board_api = hass.data[DOMAIN][config_entry.entry_id]
     relay_count = config_entry.data["relay_count"]
+    switches = []
 
     async def async_update_data():
         """Fetch data from API endpoint of board."""
@@ -45,14 +45,16 @@ async def async_setup_entry(
     )
     await coordinator.async_refresh()
 
-    async_add_entities(
-        ProgettihwswSwitch(
-            coordinator,
-            f"Relay #{i}",
-            setup_switch(board_api, i, config_entry.data[f"relay_{i!s}"]),
+    for i in range(1, int(relay_count) + 1):
+        switches.append(
+            ProgettihwswSwitch(
+                coordinator,
+                f"Relay #{i}",
+                setup_switch(board_api, i, config_entry.data[f"relay_{str(i)}"]),
+            )
         )
-        for i in range(1, int(relay_count) + 1)
-    )
+
+    async_add_entities(switches)
 
 
 class ProgettihwswSwitch(CoordinatorEntity, SwitchEntity):

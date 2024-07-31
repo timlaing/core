@@ -1,12 +1,11 @@
 """Base entity for the Nextcloud integration."""
-
 from urllib.parse import urlparse
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import NextcloudConfigEntry
 from .const import DOMAIN
 from .coordinator import NextcloudDataUpdateCoordinator
 
@@ -19,7 +18,7 @@ class NextcloudEntity(CoordinatorEntity[NextcloudDataUpdateCoordinator]):
     def __init__(
         self,
         coordinator: NextcloudDataUpdateCoordinator,
-        entry: NextcloudConfigEntry,
+        entry: ConfigEntry,
         description: EntityDescription,
     ) -> None:
         """Initialize the Nextcloud sensor."""

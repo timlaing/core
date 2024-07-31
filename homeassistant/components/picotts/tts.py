@@ -1,5 +1,4 @@
 """Support for the Pico TTS speech service."""
-
 import logging
 import os
 import shutil
@@ -8,11 +7,7 @@ import tempfile
 
 import voluptuous as vol
 
-from homeassistant.components.tts import (
-    CONF_LANG,
-    PLATFORM_SCHEMA as TTS_PLATFORM_SCHEMA,
-    Provider,
-)
+from homeassistant.components.tts import CONF_LANG, PLATFORM_SCHEMA, Provider
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -20,7 +15,7 @@ SUPPORT_LANGUAGES = ["en-US", "en-GB", "de-DE", "es-ES", "fr-FR", "it-IT"]
 
 DEFAULT_LANG = "en-US"
 
-PLATFORM_SCHEMA = TTS_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {vol.Optional(CONF_LANG, default=DEFAULT_LANG): vol.In(SUPPORT_LANGUAGES)}
 )
 

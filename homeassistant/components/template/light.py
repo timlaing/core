@@ -1,5 +1,4 @@
 """Support for Template lights."""
-
 from __future__ import annotations
 
 import logging
@@ -12,12 +11,8 @@ from homeassistant.components.light import (
     ATTR_COLOR_TEMP,
     ATTR_EFFECT,
     ATTR_HS_COLOR,
-    ATTR_RGB_COLOR,
-    ATTR_RGBW_COLOR,
-    ATTR_RGBWW_COLOR,
     ATTR_TRANSITION,
     ENTITY_ID_FORMAT,
-    PLATFORM_SCHEMA as LIGHT_PLATFORM_SCHEMA,
     ColorMode,
     LightEntity,
     LightEntityFeature,
@@ -34,7 +29,8 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import TemplateError
-from homeassistant.helpers import config_validation as cv
+import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.config_validation import PLATFORM_SCHEMA
 from homeassistant.helpers.entity import async_generate_entity_id
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.script import Script
@@ -50,18 +46,8 @@ from .template_entity import (
 _LOGGER = logging.getLogger(__name__)
 _VALID_STATES = [STATE_ON, STATE_OFF, "true", "false"]
 
-# Legacy
 CONF_COLOR_ACTION = "set_color"
 CONF_COLOR_TEMPLATE = "color_template"
-
-CONF_HS_ACTION = "set_hs"
-CONF_HS_TEMPLATE = "hs_template"
-CONF_RGB_ACTION = "set_rgb"
-CONF_RGB_TEMPLATE = "rgb_template"
-CONF_RGBW_ACTION = "set_rgbw"
-CONF_RGBW_TEMPLATE = "rgbw_template"
-CONF_RGBWW_ACTION = "set_rgbww"
-CONF_RGBWW_TEMPLATE = "rgbww_template"
 CONF_EFFECT_ACTION = "set_effect"
 CONF_EFFECT_LIST_TEMPLATE = "effect_list_template"
 CONF_EFFECT_TEMPLATE = "effect_template"
@@ -81,16 +67,8 @@ LIGHT_SCHEMA = vol.All(
     cv.deprecated(CONF_ENTITY_ID),
     vol.Schema(
         {
-            vol.Exclusive(CONF_COLOR_ACTION, "hs_legacy_action"): cv.SCRIPT_SCHEMA,
-            vol.Exclusive(CONF_COLOR_TEMPLATE, "hs_legacy_template"): cv.template,
-            vol.Exclusive(CONF_HS_ACTION, "hs_legacy_action"): cv.SCRIPT_SCHEMA,
-            vol.Exclusive(CONF_HS_TEMPLATE, "hs_legacy_template"): cv.template,
-            vol.Optional(CONF_RGB_ACTION): cv.SCRIPT_SCHEMA,
-            vol.Optional(CONF_RGB_TEMPLATE): cv.template,
-            vol.Optional(CONF_RGBW_ACTION): cv.SCRIPT_SCHEMA,
-            vol.Optional(CONF_RGBW_TEMPLATE): cv.template,
-            vol.Optional(CONF_RGBWW_ACTION): cv.SCRIPT_SCHEMA,
-            vol.Optional(CONF_RGBWW_TEMPLATE): cv.template,
+            vol.Optional(CONF_COLOR_ACTION): cv.SCRIPT_SCHEMA,
+            vol.Optional(CONF_COLOR_TEMPLATE): cv.template,
             vol.Inclusive(CONF_EFFECT_ACTION, "effect"): cv.SCRIPT_SCHEMA,
             vol.Inclusive(CONF_EFFECT_LIST_TEMPLATE, "effect"): cv.template,
             vol.Inclusive(CONF_EFFECT_TEMPLATE, "effect"): cv.template,
@@ -115,7 +93,7 @@ PLATFORM_SCHEMA = vol.All(
     # CONF_WHITE_VALUE_* is deprecated, support will be removed in release 2022.9
     cv.removed(CONF_WHITE_VALUE_ACTION),
     cv.removed(CONF_WHITE_VALUE_TEMPLATE),
-    LIGHT_PLATFORM_SCHEMA.extend(
+    PLATFORM_SCHEMA.extend(
         {vol.Required(CONF_LIGHTS): cv.schema_with_slug_keys(LIGHT_SCHEMA)}
     ),
 )
@@ -188,22 +166,6 @@ class LightTemplate(TemplateEntity, LightEntity):
         if (color_action := config.get(CONF_COLOR_ACTION)) is not None:
             self._color_script = Script(hass, color_action, friendly_name, DOMAIN)
         self._color_template = config.get(CONF_COLOR_TEMPLATE)
-        self._hs_script = None
-        if (hs_action := config.get(CONF_HS_ACTION)) is not None:
-            self._hs_script = Script(hass, hs_action, friendly_name, DOMAIN)
-        self._hs_template = config.get(CONF_HS_TEMPLATE)
-        self._rgb_script = None
-        if (rgb_action := config.get(CONF_RGB_ACTION)) is not None:
-            self._rgb_script = Script(hass, rgb_action, friendly_name, DOMAIN)
-        self._rgb_template = config.get(CONF_RGB_TEMPLATE)
-        self._rgbw_script = None
-        if (rgbw_action := config.get(CONF_RGBW_ACTION)) is not None:
-            self._rgbw_script = Script(hass, rgbw_action, friendly_name, DOMAIN)
-        self._rgbw_template = config.get(CONF_RGBW_TEMPLATE)
-        self._rgbww_script = None
-        if (rgbww_action := config.get(CONF_RGBWW_ACTION)) is not None:
-            self._rgbww_script = Script(hass, rgbww_action, friendly_name, DOMAIN)
-        self._rgbww_template = config.get(CONF_RGBWW_TEMPLATE)
         self._effect_script = None
         if (effect_action := config.get(CONF_EFFECT_ACTION)) is not None:
             self._effect_script = Script(hass, effect_action, friendly_name, DOMAIN)
@@ -216,39 +178,24 @@ class LightTemplate(TemplateEntity, LightEntity):
         self._state = False
         self._brightness = None
         self._temperature = None
-        self._hs_color = None
-        self._rgb_color = None
-        self._rgbw_color = None
-        self._rgbww_color = None
+        self._color = None
         self._effect = None
         self._effect_list = None
-        self._color_mode = None
+        self._fixed_color_mode = None
         self._max_mireds = None
         self._min_mireds = None
         self._supports_transition = False
-        self._supported_color_modes = None
 
         color_modes = {ColorMode.ONOFF}
         if self._level_script is not None:
             color_modes.add(ColorMode.BRIGHTNESS)
         if self._temperature_script is not None:
             color_modes.add(ColorMode.COLOR_TEMP)
-        if self._hs_script is not None:
-            color_modes.add(ColorMode.HS)
         if self._color_script is not None:
             color_modes.add(ColorMode.HS)
-        if self._rgb_script is not None:
-            color_modes.add(ColorMode.RGB)
-        if self._rgbw_script is not None:
-            color_modes.add(ColorMode.RGBW)
-        if self._rgbww_script is not None:
-            color_modes.add(ColorMode.RGBWW)
-
         self._supported_color_modes = filter_supported_color_modes(color_modes)
-        if len(self._supported_color_modes) > 1:
-            self._color_mode = ColorMode.UNKNOWN
         if len(self._supported_color_modes) == 1:
-            self._color_mode = next(iter(self._supported_color_modes))
+            self._fixed_color_mode = next(iter(self._supported_color_modes))
 
         self._attr_supported_features = LightEntityFeature(0)
         if self._effect_script is not None:
@@ -285,22 +232,7 @@ class LightTemplate(TemplateEntity, LightEntity):
     @property
     def hs_color(self) -> tuple[float, float] | None:
         """Return the hue and saturation color value [float, float]."""
-        return self._hs_color
-
-    @property
-    def rgb_color(self) -> tuple[int, int, int] | None:
-        """Return the rgb color value."""
-        return self._rgb_color
-
-    @property
-    def rgbw_color(self) -> tuple[int, int, int, int] | None:
-        """Return the rgbw color value."""
-        return self._rgbw_color
-
-    @property
-    def rgbww_color(self) -> tuple[int, int, int, int, int] | None:
-        """Return the rgbww color value."""
-        return self._rgbww_color
+        return self._color
 
     @property
     def effect(self) -> str | None:
@@ -315,7 +247,12 @@ class LightTemplate(TemplateEntity, LightEntity):
     @property
     def color_mode(self):
         """Return current color mode."""
-        return self._color_mode
+        if self._fixed_color_mode:
+            return self._fixed_color_mode
+        # Support for ct + hs, prioritize hs
+        if self._color is not None:
+            return ColorMode.HS
+        return ColorMode.COLOR_TEMP
 
     @property
     def supported_color_modes(self):
@@ -368,42 +305,10 @@ class LightTemplate(TemplateEntity, LightEntity):
             )
         if self._color_template:
             self.add_template_attribute(
-                "_hs_color",
+                "_color",
                 self._color_template,
                 None,
-                self._update_hs,
-                none_on_template_error=True,
-            )
-        if self._hs_template:
-            self.add_template_attribute(
-                "_hs_color",
-                self._hs_template,
-                None,
-                self._update_hs,
-                none_on_template_error=True,
-            )
-        if self._rgb_template:
-            self.add_template_attribute(
-                "_rgb_color",
-                self._rgb_template,
-                None,
-                self._update_rgb,
-                none_on_template_error=True,
-            )
-        if self._rgbw_template:
-            self.add_template_attribute(
-                "_rgbw_color",
-                self._rgbw_template,
-                None,
-                self._update_rgbw,
-                none_on_template_error=True,
-            )
-        if self._rgbww_template:
-            self.add_template_attribute(
-                "_rgbww_color",
-                self._rgbww_template,
-                None,
-                self._update_rgbww,
+                self._update_color,
                 none_on_template_error=True,
             )
         if self._effect_list_template:
@@ -432,7 +337,7 @@ class LightTemplate(TemplateEntity, LightEntity):
             )
         super()._async_setup_templates()
 
-    async def async_turn_on(self, **kwargs: Any) -> None:  # noqa: C901
+    async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the light on."""
         optimistic_set = False
         # set optimistic states
@@ -452,88 +357,19 @@ class LightTemplate(TemplateEntity, LightEntity):
                 "Optimistically setting color temperature to %s",
                 kwargs[ATTR_COLOR_TEMP],
             )
-            self._color_mode = ColorMode.COLOR_TEMP
             self._temperature = kwargs[ATTR_COLOR_TEMP]
-            if self._hs_template is None and self._color_template is None:
-                self._hs_color = None
-            if self._rgb_template is None:
-                self._rgb_color = None
-            if self._rgbw_template is None:
-                self._rgbw_color = None
-            if self._rgbww_template is None:
-                self._rgbww_color = None
+            if self._color_template is None:
+                self._color = None
             optimistic_set = True
 
-        if (
-            self._hs_template is None
-            and self._color_template is None
-            and ATTR_HS_COLOR in kwargs
-        ):
+        if self._color_template is None and ATTR_HS_COLOR in kwargs:
             _LOGGER.debug(
-                "Optimistically setting hs color to %s",
+                "Optimistically setting color to %s",
                 kwargs[ATTR_HS_COLOR],
             )
-            self._color_mode = ColorMode.HS
-            self._hs_color = kwargs[ATTR_HS_COLOR]
+            self._color = kwargs[ATTR_HS_COLOR]
             if self._temperature_template is None:
                 self._temperature = None
-            if self._rgb_template is None:
-                self._rgb_color = None
-            if self._rgbw_template is None:
-                self._rgbw_color = None
-            if self._rgbww_template is None:
-                self._rgbww_color = None
-            optimistic_set = True
-
-        if self._rgb_template is None and ATTR_RGB_COLOR in kwargs:
-            _LOGGER.debug(
-                "Optimistically setting rgb color to %s",
-                kwargs[ATTR_RGB_COLOR],
-            )
-            self._color_mode = ColorMode.RGB
-            self._rgb_color = kwargs[ATTR_RGB_COLOR]
-            if self._temperature_template is None:
-                self._temperature = None
-            if self._hs_template is None and self._color_template is None:
-                self._hs_color = None
-            if self._rgbw_template is None:
-                self._rgbw_color = None
-            if self._rgbww_template is None:
-                self._rgbww_color = None
-            optimistic_set = True
-
-        if self._rgbw_template is None and ATTR_RGBW_COLOR in kwargs:
-            _LOGGER.debug(
-                "Optimistically setting rgbw color to %s",
-                kwargs[ATTR_RGBW_COLOR],
-            )
-            self._color_mode = ColorMode.RGBW
-            self._rgbw_color = kwargs[ATTR_RGBW_COLOR]
-            if self._temperature_template is None:
-                self._temperature = None
-            if self._hs_template is None and self._color_template is None:
-                self._hs_color = None
-            if self._rgb_template is None:
-                self._rgb_color = None
-            if self._rgbww_template is None:
-                self._rgbww_color = None
-            optimistic_set = True
-
-        if self._rgbww_template is None and ATTR_RGBWW_COLOR in kwargs:
-            _LOGGER.debug(
-                "Optimistically setting rgbww color to %s",
-                kwargs[ATTR_RGBWW_COLOR],
-            )
-            self._color_mode = ColorMode.RGBWW
-            self._rgbww_color = kwargs[ATTR_RGBWW_COLOR]
-            if self._temperature_template is None:
-                self._temperature = None
-            if self._hs_template is None and self._color_template is None:
-                self._hs_color = None
-            if self._rgb_template is None:
-                self._rgb_color = None
-            if self._rgbw_template is None:
-                self._rgbw_color = None
             optimistic_set = True
 
         common_params = {}
@@ -576,58 +412,6 @@ class LightTemplate(TemplateEntity, LightEntity):
 
             await self.async_run_script(
                 self._color_script, run_variables=common_params, context=self._context
-            )
-        elif ATTR_HS_COLOR in kwargs and self._hs_script:
-            hs_value = kwargs[ATTR_HS_COLOR]
-            common_params["hs"] = hs_value
-            common_params["h"] = int(hs_value[0])
-            common_params["s"] = int(hs_value[1])
-
-            await self.async_run_script(
-                self._hs_script, run_variables=common_params, context=self._context
-            )
-        elif ATTR_RGBWW_COLOR in kwargs and self._rgbww_script:
-            rgbww_value = kwargs[ATTR_RGBWW_COLOR]
-            common_params["rgbww"] = rgbww_value
-            common_params["rgb"] = (
-                int(rgbww_value[0]),
-                int(rgbww_value[1]),
-                int(rgbww_value[2]),
-            )
-            common_params["r"] = int(rgbww_value[0])
-            common_params["g"] = int(rgbww_value[1])
-            common_params["b"] = int(rgbww_value[2])
-            common_params["cw"] = int(rgbww_value[3])
-            common_params["ww"] = int(rgbww_value[4])
-
-            await self.async_run_script(
-                self._rgbww_script, run_variables=common_params, context=self._context
-            )
-        elif ATTR_RGBW_COLOR in kwargs and self._rgbw_script:
-            rgbw_value = kwargs[ATTR_RGBW_COLOR]
-            common_params["rgbw"] = rgbw_value
-            common_params["rgb"] = (
-                int(rgbw_value[0]),
-                int(rgbw_value[1]),
-                int(rgbw_value[2]),
-            )
-            common_params["r"] = int(rgbw_value[0])
-            common_params["g"] = int(rgbw_value[1])
-            common_params["b"] = int(rgbw_value[2])
-            common_params["w"] = int(rgbw_value[3])
-
-            await self.async_run_script(
-                self._rgbw_script, run_variables=common_params, context=self._context
-            )
-        elif ATTR_RGB_COLOR in kwargs and self._rgb_script:
-            rgb_value = kwargs[ATTR_RGB_COLOR]
-            common_params["rgb"] = rgb_value
-            common_params["r"] = int(rgb_value[0])
-            common_params["g"] = int(rgb_value[1])
-            common_params["b"] = int(rgb_value[2])
-
-            await self.async_run_script(
-                self._rgb_script, run_variables=common_params, context=self._context
             )
         elif ATTR_BRIGHTNESS in kwargs and self._level_script:
             await self.async_run_script(
@@ -776,19 +560,18 @@ class LightTemplate(TemplateEntity, LightEntity):
                 " this light, or 'None'"
             )
             self._temperature = None
-        self._color_mode = ColorMode.COLOR_TEMP
 
     @callback
-    def _update_hs(self, render):
-        """Update the color from the template."""
+    def _update_color(self, render):
+        """Update the hs_color from the template."""
         if render is None:
-            self._hs_color = None
+            self._color = None
             return
 
         h_str = s_str = None
         if isinstance(render, str):
             if render in ("None", ""):
-                self._hs_color = None
+                self._color = None
                 return
             h_str, s_str = map(
                 float, render.replace("(", "").replace(")", "").split(",", 1)
@@ -799,12 +582,10 @@ class LightTemplate(TemplateEntity, LightEntity):
         if (
             h_str is not None
             and s_str is not None
-            and isinstance(h_str, (int, float))
-            and isinstance(s_str, (int, float))
             and 0 <= h_str <= 360
             and 0 <= s_str <= 100
         ):
-            self._hs_color = (h_str, s_str)
+            self._color = (h_str, s_str)
         elif h_str is not None and s_str is not None:
             _LOGGER.error(
                 (
@@ -815,151 +596,12 @@ class LightTemplate(TemplateEntity, LightEntity):
                 s_str,
                 self.entity_id,
             )
-            self._hs_color = None
+            self._color = None
         else:
             _LOGGER.error(
                 "Received invalid hs_color : (%s) for entity %s", render, self.entity_id
             )
-            self._hs_color = None
-        self._color_mode = ColorMode.HS
-
-    @callback
-    def _update_rgb(self, render):
-        """Update the color from the template."""
-        if render is None:
-            self._rgb_color = None
-            return
-
-        r_int = g_int = b_int = None
-        if isinstance(render, str):
-            if render in ("None", ""):
-                self._rgb_color = None
-                return
-            cleanup_char = ["(", ")", "[", "]", " "]
-            for char in cleanup_char:
-                render = render.replace(char, "")
-            r_int, g_int, b_int = map(int, render.split(",", 3))
-        elif isinstance(render, (list, tuple)) and len(render) == 3:
-            r_int, g_int, b_int = render
-
-        if all(
-            value is not None and isinstance(value, (int, float)) and 0 <= value <= 255
-            for value in (r_int, g_int, b_int)
-        ):
-            self._rgb_color = (r_int, g_int, b_int)
-        elif any(
-            isinstance(value, (int, float)) and not 0 <= value <= 255
-            for value in (r_int, g_int, b_int)
-        ):
-            _LOGGER.error(
-                "Received invalid rgb_color : (%s, %s, %s) for entity %s. Expected: (0-255, 0-255, 0-255)",
-                r_int,
-                g_int,
-                b_int,
-                self.entity_id,
-            )
-            self._rgb_color = None
-        else:
-            _LOGGER.error(
-                "Received invalid rgb_color : (%s) for entity %s",
-                render,
-                self.entity_id,
-            )
-            self._rgb_color = None
-        self._color_mode = ColorMode.RGB
-
-    @callback
-    def _update_rgbw(self, render):
-        """Update the color from the template."""
-        if render is None:
-            self._rgbw_color = None
-            return
-
-        r_int = g_int = b_int = w_int = None
-        if isinstance(render, str):
-            if render in ("None", ""):
-                self._rgb_color = None
-                return
-            cleanup_char = ["(", ")", "[", "]", " "]
-            for char in cleanup_char:
-                render = render.replace(char, "")
-            r_int, g_int, b_int, w_int = map(int, render.split(",", 4))
-        elif isinstance(render, (list, tuple)) and len(render) == 4:
-            r_int, g_int, b_int, w_int = render
-
-        if all(
-            value is not None and isinstance(value, (int, float)) and 0 <= value <= 255
-            for value in (r_int, g_int, b_int, w_int)
-        ):
-            self._rgbw_color = (r_int, g_int, b_int, w_int)
-        elif any(
-            isinstance(value, (int, float)) and not 0 <= value <= 255
-            for value in (r_int, g_int, b_int, w_int)
-        ):
-            _LOGGER.error(
-                "Received invalid rgb_color : (%s, %s, %s, %s) for entity %s. Expected: (0-255, 0-255, 0-255, 0-255)",
-                r_int,
-                g_int,
-                b_int,
-                w_int,
-                self.entity_id,
-            )
-            self._rgbw_color = None
-        else:
-            _LOGGER.error(
-                "Received invalid rgb_color : (%s) for entity %s",
-                render,
-                self.entity_id,
-            )
-            self._rgbw_color = None
-        self._color_mode = ColorMode.RGBW
-
-    @callback
-    def _update_rgbww(self, render):
-        """Update the color from the template."""
-        if render is None:
-            self._rgbww_color = None
-            return
-
-        r_int = g_int = b_int = cw_int = ww_int = None
-        if isinstance(render, str):
-            if render in ("None", ""):
-                self._rgb_color = None
-                return
-            cleanup_char = ["(", ")", "[", "]", " "]
-            for char in cleanup_char:
-                render = render.replace(char, "")
-            r_int, g_int, b_int, cw_int, ww_int = map(int, render.split(",", 5))
-        elif isinstance(render, (list, tuple)) and len(render) == 5:
-            r_int, g_int, b_int, cw_int, ww_int = render
-
-        if all(
-            value is not None and isinstance(value, (int, float)) and 0 <= value <= 255
-            for value in (r_int, g_int, b_int, cw_int, ww_int)
-        ):
-            self._rgbww_color = (r_int, g_int, b_int, cw_int, ww_int)
-        elif any(
-            isinstance(value, (int, float)) and not 0 <= value <= 255
-            for value in (r_int, g_int, b_int, cw_int, ww_int)
-        ):
-            _LOGGER.error(
-                "Received invalid rgb_color : (%s, %s, %s, %s, %s) for entity %s. Expected: (0-255, 0-255, 0-255, 0-255)",
-                r_int,
-                g_int,
-                b_int,
-                cw_int,
-                ww_int,
-                self.entity_id,
-            )
-            self._rgbww_color = None
-        else:
-            _LOGGER.error(
-                "Received invalid rgb_color : (%s) for entity %s",
-                render,
-                self.entity_id,
-            )
-            self._rgbww_color = None
-        self._color_mode = ColorMode.RGBWW
+            self._color = None
 
     @callback
     def _update_max_mireds(self, render):

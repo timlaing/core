@@ -1,5 +1,4 @@
 """Common fixtures for the Color extractor tests."""
-
 import pytest
 
 from homeassistant.components.color_extractor.const import DOMAIN

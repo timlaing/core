@@ -1,5 +1,4 @@
 """Demo platform that offers a fake select entity."""
-
 from __future__ import annotations
 
 from homeassistant.components.select import SelectEntity
@@ -22,6 +21,7 @@ async def async_setup_entry(
             DemoSelect(
                 unique_id="speed",
                 device_name="Speed",
+                icon="mdi:speedometer",
                 current_option="ridiculous_speed",
                 options=[
                     "light_speed",
@@ -45,6 +45,7 @@ class DemoSelect(SelectEntity):
         self,
         unique_id: str,
         device_name: str,
+        icon: str,
         current_option: str | None,
         options: list[str],
         translation_key: str,
@@ -52,6 +53,7 @@ class DemoSelect(SelectEntity):
         """Initialize the Demo select entity."""
         self._attr_unique_id = unique_id
         self._attr_current_option = current_option
+        self._attr_icon = icon
         self._attr_options = options
         self._attr_translation_key = translation_key
         self._attr_device_info = DeviceInfo(

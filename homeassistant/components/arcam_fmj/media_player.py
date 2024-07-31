@@ -1,8 +1,6 @@
 """Arcam media player."""
-
 from __future__ import annotations
 
-from collections.abc import Callable, Coroutine
 import functools
 import logging
 from typing import Any
@@ -19,6 +17,7 @@ from homeassistant.components.media_player import (
     MediaType,
 )
 from homeassistant.components.media_player.errors import BrowseError
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
@@ -26,7 +25,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import ArcamFmjConfigEntry
+from .config_flow import get_entry_client
 from .const import (
     DOMAIN,
     EVENT_TURN_ON,
@@ -40,12 +39,12 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ArcamFmjConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the configuration entry."""
 
-    client = config_entry.runtime_data
+    client = get_entry_client(hass, config_entry)
 
     async_add_entities(
         [
@@ -60,13 +59,11 @@ async def async_setup_entry(
     )
 
 
-def convert_exception[**_P, _R](
-    func: Callable[_P, Coroutine[Any, Any, _R]],
-) -> Callable[_P, Coroutine[Any, Any, _R]]:
+def convert_exception(func):
     """Return decorator to convert a connection error into a home assistant error."""
 
     @functools.wraps(func)
-    async def _convert_exception(*args: _P.args, **kwargs: _P.kwargs) -> _R:
+    async def _convert_exception(*args, **kwargs):
         try:
             return await func(*args, **kwargs)
         except ConnectionFailed as exception:
@@ -253,7 +250,7 @@ class ArcamFmj(MediaPlayerEntity):
             for preset in presets.values()
         ]
 
-        return BrowseMedia(
+        root = BrowseMedia(
             title="Arcam FMJ Receiver",
             media_class=MediaClass.DIRECTORY,
             media_content_id="root",
@@ -262,6 +259,8 @@ class ArcamFmj(MediaPlayerEntity):
             can_expand=True,
             children=radio,
         )
+
+        return root
 
     @convert_exception
     async def async_play_media(
@@ -320,7 +319,9 @@ class ArcamFmj(MediaPlayerEntity):
     def media_content_type(self) -> MediaType | None:
         """Content type of current playing media."""
         source = self._state.get_source()
-        if source in (SourceCodes.DAB, SourceCodes.FM):
+        if source == SourceCodes.DAB:
+            value = MediaType.MUSIC
+        elif source == SourceCodes.FM:
             value = MediaType.MUSIC
         else:
             value = None

@@ -6,7 +6,7 @@
       "fields": {
         "mode": {
           "name": "[%key:common::config_flow::data::mode%]",
-          "description": "Mode to set the system to."
+          "description": "Mode to set thermostat."
         },
         "period": {
           "name": "Period",

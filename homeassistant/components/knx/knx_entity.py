@@ -1,5 +1,4 @@
 """Base class for KNX devices."""
-
 from __future__ import annotations
 
 from typing import cast
@@ -36,16 +35,12 @@ class KnxEntity(Entity):
         """Request a state update from KNX bus."""
         await self._device.sync()
 
-    def after_update_callback(self, _device: XknxDevice) -> None:
+    async def after_update_callback(self, device: XknxDevice) -> None:
         """Call after device was updated."""
         self.async_write_ha_state()
 
     async def async_added_to_hass(self) -> None:
-        """Store register state change callback and start device object."""
+        """Store register state change callback."""
         self._device.register_device_updated_cb(self.after_update_callback)
-        self._device.xknx.devices.async_add(self._device)
-
-    async def async_will_remove_from_hass(self) -> None:
-        """Disconnect device object when removed."""
-        self._device.unregister_device_updated_cb(self.after_update_callback)
-        self._device.xknx.devices.async_remove(self._device)
+        # will remove all callbacks and xknx tasks
+        self.async_on_remove(self._device.shutdown)

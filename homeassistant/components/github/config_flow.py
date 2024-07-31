@@ -1,9 +1,8 @@
 """Config flow for GitHub integration."""
-
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from aiogithubapi import (
     GitHubAPI,
@@ -15,21 +14,23 @@ from aiogithubapi import (
 from aiogithubapi.const import OAUTH_USER_LOGIN
 import voluptuous as vol
 
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlow,
-)
-from homeassistant.const import CONF_ACCESS_TOKEN
+from homeassistant import config_entries
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import (
     SERVER_SOFTWARE,
     async_get_clientsession,
 )
 import homeassistant.helpers.config_validation as cv
 
-from .const import CLIENT_ID, CONF_REPOSITORIES, DEFAULT_REPOSITORIES, DOMAIN, LOGGER
+from .const import (
+    CLIENT_ID,
+    CONF_ACCESS_TOKEN,
+    CONF_REPOSITORIES,
+    DEFAULT_REPOSITORIES,
+    DOMAIN,
+    LOGGER,
+)
 
 
 async def get_repositories(hass: HomeAssistant, access_token: str) -> list[str]:
@@ -38,12 +39,12 @@ async def get_repositories(hass: HomeAssistant, access_token: str) -> list[str]:
     repositories = set()
 
     async def _get_starred_repositories() -> None:
-        response = await client.user.starred(params={"per_page": 100})
+        response = await client.user.starred(**{"params": {"per_page": 100}})
         if not response.is_last_page:
             results = await asyncio.gather(
                 *(
                     client.user.starred(
-                        params={"per_page": 100, "page": page_number},
+                        **{"params": {"per_page": 100, "page": page_number}},
                     )
                     for page_number in range(
                         response.next_page_number, response.last_page_number + 1
@@ -56,12 +57,12 @@ async def get_repositories(hass: HomeAssistant, access_token: str) -> list[str]:
         repositories.update(response.data)
 
     async def _get_personal_repositories() -> None:
-        response = await client.user.repos(params={"per_page": 100})
+        response = await client.user.repos(**{"params": {"per_page": 100}})
         if not response.is_last_page:
             results = await asyncio.gather(
                 *(
                     client.user.repos(
-                        params={"per_page": 100, "page": page_number},
+                        **{"params": {"per_page": 100, "page": page_number}},
                     )
                     for page_number in range(
                         response.next_page_number, response.last_page_number + 1
@@ -93,7 +94,7 @@ async def get_repositories(hass: HomeAssistant, access_token: str) -> list[str]:
     )
 
 
-class GitHubConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for GitHub."""
 
     VERSION = 1
@@ -109,7 +110,7 @@ class GitHubConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_user(
         self,
         user_input: dict[str, Any] | None = None,
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         if self._async_current_entries():
             return self.async_abort(reason="already_configured")
@@ -119,65 +120,65 @@ class GitHubConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_device(
         self,
         user_input: dict[str, Any] | None = None,
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle device steps."""
 
         async def _wait_for_login() -> None:
-            if TYPE_CHECKING:
-                # mypy is not aware that we can't get here without having these set already
-                assert self._device is not None
-                assert self._login_device is not None
+            # mypy is not aware that we can't get here without having these set already
+            assert self._device is not None
+            assert self._login_device is not None
 
-            response = await self._device.activation(
-                device_code=self._login_device.device_code
-            )
-            self._login = response.data
+            try:
+                response = await self._device.activation(
+                    device_code=self._login_device.device_code
+                )
+                self._login = response.data
+            finally:
+                self.hass.async_create_task(
+                    self.hass.config_entries.flow.async_configure(flow_id=self.flow_id)
+                )
 
         if not self._device:
             self._device = GitHubDeviceAPI(
                 client_id=CLIENT_ID,
                 session=async_get_clientsession(self.hass),
-                client_name=SERVER_SOFTWARE,
+                **{"client_name": SERVER_SOFTWARE},
             )
 
-            try:
-                response = await self._device.register()
-                self._login_device = response.data
-            except GitHubException as exception:
-                LOGGER.exception(exception)
-                return self.async_abort(reason="could_not_register")
+        try:
+            response = await self._device.register()
+            self._login_device = response.data
+        except GitHubException as exception:
+            LOGGER.exception(exception)
+            return self.async_abort(reason="could_not_register")
 
-        if self.login_task is None:
+        if not self.login_task:
             self.login_task = self.hass.async_create_task(_wait_for_login())
+            return self.async_show_progress(
+                step_id="device",
+                progress_action="wait_for_device",
+                description_placeholders={
+                    "url": OAUTH_USER_LOGIN,
+                    "code": self._login_device.user_code,
+                },
+            )
 
-        if self.login_task.done():
-            if self.login_task.exception():
-                return self.async_show_progress_done(next_step_id="could_not_register")
-            return self.async_show_progress_done(next_step_id="repositories")
+        try:
+            await self.login_task
+        except GitHubException as exception:
+            LOGGER.exception(exception)
+            return self.async_show_progress_done(next_step_id="could_not_register")
 
-        if TYPE_CHECKING:
-            # mypy is not aware that we can't get here without having this set already
-            assert self._login_device is not None
-
-        return self.async_show_progress(
-            step_id="device",
-            progress_action="wait_for_device",
-            description_placeholders={
-                "url": OAUTH_USER_LOGIN,
-                "code": self._login_device.user_code,
-            },
-            progress_task=self.login_task,
-        )
+        return self.async_show_progress_done(next_step_id="repositories")
 
     async def async_step_repositories(
         self,
         user_input: dict[str, Any] | None = None,
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle repositories step."""
 
-        if TYPE_CHECKING:
-            # mypy is not aware that we can't get here without having this set already
-            assert self._login is not None
+        # mypy is not aware that we can't get here without having this set already
+        assert self._login is not None
 
         if not user_input:
             repositories = await get_repositories(self.hass, self._login.access_token)
@@ -201,30 +202,30 @@ class GitHubConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_could_not_register(
         self,
         user_input: dict[str, Any] | None = None,
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle issues that need transition await from progress step."""
         return self.async_abort(reason="could_not_register")
 
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: ConfigEntry,
+        config_entry: config_entries.ConfigEntry,
     ) -> OptionsFlowHandler:
         """Get the options flow for this handler."""
         return OptionsFlowHandler(config_entry)
 
 
-class OptionsFlowHandler(OptionsFlow):
+class OptionsFlowHandler(config_entries.OptionsFlow):
     """Handle a option flow for GitHub."""
 
-    def __init__(self, config_entry: ConfigEntry) -> None:
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         self.config_entry = config_entry
 
     async def async_step_init(
         self,
         user_input: dict[str, Any] | None = None,
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle options flow."""
         if not user_input:
             configured_repositories: list[str] = self.config_entry.options[

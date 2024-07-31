@@ -1,10 +1,9 @@
 """Support for the SpaceAPI."""
-
 from contextlib import suppress
 
 import voluptuous as vol
 
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
+from homeassistant.components.http import HomeAssistantView
 from homeassistant.const import (
     ATTR_ENTITY_ID,
     ATTR_ICON,
@@ -37,7 +36,7 @@ ATTR_RADIO_SHOW = "radio_show"
 ATTR_LAT = "lat"
 ATTR_LON = "lon"
 ATTR_API = "api"
-ATTR_CLOSED = "closed"
+ATTR_CLOSE = "close"
 ATTR_CONTACT = "contact"
 ATTR_ISSUE_REPORT_CHANNELS = "issue_report_channels"
 ATTR_LASTCHANGE = "lastchange"
@@ -267,7 +266,7 @@ class APISpaceApiView(HomeAssistantView):
     @ha.callback
     def get(self, request):
         """Get SpaceAPI data."""
-        hass = request.app[KEY_HASS]
+        hass = request.app["hass"]
         spaceapi = dict(hass.data[DATA_SPACEAPI])
         is_sensors = spaceapi.get("sensors")
 
@@ -293,7 +292,7 @@ class APISpaceApiView(HomeAssistantView):
         with suppress(KeyError):
             state[ATTR_ICON] = {
                 ATTR_OPEN: spaceapi["state"][CONF_ICON_OPEN],
-                ATTR_CLOSED: spaceapi["state"][CONF_ICON_CLOSED],
+                ATTR_CLOSE: spaceapi["state"][CONF_ICON_CLOSED],
             }
 
         data = {

@@ -1,5 +1,4 @@
 """Test Discord notify."""
-
 import logging
 
 import pytest

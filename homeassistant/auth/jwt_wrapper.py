@@ -4,7 +4,6 @@ Since we decode the same tokens over and over again
 we can cache the result of the decode of valid tokens
 to speed up the process.
 """
-
 from __future__ import annotations
 
 from datetime import timedelta
@@ -78,7 +77,7 @@ class _PyJWTWithVerify(PyJWT):
         key: str,
         algorithms: list[str],
         issuer: str | None = None,
-        leeway: float | timedelta = 0,
+        leeway: int | float | timedelta = 0,
         options: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Verify a JWT's signature and claims."""

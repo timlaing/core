@@ -1,5 +1,4 @@
 """Provide common fixtures for tests."""
-
 from collections.abc import Generator
 from unittest.mock import AsyncMock, patch
 
@@ -19,7 +18,7 @@ def mock_config_entry() -> MockConfigEntry:
 
 
 @pytest.fixture
-def mock_setup_entry() -> Generator[AsyncMock]:
+def mock_setup_entry() -> Generator[AsyncMock, None, None]:
     """Mock setting up a config entry."""
     with patch(
         "homeassistant.components.openexchangerates.async_setup_entry",
@@ -29,7 +28,9 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 
 
 @pytest.fixture
-def mock_latest_rates_config_flow() -> Generator[AsyncMock]:
+def mock_latest_rates_config_flow(
+    request: pytest.FixtureRequest,
+) -> Generator[AsyncMock, None, None]:
     """Return a mocked WLED client."""
     with patch(
         "homeassistant.components.openexchangerates.config_flow.Client.get_latest",

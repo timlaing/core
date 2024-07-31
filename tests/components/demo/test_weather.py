@@ -1,5 +1,4 @@
 """The tests for the demo weather component."""
-
 import datetime
 from typing import Any
 from unittest.mock import patch

@@ -1,5 +1,4 @@
 """Define tests for the GDACS general setup."""
-
 from unittest.mock import patch
 
 from homeassistant.components.gdacs import DOMAIN, FEED

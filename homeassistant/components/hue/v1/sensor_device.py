@@ -1,5 +1,4 @@
 """Support for the Philips Hue sensor devices."""
-
 from homeassistant.helpers import entity
 from homeassistant.helpers.device_registry import DeviceInfo
 

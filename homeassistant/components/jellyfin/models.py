@@ -1,5 +1,4 @@
 """Models for the Jellyfin integration."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass

@@ -1,5 +1,4 @@
 """Entities queries for logbook."""
-
 from __future__ import annotations
 
 from collections.abc import Collection, Iterable

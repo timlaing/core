@@ -1,10 +1,10 @@
 #!/bin/sh
-# Format code with ruff-format.
+# Format code with black.
 
 cd "$(dirname "$0")/.."
 
-ruff \
-  format \
+black \
   --check \
+  --fast \
   --quiet \
   homeassistant tests script *.py

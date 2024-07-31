@@ -1,5 +1,4 @@
 """Test the Z-Wave JS siren platform."""
-
 from zwave_js_server.event import Event
 
 from homeassistant.components.siren import (
@@ -10,7 +9,7 @@ from homeassistant.components.siren import (
 from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 
-SIREN_ENTITY = "siren.indoor_siren_6_play_tone_2"
+SIREN_ENTITY = "siren.indoor_siren_6_2"
 
 TONE_ID_VALUE_ID = {
     "endpoint": 2,

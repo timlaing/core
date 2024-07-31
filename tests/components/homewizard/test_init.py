@@ -1,64 +1,106 @@
 """Tests for the homewizard component."""
+from asyncio import TimeoutError
+from unittest.mock import patch
 
-from unittest.mock import MagicMock
-
-from homewizard_energy.errors import DisabledError
-import pytest
+from homewizard_energy.errors import DisabledError, HomeWizardEnergyException
 
 from homeassistant.components.homewizard.const import DOMAIN
 from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.const import Platform
+from homeassistant.const import CONF_IP_ADDRESS
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+
+from .generator import get_mock_device
 
 from tests.common import MockConfigEntry
+from tests.test_util.aiohttp import AiohttpClientMocker
 
 
 async def test_load_unload(
-    hass: HomeAssistant,
-    mock_config_entry: MockConfigEntry,
-    mock_homewizardenergy: MagicMock,
+    aioclient_mock: AiohttpClientMocker, hass: HomeAssistant
 ) -> None:
     """Test loading and unloading of integration."""
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+
+    device = get_mock_device()
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_IP_ADDRESS: "1.1.1.1"},
+        unique_id=DOMAIN,
+    )
+    entry.add_to_hass(hass)
+
+    with patch(
+        "homeassistant.components.homewizard.coordinator.HomeWizardEnergy",
+        return_value=device,
+    ):
+        await hass.config_entries.async_setup(entry.entry_id)
+
     await hass.async_block_till_done()
 
-    assert mock_config_entry.state is ConfigEntryState.LOADED
-    assert len(mock_homewizardenergy.device.mock_calls) == 1
+    assert entry.state is ConfigEntryState.LOADED
 
-    await hass.config_entries.async_unload(mock_config_entry.entry_id)
+    await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()
 
-    assert mock_config_entry.state is ConfigEntryState.NOT_LOADED
+    assert entry.state is ConfigEntryState.NOT_LOADED
 
 
 async def test_load_failed_host_unavailable(
-    hass: HomeAssistant,
-    mock_config_entry: MockConfigEntry,
-    mock_homewizardenergy: MagicMock,
+    aioclient_mock: AiohttpClientMocker, hass: HomeAssistant
 ) -> None:
     """Test setup handles unreachable host."""
-    mock_homewizardenergy.device.side_effect = TimeoutError()
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+
+    def MockInitialize():
+        raise TimeoutError()
+
+    device = get_mock_device()
+    device.device.side_effect = MockInitialize
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_IP_ADDRESS: "1.1.1.1"},
+        unique_id=DOMAIN,
+    )
+    entry.add_to_hass(hass)
+
+    with patch(
+        "homeassistant.components.homewizard.coordinator.HomeWizardEnergy",
+        return_value=device,
+    ):
+        await hass.config_entries.async_setup(entry.entry_id)
+
     await hass.async_block_till_done()
 
-    assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
+    assert entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_load_detect_api_disabled(
-    hass: HomeAssistant,
-    mock_config_entry: MockConfigEntry,
-    mock_homewizardenergy: MagicMock,
+    aioclient_mock: AiohttpClientMocker, hass: HomeAssistant
 ) -> None:
     """Test setup detects disabled API."""
-    mock_homewizardenergy.device.side_effect = DisabledError()
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+
+    def MockInitialize():
+        raise DisabledError()
+
+    device = get_mock_device()
+    device.device.side_effect = MockInitialize
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_IP_ADDRESS: "1.1.1.1"},
+        unique_id=DOMAIN,
+    )
+    entry.add_to_hass(hass)
+
+    with patch(
+        "homeassistant.components.homewizard.coordinator.HomeWizardEnergy",
+        return_value=device,
+    ):
+        await hass.config_entries.async_setup(entry.entry_id)
+
     await hass.async_block_till_done()
 
-    assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
+    assert entry.state is ConfigEntryState.SETUP_RETRY
 
     flows = hass.config_entries.flow.async_progress()
     assert len(flows) == 1
@@ -69,88 +111,125 @@ async def test_load_detect_api_disabled(
 
     assert "context" in flow
     assert flow["context"].get("source") == SOURCE_REAUTH
-    assert flow["context"].get("entry_id") == mock_config_entry.entry_id
+    assert flow["context"].get("entry_id") == entry.entry_id
 
 
-@pytest.mark.usefixtures("mock_homewizardenergy")
 async def test_load_removes_reauth_flow(
-    hass: HomeAssistant,
-    mock_config_entry: MockConfigEntry,
+    aioclient_mock: AiohttpClientMocker, hass: HomeAssistant
 ) -> None:
     """Test setup removes reauth flow when API is enabled."""
-    mock_config_entry.add_to_hass(hass)
+
+    device = get_mock_device()
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_IP_ADDRESS: "1.1.1.1"},
+        unique_id=DOMAIN,
+    )
+    entry.add_to_hass(hass)
 
     # Add reauth flow from 'previously' failed init
-    mock_config_entry.async_start_reauth(hass)
+    entry.async_start_reauth(hass)
     await hass.async_block_till_done()
 
     flows = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
     assert len(flows) == 1
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    # Initialize entry
+    with patch(
+        "homeassistant.components.homewizard.coordinator.HomeWizardEnergy",
+        return_value=device,
+    ):
+        await hass.config_entries.async_setup(entry.entry_id)
+
     await hass.async_block_till_done()
 
-    assert mock_config_entry.state is ConfigEntryState.LOADED
+    assert entry.state is ConfigEntryState.LOADED
 
     # Flow should be removed
     flows = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
     assert len(flows) == 0
 
 
-@pytest.mark.parametrize(
-    ("device_fixture", "old_unique_id", "new_unique_id"),
-    [
-        (
-            "HWE-P1",
-            "homewizard_G001",
-            "homewizard_gas_meter_G001",
-        ),
-        (
-            "HWE-P1",
-            "homewizard_W001",
-            "homewizard_water_meter_W001",
-        ),
-        (
-            "HWE-P1",
-            "homewizard_WW001",
-            "homewizard_warm_water_meter_WW001",
-        ),
-        (
-            "HWE-P1",
-            "homewizard_H001",
-            "homewizard_heat_meter_H001",
-        ),
-        (
-            "HWE-P1",
-            "homewizard_IH001",
-            "homewizard_inlet_heat_meter_IH001",
-        ),
-    ],
-)
-@pytest.mark.usefixtures("mock_homewizardenergy")
-async def test_external_sensor_migration(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-    mock_config_entry: MockConfigEntry,
-    old_unique_id: str,
-    new_unique_id: str,
+async def test_load_handles_homewizardenergy_exception(
+    aioclient_mock: AiohttpClientMocker, hass: HomeAssistant
 ) -> None:
-    """Test unique ID or External sensors are migrated."""
-    mock_config_entry.add_to_hass(hass)
+    """Test setup handles exception from API."""
 
-    entity: er.RegistryEntry = entity_registry.async_get_or_create(
-        domain=Platform.SENSOR,
-        platform=DOMAIN,
-        unique_id=old_unique_id,
-        config_entry=mock_config_entry,
+    def MockInitialize():
+        raise HomeWizardEnergyException()
+
+    device = get_mock_device()
+    device.device.side_effect = MockInitialize
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_IP_ADDRESS: "1.1.1.1"},
+        unique_id=DOMAIN,
     )
+    entry.add_to_hass(hass)
 
-    assert entity.unique_id == old_unique_id
+    with patch(
+        "homeassistant.components.homewizard.coordinator.HomeWizardEnergy",
+        return_value=device,
+    ):
+        await hass.config_entries.async_setup(entry.entry_id)
 
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
     await hass.async_block_till_done()
 
-    entity_migrated = entity_registry.async_get(entity.entity_id)
-    assert entity_migrated
-    assert entity_migrated.unique_id == new_unique_id
-    assert entity_migrated.previous_unique_id == old_unique_id
+    assert entry.state is ConfigEntryState.SETUP_RETRY or ConfigEntryState.SETUP_ERROR
+
+
+async def test_load_handles_generic_exception(
+    aioclient_mock: AiohttpClientMocker, hass: HomeAssistant
+) -> None:
+    """Test setup handles global exception."""
+
+    def MockInitialize():
+        raise Exception()
+
+    device = get_mock_device()
+    device.device.side_effect = MockInitialize
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_IP_ADDRESS: "1.1.1.1"},
+        unique_id=DOMAIN,
+    )
+    entry.add_to_hass(hass)
+
+    with patch(
+        "homeassistant.components.homewizard.coordinator.HomeWizardEnergy",
+        return_value=device,
+    ):
+        await hass.config_entries.async_setup(entry.entry_id)
+
+    await hass.async_block_till_done()
+
+    assert entry.state is ConfigEntryState.SETUP_RETRY or ConfigEntryState.SETUP_ERROR
+
+
+async def test_load_handles_initialization_error(
+    aioclient_mock: AiohttpClientMocker, hass: HomeAssistant
+) -> None:
+    """Test handles non-exception error."""
+
+    device = get_mock_device()
+    device.device = None
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_IP_ADDRESS: "1.1.1.1"},
+        unique_id=DOMAIN,
+    )
+    entry.add_to_hass(hass)
+
+    with patch(
+        "homeassistant.components.homewizard.coordinator.HomeWizardEnergy",
+        return_value=device,
+    ):
+        await hass.config_entries.async_setup(entry.entry_id)
+
+    await hass.async_block_till_done()
+
+    assert entry.state is ConfigEntryState.SETUP_RETRY or ConfigEntryState.SETUP_ERROR

@@ -8,14 +8,15 @@ from requests.exceptions import HTTPError
 from todoist_api_python.api_async import TodoistAPIAsync
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant import config_entries
 from homeassistant.const import CONF_TOKEN
+from homeassistant.data_entry_flow import FlowResult
 
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-SETTINGS_URL = "https://app.todoist.com/app/settings/integrations/developer"
+SETTINGS_URL = "https://todoist.com/app/settings/integrations"
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
@@ -24,14 +25,14 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 )
 
 
-class TodoistConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for todoist."""
 
     VERSION = 1
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
@@ -43,10 +44,10 @@ class TodoistConfigFlow(ConfigFlow, domain=DOMAIN):
                 await api.get_tasks()
             except HTTPError as err:
                 if err.response.status_code == HTTPStatus.UNAUTHORIZED:
-                    errors["base"] = "invalid_api_key"
+                    errors["base"] = "invalid_access_token"
                 else:
                     errors["base"] = "cannot_connect"
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:

@@ -1,5 +1,4 @@
 """Support for KNX/IP covers."""
-
 from __future__ import annotations
 
 from collections.abc import Callable

@@ -1,5 +1,4 @@
 """Support for alarm control panels that can be controlled through IFTTT."""
-
 from __future__ import annotations
 
 import logging
@@ -7,7 +6,7 @@ import logging
 import voluptuous as vol
 
 from homeassistant.components.alarm_control_panel import (
-    PLATFORM_SCHEMA as ALARM_CONTROL_PANEL_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA as PARENT_PLATFORM_SCHEMA,
     AlarmControlPanelEntity,
     AlarmControlPanelEntityFeature,
     CodeFormat,
@@ -54,7 +53,7 @@ DEFAULT_EVENT_DISARM = "alarm_disarm"
 
 CONF_CODE_ARM_REQUIRED = "code_arm_required"
 
-PLATFORM_SCHEMA = ALARM_CONTROL_PANEL_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PARENT_PLATFORM_SCHEMA.extend(
     {
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
         vol.Optional(CONF_CODE): cv.string,
@@ -82,14 +81,14 @@ def setup_platform(
     if DATA_IFTTT_ALARM not in hass.data:
         hass.data[DATA_IFTTT_ALARM] = []
 
-    name: str = config[CONF_NAME]
-    code: str | None = config.get(CONF_CODE)
-    code_arm_required: bool = config[CONF_CODE_ARM_REQUIRED]
-    event_away: str = config[CONF_EVENT_AWAY]
-    event_home: str = config[CONF_EVENT_HOME]
-    event_night: str = config[CONF_EVENT_NIGHT]
-    event_disarm: str = config[CONF_EVENT_DISARM]
-    optimistic: bool = config[CONF_OPTIMISTIC]
+    name = config.get(CONF_NAME)
+    code = config.get(CONF_CODE)
+    code_arm_required = config.get(CONF_CODE_ARM_REQUIRED)
+    event_away = config.get(CONF_EVENT_AWAY)
+    event_home = config.get(CONF_EVENT_HOME)
+    event_night = config.get(CONF_EVENT_NIGHT)
+    event_disarm = config.get(CONF_EVENT_DISARM)
+    optimistic = config.get(CONF_OPTIMISTIC)
 
     alarmpanel = IFTTTAlarmPanel(
         name,
@@ -136,15 +135,15 @@ class IFTTTAlarmPanel(AlarmControlPanelEntity):
 
     def __init__(
         self,
-        name: str,
-        code: str | None,
-        code_arm_required: bool,
-        event_away: str,
-        event_home: str,
-        event_night: str,
-        event_disarm: str,
-        optimistic: bool,
-    ) -> None:
+        name,
+        code,
+        code_arm_required,
+        event_away,
+        event_home,
+        event_night,
+        event_disarm,
+        optimistic,
+    ):
         """Initialize the alarm control panel."""
         self._attr_name = name
         self._code = code
@@ -188,7 +187,7 @@ class IFTTTAlarmPanel(AlarmControlPanelEntity):
             return
         self.set_alarm_state(self._event_night, STATE_ALARM_ARMED_NIGHT)
 
-    def set_alarm_state(self, event: str, state: str) -> None:
+    def set_alarm_state(self, event, state):
         """Call the IFTTT trigger service to change the alarm state."""
         data = {ATTR_EVENT: event}
 
@@ -197,7 +196,7 @@ class IFTTTAlarmPanel(AlarmControlPanelEntity):
         if self._optimistic:
             self._attr_state = state
 
-    def push_alarm_state(self, value: str) -> None:
+    def push_alarm_state(self, value):
         """Push the alarm state to the given value."""
         if value in ALLOWED_STATES:
             _LOGGER.debug("Pushed the alarm state to %s", value)

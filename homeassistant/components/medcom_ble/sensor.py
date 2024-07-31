@@ -1,5 +1,4 @@
 """Support for Medcom BLE radiation monitor sensors."""
-
 from __future__ import annotations
 
 import logging
@@ -30,6 +29,7 @@ SENSORS_MAPPING_TEMPLATE: dict[str, SensorEntityDescription] = {
         translation_key="cpm",
         native_unit_of_measurement=UNIT_CPM,
         state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:radioactive",
     ),
 }
 

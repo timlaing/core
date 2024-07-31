@@ -1,5 +1,4 @@
 """Tests for the oncue binary_sensor."""
-
 from __future__ import annotations
 
 from homeassistant.components import oncue
@@ -25,7 +24,7 @@ async def test_binary_sensors(hass: HomeAssistant) -> None:
     with _patch_login_and_data():
         await async_setup_component(hass, oncue.DOMAIN, {oncue.DOMAIN: {}})
         await hass.async_block_till_done()
-    assert config_entry.state is ConfigEntryState.LOADED
+    assert config_entry.state == ConfigEntryState.LOADED
 
     assert len(hass.states.async_all("binary_sensor")) == 1
     assert (
@@ -47,7 +46,7 @@ async def test_binary_sensors_not_unavailable(hass: HomeAssistant) -> None:
     with _patch_login_and_data_unavailable():
         await async_setup_component(hass, oncue.DOMAIN, {oncue.DOMAIN: {}})
         await hass.async_block_till_done()
-    assert config_entry.state is ConfigEntryState.LOADED
+    assert config_entry.state == ConfigEntryState.LOADED
 
     assert len(hass.states.async_all("binary_sensor")) == 1
     assert (

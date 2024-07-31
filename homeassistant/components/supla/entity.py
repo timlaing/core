@@ -1,5 +1,4 @@
 """Base class for SUPLA channels."""
-
 from __future__ import annotations
 
 import logging

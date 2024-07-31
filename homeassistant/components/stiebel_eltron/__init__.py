@@ -1,5 +1,4 @@
 """The component for STIEBEL ELTRON heat pumps with ISGWeb Modbus module."""
-
 from datetime import timedelta
 import logging
 

@@ -1,5 +1,4 @@
 """Constants for the ENOcean integration."""
-
 import logging
 
 from homeassistant.const import Platform
@@ -16,8 +15,8 @@ SIGNAL_SEND_MESSAGE = "enocean.send_message"
 LOGGER = logging.getLogger(__package__)
 
 PLATFORMS = [
-    Platform.BINARY_SENSOR,
     Platform.LIGHT,
+    Platform.BINARY_SENSOR,
     Platform.SENSOR,
     Platform.SWITCH,
 ]

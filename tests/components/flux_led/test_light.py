@@ -1,5 +1,4 @@
 """Tests for light platform."""
-
 from datetime import timedelta
 from unittest.mock import AsyncMock, Mock
 
@@ -24,6 +23,7 @@ from homeassistant.components.flux_led.const import (
     CONF_CUSTOM_EFFECT_COLORS,
     CONF_CUSTOM_EFFECT_SPEED_PCT,
     CONF_CUSTOM_EFFECT_TRANSITION,
+    CONF_EFFECT,
     CONF_SPEED_PCT,
     CONF_TRANSITION,
     CONF_WHITE_CHANNEL_TYPE,
@@ -55,7 +55,6 @@ from homeassistant.components.light import (
 )
 from homeassistant.const import (
     ATTR_ENTITY_ID,
-    CONF_EFFECT,
     CONF_HOST,
     CONF_MODE,
     CONF_NAME,
@@ -82,9 +81,7 @@ from . import (
 from tests.common import MockConfigEntry, async_fire_time_changed
 
 
-async def test_light_unique_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
-) -> None:
+async def test_light_unique_id(hass: HomeAssistant) -> None:
     """Test a light unique id."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -98,14 +95,13 @@ async def test_light_unique_id(
         await hass.async_block_till_done()
 
     entity_id = "light.bulb_rgbcw_ddeeff"
+    entity_registry = er.async_get(hass)
     assert entity_registry.async_get(entity_id).unique_id == MAC_ADDRESS
     state = hass.states.get(entity_id)
     assert state.state == STATE_ON
 
 
-async def test_light_goes_unavailable_and_recovers(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
-) -> None:
+async def test_light_goes_unavailable_and_recovers(hass: HomeAssistant) -> None:
     """Test a light goes unavailable and then recovers."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -119,6 +115,7 @@ async def test_light_goes_unavailable_and_recovers(
         await hass.async_block_till_done()
 
     entity_id = "light.bulb_rgbcw_ddeeff"
+    entity_registry = er.async_get(hass)
     assert entity_registry.async_get(entity_id).unique_id == MAC_ADDRESS
     state = hass.states.get(entity_id)
     assert state.state == STATE_ON
@@ -138,9 +135,7 @@ async def test_light_goes_unavailable_and_recovers(
     assert state.state == STATE_ON
 
 
-async def test_light_mac_address_not_found(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
-) -> None:
+async def test_light_mac_address_not_found(hass: HomeAssistant) -> None:
     """Test a light when we cannot discover the mac address."""
     config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: IP_ADDRESS, CONF_NAME: DEFAULT_ENTRY_TITLE}
@@ -152,6 +147,7 @@ async def test_light_mac_address_not_found(
         await hass.async_block_till_done()
 
     entity_id = "light.bulb_rgbcw_ddeeff"
+    entity_registry = er.async_get(hass)
     assert entity_registry.async_get(entity_id).unique_id == config_entry.entry_id
     state = hass.states.get(entity_id)
     assert state.state == STATE_ON
@@ -165,12 +161,7 @@ async def test_light_mac_address_not_found(
     ],
 )
 async def test_light_device_registry(
-    hass: HomeAssistant,
-    device_registry: dr.DeviceRegistry,
-    protocol: str,
-    sw_version: int,
-    model_num: int,
-    model: str,
+    hass: HomeAssistant, protocol: str, sw_version: int, model_num: int, model: str
 ) -> None:
     """Test a light device registry entry."""
     config_entry = MockConfigEntry(
@@ -189,6 +180,7 @@ async def test_light_device_registry(
         await async_setup_component(hass, flux_led.DOMAIN, {flux_led.DOMAIN: {}})
         await hass.async_block_till_done()
 
+    device_registry = dr.async_get(hass)
     device = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, MAC_ADDRESS)}
     )

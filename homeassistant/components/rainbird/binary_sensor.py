@@ -1,5 +1,4 @@
 """Support for Rain Bird Irrigation system LNK WiFi Module."""
-
 from __future__ import annotations
 
 import logging
@@ -22,6 +21,7 @@ _LOGGER = logging.getLogger(__name__)
 RAIN_SENSOR_ENTITY_DESCRIPTION = BinarySensorEntityDescription(
     key="rainsensor",
     translation_key="rainsensor",
+    icon="mdi:water",
 )
 
 

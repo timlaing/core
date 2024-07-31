@@ -1,7 +1,5 @@
 """Constants for the Yamaha component."""
-
 DOMAIN = "yamaha"
-KNOWN_ZONES = "known_zones"
 CURSOR_TYPE_DOWN = "down"
 CURSOR_TYPE_LEFT = "left"
 CURSOR_TYPE_RETURN = "return"

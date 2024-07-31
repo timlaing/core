@@ -1,13 +1,9 @@
 """Provide a mock package component."""
-
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import ConfigType
-
 from .const import TEST  # noqa: F401
 
 DOMAIN = "test_package"
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(hass, config):
     """Mock a successful setup."""
     return True

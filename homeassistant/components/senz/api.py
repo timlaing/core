@@ -1,5 +1,4 @@
 """API for nVent RAYCHEM SENZ bound to Home Assistant OAuth."""
-
 from typing import cast
 
 from aiosenz import AbstractSENZAuth

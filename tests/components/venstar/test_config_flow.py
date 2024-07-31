@@ -1,5 +1,4 @@
 """Test the Venstar config flow."""
-
 import logging
 from unittest.mock import patch
 
@@ -37,26 +36,23 @@ async def test_form(hass: HomeAssistant) -> None:
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["errors"] == {}
 
-    with (
-        patch(
-            "homeassistant.components.venstar.config_flow.VenstarColorTouch.update_info",
-            new=VenstarColorTouchMock.update_info,
-        ),
-        patch(
-            "homeassistant.components.venstar.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-    ):
+    with patch(
+        "homeassistant.components.venstar.config_flow.VenstarColorTouch.update_info",
+        new=VenstarColorTouchMock.update_info,
+    ), patch(
+        "homeassistant.components.venstar.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry:
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             TEST_DATA,
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
+    assert result2["type"] == FlowResultType.CREATE_ENTRY
     assert result2["data"] == TEST_DATA
     assert len(mock_setup_entry.mock_calls) == 1
 
@@ -76,7 +72,7 @@ async def test_form_cannot_connect(hass: HomeAssistant) -> None:
             TEST_DATA,
         )
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == FlowResultType.FORM
     assert result2["errors"] == {"base": "cannot_connect"}
 
 
@@ -95,7 +91,7 @@ async def test_unknown_error(hass: HomeAssistant) -> None:
             TEST_DATA,
         )
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == FlowResultType.FORM
     assert result2["errors"] == {"base": "unknown"}
 
 
@@ -107,18 +103,15 @@ async def test_already_configured(hass: HomeAssistant) -> None:
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    with (
-        patch(
-            "homeassistant.components.venstar.VenstarColorTouch.update_info",
-            new=VenstarColorTouchMock.update_info,
-        ),
-        patch(
-            "homeassistant.components.venstar.async_setup_entry",
-            return_value=True,
-        ),
+    with patch(
+        "homeassistant.components.venstar.VenstarColorTouch.update_info",
+        new=VenstarColorTouchMock.update_info,
+    ), patch(
+        "homeassistant.components.venstar.async_setup_entry",
+        return_value=True,
     ):
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
@@ -126,5 +119,5 @@ async def test_already_configured(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.ABORT
+    assert result2["type"] == FlowResultType.ABORT
     assert result2["reason"] == "already_configured"

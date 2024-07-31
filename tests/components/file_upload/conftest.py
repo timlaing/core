@@ -1,5 +1,4 @@
 """Fixtures for FileUpload integration."""
-
 from io import StringIO
 
 import pytest

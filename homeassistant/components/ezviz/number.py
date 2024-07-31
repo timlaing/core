@@ -1,5 +1,4 @@
 """Support for EZVIZ number controls."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -31,17 +30,25 @@ PARALLEL_UPDATES = 0
 _LOGGER = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True, kw_only=True)
-class EzvizNumberEntityDescription(NumberEntityDescription):
-    """Describe a EZVIZ Number."""
+@dataclass
+class EzvizNumberEntityDescriptionMixin:
+    """Mixin values for EZVIZ Number entities."""
 
     supported_ext: str
     supported_ext_value: list
 
 
+@dataclass
+class EzvizNumberEntityDescription(
+    NumberEntityDescription, EzvizNumberEntityDescriptionMixin
+):
+    """Describe a EZVIZ Number."""
+
+
 NUMBER_TYPE = EzvizNumberEntityDescription(
     key="detection_sensibility",
     translation_key="detection_sensibility",
+    icon="mdi:eye",
     entity_category=EntityCategory.CONFIG,
     native_min_value=0,
     native_step=1,
@@ -61,8 +68,8 @@ async def async_setup_entry(
     async_add_entities(
         EzvizNumber(coordinator, camera, value, entry.entry_id)
         for camera in coordinator.data
-        for capability, value in coordinator.data[camera]["supportExt"].items()
-        if capability == NUMBER_TYPE.supported_ext
+        for capibility, value in coordinator.data[camera]["supportExt"].items()
+        if capibility == NUMBER_TYPE.supported_ext
         if value in NUMBER_TYPE.supported_ext_value
     )
 

@@ -1,5 +1,4 @@
 """Support for AVM FRITZ!SmartHome cover devices."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -10,37 +9,27 @@ from homeassistant.components.cover import (
     CoverEntity,
     CoverEntityFeature,
 )
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import FritzBoxDeviceEntity
-from .coordinator import FritzboxConfigEntry
+from . import FritzboxDataUpdateCoordinator, FritzBoxDeviceEntity
+from .const import CONF_COORDINATOR, DOMAIN as FRITZBOX_DOMAIN
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: FritzboxConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up the FRITZ!SmartHome cover from ConfigEntry."""
-    coordinator = entry.runtime_data
+    coordinator: FritzboxDataUpdateCoordinator = hass.data[FRITZBOX_DOMAIN][
+        entry.entry_id
+    ][CONF_COORDINATOR]
 
-    @callback
-    def _add_entities(devices: set[str] | None = None) -> None:
-        """Add devices."""
-        if devices is None:
-            devices = coordinator.new_devices
-        if not devices:
-            return
-        async_add_entities(
-            FritzboxCover(coordinator, ain)
-            for ain in devices
-            if coordinator.data.devices[ain].has_blind
-        )
-
-    entry.async_on_unload(coordinator.async_add_listener(_add_entities))
-
-    _add_entities(set(coordinator.data.devices))
+    async_add_entities(
+        FritzboxCover(coordinator, ain)
+        for ain, device in coordinator.data.devices.items()
+        if device.has_blind
+    )
 
 
 class FritzboxCover(FritzBoxDeviceEntity, CoverEntity):

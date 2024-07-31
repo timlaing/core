@@ -1,5 +1,4 @@
 """Support for SwitchBot curtains."""
-
 from __future__ import annotations
 
 import logging
@@ -16,11 +15,13 @@ from homeassistant.components.cover import (
     CoverEntity,
     CoverEntityFeature,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
-from .coordinator import SwitchbotConfigEntry, SwitchbotDataUpdateCoordinator
+from .const import DOMAIN
+from .coordinator import SwitchbotDataUpdateCoordinator
 from .entity import SwitchbotEntity
 
 # Initialize the logger
@@ -29,12 +30,10 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: SwitchbotConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up Switchbot curtain based on a config entry."""
-    coordinator = entry.runtime_data
+    coordinator: SwitchbotDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
     if isinstance(coordinator.device, switchbot.SwitchbotBlindTilt):
         async_add_entities([SwitchBotBlindTiltEntity(coordinator)])
     else:
@@ -79,8 +78,6 @@ class SwitchBotCurtainEntity(SwitchbotEntity, CoverEntity, RestoreEntity):
 
         _LOGGER.debug("Switchbot to open curtain %s", self._address)
         self._last_run_success = bool(await self._device.open())
-        self._attr_is_opening = self._device.is_opening()
-        self._attr_is_closing = self._device.is_closing()
         self.async_write_ha_state()
 
     async def async_close_cover(self, **kwargs: Any) -> None:
@@ -88,8 +85,6 @@ class SwitchBotCurtainEntity(SwitchbotEntity, CoverEntity, RestoreEntity):
 
         _LOGGER.debug("Switchbot to close the curtain %s", self._address)
         self._last_run_success = bool(await self._device.close())
-        self._attr_is_opening = self._device.is_opening()
-        self._attr_is_closing = self._device.is_closing()
         self.async_write_ha_state()
 
     async def async_stop_cover(self, **kwargs: Any) -> None:
@@ -97,8 +92,6 @@ class SwitchBotCurtainEntity(SwitchbotEntity, CoverEntity, RestoreEntity):
 
         _LOGGER.debug("Switchbot to stop %s", self._address)
         self._last_run_success = bool(await self._device.stop())
-        self._attr_is_opening = self._device.is_opening()
-        self._attr_is_closing = self._device.is_closing()
         self.async_write_ha_state()
 
     async def async_set_cover_position(self, **kwargs: Any) -> None:
@@ -107,18 +100,14 @@ class SwitchBotCurtainEntity(SwitchbotEntity, CoverEntity, RestoreEntity):
 
         _LOGGER.debug("Switchbot to move at %d %s", position, self._address)
         self._last_run_success = bool(await self._device.set_position(position))
-        self._attr_is_opening = self._device.is_opening()
-        self._attr_is_closing = self._device.is_closing()
         self.async_write_ha_state()
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        self._attr_is_closing = self._device.is_closing()
-        self._attr_is_opening = self._device.is_opening()
         self._attr_current_cover_position = self.parsed_data["position"]
         self._attr_is_closed = self.parsed_data["position"] <= 20
-
+        self._attr_is_opening = self.parsed_data["inMotion"]
         self.async_write_ha_state()
 
 

@@ -1,5 +1,4 @@
 """Support for Velbus devices."""
-
 from __future__ import annotations
 
 from contextlib import suppress
@@ -54,7 +53,7 @@ async def velbus_connect_task(
 
 
 def _migrate_device_identifiers(hass: HomeAssistant, entry_id: str) -> None:
-    """Migrate old device identifiers."""
+    """Migrate old device indentifiers."""
     dev_reg = dr.async_get(hass)
     devices: list[dr.DeviceEntry] = dr.async_entries_for_config_entry(dev_reg, entry_id)
     for device in devices:
@@ -89,9 +88,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return True
 
     def check_entry_id(interface: str) -> str:
-        for config_entry in hass.config_entries.async_entries(DOMAIN):
-            if "port" in config_entry.data and config_entry.data["port"] == interface:
-                return config_entry.entry_id
+        for entry in hass.config_entries.async_entries(DOMAIN):
+            if "port" in entry.data and entry.data["port"] == interface:
+                return entry.entry_id
         raise vol.Invalid(
             "The interface provided is not defined as a port in a Velbus integration"
         )
@@ -120,11 +119,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         """Handle Memo Text service call."""
         memo_text = call.data[CONF_MEMO_TEXT]
         memo_text.hass = hass
-        await (
-            hass.data[DOMAIN][call.data[CONF_INTERFACE]]["cntrl"]
-            .get_module(call.data[CONF_ADDRESS])
-            .set_memo_text(memo_text.async_render())
-        )
+        await hass.data[DOMAIN][call.data[CONF_INTERFACE]]["cntrl"].get_module(
+            call.data[CONF_ADDRESS]
+        ).set_memo_text(memo_text.async_render())
 
     hass.services.async_register(
         DOMAIN,
@@ -145,7 +142,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         """Handle a clear cache service call."""
         # clear the cache
         with suppress(FileNotFoundError):
-            if call.data.get(CONF_ADDRESS):
+            if CONF_ADDRESS in call.data and call.data[CONF_ADDRESS]:
                 await hass.async_add_executor_job(
                     os.unlink,
                     hass.config.path(
@@ -212,7 +209,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         if os.path.isdir(cache_path):
             await hass.async_add_executor_job(shutil.rmtree, cache_path)
         # set the new version
-        hass.config_entries.async_update_entry(config_entry, version=2)
+        config_entry.version = 2
 
     _LOGGER.debug("Migration to version %s successful", config_entry.version)
     return True

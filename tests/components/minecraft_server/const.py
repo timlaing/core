@@ -1,5 +1,4 @@
 """Constants for Minecraft Server integration tests."""
-
 from mcstatus.motd import Motd
 from mcstatus.status_response import (
     BedrockStatusPlayers,
@@ -42,7 +41,6 @@ TEST_JAVA_STATUS_RESPONSE = JavaStatusResponse(
     version=JavaStatusVersion.build(TEST_JAVA_STATUS_RESPONSE_RAW["version"]),
     motd=Motd.parse(TEST_JAVA_STATUS_RESPONSE_RAW["description"], bedrock=False),
     icon=None,
-    enforces_secure_chat=False,
     latency=5,
 )
 

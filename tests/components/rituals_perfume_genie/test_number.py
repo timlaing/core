@@ -1,5 +1,4 @@
 """Tests for the Rituals Perfume Genie number platform."""
-
 from __future__ import annotations
 
 import pytest
@@ -12,9 +11,8 @@ from homeassistant.components.number import (
     DOMAIN as NUMBER_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.const import ATTR_ENTITY_ID
+from homeassistant.const import ATTR_ENTITY_ID, ATTR_ICON
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.setup import async_setup_component
 
@@ -37,6 +35,7 @@ async def test_number_entity(
     state = hass.states.get("number.genie_perfume_amount")
     assert state
     assert state.state == str(diffuser.perfume_amount)
+    assert state.attributes[ATTR_ICON] == "mdi:gauge"
     assert state.attributes[ATTR_MIN] == 1
     assert state.attributes[ATTR_MAX] == 3
 
@@ -87,7 +86,7 @@ async def test_set_number_value_out_of_range(hass: HomeAssistant) -> None:
     assert state
     assert state.state == "2"
 
-    with pytest.raises(ServiceValidationError):
+    with pytest.raises(ValueError):
         await hass.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
@@ -106,7 +105,7 @@ async def test_set_number_value_out_of_range(hass: HomeAssistant) -> None:
     assert state
     assert state.state == "2"
 
-    with pytest.raises(ServiceValidationError):
+    with pytest.raises(ValueError):
         await hass.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,

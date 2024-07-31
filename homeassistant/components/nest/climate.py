@@ -1,5 +1,4 @@
 """Support for Google Nest SDM climate devices."""
-
 from __future__ import annotations
 
 from typing import Any, cast
@@ -10,6 +9,7 @@ from google_nest_sdm.device_traits import FanTrait, TemperatureTrait
 from google_nest_sdm.exceptions import ApiException
 from google_nest_sdm.thermostat_traits import (
     ThermostatEcoTrait,
+    ThermostatHeatCoolTrait,
     ThermostatHvacTrait,
     ThermostatModeTrait,
     ThermostatTemperatureSetpointTrait,
@@ -85,12 +85,11 @@ async def async_setup_entry(
     device_manager: DeviceManager = hass.data[DOMAIN][entry.entry_id][
         DATA_DEVICE_MANAGER
     ]
-
-    async_add_entities(
-        ThermostatEntity(device)
-        for device in device_manager.devices.values()
-        if ThermostatHvacTrait.NAME in device.traits
-    )
+    entities = []
+    for device in device_manager.devices.values():
+        if ThermostatHvacTrait.NAME in device.traits:
+            entities.append(ThermostatEntity(device))
+    async_add_entities(entities)
 
 
 class ThermostatEntity(ClimateEntity):
@@ -101,7 +100,6 @@ class ThermostatEntity(ClimateEntity):
     _attr_has_entity_name = True
     _attr_should_poll = False
     _attr_name = None
-    _enable_turn_on_off_backwards_compatibility = False
 
     def __init__(self, device: Device) -> None:
         """Initialize ThermostatEntity."""
@@ -172,7 +170,7 @@ class ThermostatEntity(ClimateEntity):
     @property
     def _target_temperature_trait(
         self,
-    ) -> ThermostatEcoTrait | ThermostatTemperatureSetpointTrait | None:
+    ) -> ThermostatHeatCoolTrait | None:
         """Return the correct trait with a target temp depending on mode."""
         if (
             self.preset_mode == PRESET_ECO
@@ -217,13 +215,13 @@ class ThermostatEntity(ClimateEntity):
     @property
     def preset_modes(self) -> list[str]:
         """Return the available presets."""
-        if ThermostatEcoTrait.NAME not in self._device.traits:
-            return []
-        return [
-            PRESET_MODE_MAP[mode]
-            for mode in self._device.traits[ThermostatEcoTrait.NAME].available_modes
-            if mode in PRESET_MODE_MAP
-        ]
+        modes = []
+        if ThermostatEcoTrait.NAME in self._device.traits:
+            trait = self._device.traits[ThermostatEcoTrait.NAME]
+            for mode in trait.available_modes:
+                if mode in PRESET_MODE_MAP:
+                    modes.append(PRESET_MODE_MAP[mode])
+        return modes
 
     @property
     def fan_mode(self) -> str:
@@ -248,7 +246,7 @@ class ThermostatEntity(ClimateEntity):
 
     def _get_supported_features(self) -> ClimateEntityFeature:
         """Compute the bitmap of supported features from the current state."""
-        features = ClimateEntityFeature.TURN_OFF | ClimateEntityFeature.TURN_ON
+        features = ClimateEntityFeature(0)
         if HVACMode.HEAT_COOL in self.hvac_modes:
             features |= ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
         if HVACMode.HEAT in self.hvac_modes or HVACMode.COOL in self.hvac_modes:

@@ -1,5 +1,4 @@
 """Support for Konnected devices."""
-
 import asyncio
 import logging
 

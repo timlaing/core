@@ -1,6 +1,5 @@
 """Weather entity tests for the WeatherKit integration."""
 
-import pytest
 from syrupy.assertion import SnapshotAssertion
 
 from homeassistant.components.weather import (
@@ -16,9 +15,9 @@ from homeassistant.components.weather import (
     ATTR_WEATHER_WIND_GUST_SPEED,
     ATTR_WEATHER_WIND_SPEED,
     DOMAIN as WEATHER_DOMAIN,
-    SERVICE_GET_FORECASTS,
-    WeatherEntityFeature,
+    SERVICE_GET_FORECAST,
 )
+from homeassistant.components.weather.const import WeatherEntityFeature
 from homeassistant.components.weatherkit.const import ATTRIBUTION
 from homeassistant.const import ATTR_ATTRIBUTION, ATTR_SUPPORTED_FEATURES
 from homeassistant.core import HomeAssistant
@@ -78,19 +77,15 @@ async def test_hourly_forecast_missing(hass: HomeAssistant) -> None:
     ) == 0
 
 
-@pytest.mark.parametrize(
-    ("service"),
-    [SERVICE_GET_FORECASTS],
-)
 async def test_hourly_forecast(
-    hass: HomeAssistant, snapshot: SnapshotAssertion, service: str
+    hass: HomeAssistant, snapshot: SnapshotAssertion
 ) -> None:
     """Test states of the hourly forecast."""
     await init_integration(hass)
 
     response = await hass.services.async_call(
         WEATHER_DOMAIN,
-        service,
+        SERVICE_GET_FORECAST,
         {
             "entity_id": "weather.home",
             "type": "hourly",
@@ -98,22 +93,17 @@ async def test_hourly_forecast(
         blocking=True,
         return_response=True,
     )
+    assert response["forecast"] != []
     assert response == snapshot
 
 
-@pytest.mark.parametrize(
-    ("service"),
-    [SERVICE_GET_FORECASTS],
-)
-async def test_daily_forecast(
-    hass: HomeAssistant, snapshot: SnapshotAssertion, service: str
-) -> None:
+async def test_daily_forecast(hass: HomeAssistant, snapshot: SnapshotAssertion) -> None:
     """Test states of the daily forecast."""
     await init_integration(hass)
 
     response = await hass.services.async_call(
         WEATHER_DOMAIN,
-        service,
+        SERVICE_GET_FORECAST,
         {
             "entity_id": "weather.home",
             "type": "daily",
@@ -121,4 +111,5 @@ async def test_daily_forecast(
         blocking=True,
         return_response=True,
     )
+    assert response["forecast"] != []
     assert response == snapshot

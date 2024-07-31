@@ -1,5 +1,4 @@
 """Tests for the Modern Forms config flow."""
-
 from ipaddress import ip_address
 from unittest.mock import MagicMock, patch
 
@@ -35,7 +34,7 @@ async def test_full_user_flow_implementation(
     )
 
     assert result.get("step_id") == "user"
-    assert result.get("type") is FlowResultType.FORM
+    assert result.get("type") == FlowResultType.FORM
 
     with patch(
         "homeassistant.components.modern_forms.async_setup_entry",
@@ -47,7 +46,7 @@ async def test_full_user_flow_implementation(
 
     assert result2.get("title") == "ModernFormsFan"
     assert "data" in result2
-    assert result2.get("type") is FlowResultType.CREATE_ENTRY
+    assert result2.get("type") == FlowResultType.CREATE_ENTRY
     assert result2["data"][CONF_HOST] == "192.168.1.123"
     assert result2["data"][CONF_MAC] == "AA:BB:CC:DD:EE:FF"
     assert len(mock_setup_entry.mock_calls) == 1
@@ -82,7 +81,7 @@ async def test_full_zeroconf_flow_implementation(
 
     assert result.get("description_placeholders") == {CONF_NAME: "example"}
     assert result.get("step_id") == "zeroconf_confirm"
-    assert result.get("type") is FlowResultType.FORM
+    assert result.get("type") == FlowResultType.FORM
 
     flow = flows[0]
     assert "context" in flow
@@ -94,7 +93,7 @@ async def test_full_zeroconf_flow_implementation(
     )
 
     assert result2.get("title") == "example"
-    assert result2.get("type") is FlowResultType.CREATE_ENTRY
+    assert result2.get("type") == FlowResultType.CREATE_ENTRY
 
     assert "data" in result2
     assert result2["data"][CONF_HOST] == "192.168.1.123"
@@ -102,7 +101,7 @@ async def test_full_zeroconf_flow_implementation(
 
 
 @patch(
-    "homeassistant.components.modern_forms.coordinator.ModernFormsDevice.update",
+    "homeassistant.components.modern_forms.ModernFormsDevice.update",
     side_effect=ModernFormsConnectionError,
 )
 async def test_connection_error(
@@ -117,13 +116,13 @@ async def test_connection_error(
         data={CONF_HOST: "example.com"},
     )
 
-    assert result.get("type") is FlowResultType.FORM
+    assert result.get("type") == FlowResultType.FORM
     assert result.get("step_id") == "user"
     assert result.get("errors") == {"base": "cannot_connect"}
 
 
 @patch(
-    "homeassistant.components.modern_forms.coordinator.ModernFormsDevice.update",
+    "homeassistant.components.modern_forms.ModernFormsDevice.update",
     side_effect=ModernFormsConnectionError,
 )
 async def test_zeroconf_connection_error(
@@ -146,12 +145,12 @@ async def test_zeroconf_connection_error(
         ),
     )
 
-    assert result.get("type") is FlowResultType.ABORT
+    assert result.get("type") == FlowResultType.ABORT
     assert result.get("reason") == "cannot_connect"
 
 
 @patch(
-    "homeassistant.components.modern_forms.coordinator.ModernFormsDevice.update",
+    "homeassistant.components.modern_forms.ModernFormsDevice.update",
     side_effect=ModernFormsConnectionError,
 )
 async def test_zeroconf_confirm_connection_error(
@@ -178,7 +177,7 @@ async def test_zeroconf_confirm_connection_error(
         ),
     )
 
-    assert result.get("type") is FlowResultType.ABORT
+    assert result.get("type") == FlowResultType.ABORT
     assert result.get("reason") == "cannot_connect"
 
 
@@ -214,7 +213,7 @@ async def test_user_device_exists_abort(
         },
     )
 
-    assert result.get("type") is FlowResultType.ABORT
+    assert result.get("type") == FlowResultType.ABORT
     assert result.get("reason") == "already_configured"
 
 
@@ -248,5 +247,5 @@ async def test_zeroconf_with_mac_device_exists_abort(
         ),
     )
 
-    assert result.get("type") is FlowResultType.ABORT
+    assert result.get("type") == FlowResultType.ABORT
     assert result.get("reason") == "already_configured"

@@ -1,5 +1,4 @@
 """Support for Meteoclimatic weather service."""
-
 from meteoclimatic import Condition
 
 from homeassistant.components.weather import WeatherEntity

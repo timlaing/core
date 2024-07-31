@@ -1,5 +1,4 @@
 """Constants for the onvif component."""
-
 import logging
 
 from httpx import RequestError

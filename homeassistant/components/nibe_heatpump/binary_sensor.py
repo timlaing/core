@@ -1,5 +1,4 @@
 """The Nibe Heat Pump binary sensors."""
-
 from __future__ import annotations
 
 from nibe.coil import Coil, CoilData
@@ -10,8 +9,7 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
-from .coordinator import CoilEntity, Coordinator
+from . import DOMAIN, CoilEntity, Coordinator
 
 
 async def async_setup_entry(

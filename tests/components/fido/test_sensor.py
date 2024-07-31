@@ -1,14 +1,13 @@
 """The test for the fido sensor platform."""
-
 import logging
 from unittest.mock import MagicMock, patch
 
 from pyfido.client import PyFidoError
 import pytest
 
+from homeassistant.bootstrap import async_setup_component
 from homeassistant.components.fido import sensor as fido
 from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
 
 from tests.common import assert_setup_component
 
@@ -41,7 +40,7 @@ class FidoClientMockError(FidoClientMock):
         raise PyFidoError("Fake Error")
 
 
-async def test_fido_sensor(hass: HomeAssistant) -> None:
+async def test_fido_sensor(event_loop, hass: HomeAssistant) -> None:
     """Test the Fido number sensor."""
     with patch("homeassistant.components.fido.sensor.FidoClient", new=FidoClientMock):
         config = {

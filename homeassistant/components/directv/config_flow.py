@@ -1,5 +1,4 @@
 """Config flow for DirecTV."""
-
 from __future__ import annotations
 
 import logging
@@ -10,9 +9,10 @@ from directv import DIRECTV, DIRECTVError
 import voluptuous as vol
 
 from homeassistant.components import ssdp
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import ConfigFlow
 from homeassistant.const import CONF_HOST, CONF_NAME
 from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_RECEIVER_ID, DOMAIN
@@ -46,7 +46,7 @@ class DirecTVConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow initiated by the user."""
         if user_input is None:
             return self._show_setup_form()
@@ -55,7 +55,7 @@ class DirecTVConfigFlow(ConfigFlow, domain=DOMAIN):
             info = await validate_input(self.hass, user_input)
         except DIRECTVError:
             return self._show_setup_form({"base": ERROR_CANNOT_CONNECT})
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             _LOGGER.exception("Unexpected exception")
             return self.async_abort(reason=ERROR_UNKNOWN)
 
@@ -66,9 +66,7 @@ class DirecTVConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_create_entry(title=user_input[CONF_HOST], data=user_input)
 
-    async def async_step_ssdp(
-        self, discovery_info: ssdp.SsdpServiceInfo
-    ) -> ConfigFlowResult:
+    async def async_step_ssdp(self, discovery_info: ssdp.SsdpServiceInfo) -> FlowResult:
         """Handle SSDP discovery."""
         host = urlparse(discovery_info.ssdp_location).hostname
         receiver_id = None
@@ -88,7 +86,7 @@ class DirecTVConfigFlow(ConfigFlow, domain=DOMAIN):
             info = await validate_input(self.hass, self.discovery_info)
         except DIRECTVError:
             return self.async_abort(reason=ERROR_CANNOT_CONNECT)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             _LOGGER.exception("Unexpected exception")
             return self.async_abort(reason=ERROR_UNKNOWN)
 
@@ -103,7 +101,7 @@ class DirecTVConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_ssdp_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a confirmation flow initiated by SSDP."""
         if user_input is None:
             return self.async_show_form(
@@ -117,7 +115,7 @@ class DirecTVConfigFlow(ConfigFlow, domain=DOMAIN):
             data=self.discovery_info,
         )
 
-    def _show_setup_form(self, errors: dict | None = None) -> ConfigFlowResult:
+    def _show_setup_form(self, errors: dict | None = None) -> FlowResult:
         """Show the setup form to the user."""
         return self.async_show_form(
             step_id="user",

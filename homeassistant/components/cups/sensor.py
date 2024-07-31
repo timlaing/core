@@ -1,5 +1,4 @@
 """Details about printers which are connected to CUPS."""
-
 from __future__ import annotations
 
 from datetime import timedelta
@@ -9,10 +8,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
-    SensorEntity,
-)
+from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 from homeassistant.const import CONF_HOST, CONF_PORT, PERCENTAGE
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import PlatformNotReady
@@ -50,7 +46,7 @@ SCAN_INTERVAL = timedelta(minutes=1)
 
 PRINTER_STATES = {3: "idle", 4: "printing", 5: "stopped"}
 
-PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_PRINTERS): vol.All(cv.ensure_list, [cv.string]),
         vol.Optional(CONF_IS_CUPS_SERVER, default=DEFAULT_IS_CUPS_SERVER): cv.boolean,
@@ -77,7 +73,7 @@ def setup_platform(
         data.update()
         if data.available is False:
             _LOGGER.error("Unable to connect to CUPS server: %s:%s", host, port)
-            raise PlatformNotReady
+            raise PlatformNotReady()
         assert data.printers is not None
 
         dev: list[SensorEntity] = []
@@ -88,10 +84,8 @@ def setup_platform(
             dev.append(CupsSensor(data, printer))
 
             if "marker-names" in data.attributes[printer]:
-                dev.extend(
-                    MarkerSensor(data, printer, marker, True)
-                    for marker in data.attributes[printer]["marker-names"]
-                )
+                for marker in data.attributes[printer]["marker-names"]:
+                    dev.append(MarkerSensor(data, printer, marker, True))
 
         add_entities(dev, True)
         return
@@ -100,7 +94,7 @@ def setup_platform(
     data.update()
     if data.available is False:
         _LOGGER.error("Unable to connect to IPP printer: %s:%s", host, port)
-        raise PlatformNotReady
+        raise PlatformNotReady()
 
     dev = []
     for printer in printers:

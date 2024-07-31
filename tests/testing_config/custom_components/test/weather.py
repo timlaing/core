@@ -2,7 +2,6 @@
 
 Call init before using it in your tests to ensure clean test data.
 """
-
 from __future__ import annotations
 
 from typing import Any
@@ -24,7 +23,6 @@ from homeassistant.components.weather import (
     Forecast,
     WeatherEntity,
 )
-from homeassistant.core import HomeAssistant
 
 from tests.common import MockEntity
 
@@ -33,13 +31,12 @@ ENTITIES = []
 
 def init(empty=False):
     """Initialize the platform with entities."""
-    # pylint: disable-next=global-statement
-    global ENTITIES  # noqa: PLW0603
+    global ENTITIES
     ENTITIES = [] if empty else [MockWeather()]
 
 
 async def async_setup_platform(
-    hass: HomeAssistant, config, async_add_entities_callback, discovery_info=None
+    hass, config, async_add_entities_callback, discovery_info=None
 ):
     """Return mock entities."""
     async_add_entities_callback(ENTITIES)
@@ -138,10 +135,79 @@ class MockWeather(MockEntity, WeatherEntity):
         """Return the current condition."""
         return self._handle("condition")
 
+
+class MockWeatherCompat(MockEntity, WeatherEntity):
+    """Mock weather class for backwards compatibility check."""
+
     @property
-    def precision(self) -> float:
-        """Return the precision of the temperature."""
-        return self._handle("precision")
+    def temperature(self) -> float | None:
+        """Return the platform temperature."""
+        return self._handle("temperature")
+
+    @property
+    def temperature_unit(self) -> str | None:
+        """Return the unit of measurement for temperature."""
+        return self._handle("temperature_unit")
+
+    @property
+    def pressure(self) -> float | None:
+        """Return the pressure."""
+        return self._handle("pressure")
+
+    @property
+    def pressure_unit(self) -> str | None:
+        """Return the unit of measurement for pressure."""
+        return self._handle("pressure_unit")
+
+    @property
+    def humidity(self) -> float | None:
+        """Return the humidity."""
+        return self._handle("humidity")
+
+    @property
+    def wind_speed(self) -> float | None:
+        """Return the wind speed."""
+        return self._handle("wind_speed")
+
+    @property
+    def wind_speed_unit(self) -> str | None:
+        """Return the unit of measurement for wind speed."""
+        return self._handle("wind_speed_unit")
+
+    @property
+    def wind_bearing(self) -> float | str | None:
+        """Return the wind bearing."""
+        return self._handle("wind_bearing")
+
+    @property
+    def ozone(self) -> float | None:
+        """Return the ozone level."""
+        return self._handle("ozone")
+
+    @property
+    def visibility(self) -> float | None:
+        """Return the visibility."""
+        return self._handle("visibility")
+
+    @property
+    def visibility_unit(self) -> str | None:
+        """Return the unit of measurement for visibility."""
+        return self._handle("visibility_unit")
+
+    @property
+    def forecast(self) -> list[Forecast] | None:
+        """Return the forecast."""
+        return self._handle("forecast")
+
+    @property
+    def precipitation_unit(self) -> str | None:
+        """Return the unit of measurement for accumulated precipitation."""
+        return self._handle("precipitation_unit")
+
+    @property
+    def condition(self) -> str | None:
+        """Return the current condition."""
+        return self._handle("condition")
 
 
 class MockWeatherMockForecast(MockWeather):
@@ -168,6 +234,11 @@ class MockWeatherMockForecast(MockWeather):
                 ATTR_FORECAST_HUMIDITY: self.humidity,
             }
         ]
+
+    @property
+    def forecast(self) -> list[Forecast] | None:
+        """Return the forecast."""
+        return self.forecast_list
 
     async def async_forecast_daily(self) -> list[Forecast] | None:
         """Return the forecast_daily."""

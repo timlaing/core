@@ -1,8 +1,6 @@
 """Support for Homekit covers."""
-
 from __future__ import annotations
 
-from functools import cached_property
 from typing import Any
 
 from aiohomekit.model.characteristics import CharacteristicsTypes
@@ -130,12 +128,6 @@ class HomeKitGarageDoorCover(HomeKitEntity, CoverEntity):
 class HomeKitWindowCover(HomeKitEntity, CoverEntity):
     """Representation of a HomeKit Window or Window Covering."""
 
-    @callback
-    def _async_reconfigure(self) -> None:
-        """Reconfigure entity."""
-        self._async_clear_property_cache(("supported_features",))
-        super()._async_reconfigure()
-
     def get_characteristic_types(self) -> list[str]:
         """Define the homekit characteristics the entity cares about."""
         return [
@@ -150,7 +142,7 @@ class HomeKitWindowCover(HomeKitEntity, CoverEntity):
             CharacteristicsTypes.OBSTRUCTION_DETECTED,
         ]
 
-    @cached_property
+    @property
     def supported_features(self) -> CoverEntityFeature:
         """Flag supported features."""
         features = (
@@ -212,15 +204,13 @@ class HomeKitWindowCover(HomeKitEntity, CoverEntity):
         )
 
     @property
-    def current_cover_tilt_position(self) -> int | None:
+    def current_cover_tilt_position(self) -> int:
         """Return current position of cover tilt."""
         tilt_position = self.service.value(CharacteristicsTypes.VERTICAL_TILT_CURRENT)
         if not tilt_position:
             tilt_position = self.service.value(
                 CharacteristicsTypes.HORIZONTAL_TILT_CURRENT
             )
-        if tilt_position is None:
-            return None
         # Recalculate to convert from arcdegree scale to percentage scale.
         if self.is_vertical_tilt:
             scale = 0.9

@@ -1,9 +1,7 @@
 """Apprise platform for notify component."""
-
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 import apprise
 import voluptuous as vol
@@ -12,7 +10,7 @@ from homeassistant.components.notify import (
     ATTR_TARGET,
     ATTR_TITLE,
     ATTR_TITLE_DEFAULT,
-    PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     BaseNotificationService,
 )
 from homeassistant.const import CONF_URL
@@ -24,7 +22,7 @@ _LOGGER = logging.getLogger(__name__)
 
 CONF_FILE = "config"
 
-PLATFORM_SCHEMA = NOTIFY_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Optional(CONF_URL): vol.All(cv.ensure_list, [str]),
         vol.Optional(CONF_FILE): cv.string,
@@ -53,11 +51,9 @@ def get_service(
             return None
 
     # Ordered list of URLs
-    if urls := config.get(CONF_URL):
-        for entry in urls:
-            if not a_obj.add(entry):
-                _LOGGER.error("One or more specified Apprise URL(s) are invalid")
-                return None
+    if config.get(CONF_URL) and not a_obj.add(config[CONF_URL]):
+        _LOGGER.error("Invalid Apprise URL(s) supplied")
+        return None
 
     return AppriseNotificationService(a_obj)
 
@@ -65,11 +61,11 @@ def get_service(
 class AppriseNotificationService(BaseNotificationService):
     """Implement the notification service for Apprise."""
 
-    def __init__(self, a_obj: apprise.Apprise) -> None:
+    def __init__(self, a_obj):
         """Initialize the service."""
         self.apprise = a_obj
 
-    def send_message(self, message: str = "", **kwargs: Any) -> None:
+    def send_message(self, message="", **kwargs):
         """Send a message to a specified target.
 
         If no target/tags are specified, then services are notified as is

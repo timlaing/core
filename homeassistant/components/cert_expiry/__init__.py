@@ -1,5 +1,4 @@
 """The cert_expiry component."""
-
 from __future__ import annotations
 
 from homeassistant.config_entries import ConfigEntry
@@ -7,26 +6,26 @@ from homeassistant.const import CONF_HOST, CONF_PORT, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.start import async_at_started
 
+from .const import DOMAIN
 from .coordinator import CertExpiryDataUpdateCoordinator
 
 PLATFORMS = [Platform.SENSOR]
 
-type CertExpiryConfigEntry = ConfigEntry[CertExpiryDataUpdateCoordinator]
 
-
-async def async_setup_entry(hass: HomeAssistant, entry: CertExpiryConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Load the saved entities."""
-    host: str = entry.data[CONF_HOST]
-    port: int = entry.data[CONF_PORT]
+    host = entry.data[CONF_HOST]
+    port = entry.data[CONF_PORT]
 
     coordinator = CertExpiryDataUpdateCoordinator(hass, host, port)
 
-    entry.runtime_data = coordinator
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN][entry.entry_id] = coordinator
 
     if entry.unique_id is None:
         hass.config_entries.async_update_entry(entry, unique_id=f"{host}:{port}")
 
-    async def _async_finish_startup(_: HomeAssistant) -> None:
+    async def _async_finish_startup(_):
         await coordinator.async_refresh()
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 

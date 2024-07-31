@@ -1,5 +1,4 @@
 """WebSocket API related errors."""
-
 from homeassistant.exceptions import HomeAssistantError
 
 

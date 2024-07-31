@@ -1,5 +1,4 @@
 """Constants for the Hue component."""
-
 from aiohue.v2.models.button import ButtonEvent
 from aiohue.v2.models.relative_rotary import (
     RelativeRotaryAction,
@@ -8,6 +7,7 @@ from aiohue.v2.models.relative_rotary import (
 
 DOMAIN = "hue"
 
+CONF_API_VERSION = "api_version"
 CONF_IGNORE_AVAILABILITY = "ignore_availability"
 
 CONF_SUBTYPE = "subtype"

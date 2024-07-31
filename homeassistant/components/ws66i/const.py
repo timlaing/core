@@ -1,5 +1,4 @@
 """Constants for the Soundavo WS66i 6-Zone Amplifier Media Player component."""
-
 from datetime import timedelta
 
 DOMAIN = "ws66i"

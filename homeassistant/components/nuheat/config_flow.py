@@ -1,5 +1,4 @@
 """Config flow for NuHeat integration."""
-
 from http import HTTPStatus
 import logging
 
@@ -7,10 +6,8 @@ import nuheat
 import requests.exceptions
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow
+from homeassistant import config_entries, core, exceptions
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
 
 from .const import CONF_SERIAL_NUMBER, DOMAIN
 
@@ -25,7 +22,7 @@ DATA_SCHEMA = vol.Schema(
 )
 
 
-async def validate_input(hass: HomeAssistant, data):
+async def validate_input(hass: core.HomeAssistant, data):
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
@@ -59,7 +56,7 @@ async def validate_input(hass: HomeAssistant, data):
     return {"title": thermostat.room, "serial_number": thermostat.serial_number}
 
 
-class NuHeatConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for NuHeat."""
 
     VERSION = 1
@@ -76,7 +73,7 @@ class NuHeatConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "invalid_auth"
             except InvalidThermostat:
                 errors["base"] = "invalid_thermostat"
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
 
@@ -90,13 +87,13 @@ class NuHeatConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(exceptions.HomeAssistantError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(exceptions.HomeAssistantError):
     """Error to indicate there is invalid auth."""
 
 
-class InvalidThermostat(HomeAssistantError):
+class InvalidThermostat(exceptions.HomeAssistantError):
     """Error to indicate there is invalid thermostat."""

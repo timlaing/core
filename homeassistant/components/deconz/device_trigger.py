@@ -1,5 +1,4 @@
 """Provides device automations for deconz events."""
-
 from __future__ import annotations
 
 import voluptuous as vol
@@ -31,7 +30,7 @@ from .deconz_event import (
     DeconzPresenceEvent,
     DeconzRelativeRotaryEvent,
 )
-from .hub import DeconzHub
+from .gateway import DeconzGateway
 
 CONF_SUBTYPE = "subtype"
 
@@ -347,8 +346,7 @@ AQARA_SINGLE_WALL_SWITCH = {
     (CONF_DOUBLE_PRESS, CONF_TURN_ON): {CONF_EVENT: 1004},
 }
 
-AQARA_MINI_SWITCH_WXKG11LM_MODEL = "lumi.remote.b1acn01"
-AQARA_MINI_SWITCH_WBR02D_MODEL = "lumi.remote.b1acn02"
+AQARA_MINI_SWITCH_MODEL = "lumi.remote.b1acn01"
 AQARA_MINI_SWITCH = {
     (CONF_SHORT_PRESS, CONF_TURN_ON): {CONF_EVENT: 1002},
     (CONF_DOUBLE_PRESS, CONF_TURN_ON): {CONF_EVENT: 1004},
@@ -493,7 +491,6 @@ LEGRAND_ZGP_SCENE_SWITCH = {
 }
 
 LIDL_SILVERCREST_DOORBELL_MODEL = "HG06668"
-LIDL_SILVERCREST_DOORBELL_MODEL_2 = "TS0211"
 LIDL_SILVERCREST_DOORBELL = {
     (CONF_SHORT_PRESS, ""): {CONF_EVENT: 1002},
 }
@@ -616,8 +613,7 @@ REMOTES = {
     AQARA_SINGLE_WALL_SWITCH_QBKG11LM_MODEL: AQARA_SINGLE_WALL_SWITCH_QBKG11LM,
     AQARA_SINGLE_WALL_SWITCH_WXKG03LM_MODEL: AQARA_SINGLE_WALL_SWITCH,
     AQARA_SINGLE_WALL_SWITCH_WXKG06LM_MODEL: AQARA_SINGLE_WALL_SWITCH,
-    AQARA_MINI_SWITCH_WXKG11LM_MODEL: AQARA_MINI_SWITCH,
-    AQARA_MINI_SWITCH_WBR02D_MODEL: AQARA_MINI_SWITCH,
+    AQARA_MINI_SWITCH_MODEL: AQARA_MINI_SWITCH,
     AQARA_ROUND_SWITCH_MODEL: AQARA_ROUND_SWITCH,
     AQARA_SQUARE_SWITCH_MODEL: AQARA_SQUARE_SWITCH,
     AQARA_SQUARE_SWITCH_WXKG11LM_2016_MODEL: AQARA_SQUARE_SWITCH_WXKG11LM_2016,
@@ -632,7 +628,6 @@ REMOTES = {
     LEGRAND_ZGP_TOGGLE_SWITCH_MODEL: LEGRAND_ZGP_TOGGLE_SWITCH,
     LEGRAND_ZGP_SCENE_SWITCH_MODEL: LEGRAND_ZGP_SCENE_SWITCH,
     LIDL_SILVERCREST_DOORBELL_MODEL: LIDL_SILVERCREST_DOORBELL,
-    LIDL_SILVERCREST_DOORBELL_MODEL_2: LIDL_SILVERCREST_DOORBELL,
     LIDL_SILVERCREST_BUTTON_REMOTE_MODEL: LIDL_SILVERCREST_BUTTON_REMOTE,
     LIGHTIFIY_FOUR_BUTTON_REMOTE_MODEL: LIGHTIFIY_FOUR_BUTTON_REMOTE,
     LIGHTIFIY_FOUR_BUTTON_REMOTE_4X_MODEL: LIGHTIFIY_FOUR_BUTTON_REMOTE,
@@ -658,9 +653,9 @@ def _get_deconz_event_from_device(
     device: dr.DeviceEntry,
 ) -> DeconzAlarmEvent | DeconzEvent | DeconzPresenceEvent | DeconzRelativeRotaryEvent:
     """Resolve deconz event from device."""
-    hubs: dict[str, DeconzHub] = hass.data.get(DOMAIN, {})
-    for hub in hubs.values():
-        for deconz_event in hub.events:
+    gateways: dict[str, DeconzGateway] = hass.data.get(DOMAIN, {})
+    for gateway in gateways.values():
+        for deconz_event in gateway.events:
             if device.id == deconz_event.device_id:
                 return deconz_event
 

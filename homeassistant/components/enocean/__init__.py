@@ -1,5 +1,4 @@
 """Support for EnOcean devices."""
-
 import voluptuous as vol
 
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry

@@ -1,5 +1,4 @@
 """Platform for switch integration."""
-
 import asyncio
 from typing import Any
 

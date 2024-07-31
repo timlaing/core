@@ -1,5 +1,4 @@
 """Constants for the flo integration."""
-
 import logging
 
 LOGGER = logging.getLogger(__package__)

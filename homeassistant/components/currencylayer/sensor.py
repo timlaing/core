@@ -1,5 +1,4 @@
 """Support for currencylayer.com exchange rates service."""
-
 from __future__ import annotations
 
 from datetime import timedelta
@@ -8,10 +7,7 @@ import logging
 import requests
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
-    SensorEntity,
-)
+from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 from homeassistant.const import CONF_API_KEY, CONF_BASE, CONF_NAME, CONF_QUOTE
 from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
@@ -27,7 +23,7 @@ DEFAULT_NAME = "CurrencyLayer Sensor"
 
 SCAN_INTERVAL = timedelta(hours=4)
 
-PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_API_KEY): cv.string,
         vol.Required(CONF_QUOTE): vol.All(cv.ensure_list, [cv.string]),
@@ -51,12 +47,12 @@ def setup_platform(
     rest = CurrencylayerData(_RESOURCE, parameters)
 
     response = requests.get(_RESOURCE, params=parameters, timeout=10)
+    sensors = []
+    for variable in config[CONF_QUOTE]:
+        sensors.append(CurrencylayerSensor(rest, base, variable))
     if "error" in response.json():
         return
-    add_entities(
-        (CurrencylayerSensor(rest, base, variable) for variable in config[CONF_QUOTE]),
-        True,
-    )
+    add_entities(sensors, True)
 
 
 class CurrencylayerSensor(SensorEntity):

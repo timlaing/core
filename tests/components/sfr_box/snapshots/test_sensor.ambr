@@ -18,15 +18,10 @@
         ),
       }),
       'is_new': False,
-      'labels': set({
-      }),
       'manufacturer': None,
       'model': 'NB6VAC-FXC-r0',
-      'model_id': None,
       'name': 'SFR Box',
       'name_by_user': None,
-      'primary_config_entry': <ANY>,
-      'serial_number': None,
       'suggested_area': None,
       'sw_version': 'NB6VAC-MAIN-R4.0.44k',
       'via_device_id': None,
@@ -58,8 +53,6 @@
       'hidden_by': None,
       'icon': None,
       'id': <ANY>,
-      'labels': set({
-      }),
       'name': None,
       'options': dict({
       }),
@@ -89,8 +82,6 @@
       'hidden_by': None,
       'icon': None,
       'id': <ANY>,
-      'labels': set({
-      }),
       'name': None,
       'options': dict({
       }),
@@ -120,8 +111,6 @@
       'hidden_by': None,
       'icon': None,
       'id': <ANY>,
-      'labels': set({
-      }),
       'name': None,
       'options': dict({
       }),
@@ -159,8 +148,6 @@
       'hidden_by': None,
       'icon': None,
       'id': <ANY>,
-      'labels': set({
-      }),
       'name': None,
       'options': dict({
       }),
@@ -190,8 +177,6 @@
       'hidden_by': None,
       'icon': None,
       'id': <ANY>,
-      'labels': set({
-      }),
       'name': None,
       'options': dict({
       }),
@@ -221,8 +206,6 @@
       'hidden_by': None,
       'icon': None,
       'id': <ANY>,
-      'labels': set({
-      }),
       'name': None,
       'options': dict({
       }),
@@ -252,8 +235,6 @@
       'hidden_by': None,
       'icon': None,
       'id': <ANY>,
-      'labels': set({
-      }),
       'name': None,
       'options': dict({
       }),
@@ -285,8 +266,6 @@
       'hidden_by': None,
       'icon': None,
       'id': <ANY>,
-      'labels': set({
-      }),
       'name': None,
       'options': dict({
       }),
@@ -318,8 +297,6 @@
       'hidden_by': None,
       'icon': None,
       'id': <ANY>,
-      'labels': set({
-      }),
       'name': None,
       'options': dict({
       }),
@@ -351,8 +328,6 @@
       'hidden_by': None,
       'icon': None,
       'id': <ANY>,
-      'labels': set({
-      }),
       'name': None,
       'options': dict({
       }),
@@ -384,8 +359,6 @@
       'hidden_by': None,
       'icon': None,
       'id': <ANY>,
-      'labels': set({
-      }),
       'name': None,
       'options': dict({
       }),
@@ -417,8 +390,6 @@
       'hidden_by': None,
       'icon': None,
       'id': <ANY>,
-      'labels': set({
-      }),
       'name': None,
       'options': dict({
       }),
@@ -450,8 +421,6 @@
       'hidden_by': None,
       'icon': None,
       'id': <ANY>,
-      'labels': set({
-      }),
       'name': None,
       'options': dict({
       }),
@@ -490,8 +459,6 @@
       'hidden_by': None,
       'icon': None,
       'id': <ANY>,
-      'labels': set({
-      }),
       'name': None,
       'options': dict({
       }),
@@ -534,8 +501,6 @@
       'hidden_by': None,
       'icon': None,
       'id': <ANY>,
-      'labels': set({
-      }),
       'name': None,
       'options': dict({
       }),
@@ -567,7 +532,6 @@
       'context': <ANY>,
       'entity_id': 'sensor.sfr_box_network_infrastructure',
       'last_changed': <ANY>,
-      'last_reported': <ANY>,
       'last_updated': <ANY>,
       'state': 'adsl',
     }),
@@ -580,7 +544,6 @@
       'context': <ANY>,
       'entity_id': 'sensor.sfr_box_voltage',
       'last_changed': <ANY>,
-      'last_reported': <ANY>,
       'last_updated': <ANY>,
       'state': '12251',
     }),
@@ -593,7 +556,6 @@
       'context': <ANY>,
       'entity_id': 'sensor.sfr_box_temperature',
       'last_changed': <ANY>,
-      'last_reported': <ANY>,
       'last_updated': <ANY>,
       'state': '27.56',
     }),
@@ -612,7 +574,6 @@
       'context': <ANY>,
       'entity_id': 'sensor.sfr_box_wan_mode',
       'last_changed': <ANY>,
-      'last_reported': <ANY>,
       'last_updated': <ANY>,
       'state': 'adsl_routed',
     }),
@@ -623,7 +584,6 @@
       'context': <ANY>,
       'entity_id': 'sensor.sfr_box_dsl_line_mode',
       'last_changed': <ANY>,
-      'last_reported': <ANY>,
       'last_updated': <ANY>,
       'state': 'ADSL2+',
     }),
@@ -634,7 +594,6 @@
       'context': <ANY>,
       'entity_id': 'sensor.sfr_box_dsl_counter',
       'last_changed': <ANY>,
-      'last_reported': <ANY>,
       'last_updated': <ANY>,
       'state': '16',
     }),
@@ -645,7 +604,6 @@
       'context': <ANY>,
       'entity_id': 'sensor.sfr_box_dsl_crc',
       'last_changed': <ANY>,
-      'last_reported': <ANY>,
       'last_updated': <ANY>,
       'state': '0',
     }),
@@ -659,7 +617,6 @@
       'context': <ANY>,
       'entity_id': 'sensor.sfr_box_dsl_noise_down',
       'last_changed': <ANY>,
-      'last_reported': <ANY>,
       'last_updated': <ANY>,
       'state': '5.8',
     }),
@@ -673,7 +630,6 @@
       'context': <ANY>,
       'entity_id': 'sensor.sfr_box_dsl_noise_up',
       'last_changed': <ANY>,
-      'last_reported': <ANY>,
       'last_updated': <ANY>,
       'state': '6.0',
     }),
@@ -687,7 +643,6 @@
       'context': <ANY>,
       'entity_id': 'sensor.sfr_box_dsl_attenuation_down',
       'last_changed': <ANY>,
-      'last_reported': <ANY>,
       'last_updated': <ANY>,
       'state': '28.5',
     }),
@@ -701,7 +656,6 @@
       'context': <ANY>,
       'entity_id': 'sensor.sfr_box_dsl_attenuation_up',
       'last_changed': <ANY>,
-      'last_reported': <ANY>,
       'last_updated': <ANY>,
       'state': '20.8',
     }),
@@ -715,7 +669,6 @@
       'context': <ANY>,
       'entity_id': 'sensor.sfr_box_dsl_rate_down',
       'last_changed': <ANY>,
-      'last_reported': <ANY>,
       'last_updated': <ANY>,
       'state': '5549',
     }),
@@ -729,7 +682,6 @@
       'context': <ANY>,
       'entity_id': 'sensor.sfr_box_dsl_rate_up',
       'last_changed': <ANY>,
-      'last_reported': <ANY>,
       'last_updated': <ANY>,
       'state': '187',
     }),
@@ -749,7 +701,6 @@
       'context': <ANY>,
       'entity_id': 'sensor.sfr_box_dsl_line_status',
       'last_changed': <ANY>,
-      'last_reported': <ANY>,
       'last_updated': <ANY>,
       'state': 'no_defect',
     }),
@@ -773,7 +724,6 @@
       'context': <ANY>,
       'entity_id': 'sensor.sfr_box_dsl_training',
       'last_changed': <ANY>,
-      'last_reported': <ANY>,
       'last_updated': <ANY>,
       'state': 'showtime',
     }),

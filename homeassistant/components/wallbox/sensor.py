@@ -1,5 +1,4 @@
 """Home Assistant component for accessing the Wallbox Portal API. The sensor component creates multiple sensors regarding wallbox performance."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -52,7 +51,7 @@ UPDATE_INTERVAL = 30
 _LOGGER = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
+@dataclass
 class WallboxSensorEntityDescription(SensorEntityDescription):
     """Describes Wallbox sensor entity."""
 
@@ -79,12 +78,14 @@ SENSOR_TYPES: dict[str, WallboxSensorEntityDescription] = {
     CHARGER_CHARGING_SPEED_KEY: WallboxSensorEntityDescription(
         key=CHARGER_CHARGING_SPEED_KEY,
         translation_key=CHARGER_CHARGING_SPEED_KEY,
+        icon="mdi:speedometer",
         precision=0,
         state_class=SensorStateClass.MEASUREMENT,
     ),
     CHARGER_ADDED_RANGE_KEY: WallboxSensorEntityDescription(
         key=CHARGER_ADDED_RANGE_KEY,
         translation_key=CHARGER_ADDED_RANGE_KEY,
+        icon="mdi:map-marker-distance",
         precision=0,
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
         device_class=SensorDeviceClass.DISTANCE,
@@ -109,6 +110,7 @@ SENSOR_TYPES: dict[str, WallboxSensorEntityDescription] = {
     CHARGER_COST_KEY: WallboxSensorEntityDescription(
         key=CHARGER_COST_KEY,
         translation_key=CHARGER_COST_KEY,
+        icon="mdi:ev-station",
         state_class=SensorStateClass.TOTAL_INCREASING,
     ),
     CHARGER_STATE_OF_CHARGE_KEY: WallboxSensorEntityDescription(
@@ -121,22 +123,26 @@ SENSOR_TYPES: dict[str, WallboxSensorEntityDescription] = {
     CHARGER_CURRENT_MODE_KEY: WallboxSensorEntityDescription(
         key=CHARGER_CURRENT_MODE_KEY,
         translation_key=CHARGER_CURRENT_MODE_KEY,
+        icon="mdi:ev-station",
     ),
     CHARGER_DEPOT_PRICE_KEY: WallboxSensorEntityDescription(
         key=CHARGER_DEPOT_PRICE_KEY,
         translation_key=CHARGER_DEPOT_PRICE_KEY,
+        icon="mdi:ev-station",
         precision=2,
         state_class=SensorStateClass.MEASUREMENT,
     ),
     CHARGER_ENERGY_PRICE_KEY: WallboxSensorEntityDescription(
         key=CHARGER_ENERGY_PRICE_KEY,
         translation_key=CHARGER_ENERGY_PRICE_KEY,
+        icon="mdi:ev-station",
         precision=2,
         state_class=SensorStateClass.MEASUREMENT,
     ),
     CHARGER_STATUS_DESCRIPTION_KEY: WallboxSensorEntityDescription(
         key=CHARGER_STATUS_DESCRIPTION_KEY,
         translation_key=CHARGER_STATUS_DESCRIPTION_KEY,
+        icon="mdi:ev-station",
     ),
     CHARGER_MAX_CHARGING_CURRENT_KEY: WallboxSensorEntityDescription(
         key=CHARGER_MAX_CHARGING_CURRENT_KEY,
@@ -155,9 +161,11 @@ async def async_setup_entry(
     coordinator: WallboxCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     async_add_entities(
-        WallboxSensor(coordinator, description)
-        for ent in coordinator.data
-        if (description := SENSOR_TYPES.get(ent))
+        [
+            WallboxSensor(coordinator, description)
+            for ent in coordinator.data
+            if (description := SENSOR_TYPES.get(ent))
+        ]
     )
 
 

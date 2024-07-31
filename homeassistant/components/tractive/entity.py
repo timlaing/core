@@ -1,5 +1,4 @@
 """A entity class for Tractive integration."""
-
 from __future__ import annotations
 
 from typing import Any

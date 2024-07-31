@@ -1,12 +1,11 @@
 """Test SMHI component setup process."""
-
 from unittest.mock import patch
 
 from smhi.smhi_lib import APIURL_TEMPLATE
 
 from homeassistant.components.smhi.const import DOMAIN
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.entity_registry import async_get
 
 from . import ENTITY_ID, TEST_CONFIG, TEST_CONFIG_MIGRATE
 
@@ -57,10 +56,7 @@ async def test_remove_entry(
 
 
 async def test_migrate_entry(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-    aioclient_mock: AiohttpClientMocker,
-    api_response: str,
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, api_response: str
 ) -> None:
     """Test migrate entry data."""
     uri = APIURL_TEMPLATE.format(
@@ -71,7 +67,8 @@ async def test_migrate_entry(
     entry.add_to_hass(hass)
     assert entry.version == 1
 
-    entity = entity_registry.async_get_or_create(
+    entity_reg = async_get(hass)
+    entity = entity_reg.async_get_or_create(
         domain="weather",
         config_entry=entry,
         original_name="Weather",
@@ -89,7 +86,7 @@ async def test_migrate_entry(
     assert entry.version == 2
     assert entry.unique_id == "17.84197-17.84197"
 
-    entity_get = entity_registry.async_get(entity.entity_id)
+    entity_get = entity_reg.async_get(entity.entity_id)
     assert entity_get.unique_id == "17.84197, 17.84197"
 
 

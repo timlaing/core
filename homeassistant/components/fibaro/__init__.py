@@ -1,5 +1,4 @@
 """Support for the Fibaro devices."""
-
 from __future__ import annotations
 
 from collections import defaultdict
@@ -30,7 +29,7 @@ from homeassistant.exceptions import (
     HomeAssistantError,
 )
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceEntry, DeviceInfo
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity
 from homeassistant.util import slugify
 
@@ -43,12 +42,12 @@ PLATFORMS = [
     Platform.BINARY_SENSOR,
     Platform.CLIMATE,
     Platform.COVER,
-    Platform.EVENT,
     Platform.LIGHT,
-    Platform.LOCK,
     Platform.SCENE,
     Platform.SENSOR,
+    Platform.LOCK,
     Platform.SWITCH,
+    Platform.EVENT,
 ]
 
 FIBARO_TYPEMAP = {
@@ -102,27 +101,30 @@ class FibaroController:
         self._event_callbacks: dict[int, list[Callable[[FibaroEvent], None]]] = {}
         self.hub_serial: str  # Unique serial number of the hub
         self.hub_name: str  # The friendly name of the hub
-        self.hub_model: str
         self.hub_software_version: str
         self.hub_api_url: str = config[CONF_URL]
         # Device infos by fibaro device id
         self._device_infos: dict[int, DeviceInfo] = {}
 
-    def connect(self) -> None:
+    def connect(self) -> bool:
         """Start the communication with the Fibaro controller."""
 
-        # Return value doesn't need to be checked,
-        # it is only relevant when connecting without credentials
-        self._client.connect()
+        connected = self._client.connect()
         info = self._client.read_info()
         self.hub_serial = info.serial_number
         self.hub_name = info.hc_name
-        self.hub_model = info.platform
         self.hub_software_version = info.current_version
+
+        if connected is False:
+            _LOGGER.error(
+                "Invalid login for Fibaro HC. Please check username and password"
+            )
+            return False
 
         self._room_map = {room.fibaro_id: room for room in self._client.read_rooms()}
         self._read_devices()
         self._scenes = self._client.read_scenes()
+        return True
 
     def connect_with_error_handling(self) -> None:
         """Translate connect errors to easily differentiate auth and connect failures.
@@ -130,7 +132,9 @@ class FibaroController:
         When there is a better error handling in the used library this can be improved.
         """
         try:
-            self.connect()
+            connected = self.connect()
+            if not connected:
+                raise FibaroConnectFailed("Connect status is false")
         except HTTPError as http_ex:
             if http_ex.response.status_code == 403:
                 raise FibaroAuthFailed from http_ex
@@ -180,13 +184,12 @@ class FibaroController:
 
         resolver = FibaroStateResolver(state)
         for event in resolver.get_events():
-            # event does not always have a fibaro id, therefore it is
-            # essential that we first check for relevant event type
+            fibaro_id = event.fibaro_id
             if (
                 event.event_type.lower() == "centralsceneevent"
-                and event.fibaro_id in self._event_callbacks
+                and fibaro_id in self._event_callbacks
             ):
-                for callback in self._event_callbacks[event.fibaro_id]:
+                for callback in self._event_callbacks[fibaro_id]:
                     callback(event)
 
     def register(self, device_id: int, callback: Any) -> None:
@@ -300,10 +303,6 @@ class FibaroController:
             return self._device_infos[device.parent_fibaro_id]
         return DeviceInfo(identifiers={(DOMAIN, self.hub_serial)})
 
-    def get_all_device_identifiers(self) -> list[set[tuple[str, str]]]:
-        """Get all identifiers of fibaro integration."""
-        return [device["identifiers"] for device in self._device_infos.values()]
-
     def get_room_name(self, room_id: int) -> str | None:
         """Get the room name by room id."""
         assert self._room_map
@@ -379,7 +378,7 @@ class FibaroController:
                 pass
 
 
-def init_controller(data: Mapping[str, Any]) -> FibaroController:
+def _init_controller(data: Mapping[str, Any]) -> FibaroController:
     """Validate the user input allows us to connect to fibaro."""
     controller = FibaroController(data)
     controller.connect_with_error_handling()
@@ -392,7 +391,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     The unique id of the config entry is the serial number of the home center.
     """
     try:
-        controller = await hass.async_add_executor_job(init_controller, entry.data)
+        controller = await hass.async_add_executor_job(_init_controller, entry.data)
     except FibaroConnectFailed as connect_ex:
         raise ConfigEntryNotReady(
             f"Could not connect to controller at {entry.data[CONF_URL]}"
@@ -407,10 +406,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, controller.hub_serial)},
-        serial_number=controller.hub_serial,
         manufacturer="Fibaro",
         name=controller.hub_name,
-        model=controller.hub_model,
+        model=controller.hub_serial,
         sw_version=controller.hub_software_version,
         configuration_url=controller.hub_api_url.removesuffix("/api/"),
     )
@@ -433,23 +431,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 
-async def async_remove_config_entry_device(
-    hass: HomeAssistant, config_entry: ConfigEntry, device_entry: DeviceEntry
-) -> bool:
-    """Remove a device entry from fibaro integration.
-
-    Only removing devices which are not present anymore are eligible to be removed.
-    """
-    controller: FibaroController = hass.data[DOMAIN][config_entry.entry_id]
-    for identifiers in controller.get_all_device_identifiers():
-        if device_entry.identifiers == identifiers:
-            # Fibaro device is still served by the controller,
-            # do not allow to remove the device entry
-            return False
-
-    return True
-
-
 class FibaroDevice(Entity):
     """Representation of a Fibaro device entity."""
 
@@ -468,38 +449,37 @@ class FibaroDevice(Entity):
         if not fibaro_device.visible:
             self._attr_entity_registry_visible_default = False
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_hass(self):
         """Call when entity is added to hass."""
         self.controller.register(self.fibaro_device.fibaro_id, self._update_callback)
 
-    def _update_callback(self) -> None:
+    def _update_callback(self):
         """Update the state."""
         self.schedule_update_ha_state(True)
 
     @property
-    def level(self) -> int | None:
+    def level(self):
         """Get the level of Fibaro device."""
         if self.fibaro_device.value.has_value:
             return self.fibaro_device.value.int_value()
         return None
 
     @property
-    def level2(self) -> int | None:
+    def level2(self):
         """Get the tilt level of Fibaro device."""
         if self.fibaro_device.value_2.has_value:
             return self.fibaro_device.value_2.int_value()
         return None
 
-    def dont_know_message(self, cmd: str) -> None:
+    def dont_know_message(self, action):
         """Make a warning in case we don't know how to perform an action."""
         _LOGGER.warning(
-            "Not sure how to %s: %s (available actions: %s)",
-            cmd,
+            "Not sure how to setValue: %s (available actions: %s)",
             str(self.ha_id),
             str(self.fibaro_device.actions),
         )
 
-    def set_level(self, level: int) -> None:
+    def set_level(self, level):
         """Set the level of Fibaro device."""
         self.action("setValue", level)
         if self.fibaro_device.value.has_value:
@@ -507,21 +487,21 @@ class FibaroDevice(Entity):
         if self.fibaro_device.has_brightness:
             self.fibaro_device.properties["brightness"] = level
 
-    def set_level2(self, level: int) -> None:
+    def set_level2(self, level):
         """Set the level2 of Fibaro device."""
         self.action("setValue2", level)
         if self.fibaro_device.value_2.has_value:
             self.fibaro_device.properties["value2"] = level
 
-    def call_turn_on(self) -> None:
+    def call_turn_on(self):
         """Turn on the Fibaro device."""
         self.action("turnOn")
 
-    def call_turn_off(self) -> None:
+    def call_turn_off(self):
         """Turn off the Fibaro device."""
         self.action("turnOff")
 
-    def call_set_color(self, red: int, green: int, blue: int, white: int) -> None:
+    def call_set_color(self, red, green, blue, white):
         """Set the color of Fibaro device."""
         red = int(max(0, min(255, red)))
         green = int(max(0, min(255, green)))
@@ -531,7 +511,7 @@ class FibaroDevice(Entity):
         self.fibaro_device.properties["color"] = color_str
         self.action("setColor", str(red), str(green), str(blue), str(white))
 
-    def action(self, cmd: str, *args: Any) -> None:
+    def action(self, cmd, *args):
         """Perform an action on the Fibaro HC."""
         if cmd in self.fibaro_device.actions:
             self.fibaro_device.execute_action(cmd, args)
@@ -540,12 +520,12 @@ class FibaroDevice(Entity):
             self.dont_know_message(cmd)
 
     @property
-    def current_binary_state(self) -> bool:
+    def current_binary_state(self):
         """Return the current binary state."""
         return self.fibaro_device.value.bool_value(False)
 
     @property
-    def extra_state_attributes(self) -> Mapping[str, Any]:
+    def extra_state_attributes(self):
         """Return the state attributes of the device."""
         attr = {"fibaro_id": self.fibaro_device.fibaro_id}
 

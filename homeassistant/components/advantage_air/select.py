@@ -1,10 +1,11 @@
 """Select platform for Advantage Air integration."""
 
 from homeassistant.components.select import SelectEntity
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import AdvantageAirDataConfigEntry
+from .const import DOMAIN as ADVANTAGE_AIR_DOMAIN
 from .entity import AdvantageAirAcEntity
 from .models import AdvantageAirData
 
@@ -13,15 +14,18 @@ ADVANTAGE_AIR_INACTIVE = "Inactive"
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: AdvantageAirDataConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up AdvantageAir select platform."""
 
-    instance = config_entry.runtime_data
+    instance: AdvantageAirData = hass.data[ADVANTAGE_AIR_DOMAIN][config_entry.entry_id]
 
+    entities: list[SelectEntity] = []
     if aircons := instance.coordinator.data.get("aircons"):
-        async_add_entities(AdvantageAirMyZone(instance, ac_key) for ac_key in aircons)
+        for ac_key in aircons:
+            entities.append(AdvantageAirMyZone(instance, ac_key))
+    async_add_entities(entities)
 
 
 class AdvantageAirMyZone(AdvantageAirAcEntity, SelectEntity):

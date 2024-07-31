@@ -1,5 +1,4 @@
 """Support for Pure Energie sensors."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -19,15 +18,22 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from . import PureEnergieData, PureEnergieDataUpdateCoordinator
 from .const import DOMAIN
-from .coordinator import PureEnergieData, PureEnergieDataUpdateCoordinator
 
 
-@dataclass(frozen=True, kw_only=True)
-class PureEnergieSensorEntityDescription(SensorEntityDescription):
-    """Describes a Pure Energie sensor entity."""
+@dataclass
+class PureEnergieSensorEntityDescriptionMixin:
+    """Mixin for required keys."""
 
     value_fn: Callable[[PureEnergieData], int | float]
+
+
+@dataclass
+class PureEnergieSensorEntityDescription(
+    SensorEntityDescription, PureEnergieSensorEntityDescriptionMixin
+):
+    """Describes a Pure Energie sensor entity."""
 
 
 SENSORS: tuple[PureEnergieSensorEntityDescription, ...] = (

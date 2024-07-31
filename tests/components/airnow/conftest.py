@@ -1,23 +1,17 @@
 """Define fixtures for AirNow tests."""
-
-from collections.abc import Generator
-from typing import Any
+import json
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from homeassistant.components.airnow import DOMAIN
 from homeassistant.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE, CONF_RADIUS
-from homeassistant.core import HomeAssistant
-from homeassistant.util.json import JsonArrayType
 
-from tests.common import MockConfigEntry, load_json_array_fixture
+from tests.common import MockConfigEntry, load_fixture
 
 
 @pytest.fixture(name="config_entry")
-def config_entry_fixture(
-    hass: HomeAssistant, config: dict[str, Any], options: dict[str, Any]
-) -> MockConfigEntry:
+def config_entry_fixture(hass, config, options):
     """Define a config entry fixture."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -32,7 +26,7 @@ def config_entry_fixture(
 
 
 @pytest.fixture(name="config")
-def config_fixture() -> dict[str, Any]:
+def config_fixture(hass):
     """Define a config entry data fixture."""
     return {
         CONF_API_KEY: "abc123",
@@ -42,30 +36,29 @@ def config_fixture() -> dict[str, Any]:
 
 
 @pytest.fixture(name="options")
-def options_fixture() -> dict[str, Any]:
+def options_fixture(hass):
     """Define a config options data fixture."""
     return {
         CONF_RADIUS: 150,
     }
 
 
-@pytest.fixture(name="data", scope="package")
-def data_fixture() -> JsonArrayType:
+@pytest.fixture(name="data", scope="session")
+def data_fixture():
     """Define a fixture for response data."""
-    return load_json_array_fixture("response.json", "airnow")
+    return json.loads(load_fixture("response.json", "airnow"))
 
 
 @pytest.fixture(name="mock_api_get")
-def mock_api_get_fixture(data: JsonArrayType) -> AsyncMock:
+def mock_api_get_fixture(data):
     """Define a fixture for a mock "get" coroutine function."""
     return AsyncMock(return_value=data)
 
 
 @pytest.fixture(name="setup_airnow")
-def setup_airnow_fixture(mock_api_get: AsyncMock) -> Generator[None]:
+async def setup_airnow_fixture(hass, config, mock_api_get):
     """Define a fixture to set up AirNow."""
-    with (
-        patch("pyairnow.WebServiceAPI._get", mock_api_get),
-        patch("homeassistant.components.airnow.PLATFORMS", []),
+    with patch("pyairnow.WebServiceAPI._get", mock_api_get), patch(
+        "homeassistant.components.airnow.PLATFORMS", []
     ):
         yield

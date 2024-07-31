@@ -1,5 +1,4 @@
 """Tests for Mill config flow."""
-
 from unittest.mock import patch
 
 from homeassistant import config_entries
@@ -17,7 +16,7 @@ async def test_show_config_form(hass: HomeAssistant) -> None:
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "user"
 
 
@@ -26,7 +25,7 @@ async def test_create_entry(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["errors"] is None
 
     result2 = await hass.config_entries.flow.async_configure(
@@ -35,7 +34,7 @@ async def test_create_entry(hass: HomeAssistant) -> None:
             CONNECTION_TYPE: CLOUD,
         },
     )
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == FlowResultType.FORM
 
     with patch("mill.Mill.connect", return_value=True):
         result = await hass.config_entries.flow.async_configure(
@@ -47,7 +46,7 @@ async def test_create_entry(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == "create_entry"
     assert result["title"] == "user"
     assert result["data"] == {
         CONF_USERNAME: "user",
@@ -74,7 +73,7 @@ async def test_flow_entry_already_exists(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["errors"] is None
 
     result2 = await hass.config_entries.flow.async_configure(
@@ -83,7 +82,7 @@ async def test_flow_entry_already_exists(hass: HomeAssistant) -> None:
             CONNECTION_TYPE: CLOUD,
         },
     )
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == FlowResultType.FORM
 
     with patch("mill.Mill.connect", return_value=True):
         result = await hass.config_entries.flow.async_configure(
@@ -92,7 +91,7 @@ async def test_flow_entry_already_exists(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "already_configured"
 
 
@@ -101,7 +100,7 @@ async def test_connection_error(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["errors"] is None
 
     result2 = await hass.config_entries.flow.async_configure(
@@ -110,7 +109,7 @@ async def test_connection_error(hass: HomeAssistant) -> None:
             CONNECTION_TYPE: CLOUD,
         },
     )
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == FlowResultType.FORM
 
     with patch("mill.Mill.connect", return_value=False):
         result = await hass.config_entries.flow.async_configure(
@@ -121,7 +120,7 @@ async def test_connection_error(hass: HomeAssistant) -> None:
             },
         )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["errors"] == {"base": "cannot_connect"}
 
 
@@ -130,7 +129,7 @@ async def test_local_create_entry(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["errors"] is None
 
     result2 = await hass.config_entries.flow.async_configure(
@@ -139,7 +138,7 @@ async def test_local_create_entry(hass: HomeAssistant) -> None:
             CONNECTION_TYPE: LOCAL,
         },
     )
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == FlowResultType.FORM
 
     test_data = {
         CONF_IP_ADDRESS: "192.168.1.59",
@@ -160,7 +159,7 @@ async def test_local_create_entry(hass: HomeAssistant) -> None:
         )
 
     test_data[CONNECTION_TYPE] = LOCAL
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == "create_entry"
     assert result["title"] == test_data[CONF_IP_ADDRESS]
     assert result["data"] == test_data
 
@@ -182,7 +181,7 @@ async def test_local_flow_entry_already_exists(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["errors"] is None
 
     result2 = await hass.config_entries.flow.async_configure(
@@ -191,7 +190,7 @@ async def test_local_flow_entry_already_exists(hass: HomeAssistant) -> None:
             CONNECTION_TYPE: LOCAL,
         },
     )
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == FlowResultType.FORM
 
     test_data = {
         CONF_IP_ADDRESS: "192.168.1.59",
@@ -211,7 +210,7 @@ async def test_local_flow_entry_already_exists(hass: HomeAssistant) -> None:
             test_data,
         )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == "abort"
     assert result["reason"] == "already_configured"
 
 
@@ -221,7 +220,7 @@ async def test_local_connection_error(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["errors"] is None
 
     result2 = await hass.config_entries.flow.async_configure(
@@ -230,7 +229,7 @@ async def test_local_connection_error(hass: HomeAssistant) -> None:
             CONNECTION_TYPE: LOCAL,
         },
     )
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == FlowResultType.FORM
 
     test_data = {
         CONF_IP_ADDRESS: "192.168.1.59",
@@ -245,5 +244,5 @@ async def test_local_connection_error(hass: HomeAssistant) -> None:
             test_data,
         )
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["errors"] == {"base": "cannot_connect"}

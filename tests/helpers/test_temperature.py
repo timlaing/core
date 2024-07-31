@@ -1,5 +1,4 @@
 """Tests Home Assistant temperature helpers."""
-
 import pytest
 
 from homeassistant.const import (

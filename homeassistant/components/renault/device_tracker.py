@@ -1,26 +1,28 @@
 """Support for Renault device trackers."""
-
 from __future__ import annotations
 
 from renault_api.kamereon.models import KamereonVehicleLocationData
 
 from homeassistant.components.device_tracker import SourceType, TrackerEntity
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import RenaultConfigEntry
+from .const import DOMAIN
 from .entity import RenaultDataEntity, RenaultDataEntityDescription
+from .renault_hub import RenaultHub
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: RenaultConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Renault entities from config entry."""
+    proxy: RenaultHub = hass.data[DOMAIN][config_entry.entry_id]
     entities: list[RenaultDeviceTracker] = [
         RenaultDeviceTracker(vehicle, description)
-        for vehicle in config_entry.runtime_data.vehicles.values()
+        for vehicle in proxy.vehicles.values()
         for description in DEVICE_TRACKER_TYPES
         if description.coordinator in vehicle.coordinators
     ]
@@ -52,6 +54,7 @@ DEVICE_TRACKER_TYPES: tuple[RenaultDataEntityDescription, ...] = (
     RenaultDataEntityDescription(
         key="location",
         coordinator="location",
+        icon="mdi:car",
         translation_key="location",
     ),
 )

@@ -1,5 +1,4 @@
 """Tests for the Whois integration."""
-
 from unittest.mock import MagicMock
 
 import pytest

@@ -1,15 +1,12 @@
 """Config flow for roon integration."""
-
 import asyncio
 import logging
 
 from roonapi import RoonApi, RoonDiscovery
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow
+from homeassistant import config_entries, core, exceptions
 from homeassistant.const import CONF_API_KEY, CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
 import homeassistant.helpers.config_validation as cv
 
 from .const import (
@@ -97,10 +94,12 @@ async def discover(hass):
     """Connect and authenticate home assistant."""
 
     hub = RoonHub(hass)
-    return await hub.discover()
+    servers = await hub.discover()
+
+    return servers
 
 
-async def authenticate(hass: HomeAssistant, host, port, servers):
+async def authenticate(hass: core.HomeAssistant, host, port, servers):
     """Connect and authenticate home assistant."""
 
     hub = RoonHub(hass)
@@ -117,7 +116,7 @@ async def authenticate(hass: HomeAssistant, host, port, servers):
     }
 
 
-class RoonConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for roon."""
 
     VERSION = 1
@@ -153,7 +152,7 @@ class RoonConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_link(self, user_input=None):
-        """Handle linking and authenticating with the roon server."""
+        """Handle linking and authenticting with the roon server."""
         errors = {}
         if user_input is not None:
             # Do not authenticate if the host is already configured
@@ -166,7 +165,7 @@ class RoonConfigFlow(ConfigFlow, domain=DOMAIN):
 
             except InvalidAuth:
                 errors["base"] = "invalid_auth"
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
@@ -175,5 +174,5 @@ class RoonConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(step_id="link", errors=errors)
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(exceptions.HomeAssistantError):
     """Error to indicate there is invalid auth."""

@@ -1,5 +1,4 @@
 """Support for Kaiterra Temperature ahn Humidity Sensors."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -18,11 +17,18 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from .const import DISPATCHER_KAITERRA, DOMAIN
 
 
-@dataclass(frozen=True, kw_only=True)
-class KaiterraSensorEntityDescription(SensorEntityDescription):
-    """Class describing Renault sensor entities."""
+@dataclass
+class KaiterraSensorRequiredKeysMixin:
+    """Mixin for required keys."""
 
     suffix: str
+
+
+@dataclass
+class KaiterraSensorEntityDescription(
+    SensorEntityDescription, KaiterraSensorRequiredKeysMixin
+):
+    """Class describing Renault sensor entities."""
 
 
 SENSORS = [

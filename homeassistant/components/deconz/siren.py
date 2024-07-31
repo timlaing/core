@@ -1,5 +1,4 @@
 """Support for deCONZ siren."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -18,7 +17,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .deconz_device import DeconzDevice
-from .hub import DeconzHub
+from .gateway import get_gateway_from_config_entry
 
 
 async def async_setup_entry(
@@ -27,18 +26,18 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up sirens for deCONZ component."""
-    hub = DeconzHub.get_hub(hass, config_entry)
-    hub.entities[DOMAIN] = set()
+    gateway = get_gateway_from_config_entry(hass, config_entry)
+    gateway.entities[DOMAIN] = set()
 
     @callback
     def async_add_siren(_: EventType, siren_id: str) -> None:
         """Add siren from deCONZ."""
-        siren = hub.api.lights.sirens[siren_id]
-        async_add_entities([DeconzSiren(siren, hub)])
+        siren = gateway.api.lights.sirens[siren_id]
+        async_add_entities([DeconzSiren(siren, gateway)])
 
-    hub.register_platform_add_device_callback(
+    gateway.register_platform_add_device_callback(
         async_add_siren,
-        hub.api.lights.sirens,
+        gateway.api.lights.sirens,
     )
 
 
@@ -61,7 +60,7 @@ class DeconzSiren(DeconzDevice[Siren], SirenEntity):
         """Turn on siren."""
         if (duration := kwargs.get(ATTR_DURATION)) is not None:
             duration *= 10
-        await self.hub.api.lights.sirens.set_state(
+        await self.gateway.api.lights.sirens.set_state(
             id=self._device.resource_id,
             on=True,
             duration=duration,
@@ -69,7 +68,7 @@ class DeconzSiren(DeconzDevice[Siren], SirenEntity):
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off siren."""
-        await self.hub.api.lights.sirens.set_state(
+        await self.gateway.api.lights.sirens.set_state(
             id=self._device.resource_id,
             on=False,
         )

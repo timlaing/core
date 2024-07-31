@@ -1,5 +1,4 @@
 """Support for Wyoming speech-to-text services."""
-
 from collections.abc import AsyncIterable
 import logging
 
@@ -15,7 +14,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import DOMAIN, SAMPLE_CHANNELS, SAMPLE_RATE, SAMPLE_WIDTH
 from .data import WyomingService
 from .error import WyomingError
-from .models import DomainDataItem
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -26,10 +24,10 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Wyoming speech-to-text."""
-    item: DomainDataItem = hass.data[DOMAIN][config_entry.entry_id]
+    service: WyomingService = hass.data[DOMAIN][config_entry.entry_id]
     async_add_entities(
         [
-            WyomingSttProvider(config_entry, item.service),
+            WyomingSttProvider(config_entry, service),
         ]
     )
 
@@ -126,8 +124,8 @@ class WyomingSttProvider(stt.SpeechToTextEntity):
                         text = transcript.text
                         break
 
-        except (OSError, WyomingError):
-            _LOGGER.exception("Error processing audio stream")
+        except (OSError, WyomingError) as err:
+            _LOGGER.exception("Error processing audio stream: %s", err)
             return stt.SpeechResult(None, stt.SpeechResultState.ERROR)
 
         return stt.SpeechResult(

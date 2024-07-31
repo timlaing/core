@@ -1,8 +1,7 @@
 """The tests for the time component."""
-
 from datetime import time
 
-from homeassistant.components.time import DOMAIN, SERVICE_SET_VALUE
+from homeassistant.components.time import DOMAIN, SERVICE_SET_VALUE, TimeEntity
 from homeassistant.const import (
     ATTR_ENTITY_ID,
     ATTR_FRIENDLY_NAME,
@@ -12,19 +11,23 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 
-from .common import MockTimeEntity
 
-from tests.common import setup_test_component_platform
+class MockTimeEntity(TimeEntity):
+    """Mock time device to use in tests."""
+
+    def __init__(self, native_value=time(12, 0, 0)) -> None:
+        """Initialize mock time entity."""
+        self._attr_native_value = native_value
+
+    async def async_set_value(self, value: time) -> None:
+        """Set the value of the time."""
+        self._attr_native_value = value
 
 
-async def test_date(hass: HomeAssistant) -> None:
+async def test_date(hass: HomeAssistant, enable_custom_integrations: None) -> None:
     """Test time entity."""
-    entity = MockTimeEntity(
-        name="test",
-        unique_id="unique_time",
-        native_value=time(1, 2, 3),
-    )
-    setup_test_component_platform(hass, DOMAIN, [entity])
+    platform = getattr(hass.components, f"test.{DOMAIN}")
+    platform.init()
 
     assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
     await hass.async_block_till_done()

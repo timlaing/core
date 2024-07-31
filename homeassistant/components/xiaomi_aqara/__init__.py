@@ -1,5 +1,4 @@
 """Support for Xiaomi Gateways."""
-
 import asyncio
 from datetime import timedelta
 import logging
@@ -388,7 +387,7 @@ class XiaomiDevice(Entity):
 
     def parse_data(self, data, raw_data):
         """Parse data sent by gateway."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 def _add_gateway_to_schema(hass, schema):

@@ -1,5 +1,4 @@
 """Test the Yardian config flow."""
-
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -18,7 +17,7 @@ async def test_form(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["errors"] == {}
 
     with patch(
@@ -34,7 +33,7 @@ async def test_form(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
+    assert result2["type"] == FlowResultType.CREATE_ENTRY
     assert result2["title"] == PRODUCT_NAME
     assert result2["data"] == {
         "host": "fake_host",
@@ -65,7 +64,7 @@ async def test_form_invalid_auth(
             },
         )
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == FlowResultType.FORM
     assert result2["errors"] == {"base": "invalid_auth"}
 
     # Should be recoverable after hits error
@@ -82,7 +81,7 @@ async def test_form_invalid_auth(
         )
         await hass.async_block_till_done()
 
-    assert result3["type"] is FlowResultType.CREATE_ENTRY
+    assert result3["type"] == FlowResultType.CREATE_ENTRY
     assert result3["title"] == PRODUCT_NAME
     assert result3["data"] == {
         "host": "fake_host",
@@ -113,7 +112,7 @@ async def test_form_cannot_connect(
             },
         )
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == FlowResultType.FORM
     assert result2["errors"] == {"base": "cannot_connect"}
 
     # Should be recoverable after hits error
@@ -130,7 +129,7 @@ async def test_form_cannot_connect(
         )
         await hass.async_block_till_done()
 
-    assert result3["type"] is FlowResultType.CREATE_ENTRY
+    assert result3["type"] == FlowResultType.CREATE_ENTRY
     assert result3["title"] == PRODUCT_NAME
     assert result3["data"] == {
         "host": "fake_host",
@@ -161,7 +160,7 @@ async def test_form_uncategorized_error(
             },
         )
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == FlowResultType.FORM
     assert result2["errors"] == {"base": "unknown"}
 
     # Should be recoverable after hits error
@@ -178,7 +177,7 @@ async def test_form_uncategorized_error(
         )
         await hass.async_block_till_done()
 
-    assert result3["type"] is FlowResultType.CREATE_ENTRY
+    assert result3["type"] == FlowResultType.CREATE_ENTRY
     assert result3["title"] == PRODUCT_NAME
     assert result3["data"] == {
         "host": "fake_host",

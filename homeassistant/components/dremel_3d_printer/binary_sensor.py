@@ -1,5 +1,4 @@
 """Support for monitoring Dremel 3D Printer binary sensors."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -12,18 +11,26 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .coordinator import DremelConfigEntry
+from .const import DOMAIN
 from .entity import Dremel3DPrinterEntity
 
 
-@dataclass(frozen=True, kw_only=True)
-class Dremel3DPrinterBinarySensorEntityDescription(BinarySensorEntityDescription):
-    """Describes a Dremel 3D Printer binary sensor."""
+@dataclass
+class Dremel3DPrinterBinarySensorEntityMixin:
+    """Mixin for Dremel 3D Printer binary sensor."""
 
     value_fn: Callable[[Dremel3DPrinter], bool]
+
+
+@dataclass
+class Dremel3DPrinterBinarySensorEntityDescription(
+    BinarySensorEntityDescription, Dremel3DPrinterBinarySensorEntityMixin
+):
+    """Describes a Dremel 3D Printer binary sensor."""
 
 
 BINARY_SENSOR_TYPES: tuple[Dremel3DPrinterBinarySensorEntityDescription, ...] = (
@@ -42,12 +49,14 @@ BINARY_SENSOR_TYPES: tuple[Dremel3DPrinterBinarySensorEntityDescription, ...] = 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: DremelConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the available Dremel binary sensors."""
+    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+
     async_add_entities(
-        Dremel3DPrinterBinarySensor(config_entry.runtime_data, description)
+        Dremel3DPrinterBinarySensor(coordinator, description)
         for description in BINARY_SENSOR_TYPES
     )
 

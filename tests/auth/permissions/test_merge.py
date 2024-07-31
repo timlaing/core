@@ -1,5 +1,4 @@
 """Tests for permissions merging."""
-
 from homeassistant.auth.permissions.merge import merge_policies
 
 

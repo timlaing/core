@@ -1,5 +1,4 @@
 """Implementation of a base class for all IHC devices."""
-
 import logging
 
 from ihcsdk.ihccontroller import IHCController
@@ -40,7 +39,7 @@ class IHCDevice(Entity):
             self.ihc_name = product["name"]
             self.ihc_note = product["note"]
             self.ihc_position = product["position"]
-            self.suggested_area = product.get("group")
+            self.suggested_area = product["group"] if "group" in product else None
             if "id" in product:
                 product_id = product["id"]
                 self.device_id = f"{controller_id}_{product_id }"

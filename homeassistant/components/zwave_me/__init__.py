@@ -1,5 +1,4 @@
 """The Z-Wave-Me WS integration."""
-
 import logging
 
 from zwave_me_ws import ZWaveMe, ZWaveMeData
@@ -28,7 +27,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         registry = dr.async_get(hass)
         controller.remove_stale_devices(registry)
         return True
-    raise ConfigEntryNotReady
+    raise ConfigEntryNotReady()
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -63,7 +62,8 @@ class ZWaveMeController:
 
     async def async_establish_connection(self):
         """Get connection status."""
-        return await self.zwave_api.get_connection()
+        is_connected = await self.zwave_api.get_connection()
+        return is_connected
 
     def add_device(self, device: ZWaveMeData) -> None:
         """Send signal to create device."""

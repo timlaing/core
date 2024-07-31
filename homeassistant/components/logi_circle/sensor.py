@@ -1,5 +1,4 @@
 """Support for Logi Circle sensors."""
-
 from __future__ import annotations
 
 import logging

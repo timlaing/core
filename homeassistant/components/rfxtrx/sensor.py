@@ -1,5 +1,4 @@
 """Support for RFXtrx sensors."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -59,7 +58,7 @@ def _rssi_convert(value: int | None) -> str | None:
     return f"{value*8-120}"
 
 
-@dataclass(frozen=True)
+@dataclass
 class RfxtrxSensorEntityDescription(SensorEntityDescription):
     """Description of sensor entities."""
 
@@ -149,7 +148,7 @@ SENSOR_TYPES = (
         translation_key="total_energy_usage",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
     ),
     RfxtrxSensorEntityDescription(
         key="Voltage",
@@ -255,15 +254,18 @@ async def async_setup_entry(
         device_id: DeviceTuple,
         entity_info: dict[str, Any],
     ) -> list[Entity]:
-        return [
-            RfxtrxSensor(
-                event.device,
-                device_id,
-                SENSOR_TYPES_DICT[data_type],
-                event=event if auto else None,
+        entities: list[Entity] = []
+        for data_type in set(event.values) & set(SENSOR_TYPES_DICT):
+            entities.append(
+                RfxtrxSensor(
+                    event.device,
+                    device_id,
+                    SENSOR_TYPES_DICT[data_type],
+                    event=event if auto else None,
+                )
             )
-            for data_type in set(event.values) & set(SENSOR_TYPES_DICT)
-        ]
+
+        return entities
 
     await async_setup_platform_entry(
         hass, config_entry, async_add_entities, _supported, _constructor

@@ -1,5 +1,4 @@
 """Support for Modern Forms switches."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -9,9 +8,12 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import ModernFormsDeviceEntity, modernforms_exception_handler
+from . import (
+    ModernFormsDataUpdateCoordinator,
+    ModernFormsDeviceEntity,
+    modernforms_exception_handler,
+)
 from .const import DOMAIN
-from .coordinator import ModernFormsDataUpdateCoordinator
 
 
 async def async_setup_entry(
@@ -37,11 +39,12 @@ class ModernFormsSwitch(ModernFormsDeviceEntity, SwitchEntity):
         *,
         entry_id: str,
         coordinator: ModernFormsDataUpdateCoordinator,
+        icon: str,
         key: str,
     ) -> None:
         """Initialize Modern Forms switch."""
         self._key = key
-        super().__init__(entry_id=entry_id, coordinator=coordinator)
+        super().__init__(entry_id=entry_id, coordinator=coordinator, icon=icon)
         self._attr_unique_id = f"{self.coordinator.data.info.mac_address}_{self._key}"
 
 
@@ -57,6 +60,7 @@ class ModernFormsAwaySwitch(ModernFormsSwitch):
         super().__init__(
             coordinator=coordinator,
             entry_id=entry_id,
+            icon="mdi:airplane-takeoff",
             key="away_mode",
         )
 
@@ -88,6 +92,7 @@ class ModernFormsAdaptiveLearningSwitch(ModernFormsSwitch):
         super().__init__(
             coordinator=coordinator,
             entry_id=entry_id,
+            icon="mdi:school-outline",
             key="adaptive_learning",
         )
 

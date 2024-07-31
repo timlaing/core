@@ -1,5 +1,4 @@
 """The Meater Temperature Probe integration."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -28,12 +27,19 @@ from homeassistant.util import dt as dt_util
 from .const import DOMAIN
 
 
-@dataclass(frozen=True, kw_only=True)
-class MeaterSensorEntityDescription(SensorEntityDescription):
-    """Describes meater sensor entity."""
+@dataclass
+class MeaterSensorEntityDescriptionMixin:
+    """Mixin for MeaterSensorEntityDescription."""
 
     available: Callable[[MeaterProbe | None], bool]
     value: Callable[[MeaterProbe], datetime | float | str | None]
+
+
+@dataclass
+class MeaterSensorEntityDescription(
+    SensorEntityDescription, MeaterSensorEntityDescriptionMixin
+):
+    """Describes meater sensor entity."""
 
 
 def _elapsed_time_to_timestamp(probe: MeaterProbe) -> datetime | None:
@@ -147,7 +153,7 @@ async def async_setup_entry(
     def async_update_data():
         """Handle updated data from the API endpoint."""
         if not coordinator.last_update_success:
-            return None
+            return
 
         devices = coordinator.data
         entities = []

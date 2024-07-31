@@ -1,5 +1,4 @@
 """Test pushbullet notification platform."""
-
 from http import HTTPStatus
 
 import requests_mock

@@ -1,5 +1,4 @@
 """Tests for the myStrom integration."""
-
 from typing import Any
 
 
@@ -173,10 +172,3 @@ class MyStromSwitchMock(MyStromDeviceMock):
         if not self._requested_state:
             return None
         return self._state["temperature"]
-
-    @property
-    def uri(self) -> str | None:
-        """Return the URI."""
-        if not self._requested_state:
-            return None
-        return f"http://{self._state["ip"]}"

@@ -1,5 +1,4 @@
 """Support for DHT and DS18B20 sensors attached to a Konnected device."""
-
 from __future__ import annotations
 
 from homeassistant.components.sensor import (

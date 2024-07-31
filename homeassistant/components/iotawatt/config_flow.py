@@ -1,5 +1,4 @@
 """Config flow for iotawatt integration."""
-
 from __future__ import annotations
 
 import logging
@@ -7,10 +6,8 @@ import logging
 from iotawattpy.iotawatt import Iotawatt
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow
+from homeassistant import config_entries, core, exceptions
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import httpx_client
 
 from .const import CONNECTION_ERRORS, DOMAIN
@@ -18,7 +15,9 @@ from .const import CONNECTION_ERRORS, DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, str]) -> dict[str, str]:
+async def validate_input(
+    hass: core.HomeAssistant, data: dict[str, str]
+) -> dict[str, str]:
     """Validate the user input allows us to connect."""
     iotawatt = Iotawatt(
         "",
@@ -31,7 +30,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, str]) -> dict[str,
         is_connected = await iotawatt.connect()
     except CONNECTION_ERRORS:
         return {"base": "cannot_connect"}
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         _LOGGER.exception("Unexpected exception")
         return {"base": "unknown"}
 
@@ -41,7 +40,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, str]) -> dict[str,
     return {}
 
 
-class IOTaWattConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for iotawatt."""
 
     VERSION = 1
@@ -100,9 +99,9 @@ class IOTaWattConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_create_entry(title=data[CONF_HOST], data=data)
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(exceptions.HomeAssistantError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(exceptions.HomeAssistantError):
     """Error to indicate there is invalid auth."""

@@ -1,5 +1,4 @@
 """Test Trace websocket API."""
-
 import asyncio
 from collections import defaultdict
 import json
@@ -9,11 +8,11 @@ from unittest.mock import patch
 import pytest
 from pytest_unordered import unordered
 
+from homeassistant.bootstrap import async_setup_component
 from homeassistant.components.trace.const import DEFAULT_STORED_TRACES
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import Context, CoreState, HomeAssistant, callback
 from homeassistant.helpers.typing import UNDEFINED
-from homeassistant.setup import async_setup_component
 from homeassistant.util.uuid import random_uuid_hex
 
 from tests.common import load_fixture
@@ -119,26 +118,25 @@ async def _assert_contexts(client, next_id, contexts, domain=None, item_id=None)
         ("script", "sequence", [set(), set()], [UNDEFINED, UNDEFINED], "id", []),
     ],
 )
-@pytest.mark.usefixtures("enable_custom_integrations")
 async def test_get_trace(
     hass: HomeAssistant,
     hass_storage: dict[str, Any],
-    hass_ws_client: WebSocketGenerator,
+    hass_ws_client,
     domain,
     prefix,
     extra_trace_keys,
     trigger,
     context_key,
     condition_results,
+    enable_custom_integrations: None,
 ) -> None:
     """Test tracing a script or automation."""
-    await async_setup_component(hass, "homeassistant", {})
-    msg_id = 1
+    id = 1
 
     def next_id():
-        nonlocal msg_id
-        msg_id += 1
-        return msg_id
+        nonlocal id
+        id += 1
+        return id
 
     sun_config = {
         "id": "sun",
@@ -207,7 +205,7 @@ async def test_get_trace(
     _assert_raw_config(domain, sun_config, trace)
     assert trace["blueprint_inputs"] is None
     assert trace["context"]
-    assert trace["error"] == "Action test.automation not found"
+    assert trace["error"] == "Unable to find service test.automation"
     assert trace["state"] == "stopped"
     assert trace["script_execution"] == "error"
     assert trace["item_id"] == "sun"
@@ -425,19 +423,16 @@ async def test_get_trace(
 
 @pytest.mark.parametrize("domain", ["automation", "script"])
 async def test_restore_traces(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_ws_client: WebSocketGenerator,
-    domain: str,
+    hass: HomeAssistant, hass_storage: dict[str, Any], hass_ws_client, domain
 ) -> None:
     """Test restored traces."""
-    hass.set_state(CoreState.not_running)
-    msg_id = 1
+    hass.state = CoreState.not_running
+    id = 1
 
     def next_id():
-        nonlocal msg_id
-        msg_id += 1
-        return msg_id
+        nonlocal id
+        id += 1
+        return id
 
     saved_traces = json.loads(load_fixture(f"trace/{domain}_saved_traces.json"))
     hass_storage["trace.saved_traces"] = saved_traces
@@ -525,7 +520,7 @@ async def test_trace_overflow(
     hass: HomeAssistant, hass_ws_client: WebSocketGenerator, domain, stored_traces
 ) -> None:
     """Test the number of stored traces per script or automation is limited."""
-    msg_id = 1
+    id = 1
 
     trace_uuids = []
 
@@ -535,9 +530,9 @@ async def test_trace_overflow(
         return trace_uuids[-1]
 
     def next_id():
-        nonlocal msg_id
-        msg_id += 1
-        return msg_id
+        nonlocal id
+        id += 1
+        return id
 
     sun_config = {
         "id": "sun",
@@ -598,13 +593,13 @@ async def test_trace_overflow(
 async def test_restore_traces_overflow(
     hass: HomeAssistant,
     hass_storage: dict[str, Any],
-    hass_ws_client: WebSocketGenerator,
-    domain: str,
-    num_restored_moon_traces: int,
+    hass_ws_client,
+    domain,
+    num_restored_moon_traces,
 ) -> None:
     """Test restored traces are evicted first."""
-    hass.set_state(CoreState.not_running)
-    msg_id = 1
+    hass.state = CoreState.not_running
+    id = 1
 
     trace_uuids = []
 
@@ -614,9 +609,9 @@ async def test_restore_traces_overflow(
         return trace_uuids[-1]
 
     def next_id():
-        nonlocal msg_id
-        msg_id += 1
-        return msg_id
+        nonlocal id
+        id += 1
+        return id
 
     saved_traces = json.loads(load_fixture(f"trace/{domain}_saved_traces.json"))
     hass_storage["trace.saved_traces"] = saved_traces
@@ -678,14 +673,14 @@ async def test_restore_traces_overflow(
 async def test_restore_traces_late_overflow(
     hass: HomeAssistant,
     hass_storage: dict[str, Any],
-    hass_ws_client: WebSocketGenerator,
-    domain: str,
-    num_restored_moon_traces: int,
-    restored_run_id: str,
+    hass_ws_client,
+    domain,
+    num_restored_moon_traces,
+    restored_run_id,
 ) -> None:
     """Test restored traces are evicted first."""
-    hass.set_state(CoreState.not_running)
-    msg_id = 1
+    hass.state = CoreState.not_running
+    id = 1
 
     trace_uuids = []
 
@@ -695,9 +690,9 @@ async def test_restore_traces_late_overflow(
         return trace_uuids[-1]
 
     def next_id():
-        nonlocal msg_id
-        msg_id += 1
-        return msg_id
+        nonlocal id
+        id += 1
+        return id
 
     saved_traces = json.loads(load_fixture(f"trace/{domain}_saved_traces.json"))
     hass_storage["trace.saved_traces"] = saved_traces
@@ -746,12 +741,12 @@ async def test_trace_no_traces(
     hass: HomeAssistant, hass_ws_client: WebSocketGenerator, domain
 ) -> None:
     """Test the storing traces for a script or automation can be disabled."""
-    msg_id = 1
+    id = 1
 
     def next_id():
-        nonlocal msg_id
-        msg_id += 1
-        return msg_id
+        nonlocal id
+        id += 1
+        return id
 
     sun_config = {
         "id": "sun",
@@ -812,13 +807,12 @@ async def test_list_traces(
     script_execution,
 ) -> None:
     """Test listing script and automation traces."""
-    await async_setup_component(hass, "homeassistant", {})
-    msg_id = 1
+    id = 1
 
     def next_id():
-        nonlocal msg_id
-        msg_id += 1
-        return msg_id
+        nonlocal id
+        id += 1
+        return id
 
     sun_config = {
         "id": "sun",
@@ -899,7 +893,7 @@ async def test_list_traces(
     assert len(_find_traces(response["result"], domain, "sun")) == 1
     trace = _find_traces(response["result"], domain, "sun")[0]
     assert trace["last_step"] == last_step[0].format(prefix=prefix)
-    assert trace["error"] == "Action test.automation not found"
+    assert trace["error"] == "Unable to find service test.automation"
     assert trace["state"] == "stopped"
     assert trace["script_execution"] == script_execution[0]
     assert trace["timestamp"]
@@ -946,12 +940,12 @@ async def test_nested_traces(
     extra_trace_keys,
 ) -> None:
     """Test nested automation and script traces."""
-    msg_id = 1
+    id = 1
 
     def next_id():
-        nonlocal msg_id
-        msg_id += 1
-        return msg_id
+        nonlocal id
+        id += 1
+        return id
 
     sun_config = {
         "id": "sun",
@@ -1006,12 +1000,12 @@ async def test_breakpoints(
     hass: HomeAssistant, hass_ws_client: WebSocketGenerator, domain, prefix
 ) -> None:
     """Test script and automation breakpoints."""
-    msg_id = 1
+    id = 1
 
     def next_id():
-        nonlocal msg_id
-        msg_id += 1
-        return msg_id
+        nonlocal id
+        id += 1
+        return id
 
     async def assert_last_step(item_id, expected_action, expected_state):
         await client.send_json(
@@ -1176,12 +1170,12 @@ async def test_breakpoints_2(
     hass: HomeAssistant, hass_ws_client: WebSocketGenerator, domain, prefix
 ) -> None:
     """Test execution resumes and breakpoints are removed after subscription removed."""
-    msg_id = 1
+    id = 1
 
     def next_id():
-        nonlocal msg_id
-        msg_id += 1
-        return msg_id
+        nonlocal id
+        id += 1
+        return id
 
     async def assert_last_step(item_id, expected_action, expected_state):
         await client.send_json(
@@ -1281,12 +1275,12 @@ async def test_breakpoints_3(
     hass: HomeAssistant, hass_ws_client: WebSocketGenerator, domain, prefix
 ) -> None:
     """Test breakpoints can be cleared."""
-    msg_id = 1
+    id = 1
 
     def next_id():
-        nonlocal msg_id
-        msg_id += 1
-        return msg_id
+        nonlocal id
+        id += 1
+        return id
 
     async def assert_last_step(item_id, expected_action, expected_state):
         await client.send_json(
@@ -1437,12 +1431,12 @@ async def test_script_mode(
     script_execution,
 ) -> None:
     """Test overlapping runs with max_runs > 1."""
-    msg_id = 1
+    id = 1
 
     def next_id():
-        nonlocal msg_id
-        msg_id += 1
-        return msg_id
+        nonlocal id
+        id += 1
+        return id
 
     flag = asyncio.Event()
 
@@ -1505,12 +1499,12 @@ async def test_script_mode_2(
     script_execution,
 ) -> None:
     """Test overlapping runs with max_runs > 1."""
-    msg_id = 1
+    id = 1
 
     def next_id():
-        nonlocal msg_id
-        msg_id += 1
-        return msg_id
+        nonlocal id
+        id += 1
+        return id
 
     flag = asyncio.Event()
 
@@ -1573,19 +1567,18 @@ async def test_script_mode_2(
     assert trace["script_execution"] == "finished"
 
 
-@pytest.mark.usefixtures("enable_custom_integrations")
 async def test_trace_blueprint_automation(
     hass: HomeAssistant,
     hass_ws_client: WebSocketGenerator,
+    enable_custom_integrations: None,
 ) -> None:
     """Test trace of blueprint automation."""
-    await async_setup_component(hass, "homeassistant", {})
-    msg_id = 1
+    id = 1
 
     def next_id():
-        nonlocal msg_id
-        msg_id += 1
-        return msg_id
+        nonlocal id
+        id += 1
+        return id
 
     domain = "automation"
     sun_config = {
@@ -1639,7 +1632,7 @@ async def test_trace_blueprint_automation(
     assert trace["config"]["id"] == "sun"
     assert trace["blueprint_inputs"] == sun_config
     assert trace["context"]
-    assert trace["error"] == "Action test.automation not found"
+    assert trace["error"] == "Unable to find service test.automation"
     assert trace["state"] == "stopped"
     assert trace["script_execution"] == "error"
     assert trace["item_id"] == "sun"

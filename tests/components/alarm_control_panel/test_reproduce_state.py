@@ -1,5 +1,4 @@
 """Test reproduce state for Alarm control panel."""
-
 import pytest
 
 from homeassistant.const import (

@@ -1,5 +1,6 @@
 """Test version diagnostics."""
 
+
 from homeassistant.core import HomeAssistant
 
 from .common import MOCK_VERSION, setup_version_integration

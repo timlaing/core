@@ -1,5 +1,4 @@
 """Support for EZVIZ camera."""
-
 import logging
 
 from pyezviz.client import EzvizClient

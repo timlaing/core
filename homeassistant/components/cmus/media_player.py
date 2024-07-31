@@ -1,5 +1,4 @@
 """Support for interacting with and controlling the cmus music player."""
-
 from __future__ import annotations
 
 import logging
@@ -9,7 +8,7 @@ from pycmus import exceptions, remote
 import voluptuous as vol
 
 from homeassistant.components.media_player import (
-    PLATFORM_SCHEMA as MEDIA_PLAYER_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
@@ -26,7 +25,7 @@ _LOGGER = logging.getLogger(__name__)
 DEFAULT_NAME = "cmus"
 DEFAULT_PORT = 3000
 
-PLATFORM_SCHEMA = MEDIA_PLAYER_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Inclusive(CONF_HOST, "remote"): cv.string,
         vol.Inclusive(CONF_PASSWORD, "remote"): cv.string,

@@ -1,5 +1,4 @@
 """Define constants for the Ambient PWS component."""
-
 import logging
 
 DOMAIN = "ambient_station"

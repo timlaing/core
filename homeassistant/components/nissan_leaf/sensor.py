@@ -1,5 +1,4 @@
 """Battery Charge and Range Support for the Nissan Leaf."""
-
 from __future__ import annotations
 
 import logging

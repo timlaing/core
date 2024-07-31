@@ -1,5 +1,4 @@
 """Vodafone Station buttons."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -21,12 +20,19 @@ from .const import _LOGGER, DOMAIN
 from .coordinator import VodafoneStationRouter
 
 
-@dataclass(frozen=True, kw_only=True)
-class VodafoneStationEntityDescription(ButtonEntityDescription):
-    """Vodafone Station entity description."""
+@dataclass
+class VodafoneStationBaseEntityDescriptionMixin:
+    """Mixin to describe a Button entity."""
 
     press_action: Callable[[VodafoneStationRouter], Any]
     is_suitable: Callable[[dict], bool]
+
+
+@dataclass
+class VodafoneStationEntityDescription(
+    ButtonEntityDescription, VodafoneStationBaseEntityDescriptionMixin
+):
+    """Vodafone Station entity description."""
 
 
 BUTTON_TYPES: Final = (

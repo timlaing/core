@@ -1,5 +1,4 @@
 """Support for Epson projector."""
-
 from __future__ import annotations
 
 import logging
@@ -36,14 +35,11 @@ from homeassistant.components.media_player import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import (
-    config_validation as cv,
-    device_registry as dr,
-    entity_platform,
-    entity_registry as er,
-)
+from homeassistant.helpers import entity_platform
+import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 
 from .const import ATTR_CMODE, DOMAIN, SERVICE_SELECT_CMODE
 
@@ -59,7 +55,8 @@ async def async_setup_entry(
     projector: Projector = hass.data[DOMAIN][config_entry.entry_id]
     projector_entity = EpsonProjectorMediaPlayer(
         projector=projector,
-        unique_id=config_entry.unique_id or config_entry.entry_id,
+        name=config_entry.title,
+        unique_id=config_entry.unique_id,
         entry=config_entry,
     )
     async_add_entities([projector_entity], True)
@@ -74,9 +71,6 @@ async def async_setup_entry(
 class EpsonProjectorMediaPlayer(MediaPlayerEntity):
     """Representation of Epson Projector Device."""
 
-    _attr_has_entity_name = True
-    _attr_name = None
-
     _attr_supported_features = (
         MediaPlayerEntityFeature.TURN_ON
         | MediaPlayerEntityFeature.TURN_OFF
@@ -88,38 +82,38 @@ class EpsonProjectorMediaPlayer(MediaPlayerEntity):
     )
 
     def __init__(
-        self, projector: Projector, unique_id: str, entry: ConfigEntry
+        self, projector: Projector, name: str, unique_id: str | None, entry: ConfigEntry
     ) -> None:
         """Initialize entity to control Epson projector."""
         self._projector = projector
         self._entry = entry
+        self._attr_name = name
         self._attr_available = False
         self._cmode = None
         self._attr_source_list = list(DEFAULT_SOURCES.values())
         self._attr_unique_id = unique_id
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, unique_id)},
-            manufacturer="Epson",
-            model="Epson",
-        )
+        if unique_id:
+            self._attr_device_info = DeviceInfo(
+                identifiers={(DOMAIN, unique_id)},
+                manufacturer="Epson",
+                model="Epson",
+                name="Epson projector",
+                via_device=(DOMAIN, unique_id),
+            )
 
     async def set_unique_id(self) -> bool:
         """Set unique id for projector config entry."""
         _LOGGER.debug("Setting unique_id for projector")
-        if self._entry.unique_id:
+        if self.unique_id:
             return False
         if uid := await self._projector.get_serial_number():
             self.hass.config_entries.async_update_entry(self._entry, unique_id=uid)
-            ent_reg = er.async_get(self.hass)
-            old_entity_id = ent_reg.async_get_entity_id(
+            registry = async_get_entity_registry(self.hass)
+            old_entity_id = registry.async_get_entity_id(
                 "media_player", DOMAIN, self._entry.entry_id
             )
             if old_entity_id is not None:
-                ent_reg.async_update_entity(old_entity_id, new_unique_id=uid)
-            dev_reg = dr.async_get(self.hass)
-            device = dev_reg.async_get_device({(DOMAIN, self._entry.entry_id)})
-            if device is not None:
-                dev_reg.async_update_device(device.id, new_identifiers={(DOMAIN, uid)})
+                registry.async_update_entity(old_entity_id, new_unique_id=uid)
             self.hass.async_create_task(
                 self.hass.config_entries.async_reload(self._entry.entry_id)
             )

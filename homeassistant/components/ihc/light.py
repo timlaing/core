@@ -1,5 +1,4 @@
 """Support for IHC lights."""
-
 from __future__ import annotations
 
 from typing import Any

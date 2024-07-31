@@ -1,5 +1,4 @@
 """Config flow for Dormakaba dKey integration."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -10,13 +9,14 @@ from bleak import BleakError
 from py_dormakaba_dkey import DKEYLock, device_filter, errors as dkey_errors
 import voluptuous as vol
 
+from homeassistant import config_entries
 from homeassistant.components.bluetooth import (
     BluetoothServiceInfoBleak,
     async_discovered_service_info,
     async_last_service_info,
 )
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_ADDRESS
+from homeassistant.data_entry_flow import FlowResult
 
 from .const import CONF_ASSOCIATION_DATA, DOMAIN
 
@@ -29,12 +29,12 @@ STEP_ASSOCIATE_SCHEMA = vol.Schema(
 )
 
 
-class DormkabaConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Dormakaba dKey."""
 
     VERSION = 1
 
-    _reauth_entry: ConfigEntry | None = None
+    _reauth_entry: config_entries.ConfigEntry | None = None
 
     def __init__(self) -> None:
         """Initialize the config flow."""
@@ -46,7 +46,7 @@ class DormkabaConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the user step to pick discovered device."""
         errors: dict[str, str] = {}
 
@@ -92,7 +92,7 @@ class DormkabaConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_bluetooth(
         self, discovery_info: BluetoothServiceInfoBleak
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the Bluetooth discovery step."""
         await self.async_set_unique_id(discovery_info.address)
         self._abort_if_unique_id_configured()
@@ -103,7 +103,7 @@ class DormkabaConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_bluetooth_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle bluetooth confirm step."""
         # mypy is not aware that we can't get here without having these set already
         assert self._discovery_info is not None
@@ -117,9 +117,7 @@ class DormkabaConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return await self.async_step_associate()
 
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Handle reauthorization request."""
         self._reauth_entry = self.hass.config_entries.async_get_entry(
             self.context["entry_id"]
@@ -128,7 +126,7 @@ class DormkabaConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle reauthorization flow."""
         errors = {}
         reauth_entry = self._reauth_entry
@@ -151,7 +149,7 @@ class DormkabaConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_associate(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle associate step."""
         # mypy is not aware that we can't get here without having these set already
         assert self._discovery_info is not None
@@ -175,7 +173,7 @@ class DormkabaConfigFlow(ConfigFlow, domain=DOMAIN):
             errors["base"] = "invalid_code"
         except dkey_errors.WrongActivationCode:
             errors["base"] = "wrong_code"
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             _LOGGER.exception("Unexpected exception")
             return self.async_abort(reason="unknown")
         else:

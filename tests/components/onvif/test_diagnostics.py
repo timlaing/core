@@ -1,7 +1,5 @@
 """Test ONVIF diagnostics."""
-
 from syrupy import SnapshotAssertion
-from syrupy.filters import props
 
 from homeassistant.core import HomeAssistant
 
@@ -20,6 +18,4 @@ async def test_diagnostics(
 
     entry, _, _ = await setup_onvif_integration(hass)
 
-    assert await get_diagnostics_for_config_entry(hass, hass_client, entry) == snapshot(
-        exclude=props("created_at", "modified_at")
-    )
+    assert await get_diagnostics_for_config_entry(hass, hass_client, entry) == snapshot

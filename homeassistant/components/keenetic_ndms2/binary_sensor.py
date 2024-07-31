@@ -1,5 +1,4 @@
 """The Keenetic Client class."""
-
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,

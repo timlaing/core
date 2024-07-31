@@ -1,5 +1,4 @@
 """Siren support for switch entities."""
-
 from __future__ import annotations
 
 from homeassistant.components.siren import (

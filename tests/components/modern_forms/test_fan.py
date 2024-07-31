@@ -1,5 +1,4 @@
 """Tests for the Modern Forms fan platform."""
-
 from unittest.mock import patch
 
 from aiomodernforms import ModernFormsConnectionError
@@ -36,12 +35,12 @@ from tests.test_util.aiohttp import AiohttpClientMocker
 
 
 async def test_fan_state(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-    aioclient_mock: AiohttpClientMocker,
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test the creation and values of the Modern Forms fans."""
     await init_integration(hass, aioclient_mock)
+
+    entity_registry = er.async_get(hass)
 
     state = hass.states.get("fan.modernformsfan_fan")
     assert state
@@ -191,9 +190,7 @@ async def test_fan_error(
 
     aioclient_mock.post("http://192.168.1.123:80/mf", text="", status=400)
 
-    with patch(
-        "homeassistant.components.modern_forms.coordinator.ModernFormsDevice.update"
-    ):
+    with patch("homeassistant.components.modern_forms.ModernFormsDevice.update"):
         await hass.services.async_call(
             FAN_DOMAIN,
             SERVICE_TURN_OFF,
@@ -212,14 +209,9 @@ async def test_fan_connection_error(
     """Test error handling of the Moder Forms fans."""
     await init_integration(hass, aioclient_mock)
 
-    with (
-        patch(
-            "homeassistant.components.modern_forms.coordinator.ModernFormsDevice.update"
-        ),
-        patch(
-            "homeassistant.components.modern_forms.coordinator.ModernFormsDevice.fan",
-            side_effect=ModernFormsConnectionError,
-        ),
+    with patch("homeassistant.components.modern_forms.ModernFormsDevice.update"), patch(
+        "homeassistant.components.modern_forms.ModernFormsDevice.fan",
+        side_effect=ModernFormsConnectionError,
     ):
         await hass.services.async_call(
             FAN_DOMAIN,

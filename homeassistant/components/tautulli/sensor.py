@@ -1,5 +1,4 @@
 """A platform which allows you to get information from Tautulli."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -19,14 +18,14 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import SOURCE_IMPORT
+from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfInformation
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType, StateType
 
-from . import TautulliConfigEntry, TautulliEntity
+from . import TautulliEntity
 from .const import ATTR_TOP_USER, DOMAIN
 from .coordinator import TautulliDataUpdateCoordinator
 
@@ -44,21 +43,30 @@ def get_top_stats(
     return value
 
 
-@dataclass(frozen=True, kw_only=True)
-class TautulliSensorEntityDescription(SensorEntityDescription):
-    """Describes a Tautulli sensor."""
+@dataclass
+class TautulliSensorEntityMixin:
+    """Mixin for Tautulli sensor."""
 
     value_fn: Callable[[PyTautulliApiHomeStats, PyTautulliApiActivity, str], StateType]
 
 
+@dataclass
+class TautulliSensorEntityDescription(
+    SensorEntityDescription, TautulliSensorEntityMixin
+):
+    """Describes a Tautulli sensor."""
+
+
 SENSOR_TYPES: tuple[TautulliSensorEntityDescription, ...] = (
     TautulliSensorEntityDescription(
+        icon="mdi:plex",
         key="watching_count",
         translation_key="watching_count",
         native_unit_of_measurement="Watching",
         value_fn=lambda home_stats, activity, _: cast(int, activity.stream_count),
     ),
     TautulliSensorEntityDescription(
+        icon="mdi:plex",
         key="stream_count_direct_play",
         translation_key="stream_count_direct_play",
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -69,6 +77,7 @@ SENSOR_TYPES: tuple[TautulliSensorEntityDescription, ...] = (
         ),
     ),
     TautulliSensorEntityDescription(
+        icon="mdi:plex",
         key="stream_count_direct_stream",
         translation_key="stream_count_direct_stream",
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -79,6 +88,7 @@ SENSOR_TYPES: tuple[TautulliSensorEntityDescription, ...] = (
         ),
     ),
     TautulliSensorEntityDescription(
+        icon="mdi:plex",
         key="stream_count_transcode",
         translation_key="stream_count_transcode",
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -118,18 +128,21 @@ SENSOR_TYPES: tuple[TautulliSensorEntityDescription, ...] = (
         value_fn=lambda home_stats, activity, _: cast(int, activity.wan_bandwidth),
     ),
     TautulliSensorEntityDescription(
+        icon="mdi:movie-open",
         key="top_movies",
         translation_key="top_movies",
         entity_registry_enabled_default=False,
         value_fn=get_top_stats,
     ),
     TautulliSensorEntityDescription(
+        icon="mdi:television",
         key="top_tv",
         translation_key="top_tv",
         entity_registry_enabled_default=False,
         value_fn=get_top_stats,
     ),
     TautulliSensorEntityDescription(
+        icon="mdi:walk",
         key=ATTR_TOP_USER,
         translation_key="top_user",
         entity_registry_enabled_default=False,
@@ -138,15 +151,23 @@ SENSOR_TYPES: tuple[TautulliSensorEntityDescription, ...] = (
 )
 
 
-@dataclass(frozen=True, kw_only=True)
-class TautulliSessionSensorEntityDescription(SensorEntityDescription):
-    """Describes a Tautulli session sensor."""
+@dataclass
+class TautulliSessionSensorEntityMixin:
+    """Mixin for Tautulli session sensor."""
 
     value_fn: Callable[[PyTautulliApiSession], StateType]
 
 
+@dataclass
+class TautulliSessionSensorEntityDescription(
+    SensorEntityDescription, TautulliSessionSensorEntityMixin
+):
+    """Describes a Tautulli session sensor."""
+
+
 SESSION_SENSOR_TYPES: tuple[TautulliSessionSensorEntityDescription, ...] = (
     TautulliSessionSensorEntityDescription(
+        icon="mdi:plex",
         key="state",
         translation_key="state",
         value_fn=lambda session: cast(str, session.state),
@@ -158,6 +179,7 @@ SESSION_SENSOR_TYPES: tuple[TautulliSessionSensorEntityDescription, ...] = (
         value_fn=lambda session: cast(str, session.full_title),
     ),
     TautulliSessionSensorEntityDescription(
+        icon="mdi:progress-clock",
         key="progress",
         translation_key="progress",
         native_unit_of_measurement=PERCENTAGE,
@@ -172,6 +194,7 @@ SESSION_SENSOR_TYPES: tuple[TautulliSessionSensorEntityDescription, ...] = (
         value_fn=lambda session: cast(str, session.stream_video_resolution),
     ),
     TautulliSessionSensorEntityDescription(
+        icon="mdi:plex",
         key="transcode_decision",
         translation_key="transcode_decision",
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -210,28 +233,26 @@ async def async_setup_platform(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: TautulliConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up Tautulli sensor."""
-    data = entry.runtime_data
+    coordinator: TautulliDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
     entities: list[TautulliSensor | TautulliSessionSensor] = [
         TautulliSensor(
-            data,
+            coordinator,
             description,
         )
         for description in SENSOR_TYPES
     ]
-    if data.users:
+    if coordinator.users:
         entities.extend(
             TautulliSessionSensor(
-                data,
+                coordinator,
                 description,
                 user,
             )
             for description in SESSION_SENSOR_TYPES
-            for user in data.users
+            for user in coordinator.users
             if user.username != "Local"
         )
     async_add_entities(entities)

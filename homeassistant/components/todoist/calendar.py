@@ -1,5 +1,4 @@
 """Support for Todoist task management (https://todoist.com)."""
-
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
@@ -14,7 +13,7 @@ from todoist_api_python.models import Due, Label, Task
 import voluptuous as vol
 
 from homeassistant.components.calendar import (
-    PLATFORM_SCHEMA as CALENDAR_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     CalendarEntity,
     CalendarEvent,
 )
@@ -66,7 +65,6 @@ _LOGGER = logging.getLogger(__name__)
 NEW_TASK_SERVICE_SCHEMA = vol.Schema(
     {
         vol.Required(CONTENT): cv.string,
-        vol.Optional(DESCRIPTION): cv.string,
         vol.Optional(PROJECT_NAME, default="inbox"): vol.All(cv.string, vol.Lower),
         vol.Optional(LABELS): cv.ensure_list_csv,
         vol.Optional(ASSIGNEE): cv.string,
@@ -82,7 +80,7 @@ NEW_TASK_SERVICE_SCHEMA = vol.Schema(
     }
 )
 
-PLATFORM_SCHEMA = CALENDAR_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_TOKEN): cv.string,
         vol.Optional(CONF_EXTRA_PROJECTS, default=[]): vol.All(
@@ -226,8 +224,6 @@ def async_register_services(
         content = call.data[CONTENT]
         data: dict[str, Any] = {"project_id": project_id}
 
-        if description := call.data.get(DESCRIPTION):
-            data["description"] = description
         if task_labels := call.data.get(LABELS):
             data["labels"] = task_labels
 
@@ -436,7 +432,7 @@ class TodoistProjectData:
 
         self._coordinator = coordinator
         self._name = project_data[CONF_NAME]
-        # If no ID is defined, this is a custom project.
+        # If no ID is defined, fetch all tasks.
         self._id = project_data.get(CONF_ID)
 
         # All labels the user has defined, for easy lookup.
@@ -496,13 +492,6 @@ class TodoistProjectData:
             START: dt_util.now(),
             SUMMARY: data.content,
         }
-
-        if (
-            self._project_id_whitelist
-            and data.project_id not in self._project_id_whitelist
-        ):
-            # Project isn't in `include_projects` filter.
-            return None
 
         # All task Labels (optional parameter).
         task[LABELS] = [
@@ -632,7 +621,10 @@ class TodoistProjectData:
         tasks = self._coordinator.data
         if self._id is None:
             project_task_data = [
-                task for task in tasks if self.create_todoist_task(task) is not None
+                task
+                for task in tasks
+                if not self._project_id_whitelist
+                or task.project_id in self._project_id_whitelist
             ]
         else:
             project_task_data = [task for task in tasks if task.project_id == self._id]

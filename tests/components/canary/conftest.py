@@ -1,27 +1,22 @@
 """Define fixtures available for all tests."""
-
-from collections.abc import Generator
 from unittest.mock import MagicMock, patch
 
 from canary.api import Api
 import pytest
 
-from homeassistant.core import HomeAssistant
-
 
 @pytest.fixture(autouse=True)
-def mock_ffmpeg(hass: HomeAssistant) -> None:
+def mock_ffmpeg(hass):
     """Mock ffmpeg is loaded."""
     hass.config.components.add("ffmpeg")
 
 
 @pytest.fixture
-def canary() -> Generator[MagicMock]:
+def canary(hass):
     """Mock the CanaryApi for easier testing."""
-    with (
-        patch.object(Api, "login", return_value=True),
-        patch("homeassistant.components.canary.Api") as mock_canary,
-    ):
+    with patch.object(Api, "login", return_value=True), patch(
+        "homeassistant.components.canary.Api"
+    ) as mock_canary:
         instance = mock_canary.return_value = Api(
             "test-username",
             "test-password",
@@ -41,12 +36,11 @@ def canary() -> Generator[MagicMock]:
 
 
 @pytest.fixture
-def canary_config_flow() -> Generator[MagicMock]:
+def canary_config_flow(hass):
     """Mock the CanaryApi for easier config flow testing."""
-    with (
-        patch.object(Api, "login", return_value=True),
-        patch("homeassistant.components.canary.config_flow.Api") as mock_canary,
-    ):
+    with patch.object(Api, "login", return_value=True), patch(
+        "homeassistant.components.canary.config_flow.Api"
+    ) as mock_canary:
         instance = mock_canary.return_value = Api(
             "test-username",
             "test-password",

@@ -1,13 +1,11 @@
 """Config flow for JuiceNet integration."""
-
 import logging
 
 import aiohttp
 from pyjuicenet import Api, TokenError
 import voluptuous as vol
 
-from homeassistant import core, exceptions
-from homeassistant.config_entries import ConfigFlow
+from homeassistant import config_entries, core, exceptions
 from homeassistant.const import CONF_ACCESS_TOKEN
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
@@ -39,7 +37,7 @@ async def validate_input(hass: core.HomeAssistant, data):
     return {"title": "JuiceNet"}
 
 
-class JuiceNetConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for JuiceNet."""
 
     VERSION = 1
@@ -58,7 +56,7 @@ class JuiceNetConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
                 errors["base"] = "invalid_auth"
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
 

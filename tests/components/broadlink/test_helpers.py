@@ -1,5 +1,4 @@
 """Tests for Broadlink helper functions."""
-
 import pytest
 import voluptuous as vol
 

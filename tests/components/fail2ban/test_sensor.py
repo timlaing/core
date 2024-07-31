@@ -1,5 +1,4 @@
 """The tests for local file sensor platform."""
-
 from unittest.mock import Mock, mock_open, patch
 
 from homeassistant.components.fail2ban.sensor import (

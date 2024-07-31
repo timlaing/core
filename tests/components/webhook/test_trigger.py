@@ -1,5 +1,4 @@
 """The tests for the webhook automation trigger."""
-
 from ipaddress import ip_address
 from unittest.mock import Mock, patch
 
@@ -17,7 +16,7 @@ def stub_blueprint_populate_autouse(stub_blueprint_populate: None) -> None:
 
 
 @pytest.fixture(autouse=True)
-async def setup_http(hass: HomeAssistant) -> None:
+async def setup_http(hass):
     """Set up http."""
     assert await async_setup_component(hass, "http", {})
     assert await async_setup_component(hass, "webhook", {})
@@ -151,7 +150,7 @@ async def test_webhook_allowed_methods_internet(
                     "platform": "webhook",
                     "webhook_id": "post_webhook",
                     "allowed_methods": "PUT",
-                    "local_only": False,
+                    # Enable after 2023.11.0: "local_only": False,
                 },
                 "action": {
                     "event": "test_success",

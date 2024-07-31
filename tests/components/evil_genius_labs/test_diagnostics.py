@@ -1,5 +1,4 @@
 """Test evil genius labs diagnostics."""
-
 import pytest
 
 from homeassistant.components.diagnostics import REDACTED

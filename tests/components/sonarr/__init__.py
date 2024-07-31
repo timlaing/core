@@ -1,5 +1,4 @@
 """Tests for the Sonarr component."""
-
 from homeassistant.const import CONF_API_KEY, CONF_URL
 
 MOCK_REAUTH_INPUT = {CONF_API_KEY: "test-api-key-reauth"}

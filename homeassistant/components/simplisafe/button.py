@@ -1,5 +1,4 @@
 """Buttons for the SimpliSafe integration."""
-
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
@@ -20,11 +19,18 @@ from .const import DOMAIN
 from .typing import SystemType
 
 
-@dataclass(frozen=True, kw_only=True)
-class SimpliSafeButtonDescription(ButtonEntityDescription):
-    """Describe a SimpliSafe button entity."""
+@dataclass
+class SimpliSafeButtonDescriptionMixin:
+    """Define an entity description mixin for SimpliSafe buttons."""
 
     push_action: Callable[[System], Awaitable]
+
+
+@dataclass
+class SimpliSafeButtonDescription(
+    ButtonEntityDescription, SimpliSafeButtonDescriptionMixin
+):
+    """Describe a SimpliSafe button entity."""
 
 
 BUTTON_KIND_CLEAR_NOTIFICATIONS = "clear_notifications"

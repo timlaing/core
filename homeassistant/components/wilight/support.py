@@ -1,5 +1,4 @@
 """Support for config validation using voluptuous and Translate Trigger."""
-
 from __future__ import annotations
 
 import calendar

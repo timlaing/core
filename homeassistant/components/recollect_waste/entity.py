@@ -1,5 +1,4 @@
 """Define a base ReCollect Waste entity."""
-
 from aiorecollect.client import PickupEvent
 
 from homeassistant.config_entries import ConfigEntry

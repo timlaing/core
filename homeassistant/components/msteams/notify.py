@@ -1,5 +1,4 @@
 """Microsoft Teams platform for notify component."""
-
 from __future__ import annotations
 
 import logging
@@ -11,7 +10,7 @@ from homeassistant.components.notify import (
     ATTR_DATA,
     ATTR_TITLE,
     ATTR_TITLE_DEFAULT,
-    PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     BaseNotificationService,
 )
 from homeassistant.const import CONF_URL
@@ -23,7 +22,7 @@ _LOGGER = logging.getLogger(__name__)
 
 ATTR_FILE_URL = "image_url"
 
-PLATFORM_SCHEMA = NOTIFY_PLATFORM_SCHEMA.extend({vol.Required(CONF_URL): cv.url})
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({vol.Required(CONF_URL): cv.url})
 
 
 def get_service(
@@ -37,8 +36,8 @@ def get_service(
     try:
         return MSTeamsNotificationService(webhook_url)
 
-    except RuntimeError:
-        _LOGGER.exception("Error in creating a new Microsoft Teams message")
+    except RuntimeError as err:
+        _LOGGER.exception("Error in creating a new Microsoft Teams message: %s", err)
         return None
 
 

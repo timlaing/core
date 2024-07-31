@@ -1,5 +1,4 @@
 """Support for LED numbers."""
-
 from __future__ import annotations
 
 from abc import abstractmethod
@@ -90,6 +89,7 @@ class FluxSpeedNumber(
     _attr_native_max_value = 100
     _attr_native_step = 1
     _attr_mode = NumberMode.SLIDER
+    _attr_icon = "mdi:speedometer"
     _attr_translation_key = "effect_speed"
 
     @property
@@ -175,6 +175,7 @@ class FluxPixelsPerSegmentNumber(FluxConfigNumber):
     """Defines a flux_led pixels per segment number."""
 
     _attr_translation_key = "pixels_per_segment"
+    _attr_icon = "mdi:dots-grid"
 
     @property
     def native_max_value(self) -> int:
@@ -201,6 +202,7 @@ class FluxSegmentsNumber(FluxConfigNumber):
     """Defines a flux_led segments number."""
 
     _attr_translation_key = "segments"
+    _attr_icon = "mdi:segment"
 
     @property
     def native_max_value(self) -> int:
@@ -235,6 +237,7 @@ class FluxMusicPixelsPerSegmentNumber(FluxMusicNumber):
     """Defines a flux_led music pixels per segment number."""
 
     _attr_translation_key = "music_pixels_per_segment"
+    _attr_icon = "mdi:dots-grid"
 
     @property
     def native_max_value(self) -> int:
@@ -263,6 +266,7 @@ class FluxMusicSegmentsNumber(FluxMusicNumber):
     """Defines a flux_led music segments number."""
 
     _attr_translation_key = "music_segments"
+    _attr_icon = "mdi:segment"
 
     @property
     def native_max_value(self) -> int:

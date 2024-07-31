@@ -1,13 +1,11 @@
 """Config flow for Antifurto365 iAlarm integration."""
-
 import logging
 
 from pyialarm import IAlarm
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow
+from homeassistant import config_entries, core
 from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
 
 from .const import DEFAULT_PORT, DOMAIN
 
@@ -21,12 +19,12 @@ DATA_SCHEMA = vol.Schema(
 )
 
 
-async def _get_device_mac(hass: HomeAssistant, host, port):
+async def _get_device_mac(hass: core.HomeAssistant, host, port):
     ialarm = IAlarm(host, port)
     return await hass.async_add_executor_job(ialarm.get_mac)
 
 
-class IAlarmConfigFlow(ConfigFlow, domain=DOMAIN):
+class IAlarmConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Antifurto365 iAlarm."""
 
     VERSION = 1
@@ -48,7 +46,7 @@ class IAlarmConfigFlow(ConfigFlow, domain=DOMAIN):
             mac = await _get_device_mac(self.hass, host, port)
         except ConnectionError:
             errors["base"] = "cannot_connect"
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             _LOGGER.exception("Unexpected exception")
             errors["base"] = "unknown"
 

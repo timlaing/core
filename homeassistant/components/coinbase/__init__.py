@@ -1,5 +1,4 @@
 """The Coinbase integration."""
-
 from __future__ import annotations
 
 from datetime import timedelta
@@ -77,11 +76,12 @@ async def update_listener(hass: HomeAssistant, config_entry: ConfigEntry) -> Non
     # Remove orphaned entities
     for entity in entities:
         currency = entity.unique_id.split("-")[-1]
-        if (
-            "xe" in entity.unique_id
-            and currency not in config_entry.options.get(CONF_EXCHANGE_RATES, [])
-            or "wallet" in entity.unique_id
-            and currency not in config_entry.options.get(CONF_CURRENCIES, [])
+        if "xe" in entity.unique_id and currency not in config_entry.options.get(
+            CONF_EXCHANGE_RATES, []
+        ):
+            registry.async_remove(entity.entity_id)
+        elif "wallet" in entity.unique_id and currency not in config_entry.options.get(
+            CONF_CURRENCIES, []
         ):
             registry.async_remove(entity.entity_id)
 

@@ -1,19 +1,21 @@
 """Helpers for WLED."""
-
 from __future__ import annotations
 
 from collections.abc import Callable, Coroutine
-from typing import Any, Concatenate
+from typing import Any, Concatenate, ParamSpec, TypeVar
 
 from wled import WLEDConnectionError, WLEDError
 
 from homeassistant.exceptions import HomeAssistantError
 
-from .entity import WLEDEntity
+from .models import WLEDEntity
+
+_WLEDEntityT = TypeVar("_WLEDEntityT", bound=WLEDEntity)
+_P = ParamSpec("_P")
 
 
-def wled_exception_handler[_WLEDEntityT: WLEDEntity, **_P](
-    func: Callable[Concatenate[_WLEDEntityT, _P], Coroutine[Any, Any, Any]],
+def wled_exception_handler(
+    func: Callable[Concatenate[_WLEDEntityT, _P], Coroutine[Any, Any, Any]]
 ) -> Callable[Concatenate[_WLEDEntityT, _P], Coroutine[Any, Any, None]]:
     """Decorate WLED calls to handle WLED exceptions.
 
@@ -35,13 +37,3 @@ def wled_exception_handler[_WLEDEntityT: WLEDEntity, **_P](
             raise HomeAssistantError("Invalid response from WLED API") from error
 
     return handler
-
-
-def kelvin_to_255(k: int, min_k: int, max_k: int) -> int:
-    """Map color temperature in K from minK-maxK to 0-255."""
-    return int((k - min_k) / (max_k - min_k) * 255)
-
-
-def kelvin_to_255_reverse(v: int, min_k: int, max_k: int) -> int:
-    """Map color temperature from 0-255 to minK-maxK K."""
-    return int(v / 255 * (max_k - min_k) + min_k)

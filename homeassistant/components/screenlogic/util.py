@@ -1,5 +1,4 @@
 """Utility functions for the ScreenLogic integration."""
-
 import logging
 
 from screenlogicpy.const.data import SHARED_VALUES

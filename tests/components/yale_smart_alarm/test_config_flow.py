@@ -1,5 +1,4 @@
 """Test the Yale Smart Living config flow."""
-
 from __future__ import annotations
 
 from unittest.mock import patch
@@ -21,18 +20,15 @@ async def test_form(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["errors"] == {}
 
-    with (
-        patch(
-            "homeassistant.components.yale_smart_alarm.config_flow.YaleSmartAlarmClient",
-        ),
-        patch(
-            "homeassistant.components.yale_smart_alarm.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-    ):
+    with patch(
+        "homeassistant.components.yale_smart_alarm.config_flow.YaleSmartAlarmClient",
+    ), patch(
+        "homeassistant.components.yale_smart_alarm.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry:
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             {
@@ -43,7 +39,7 @@ async def test_form(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
+    assert result2["type"] == FlowResultType.CREATE_ENTRY
     assert result2["title"] == "test-username"
     assert result2["data"] == {
         "username": "test-username",
@@ -85,17 +81,14 @@ async def test_form_invalid_auth(
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == FlowResultType.FORM
     assert result2["errors"] == {"base": p_error}
 
-    with (
-        patch(
-            "homeassistant.components.yale_smart_alarm.config_flow.YaleSmartAlarmClient",
-        ),
-        patch(
-            "homeassistant.components.yale_smart_alarm.async_setup_entry",
-            return_value=True,
-        ),
+    with patch(
+        "homeassistant.components.yale_smart_alarm.config_flow.YaleSmartAlarmClient",
+    ), patch(
+        "homeassistant.components.yale_smart_alarm.async_setup_entry",
+        return_value=True,
     ):
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
@@ -107,7 +100,7 @@ async def test_form_invalid_auth(
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.CREATE_ENTRY
+    assert result2["type"] == FlowResultType.CREATE_ENTRY
     assert result2["title"] == "test-username"
     assert result2["data"] == {
         "username": "test-username",
@@ -142,18 +135,15 @@ async def test_reauth_flow(hass: HomeAssistant) -> None:
         data=entry.data,
     )
     assert result["step_id"] == "reauth_confirm"
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["errors"] == {}
 
-    with (
-        patch(
-            "homeassistant.components.yale_smart_alarm.config_flow.YaleSmartAlarmClient",
-        ) as mock_yale,
-        patch(
-            "homeassistant.components.yale_smart_alarm.async_setup_entry",
-            return_value=True,
-        ) as mock_setup_entry,
-    ):
+    with patch(
+        "homeassistant.components.yale_smart_alarm.config_flow.YaleSmartAlarmClient",
+    ) as mock_yale, patch(
+        "homeassistant.components.yale_smart_alarm.async_setup_entry",
+        return_value=True,
+    ) as mock_setup_entry:
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             {
@@ -163,7 +153,7 @@ async def test_reauth_flow(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.ABORT
+    assert result2["type"] == FlowResultType.ABORT
     assert result2["reason"] == "reauth_successful"
     assert entry.data == {
         "username": "test-username",
@@ -226,18 +216,15 @@ async def test_reauth_flow_error(
         await hass.async_block_till_done()
 
     assert result2["step_id"] == "reauth_confirm"
-    assert result2["type"] is FlowResultType.FORM
+    assert result2["type"] == FlowResultType.FORM
     assert result2["errors"] == {"base": p_error}
 
-    with (
-        patch(
-            "homeassistant.components.yale_smart_alarm.config_flow.YaleSmartAlarmClient",
-            return_value="",
-        ),
-        patch(
-            "homeassistant.components.yale_smart_alarm.async_setup_entry",
-            return_value=True,
-        ),
+    with patch(
+        "homeassistant.components.yale_smart_alarm.config_flow.YaleSmartAlarmClient",
+        return_value="",
+    ), patch(
+        "homeassistant.components.yale_smart_alarm.async_setup_entry",
+        return_value=True,
     ):
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
@@ -248,7 +235,7 @@ async def test_reauth_flow_error(
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] is FlowResultType.ABORT
+    assert result2["type"] == FlowResultType.ABORT
     assert result2["reason"] == "reauth_successful"
     assert entry.data == {
         "username": "test-username",
@@ -273,22 +260,19 @@ async def test_options_flow(hass: HomeAssistant) -> None:
     )
     entry.add_to_hass(hass)
 
-    with (
-        patch(
-            "homeassistant.components.yale_smart_alarm.config_flow.YaleSmartAlarmClient",
-            return_value=True,
-        ),
-        patch(
-            "homeassistant.components.yale_smart_alarm.async_setup_entry",
-            return_value=True,
-        ),
+    with patch(
+        "homeassistant.components.yale_smart_alarm.config_flow.YaleSmartAlarmClient",
+        return_value=True,
+    ), patch(
+        "homeassistant.components.yale_smart_alarm.async_setup_entry",
+        return_value=True,
     ):
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
 
     result = await hass.config_entries.options.async_init(entry.entry_id)
 
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "init"
 
     result = await hass.config_entries.options.async_configure(
@@ -296,5 +280,5 @@ async def test_options_flow(hass: HomeAssistant) -> None:
         user_input={"lock_code_digits": 6},
     )
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"] == {"lock_code_digits": 6}

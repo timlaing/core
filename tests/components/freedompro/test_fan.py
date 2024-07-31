@@ -1,5 +1,4 @@
 """Tests for the Freedompro fan."""
-
 from datetime import timedelta
 from unittest.mock import ANY, patch
 
@@ -17,20 +16,18 @@ from homeassistant.util.dt import utcnow
 
 from .conftest import get_states_response_for_uid
 
-from tests.common import MockConfigEntry, async_fire_time_changed
+from tests.common import async_fire_time_changed
 
 uid = "3WRRJR6RCZQZSND8VP0YTO3YXCSOFPKBMW8T51TU-LQ*ILYH1E3DWZOVMNEUIMDYMNLOW-LFRQFDPWWJOVHVDOS"
 
 
-async def test_fan_get_state(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-    device_registry: dr.DeviceRegistry,
-    init_integration: MockConfigEntry,
-) -> None:
+async def test_fan_get_state(hass: HomeAssistant, init_integration) -> None:
     """Test states of the fan."""
+    init_integration
+    registry = er.async_get(hass)
+    registry_device = dr.async_get(hass)
 
-    device = device_registry.async_get_device(identifiers={("freedompro", uid)})
+    device = registry_device.async_get_device(identifiers={("freedompro", uid)})
     assert device is not None
     assert device.identifiers == {("freedompro", uid)}
     assert device.manufacturer == "Freedompro"
@@ -44,7 +41,7 @@ async def test_fan_get_state(
     assert state.attributes[ATTR_PERCENTAGE] == 0
     assert state.attributes.get("friendly_name") == "bedroom"
 
-    entry = entity_registry.async_get(entity_id)
+    entry = registry.async_get(entity_id)
     assert entry
     assert entry.unique_id == uid
 
@@ -62,7 +59,7 @@ async def test_fan_get_state(
         assert state
         assert state.attributes.get("friendly_name") == "bedroom"
 
-        entry = entity_registry.async_get(entity_id)
+        entry = registry.async_get(entity_id)
         assert entry
         assert entry.unique_id == uid
 
@@ -70,12 +67,10 @@ async def test_fan_get_state(
         assert state.attributes[ATTR_PERCENTAGE] == 50
 
 
-async def test_fan_set_off(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-    init_integration: MockConfigEntry,
-) -> None:
+async def test_fan_set_off(hass: HomeAssistant, init_integration) -> None:
     """Test turn off the fan."""
+    init_integration
+    registry = er.async_get(hass)
 
     entity_id = "fan.bedroom"
 
@@ -96,7 +91,7 @@ async def test_fan_set_off(
     assert state.attributes[ATTR_PERCENTAGE] == 50
     assert state.attributes.get("friendly_name") == "bedroom"
 
-    entry = entity_registry.async_get(entity_id)
+    entry = registry.async_get(entity_id)
     assert entry
     assert entry.unique_id == uid
 
@@ -125,12 +120,10 @@ async def test_fan_set_off(
     assert state.state == STATE_OFF
 
 
-async def test_fan_set_on(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-    init_integration: MockConfigEntry,
-) -> None:
+async def test_fan_set_on(hass: HomeAssistant, init_integration) -> None:
     """Test turn on the fan."""
+    init_integration
+    registry = er.async_get(hass)
 
     entity_id = "fan.bedroom"
     state = hass.states.get(entity_id)
@@ -139,7 +132,7 @@ async def test_fan_set_on(
     assert state.attributes[ATTR_PERCENTAGE] == 0
     assert state.attributes.get("friendly_name") == "bedroom"
 
-    entry = entity_registry.async_get(entity_id)
+    entry = registry.async_get(entity_id)
     assert entry
     assert entry.unique_id == uid
 
@@ -167,12 +160,10 @@ async def test_fan_set_on(
     assert state.state == STATE_ON
 
 
-async def test_fan_set_percent(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-    init_integration: MockConfigEntry,
-) -> None:
+async def test_fan_set_percent(hass: HomeAssistant, init_integration) -> None:
     """Test turn on the fan."""
+    init_integration
+    registry = er.async_get(hass)
 
     entity_id = "fan.bedroom"
     state = hass.states.get(entity_id)
@@ -181,7 +172,7 @@ async def test_fan_set_percent(
     assert state.attributes[ATTR_PERCENTAGE] == 0
     assert state.attributes.get("friendly_name") == "bedroom"
 
-    entry = entity_registry.async_get(entity_id)
+    entry = registry.async_get(entity_id)
     assert entry
     assert entry.unique_id == uid
 

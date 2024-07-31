@@ -1,5 +1,4 @@
 """Errors for the Acmeda Pulse component."""
-
 from homeassistant.exceptions import HomeAssistantError
 
 

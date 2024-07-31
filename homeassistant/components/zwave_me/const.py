@@ -1,5 +1,4 @@
 """Constants for ZWaveMe."""
-
 from enum import StrEnum
 
 from homeassistant.const import Platform

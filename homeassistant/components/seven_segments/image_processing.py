@@ -1,5 +1,4 @@
 """Optical character recognition processing of seven segments displays."""
-
 from __future__ import annotations
 
 import io
@@ -11,7 +10,7 @@ from PIL import Image
 import voluptuous as vol
 
 from homeassistant.components.image_processing import (
-    PLATFORM_SCHEMA as IMAGE_PROCESSING_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     ImageProcessingDeviceClass,
     ImageProcessingEntity,
 )
@@ -35,7 +34,7 @@ CONF_Y_POS = "y_position"
 
 DEFAULT_BINARY = "ssocr"
 
-PLATFORM_SCHEMA = IMAGE_PROCESSING_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Optional(CONF_EXTRA_ARGUMENTS, default=""): cv.string,
         vol.Optional(CONF_DIGITS): cv.positive_int,
@@ -57,12 +56,15 @@ async def async_setup_platform(
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the Seven segments OCR platform."""
-    async_add_entities(
-        ImageProcessingSsocr(
-            hass, camera[CONF_ENTITY_ID], config, camera.get(CONF_NAME)
+    entities = []
+    for camera in config[CONF_SOURCE]:
+        entities.append(
+            ImageProcessingSsocr(
+                hass, camera[CONF_ENTITY_ID], config, camera.get(CONF_NAME)
+            )
         )
-        for camera in config[CONF_SOURCE]
-    )
+
+    async_add_entities(entities)
 
 
 class ImageProcessingSsocr(ImageProcessingEntity):
@@ -96,14 +98,14 @@ class ImageProcessingSsocr(ImageProcessingEntity):
         threshold = ["-t", str(config[CONF_THRESHOLD])]
         extra_arguments = config[CONF_EXTRA_ARGUMENTS].split(" ")
 
-        self._command = [
-            config[CONF_SSOCR_BIN],
-            *crop,
-            *digits,
-            *threshold,
-            *rotate,
-            *extra_arguments,
-        ]
+        self._command = (
+            [config[CONF_SSOCR_BIN]]
+            + crop
+            + digits
+            + threshold
+            + rotate
+            + extra_arguments
+        )
         self._command.append(self.filepath)
 
     @property

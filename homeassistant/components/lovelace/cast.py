@@ -179,7 +179,7 @@ async def _get_dashboard_info(hass, url_path):
         "views": views,
     }
 
-    if config is None or "views" not in config:
+    if config is None:
         return data
 
     for idx, view in enumerate(config["views"]):

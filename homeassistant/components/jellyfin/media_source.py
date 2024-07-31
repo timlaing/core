@@ -1,5 +1,4 @@
 """The Media Source implementation for the Jellyfin integration."""
-
 from __future__ import annotations
 
 import logging
@@ -19,11 +18,9 @@ from homeassistant.components.media_source.models import (
 )
 from homeassistant.core import HomeAssistant
 
-from . import JellyfinConfigEntry
 from .const import (
     COLLECTION_TYPE_MOVIES,
     COLLECTION_TYPE_MUSIC,
-    CONF_AUDIO_CODEC,
     DOMAIN,
     ITEM_KEY_COLLECTION_TYPE,
     ITEM_KEY_ID,
@@ -48,6 +45,7 @@ from .const import (
     PLAYABLE_ITEM_TYPES,
     SUPPORTED_COLLECTION_TYPES,
 )
+from .models import JellyfinData
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -55,10 +53,10 @@ _LOGGER = logging.getLogger(__name__)
 async def async_get_media_source(hass: HomeAssistant) -> MediaSource:
     """Set up Jellyfin media source."""
     # Currently only a single Jellyfin server is supported
-    entry: JellyfinConfigEntry = hass.config_entries.async_entries(DOMAIN)[0]
-    jellyfin_data = entry.runtime_data
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    jellyfin_data: JellyfinData = hass.data[DOMAIN][entry.entry_id]
 
-    return JellyfinSource(hass, jellyfin_data.jellyfin_client, entry)
+    return JellyfinSource(hass, jellyfin_data.jellyfin_client)
 
 
 class JellyfinSource(MediaSource):
@@ -66,14 +64,11 @@ class JellyfinSource(MediaSource):
 
     name: str = "Jellyfin"
 
-    def __init__(
-        self, hass: HomeAssistant, client: JellyfinClient, entry: JellyfinConfigEntry
-    ) -> None:
+    def __init__(self, hass: HomeAssistant, client: JellyfinClient) -> None:
         """Initialize the Jellyfin media source."""
         super().__init__(DOMAIN)
 
         self.hass = hass
-        self.entry = entry
 
         self.client = client
         self.api = client.jellyfin
@@ -290,7 +285,7 @@ class JellyfinSource(MediaSource):
         mime_type = _media_mime_type(track)
         thumbnail_url = self._get_thumbnail_url(track)
 
-        return BrowseMediaSource(
+        result = BrowseMediaSource(
             domain=DOMAIN,
             identifier=track_id,
             media_class=MediaClass.TRACK,
@@ -300,6 +295,8 @@ class JellyfinSource(MediaSource):
             can_expand=False,
             thumbnail=thumbnail_url,
         )
+
+        return result
 
     async def _build_movie_library(
         self, library: dict[str, Any], include_children: bool
@@ -349,7 +346,7 @@ class JellyfinSource(MediaSource):
         mime_type = _media_mime_type(movie)
         thumbnail_url = self._get_thumbnail_url(movie)
 
-        return BrowseMediaSource(
+        result = BrowseMediaSource(
             domain=DOMAIN,
             identifier=movie_id,
             media_class=MediaClass.MOVIE,
@@ -359,6 +356,8 @@ class JellyfinSource(MediaSource):
             can_expand=False,
             thumbnail=thumbnail_url,
         )
+
+        return result
 
     async def _build_tv_library(
         self, library: dict[str, Any], include_children: bool
@@ -395,7 +394,7 @@ class JellyfinSource(MediaSource):
                 k.get(ITEM_KEY_NAME),
             ),
         )
-        return [await self._build_series(s, False) for s in series]
+        return [await self._build_series(serie, False) for serie in series]
 
     async def _build_series(
         self, series: dict[str, Any], include_children: bool
@@ -486,7 +485,7 @@ class JellyfinSource(MediaSource):
         mime_type = _media_mime_type(episode)
         thumbnail_url = self._get_thumbnail_url(episode)
 
-        return BrowseMediaSource(
+        result = BrowseMediaSource(
             domain=DOMAIN,
             identifier=episode_id,
             media_class=MediaClass.EPISODE,
@@ -496,6 +495,8 @@ class JellyfinSource(MediaSource):
             can_expand=False,
             thumbnail=thumbnail_url,
         )
+
+        return result
 
     async def _get_children(
         self, parent_id: str, item_type: str
@@ -528,8 +529,6 @@ class JellyfinSource(MediaSource):
         item_id = media_item[ITEM_KEY_ID]
 
         if media_type == MEDIA_TYPE_AUDIO:
-            if audio_codec := self.entry.options.get(CONF_AUDIO_CODEC):
-                return self.api.audio_url(item_id, audio_codec=audio_codec)  # type: ignore[no-any-return]
             return self.api.audio_url(item_id)  # type: ignore[no-any-return]
         if media_type == MEDIA_TYPE_VIDEO:
             return self.api.video_url(item_id)  # type: ignore[no-any-return]

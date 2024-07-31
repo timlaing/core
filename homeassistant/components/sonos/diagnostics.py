@@ -1,5 +1,4 @@
 """Provides diagnostics for Sonos."""
-
 from __future__ import annotations
 
 import time
@@ -113,7 +112,7 @@ async def async_generate_speaker_info(
     payload: dict[str, Any] = {}
 
     def get_contents(
-        item: float | str | dict[str, Any],
+        item: int | float | str | dict[str, Any]
     ) -> int | float | str | dict[str, Any]:
         if isinstance(item, (int, float, str)):
             return item

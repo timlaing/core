@@ -1,5 +1,4 @@
 """Errors for the Transmission component."""
-
 from homeassistant.exceptions import HomeAssistantError
 
 

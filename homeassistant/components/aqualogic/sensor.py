@@ -1,5 +1,4 @@
 """Support for AquaLogic sensors."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -7,7 +6,7 @@ from dataclasses import dataclass
 import voluptuous as vol
 
 from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
@@ -27,7 +26,7 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from . import DOMAIN, UPDATE_TOPIC, AquaLogicProcessor
 
 
-@dataclass(frozen=True)
+@dataclass
 class AquaLogicSensorEntityDescription(SensorEntityDescription):
     """Describes AquaLogic sensor entity."""
 
@@ -104,7 +103,7 @@ SENSOR_TYPES: tuple[AquaLogicSensorEntityDescription, ...] = (
 
 SENSOR_KEYS: list[str] = [desc.key for desc in SENSOR_TYPES]
 
-PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_MONITORED_CONDITIONS, default=SENSOR_KEYS): vol.All(
             cv.ensure_list, [vol.In(SENSOR_KEYS)]

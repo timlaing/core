@@ -1,15 +1,13 @@
 """Test the Diagnostics integration."""
-
 from http import HTTPStatus
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from homeassistant.components.websocket_api import TYPE_RESULT
+from homeassistant.components.websocket_api.const import TYPE_RESULT
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.device_registry import async_get
 from homeassistant.helpers.system_info import async_get_system_info
-from homeassistant.loader import async_get_integration
 from homeassistant.setup import async_setup_component
 
 from . import _get_diagnostics_for_config_entry, _get_diagnostics_for_device
@@ -19,7 +17,7 @@ from tests.typing import ClientSessionGenerator, WebSocketGenerator
 
 
 @pytest.fixture(autouse=True)
-async def mock_diagnostics_integration(hass: HomeAssistant) -> None:
+async def mock_diagnostics_integration(hass):
     """Mock a diagnostics integration."""
     hass.config.components.add("fake_integration")
     mock_platform(
@@ -80,11 +78,8 @@ async def test_websocket(
     }
 
 
-@pytest.mark.usefixtures("enable_custom_integrations")
 async def test_download_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    device_registry: dr.DeviceRegistry,
+    hass: HomeAssistant, hass_client: ClientSessionGenerator
 ) -> None:
     """Test download diagnostics."""
     config_entry = MockConfigEntry(domain="fake_integration")
@@ -92,85 +87,12 @@ async def test_download_diagnostics(
     hass_sys_info = await async_get_system_info(hass)
     hass_sys_info["run_as_root"] = hass_sys_info["user"] == "root"
     del hass_sys_info["user"]
-    integration = await async_get_integration(hass, "fake_integration")
-    original_manifest = integration.manifest.copy()
-    original_manifest["codeowners"] = ["@test"]
-    with patch.object(integration, "manifest", original_manifest):
-        response = await _get_diagnostics_for_config_entry(
-            hass, hass_client, config_entry
-        )
-    assert response == {
+
+    assert await _get_diagnostics_for_config_entry(hass, hass_client, config_entry) == {
         "home_assistant": hass_sys_info,
-        "setup_times": {},
-        "custom_components": {
-            "test": {
-                "documentation": "http://example.com",
-                "requirements": [],
-                "version": "1.2.3",
-            },
-            "test_blocked_version": {
-                "documentation": None,
-                "requirements": [],
-                "version": "1.0.0",
-            },
-            "test_embedded": {
-                "documentation": "http://test-package.io",
-                "requirements": [],
-                "version": "1.2.3",
-            },
-            "test_integration_frame": {
-                "documentation": "http://example.com",
-                "requirements": [],
-                "version": "1.2.3",
-            },
-            "test_integration_platform": {
-                "documentation": "http://test-package.io",
-                "requirements": [],
-                "version": "1.2.3",
-            },
-            "test_legacy_state_translations": {
-                "documentation": "http://test-package.io",
-                "requirements": [],
-                "version": "1.2.3",
-            },
-            "test_legacy_state_translations_bad_data": {
-                "documentation": "http://test-package.io",
-                "requirements": [],
-                "version": "1.2.3",
-            },
-            "test_package": {
-                "documentation": "http://test-package.io",
-                "requirements": [],
-                "version": "1.2.3",
-            },
-            "test_package_loaded_executor": {
-                "documentation": "http://test-package.io",
-                "requirements": [],
-                "version": "1.2.3",
-            },
-            "test_package_loaded_loop": {
-                "documentation": "http://test-package.io",
-                "requirements": [],
-                "version": "1.2.3",
-            },
-            "test_package_raises_cancelled_error": {
-                "documentation": "http://test-package.io",
-                "requirements": [],
-                "version": "1.2.3",
-            },
-            "test_package_raises_cancelled_error_config_entry": {
-                "documentation": "http://test-package.io",
-                "requirements": [],
-                "version": "1.2.3",
-            },
-            "test_with_services": {
-                "documentation": None,
-                "requirements": [],
-                "version": "1.0",
-            },
-        },
+        "custom_components": {},
         "integration_manifest": {
-            "codeowners": ["test"],
+            "codeowners": [],
             "dependencies": [],
             "domain": "fake_integration",
             "is_built_in": True,
@@ -180,7 +102,8 @@ async def test_download_diagnostics(
         "data": {"config_entry": "info"},
     }
 
-    device = device_registry.async_get_or_create(
+    dev_reg = async_get(hass)
+    device = dev_reg.async_get_or_create(
         config_entry_id=config_entry.entry_id, identifiers={("test", "test")}
     )
 
@@ -188,73 +111,7 @@ async def test_download_diagnostics(
         hass, hass_client, config_entry, device
     ) == {
         "home_assistant": hass_sys_info,
-        "custom_components": {
-            "test": {
-                "documentation": "http://example.com",
-                "requirements": [],
-                "version": "1.2.3",
-            },
-            "test_blocked_version": {
-                "documentation": None,
-                "requirements": [],
-                "version": "1.0.0",
-            },
-            "test_embedded": {
-                "documentation": "http://test-package.io",
-                "requirements": [],
-                "version": "1.2.3",
-            },
-            "test_integration_frame": {
-                "documentation": "http://example.com",
-                "requirements": [],
-                "version": "1.2.3",
-            },
-            "test_integration_platform": {
-                "documentation": "http://test-package.io",
-                "requirements": [],
-                "version": "1.2.3",
-            },
-            "test_legacy_state_translations": {
-                "documentation": "http://test-package.io",
-                "requirements": [],
-                "version": "1.2.3",
-            },
-            "test_legacy_state_translations_bad_data": {
-                "documentation": "http://test-package.io",
-                "requirements": [],
-                "version": "1.2.3",
-            },
-            "test_package": {
-                "documentation": "http://test-package.io",
-                "requirements": [],
-                "version": "1.2.3",
-            },
-            "test_package_loaded_executor": {
-                "documentation": "http://test-package.io",
-                "requirements": [],
-                "version": "1.2.3",
-            },
-            "test_package_loaded_loop": {
-                "documentation": "http://test-package.io",
-                "requirements": [],
-                "version": "1.2.3",
-            },
-            "test_package_raises_cancelled_error": {
-                "documentation": "http://test-package.io",
-                "requirements": [],
-                "version": "1.2.3",
-            },
-            "test_package_raises_cancelled_error_config_entry": {
-                "documentation": "http://test-package.io",
-                "requirements": [],
-                "version": "1.2.3",
-            },
-            "test_with_services": {
-                "documentation": None,
-                "requirements": [],
-                "version": "1.0",
-            },
-        },
+        "custom_components": {},
         "integration_manifest": {
             "codeowners": [],
             "dependencies": [],
@@ -264,7 +121,6 @@ async def test_download_diagnostics(
             "requirements": [],
         },
         "data": {"device": "info"},
-        "setup_times": {},
     }
 
 

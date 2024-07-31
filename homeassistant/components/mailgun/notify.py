@@ -1,5 +1,4 @@
 """Support for the Mailgun mail notifications."""
-
 from __future__ import annotations
 
 import logging
@@ -16,7 +15,7 @@ from homeassistant.components.notify import (
     ATTR_DATA,
     ATTR_TITLE,
     ATTR_TITLE_DEFAULT,
-    PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     BaseNotificationService,
 )
 from homeassistant.const import CONF_API_KEY, CONF_DOMAIN, CONF_RECIPIENT, CONF_SENDER
@@ -32,7 +31,7 @@ ATTR_IMAGES = "images"
 
 DEFAULT_SANDBOX = False
 
-PLATFORM_SCHEMA = NOTIFY_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {vol.Required(CONF_RECIPIENT): vol.Email(), vol.Optional(CONF_SENDER): vol.Email()}
 )
 
@@ -86,8 +85,8 @@ class MailgunNotificationService(BaseNotificationService):
         except MailgunCredentialsError:
             _LOGGER.exception("Invalid credentials")
             return False
-        except MailgunDomainError:
-            _LOGGER.exception("Unexpected exception")
+        except MailgunDomainError as mailgun_error:
+            _LOGGER.exception(mailgun_error)
             return False
         return True
 
@@ -110,5 +109,5 @@ class MailgunNotificationService(BaseNotificationService):
                 files=files,
             )
             _LOGGER.debug("Message sent: %s", resp)
-        except MailgunError:
-            _LOGGER.exception("Failed to send message")
+        except MailgunError as mailgun_error:
+            _LOGGER.exception("Failed to send message: %s", mailgun_error)

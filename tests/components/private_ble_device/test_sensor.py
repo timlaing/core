@@ -1,10 +1,10 @@
 """Tests for sensors."""
 
-# pylint: disable-next=no-name-in-module
-from habluetooth.advertisement_tracker import ADVERTISING_TIMES_NEEDED
-import pytest
 
 from homeassistant.components.bluetooth import async_set_fallback_availability_interval
+from homeassistant.components.bluetooth.advertisement_tracker import (
+    ADVERTISING_TIMES_NEEDED,
+)
 from homeassistant.core import HomeAssistant
 
 from . import (
@@ -15,8 +15,11 @@ from . import (
 )
 
 
-@pytest.mark.usefixtures("enable_bluetooth", "entity_registry_enabled_by_default")
-async def test_sensor_unavailable(hass: HomeAssistant) -> None:
+async def test_sensor_unavailable(
+    hass: HomeAssistant,
+    enable_bluetooth: None,
+    entity_registry_enabled_by_default: None,
+) -> None:
     """Test sensors are unavailable."""
     await async_mock_config_entry(hass)
 
@@ -25,8 +28,11 @@ async def test_sensor_unavailable(hass: HomeAssistant) -> None:
     assert state.state == "unavailable"
 
 
-@pytest.mark.usefixtures("enable_bluetooth", "entity_registry_enabled_by_default")
-async def test_sensors_already_home(hass: HomeAssistant) -> None:
+async def test_sensors_already_home(
+    hass: HomeAssistant,
+    enable_bluetooth: None,
+    entity_registry_enabled_by_default: None,
+) -> None:
     """Test sensors get value when we start at home."""
     await async_inject_broadcast(hass, MAC_RPA_VALID_1)
     await async_mock_config_entry(hass)
@@ -36,8 +42,11 @@ async def test_sensors_already_home(hass: HomeAssistant) -> None:
     assert state.state == "-63"
 
 
-@pytest.mark.usefixtures("enable_bluetooth", "entity_registry_enabled_by_default")
-async def test_sensors_come_home(hass: HomeAssistant) -> None:
+async def test_sensors_come_home(
+    hass: HomeAssistant,
+    enable_bluetooth: None,
+    entity_registry_enabled_by_default: None,
+) -> None:
     """Test sensors get value when we receive a broadcast."""
     await async_mock_config_entry(hass)
     await async_inject_broadcast(hass, MAC_RPA_VALID_1)
@@ -47,8 +56,11 @@ async def test_sensors_come_home(hass: HomeAssistant) -> None:
     assert state.state == "-63"
 
 
-@pytest.mark.usefixtures("enable_bluetooth", "entity_registry_enabled_by_default")
-async def test_estimated_broadcast_interval(hass: HomeAssistant) -> None:
+async def test_estimated_broadcast_interval(
+    hass: HomeAssistant,
+    enable_bluetooth: None,
+    entity_registry_enabled_by_default: None,
+) -> None:
     """Test sensors get value when we receive a broadcast."""
     await async_mock_config_entry(hass)
     await async_inject_broadcast(hass, MAC_RPA_VALID_1)
@@ -70,7 +82,7 @@ async def test_estimated_broadcast_interval(hass: HomeAssistant) -> None:
         "sensor.private_ble_device_000000_estimated_broadcast_interval"
     )
     assert state
-    assert state.state == "90.0"
+    assert state.state == "90"
 
     # Learned broadcast interval takes over from fallback interval
 
@@ -83,7 +95,7 @@ async def test_estimated_broadcast_interval(hass: HomeAssistant) -> None:
         "sensor.private_ble_device_000000_estimated_broadcast_interval"
     )
     assert state
-    assert state.state == "10.0"
+    assert state.state == "10"
 
     # MAC address changes, the broadcast interval is kept
 
@@ -93,4 +105,4 @@ async def test_estimated_broadcast_interval(hass: HomeAssistant) -> None:
         "sensor.private_ble_device_000000_estimated_broadcast_interval"
     )
     assert state
-    assert state.state == "10.0"
+    assert state.state == "10"

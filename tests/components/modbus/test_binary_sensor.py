@@ -1,5 +1,5 @@
 """Thetests for the Modbus sensor component."""
-
+from freezegun.api import FrozenDateTimeFactory
 import pytest
 
 from homeassistant.components.binary_sensor import DOMAIN as SENSOR_DOMAIN
@@ -10,6 +10,7 @@ from homeassistant.components.modbus.const import (
     CALL_TYPE_REGISTER_INPUT,
     CONF_DEVICE_ADDRESS,
     CONF_INPUT_TYPE,
+    CONF_LAZY_ERROR,
     CONF_SLAVE_COUNT,
     CONF_VIRTUAL_COUNT,
     MODBUS_DOMAIN,
@@ -25,12 +26,13 @@ from homeassistant.const import (
     STATE_OFF,
     STATE_ON,
     STATE_UNAVAILABLE,
+    STATE_UNKNOWN,
 )
 from homeassistant.core import HomeAssistant, State
 from homeassistant.helpers import entity_registry as er
 from homeassistant.setup import async_setup_component
 
-from .conftest import TEST_ENTITY_NAME, ReadResult
+from .conftest import TEST_ENTITY_NAME, ReadResult, do_next_cycle
 
 ENTITY_ID = f"{SENSOR_DOMAIN}.{TEST_ENTITY_NAME}".replace(" ", "_")
 SLAVE_UNIQUE_ID = "ground_floor_sensor"
@@ -55,6 +57,7 @@ SLAVE_UNIQUE_ID = "ground_floor_sensor"
                     CONF_SLAVE: 10,
                     CONF_INPUT_TYPE: CALL_TYPE_DISCRETE,
                     CONF_DEVICE_CLASS: "door",
+                    CONF_LAZY_ERROR: 10,
                 }
             ]
         },
@@ -66,6 +69,7 @@ SLAVE_UNIQUE_ID = "ground_floor_sensor"
                     CONF_DEVICE_ADDRESS: 10,
                     CONF_INPUT_TYPE: CALL_TYPE_DISCRETE,
                     CONF_DEVICE_CLASS: "door",
+                    CONF_LAZY_ERROR: 10,
                 }
             ]
         },
@@ -199,6 +203,44 @@ async def test_all_binary_sensor(hass: HomeAssistant, expected, mock_do_cycle) -
             CONF_BINARY_SENSORS: [
                 {
                     CONF_NAME: TEST_ENTITY_NAME,
+                    CONF_ADDRESS: 51,
+                    CONF_INPUT_TYPE: CALL_TYPE_COIL,
+                    CONF_SCAN_INTERVAL: 10,
+                    CONF_LAZY_ERROR: 2,
+                },
+            ],
+        },
+    ],
+)
+@pytest.mark.parametrize(
+    ("register_words", "do_exception", "start_expect", "end_expect"),
+    [
+        (
+            [False * 16],
+            True,
+            STATE_UNKNOWN,
+            STATE_UNAVAILABLE,
+        ),
+    ],
+)
+async def test_lazy_error_binary_sensor(
+    hass: HomeAssistant, start_expect, end_expect, mock_do_cycle: FrozenDateTimeFactory
+) -> None:
+    """Run test for given config."""
+    assert hass.states.get(ENTITY_ID).state == start_expect
+    await do_next_cycle(hass, mock_do_cycle, 11)
+    assert hass.states.get(ENTITY_ID).state == start_expect
+    await do_next_cycle(hass, mock_do_cycle, 11)
+    assert hass.states.get(ENTITY_ID).state == end_expect
+
+
+@pytest.mark.parametrize(
+    "do_config",
+    [
+        {
+            CONF_BINARY_SENSORS: [
+                {
+                    CONF_NAME: TEST_ENTITY_NAME,
                     CONF_ADDRESS: 1234,
                     CONF_INPUT_TYPE: CALL_TYPE_COIL,
                 }
@@ -207,7 +249,7 @@ async def test_all_binary_sensor(hass: HomeAssistant, expected, mock_do_cycle) -
     ],
 )
 async def test_service_binary_sensor_update(
-    hass: HomeAssistant, mock_modbus_ha
+    hass: HomeAssistant, mock_modbus, mock_ha
 ) -> None:
     """Run test for service homeassistant.update_entity."""
 
@@ -217,7 +259,7 @@ async def test_service_binary_sensor_update(
     await hass.async_block_till_done()
     assert hass.states.get(ENTITY_ID).state == STATE_OFF
 
-    mock_modbus_ha.read_coils.return_value = ReadResult([0x01])
+    mock_modbus.read_coils.return_value = ReadResult([0x01])
     await hass.services.async_call(
         "homeassistant", "update_entity", {"entity_id": ENTITY_ID}, blocking=True
     )
@@ -291,7 +333,7 @@ async def test_config_virtual_binary_sensor(hass: HomeAssistant, mock_modbus) ->
     """Run config test for binary sensor."""
     assert SENSOR_DOMAIN in hass.config.components
 
-    for addon in ("", " 1", " 2", " 3"):
+    for addon in ["", " 1", " 2", " 3"]:
         entity_id = f"{SENSOR_DOMAIN}.{TEST_ENTITY_NAME}{addon}".replace(" ", "_")
         assert hass.states.get(entity_id) is not None
 
@@ -403,14 +445,11 @@ async def test_config_virtual_binary_sensor(hass: HomeAssistant, mock_modbus) ->
     ],
 )
 async def test_virtual_binary_sensor(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-    expected,
-    slaves,
-    mock_do_cycle,
+    hass: HomeAssistant, expected, slaves, mock_do_cycle
 ) -> None:
     """Run test for given config."""
     assert hass.states.get(ENTITY_ID).state == expected
+    entity_registry = er.async_get(hass)
 
     for i, slave in enumerate(slaves):
         entity_id = f"{SENSOR_DOMAIN}.{TEST_ENTITY_NAME}_{i+1}".replace(" ", "_")

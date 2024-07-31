@@ -1,5 +1,4 @@
 """Test Local Media Source."""
-
 from collections.abc import AsyncGenerator
 from http import HTTPStatus
 import io
@@ -20,7 +19,7 @@ from tests.typing import ClientSessionGenerator, WebSocketGenerator
 
 
 @pytest.fixture
-async def temp_dir(hass: HomeAssistant) -> AsyncGenerator[str]:
+async def temp_dir(hass: HomeAssistant) -> AsyncGenerator[str, None]:
     """Return a temp dir."""
     with TemporaryDirectory() as tmpdirname:
         target_dir = Path(tmpdirname) / "another_subdir"

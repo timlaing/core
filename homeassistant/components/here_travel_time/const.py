@@ -1,5 +1,4 @@
 """Constants for the HERE Travel Time integration."""
-
 from typing import Final
 
 DOMAIN = "here_travel_time"

@@ -1,8 +1,7 @@
-"""Tests for Twitch."""
-
+"""Tests for YouTube."""
 import http
 import time
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 from aiohttp.client_exceptions import ClientError
 import pytest
@@ -11,14 +10,14 @@ from homeassistant.components.twitch.const import DOMAIN, OAUTH2_TOKEN
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 
-from . import setup_integration
+from . import TwitchMock, setup_integration
 
 from tests.common import MockConfigEntry
 from tests.test_util.aiohttp import AiohttpClientMocker
 
 
 async def test_setup_success(
-    hass: HomeAssistant, config_entry: MockConfigEntry, twitch_mock: AsyncMock
+    hass: HomeAssistant, config_entry: MockConfigEntry, twitch: TwitchMock
 ) -> None:
     """Test successful setup and unload."""
     await setup_integration(hass, config_entry)
@@ -38,7 +37,7 @@ async def test_expired_token_refresh_success(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
     config_entry: MockConfigEntry,
-    twitch_mock: AsyncMock,
+    twitch: TwitchMock,
 ) -> None:
     """Test expired token is refreshed."""
 
@@ -84,7 +83,7 @@ async def test_expired_token_refresh_failure(
     status: http.HTTPStatus,
     expected_state: ConfigEntryState,
     config_entry: MockConfigEntry,
-    twitch_mock: AsyncMock,
+    twitch: TwitchMock,
 ) -> None:
     """Test failure while refreshing token with a transient error."""
 
@@ -93,10 +92,8 @@ async def test_expired_token_refresh_failure(
         OAUTH2_TOKEN,
         status=status,
     )
-    config_entry.add_to_hass(hass)
 
-    assert not await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await setup_integration(hass, config_entry)
 
     # Verify a transient failure has occurred
     entries = hass.config_entries.async_entries(DOMAIN)
@@ -104,7 +101,7 @@ async def test_expired_token_refresh_failure(
 
 
 async def test_expired_token_refresh_client_error(
-    hass: HomeAssistant, config_entry: MockConfigEntry, twitch_mock: AsyncMock
+    hass: HomeAssistant, config_entry: MockConfigEntry, twitch: TwitchMock
 ) -> None:
     """Test failure while refreshing token with a client error."""
 
@@ -112,10 +109,7 @@ async def test_expired_token_refresh_client_error(
         "homeassistant.components.twitch.OAuth2Session.async_ensure_token_valid",
         side_effect=ClientError,
     ):
-        config_entry.add_to_hass(hass)
-
-        assert not await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await setup_integration(hass, config_entry)
 
     # Verify a transient failure has occurred
     entries = hass.config_entries.async_entries(DOMAIN)

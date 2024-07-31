@@ -1,5 +1,5 @@
 ignore: |
-  tests/fixtures/core/config/yaml_errors/
+  azure-*.yml
 rules:
   braces:
     level: error

@@ -1,5 +1,4 @@
 """GoodWe PV inverter numeric settings entities."""
-
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
@@ -24,13 +23,20 @@ from .const import DOMAIN, KEY_DEVICE_INFO, KEY_INVERTER
 _LOGGER = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True, kw_only=True)
-class GoodweNumberEntityDescription(NumberEntityDescription):
-    """Class describing Goodwe number entities."""
+@dataclass
+class GoodweNumberEntityDescriptionBase:
+    """Required values when describing Goodwe number entities."""
 
     getter: Callable[[Inverter], Awaitable[int]]
     setter: Callable[[Inverter, int], Awaitable[None]]
     filter: Callable[[Inverter], bool]
+
+
+@dataclass
+class GoodweNumberEntityDescription(
+    NumberEntityDescription, GoodweNumberEntityDescriptionBase
+):
+    """Class describing Goodwe number entities."""
 
 
 def _get_setting_unit(inverter: Inverter, setting: str) -> str:
@@ -45,6 +51,7 @@ NUMBERS = (
     GoodweNumberEntityDescription(
         key="grid_export_limit",
         translation_key="grid_export_limit",
+        icon="mdi:transmission-tower",
         entity_category=EntityCategory.CONFIG,
         device_class=NumberDeviceClass.POWER,
         native_unit_of_measurement=UnitOfPower.WATT,
@@ -59,11 +66,12 @@ NUMBERS = (
     GoodweNumberEntityDescription(
         key="grid_export_limit",
         translation_key="grid_export_limit",
+        icon="mdi:transmission-tower",
         entity_category=EntityCategory.CONFIG,
         native_unit_of_measurement=PERCENTAGE,
         native_step=1,
         native_min_value=0,
-        native_max_value=200,
+        native_max_value=100,
         getter=lambda inv: inv.get_grid_export_limit(),
         setter=lambda inv, val: inv.set_grid_export_limit(val),
         filter=lambda inv: _get_setting_unit(inv, "grid_export_limit") == "%",
@@ -130,11 +138,6 @@ class InverterNumberEntity(NumberEntity):
         self._attr_device_info = device_info
         self._attr_native_value = float(current_value)
         self._inverter: Inverter = inverter
-
-    async def async_update(self) -> None:
-        """Get the current value from inverter."""
-        value = await self.entity_description.getter(self._inverter)
-        self._attr_native_value = float(value)
 
     async def async_set_native_value(self, value: float) -> None:
         """Set new value."""

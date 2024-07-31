@@ -1,5 +1,4 @@
 """Test reproduce state for Input number."""
-
 import pytest
 
 from homeassistant.core import HomeAssistant, State

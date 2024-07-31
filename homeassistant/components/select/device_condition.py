@@ -1,5 +1,4 @@
 """Provide the device conditions for Select."""
-
 from __future__ import annotations
 
 import voluptuous as vol

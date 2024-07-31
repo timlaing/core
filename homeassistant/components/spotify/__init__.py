@@ -1,7 +1,7 @@
 """The spotify integration."""
-
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any
 
@@ -21,7 +21,6 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .browse_media import async_browse_media
 from .const import DOMAIN, LOGGER, SPOTIFY_SCOPES
-from .models import HomeAssistantSpotifyData
 from .util import (
     is_spotify_media_type,
     resolve_spotify_media_type,
@@ -29,6 +28,7 @@ from .util import (
 )
 
 PLATFORMS = [Platform.MEDIA_PLAYER]
+
 
 __all__ = [
     "async_browse_media",
@@ -39,10 +39,17 @@ __all__ = [
 ]
 
 
-type SpotifyConfigEntry = ConfigEntry[HomeAssistantSpotifyData]
+@dataclass
+class HomeAssistantSpotifyData:
+    """Spotify data stored in the Home Assistant data object."""
+
+    client: Spotify
+    current_user: dict[str, Any]
+    devices: DataUpdateCoordinator[list[dict[str, Any]]]
+    session: OAuth2Session
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: SpotifyConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Spotify from a config entry."""
     implementation = await async_get_config_entry_implementation(hass, entry)
     session = OAuth2Session(hass, entry, implementation)
@@ -81,18 +88,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: SpotifyConfigEntry) -> b
 
         return devices.get("devices", [])
 
-    device_coordinator: DataUpdateCoordinator[list[dict[str, Any]]] = (
-        DataUpdateCoordinator(
-            hass,
-            LOGGER,
-            name=f"{entry.title} Devices",
-            update_interval=timedelta(minutes=5),
-            update_method=_update_devices,
-        )
+    device_coordinator: DataUpdateCoordinator[
+        list[dict[str, Any]]
+    ] = DataUpdateCoordinator(
+        hass,
+        LOGGER,
+        name=f"{entry.title} Devices",
+        update_interval=timedelta(minutes=5),
+        update_method=_update_devices,
     )
     await device_coordinator.async_config_entry_first_refresh()
 
-    entry.runtime_data = HomeAssistantSpotifyData(
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN][entry.entry_id] = HomeAssistantSpotifyData(
         client=spotify,
         current_user=current_user,
         devices=device_coordinator,
@@ -108,4 +116,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: SpotifyConfigEntry) -> b
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload Spotify config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        del hass.data[DOMAIN][entry.entry_id]
+    return unload_ok

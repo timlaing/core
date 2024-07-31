@@ -1,5 +1,4 @@
 """Config flow for Sonarr."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -12,14 +11,10 @@ from aiopyarr.sonarr_client import SonarrClient
 import voluptuous as vol
 import yarl
 
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlow,
-)
+from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
 from homeassistant.const import CONF_API_KEY, CONF_URL, CONF_VERIFY_SSL
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
@@ -68,9 +63,7 @@ class SonarrConfigFlow(ConfigFlow, domain=DOMAIN):
         """Get the options flow for this handler."""
         return SonarrOptionsFlowHandler(config_entry)
 
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Handle configuration by re-auth."""
         self.entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
 
@@ -78,7 +71,7 @@ class SonarrConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Confirm reauth dialog."""
         if user_input is None:
             assert self.entry is not None
@@ -92,7 +85,7 @@ class SonarrConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow initiated by the user."""
         errors = {}
 
@@ -109,7 +102,7 @@ class SonarrConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors = {"base": "invalid_auth"}
             except ArrException:
                 errors = {"base": "cannot_connect"}
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 return self.async_abort(reason="unknown")
             else:
@@ -129,9 +122,7 @@ class SonarrConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def _async_reauth_update_entry(
-        self, data: dict[str, Any]
-    ) -> ConfigFlowResult:
+    async def _async_reauth_update_entry(self, data: dict[str, Any]) -> FlowResult:
         """Update existing config entry."""
         assert self.entry is not None
         self.hass.config_entries.async_update_entry(self.entry, data=data)
@@ -150,9 +141,9 @@ class SonarrConfigFlow(ConfigFlow, domain=DOMAIN):
         }
 
         if self.show_advanced_options:
-            data_schema[vol.Optional(CONF_VERIFY_SSL, default=DEFAULT_VERIFY_SSL)] = (
-                bool
-            )
+            data_schema[
+                vol.Optional(CONF_VERIFY_SSL, default=DEFAULT_VERIFY_SSL)
+            ] = bool
 
         return data_schema
 
@@ -166,7 +157,7 @@ class SonarrOptionsFlowHandler(OptionsFlow):
 
     async def async_step_init(
         self, user_input: dict[str, int] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Manage Sonarr options."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)

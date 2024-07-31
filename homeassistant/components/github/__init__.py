@@ -1,5 +1,4 @@
 """The GitHub integration."""
-
 from __future__ import annotations
 
 from aiogithubapi import GitHubAPI
@@ -19,20 +18,18 @@ from .coordinator import GitHubDataUpdateCoordinator
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 
-type GithubConfigEntry = ConfigEntry[dict[str, GitHubDataUpdateCoordinator]]
-
-
-async def async_setup_entry(hass: HomeAssistant, entry: GithubConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up GitHub from a config entry."""
+    hass.data.setdefault(DOMAIN, {})
+
     client = GitHubAPI(
         token=entry.data[CONF_ACCESS_TOKEN],
         session=async_get_clientsession(hass),
-        client_name=SERVER_SOFTWARE,
+        **{"client_name": SERVER_SOFTWARE},
     )
 
     repositories: list[str] = entry.options[CONF_REPOSITORIES]
 
-    entry.runtime_data = {}
     for repository in repositories:
         coordinator = GitHubDataUpdateCoordinator(
             hass=hass,
@@ -45,7 +42,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: GithubConfigEntry) -> bo
         if not entry.pref_disable_polling:
             await coordinator.subscribe()
 
-        entry.runtime_data[repository] = coordinator
+        hass.data[DOMAIN][repository] = coordinator
 
     async_cleanup_device_registry(hass=hass, entry=entry)
 
@@ -83,13 +80,15 @@ def async_cleanup_device_registry(
                 break
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: GithubConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    repositories = entry.runtime_data
+    repositories: dict[str, GitHubDataUpdateCoordinator] = hass.data[DOMAIN]
     for coordinator in repositories.values():
         coordinator.unsubscribe()
 
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        hass.data.pop(DOMAIN)
+    return unload_ok
 
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:

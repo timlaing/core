@@ -1,5 +1,4 @@
 """Component for interacting with a Lutron Caseta system."""
-
 from __future__ import annotations
 
 import asyncio
@@ -63,7 +62,6 @@ from .models import (
     LUTRON_KEYPAD_SERIAL,
     LUTRON_KEYPAD_TYPE,
     LutronButton,
-    LutronCasetaConfigEntry,
     LutronCasetaData,
     LutronKeypad,
     LutronKeypadData,
@@ -93,17 +91,19 @@ CONFIG_SCHEMA = vol.Schema(
 
 PLATFORMS = [
     Platform.BINARY_SENSOR,
-    Platform.BUTTON,
     Platform.COVER,
     Platform.FAN,
     Platform.LIGHT,
     Platform.SCENE,
     Platform.SWITCH,
+    Platform.BUTTON,
 ]
 
 
 async def async_setup(hass: HomeAssistant, base_config: ConfigType) -> bool:
     """Set up the Lutron component."""
+    hass.data.setdefault(DOMAIN, {})
+
     if DOMAIN in base_config:
         bridge_configs = base_config[DOMAIN]
         for config in bridge_configs:
@@ -125,7 +125,7 @@ async def async_setup(hass: HomeAssistant, base_config: ConfigType) -> bool:
 
 
 async def _async_migrate_unique_ids(
-    hass: HomeAssistant, entry: LutronCasetaConfigEntry
+    hass: HomeAssistant, entry: config_entries.ConfigEntry
 ) -> None:
     """Migrate entities since the occupancygroup were not actually unique."""
 
@@ -152,14 +152,14 @@ async def _async_migrate_unique_ids(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: LutronCasetaConfigEntry
+    hass: HomeAssistant, config_entry: config_entries.ConfigEntry
 ) -> bool:
     """Set up a bridge from a config entry."""
-    entry_id = entry.entry_id
-    host = entry.data[CONF_HOST]
-    keyfile = hass.config.path(entry.data[CONF_KEYFILE])
-    certfile = hass.config.path(entry.data[CONF_CERTFILE])
-    ca_certs = hass.config.path(entry.data[CONF_CA_CERTS])
+    entry_id = config_entry.entry_id
+    host = config_entry.data[CONF_HOST]
+    keyfile = hass.config.path(config_entry.data[CONF_KEYFILE])
+    certfile = hass.config.path(config_entry.data[CONF_CERTFILE])
+    ca_certs = hass.config.path(config_entry.data[CONF_CA_CERTS])
     bridge = None
 
     try:
@@ -171,7 +171,7 @@ async def async_setup_entry(
         return False
 
     timed_out = True
-    with contextlib.suppress(TimeoutError):
+    with contextlib.suppress(asyncio.TimeoutError):
         async with asyncio.timeout(BRIDGE_TIMEOUT):
             await bridge.connect()
             timed_out = False
@@ -184,14 +184,14 @@ async def async_setup_entry(
             raise ConfigEntryNotReady(f"Cannot connect to {host}")
 
     _LOGGER.debug("Connected to Lutron Caseta bridge via LEAP at %s", host)
-    await _async_migrate_unique_ids(hass, entry)
+    await _async_migrate_unique_ids(hass, config_entry)
 
     bridge_devices = bridge.get_devices()
     bridge_device = bridge_devices[BRIDGE_DEVICE_ID]
 
-    if not entry.unique_id:
+    if not config_entry.unique_id:
         hass.config_entries.async_update_entry(
-            entry, unique_id=serial_to_unique_id(bridge_device["serial"])
+            config_entry, unique_id=serial_to_unique_id(bridge_device["serial"])
         )
 
     _async_register_bridge_device(hass, entry_id, bridge_device, bridge)
@@ -201,9 +201,13 @@ async def async_setup_entry(
     # Store this bridge (keyed by entry_id) so it can be retrieved by the
     # platforms we're setting up.
 
-    entry.runtime_data = LutronCasetaData(bridge, bridge_device, keypad_data)
+    hass.data[DOMAIN][entry_id] = LutronCasetaData(
+        bridge,
+        bridge_device,
+        keypad_data,
+    )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     return True
 
@@ -318,7 +322,7 @@ def _async_setup_keypads(
 
 @callback
 def _async_build_trigger_schemas(
-    keypad_button_names_to_leap: dict[int, dict[str, int]],
+    keypad_button_names_to_leap: dict[int, dict[str, int]]
 ) -> dict[int, vol.Schema]:
     """Build device trigger schemas."""
 
@@ -492,12 +496,14 @@ def _async_subscribe_keypad_events(
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: LutronCasetaConfigEntry
+    hass: HomeAssistant, entry: config_entries.ConfigEntry
 ) -> bool:
     """Unload the bridge from a config entry."""
-    data = entry.runtime_data
+    data: LutronCasetaData = hass.data[DOMAIN][entry.entry_id]
     await data.bridge.close()
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        hass.data[DOMAIN].pop(entry.entry_id)
+    return unload_ok
 
 
 class LutronCasetaDevice(Entity):
@@ -598,10 +604,10 @@ def _id_to_identifier(lutron_id: str) -> tuple[str, str]:
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, entry: LutronCasetaConfigEntry, device_entry: dr.DeviceEntry
+    hass: HomeAssistant, entry: config_entries.ConfigEntry, device_entry: dr.DeviceEntry
 ) -> bool:
     """Remove lutron_caseta config entry from a device."""
-    data = entry.runtime_data
+    data: LutronCasetaData = hass.data[DOMAIN][entry.entry_id]
     bridge = data.bridge
     devices = bridge.get_devices()
     buttons = bridge.buttons

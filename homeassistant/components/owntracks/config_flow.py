@@ -1,9 +1,8 @@
 """Config flow for OwnTracks."""
-
 import secrets
 
+from homeassistant import config_entries
 from homeassistant.components import cloud, webhook
-from homeassistant.config_entries import ConfigFlow
 from homeassistant.const import CONF_WEBHOOK_ID
 
 from .const import DOMAIN
@@ -13,7 +12,7 @@ CONF_SECRET = "secret"
 CONF_CLOUDHOOK = "cloudhook"
 
 
-class OwnTracksFlow(ConfigFlow, domain=DOMAIN):
+class OwnTracksFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Set up OwnTracks."""
 
     VERSION = 1

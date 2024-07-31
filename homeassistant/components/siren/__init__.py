@@ -1,9 +1,8 @@
 """Component to interface with various sirens/chimes."""
-
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import timedelta
-from functools import cached_property, partial
 import logging
 from typing import Any, TypedDict, cast, final
 
@@ -12,37 +11,34 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import SERVICE_TOGGLE, SERVICE_TURN_OFF, SERVICE_TURN_ON
 from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.deprecation import (
-    all_with_deprecated_constants,
-    check_if_deprecated_constant,
-    dir_with_deprecated_constants,
+import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.config_validation import (  # noqa: F401
+    PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA_BASE,
 )
 from homeassistant.helpers.entity import ToggleEntity, ToggleEntityDescription
 from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.typing import ConfigType, VolDictType
+from homeassistant.helpers.typing import ConfigType
 
 from .const import (  # noqa: F401
-    _DEPRECATED_SUPPORT_DURATION,
-    _DEPRECATED_SUPPORT_TONES,
-    _DEPRECATED_SUPPORT_TURN_OFF,
-    _DEPRECATED_SUPPORT_TURN_ON,
-    _DEPRECATED_SUPPORT_VOLUME_SET,
     ATTR_AVAILABLE_TONES,
     ATTR_DURATION,
     ATTR_TONE,
     ATTR_VOLUME_LEVEL,
     DOMAIN,
+    SUPPORT_DURATION,
+    SUPPORT_TONES,
+    SUPPORT_TURN_OFF,
+    SUPPORT_TURN_ON,
+    SUPPORT_VOLUME_SET,
     SirenEntityFeature,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA
-PLATFORM_SCHEMA_BASE = cv.PLATFORM_SCHEMA_BASE
 SCAN_INTERVAL = timedelta(seconds=60)
 
-TURN_ON_SCHEMA: VolDictType = {
+TURN_ON_SCHEMA = {
     vol.Optional(ATTR_TONE): vol.Any(vol.Coerce(int), cv.string),
     vol.Optional(ATTR_DURATION): cv.positive_int,
     vol.Optional(ATTR_VOLUME_LEVEL): cv.small_float,
@@ -153,19 +149,14 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return await component.async_unload_entry(entry)
 
 
-class SirenEntityDescription(ToggleEntityDescription, frozen_or_thawed=True):
+@dataclass
+class SirenEntityDescription(ToggleEntityDescription):
     """A class that describes siren entities."""
 
     available_tones: list[int | str] | dict[int, str] | None = None
 
 
-CACHED_PROPERTIES_WITH_ATTR_ = {
-    "available_tones",
-    "supported_features",
-}
-
-
-class SirenEntity(ToggleEntity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
+class SirenEntity(ToggleEntity):
     """Representation of a siren device."""
 
     _entity_component_unrecorded_attributes = frozenset({ATTR_AVAILABLE_TONES})
@@ -186,7 +177,7 @@ class SirenEntity(ToggleEntity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
         return None
 
-    @cached_property
+    @property
     def available_tones(self) -> list[int | str] | dict[int, str] | None:
         """Return a list of available tones.
 
@@ -198,22 +189,7 @@ class SirenEntity(ToggleEntity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
             return self.entity_description.available_tones
         return None
 
-    @cached_property
+    @property
     def supported_features(self) -> SirenEntityFeature:
         """Return the list of supported features."""
-        features = self._attr_supported_features
-        if type(features) is int:  # noqa: E721
-            new_features = SirenEntityFeature(features)
-            self._report_deprecated_supported_features_values(new_features)
-            return new_features
-        return features
-
-
-# As we import deprecated constants from the const module, we need to add these two functions
-# otherwise this module will be logged for using deprecated constants and not the custom component
-# These can be removed if no deprecated constant are in this module anymore
-__getattr__ = partial(check_if_deprecated_constant, module_globals=globals())
-__dir__ = partial(
-    dir_with_deprecated_constants, module_globals_keys=[*globals().keys()]
-)
-__all__ = all_with_deprecated_constants(globals())
+        return self._attr_supported_features

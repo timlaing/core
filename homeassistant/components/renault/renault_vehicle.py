@@ -1,5 +1,4 @@
 """Proxy to handle account communication with Renault servers."""
-
 from __future__ import annotations
 
 import asyncio
@@ -8,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from functools import wraps
 import logging
-from typing import Any, Concatenate, cast
+from typing import Any, Concatenate, ParamSpec, TypeVar, cast
 
 from renault_api.exceptions import RenaultException
 from renault_api.kamereon import models
@@ -22,11 +21,13 @@ from .const import DOMAIN
 from .coordinator import RenaultDataUpdateCoordinator
 
 LOGGER = logging.getLogger(__name__)
+_T = TypeVar("_T")
+_P = ParamSpec("_P")
 
 
-def with_error_wrapping[**_P, _R](
-    func: Callable[Concatenate[RenaultVehicleProxy, _P], Awaitable[_R]],
-) -> Callable[Concatenate[RenaultVehicleProxy, _P], Coroutine[Any, Any, _R]]:
+def with_error_wrapping(
+    func: Callable[Concatenate[RenaultVehicleProxy, _P], Awaitable[_T]]
+) -> Callable[Concatenate[RenaultVehicleProxy, _P], Coroutine[Any, Any, _T]]:
     """Catch Renault errors."""
 
     @wraps(func)
@@ -34,7 +35,7 @@ def with_error_wrapping[**_P, _R](
         self: RenaultVehicleProxy,
         *args: _P.args,
         **kwargs: _P.kwargs,
-    ) -> _R:
+    ) -> _T:
         """Catch RenaultException errors and raise HomeAssistantError."""
         try:
             return await func(self, *args, **kwargs)
@@ -123,16 +124,16 @@ class RenaultVehicleProxy:
             coordinator = self.coordinators[key]
             if coordinator.not_supported:
                 # Remove endpoint as it is not supported for this vehicle.
-                LOGGER.warning(
-                    "Ignoring endpoint %s as it is not supported: %s",
+                LOGGER.info(
+                    "Ignoring endpoint %s as it is not supported for this vehicle: %s",
                     coordinator.name,
                     coordinator.last_exception,
                 )
                 del self.coordinators[key]
             elif coordinator.access_denied:
                 # Remove endpoint as it is denied for this vehicle.
-                LOGGER.warning(
-                    "Ignoring endpoint %s as it is denied: %s",
+                LOGGER.info(
+                    "Ignoring endpoint %s as it is denied for this vehicle: %s",
                     coordinator.name,
                     coordinator.last_exception,
                 )

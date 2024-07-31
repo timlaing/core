@@ -1,5 +1,4 @@
 """Support for restoring entity states on startup."""
-
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -11,18 +10,15 @@ from homeassistant.const import ATTR_RESTORED, EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import HomeAssistant, State, callback, valid_entity_id
 from homeassistant.exceptions import HomeAssistantError
 import homeassistant.util.dt as dt_util
-from homeassistant.util.hass_dict import HassKey
-from homeassistant.util.json import json_loads
 
 from . import start
 from .entity import Entity
 from .event import async_track_time_interval
 from .frame import report
 from .json import JSONEncoder
-from .singleton import singleton
 from .storage import Store
 
-DATA_RESTORE_STATE: HassKey[RestoreStateData] = HassKey("restore_state")
+DATA_RESTORE_STATE = "restore_state"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -74,12 +70,13 @@ class StoredState:
         self.state = state
 
     def as_dict(self) -> dict[str, Any]:
-        """Return a dict representation of the stored state to be JSON serialized."""
-        return {
-            "state": self.state.json_fragment,
+        """Return a dict representation of the stored state."""
+        result = {
+            "state": self.state.as_dict(),
             "extra_data": self.extra_data.as_dict() if self.extra_data else None,
             "last_seen": self.last_seen,
         }
+        return result
 
     @classmethod
     def from_dict(cls, json_dict: dict) -> Self:
@@ -98,14 +95,15 @@ class StoredState:
 
 async def async_load(hass: HomeAssistant) -> None:
     """Load the restore state task."""
-    await async_get(hass).async_setup()
+    restore_state = RestoreStateData(hass)
+    await restore_state.async_setup()
+    hass.data[DATA_RESTORE_STATE] = restore_state
 
 
 @callback
-@singleton(DATA_RESTORE_STATE)
 def async_get(hass: HomeAssistant) -> RestoreStateData:
     """Get the restore state data helper."""
-    return RestoreStateData(hass)
+    return cast(RestoreStateData, hass.data[DATA_RESTORE_STATE])
 
 
 class RestoreStateData:
@@ -144,8 +142,7 @@ class RestoreStateData:
         """Set up up the instance of this data helper."""
         await self.async_load()
 
-        @callback
-        def hass_start(hass: HomeAssistant) -> None:
+        async def hass_start(hass: HomeAssistant) -> None:
             """Start the restore state task."""
             self.async_setup_dump()
 
@@ -181,8 +178,8 @@ class RestoreStateData:
         now = dt_util.utcnow()
         all_states = self.hass.states.async_all()
         # Entities currently backed by an entity object
-        current_states_by_entity_id = {
-            state.entity_id: state
+        current_entity_ids = {
+            state.entity_id
             for state in all_states
             if not state.attributes.get(ATTR_RESTORED)
         }
@@ -190,12 +187,12 @@ class RestoreStateData:
         # Start with the currently registered states
         stored_states = [
             StoredState(
-                current_states_by_entity_id[entity_id],
-                entity.extra_restore_state_data,
-                now,
+                state, self.entities[state.entity_id].extra_restore_state_data, now
             )
-            for entity_id, entity in self.entities.items()
-            if entity_id in current_states_by_entity_id
+            for state in all_states
+            if state.entity_id in self.entities and
+            # Ignore all states that are entity registry placeholders
+            not state.attributes.get(ATTR_RESTORED)
         ]
         expiration_time = now - STATE_EXPIRATION
 
@@ -203,7 +200,7 @@ class RestoreStateData:
             # Don't save old states that have entities in the current run
             # They are either registered and already part of stored_states,
             # or no longer care about restoring.
-            if entity_id in current_states_by_entity_id:
+            if entity_id in current_entity_ids:
                 continue
 
             # Don't save old states that have expired
@@ -237,9 +234,7 @@ class RestoreStateData:
         # Dump the initial states now. This helps minimize the risk of having
         # old states loaded by overwriting the last states once Home Assistant
         # has started and the old states have been read.
-        self.hass.async_create_task_internal(
-            _async_dump_states(), "RestoreStateData dump"
-        )
+        self.hass.async_create_task(_async_dump_states(), "RestoreStateData dump")
 
         # Dump states periodically
         cancel_interval = async_track_time_interval(
@@ -275,13 +270,39 @@ class RestoreStateData:
         # To fully mimic all the attribute data types when loaded from storage,
         # we're going to serialize it to JSON and then re-load it.
         if state is not None:
-            state = State.from_dict(json_loads(state.as_dict_json))  # type: ignore[arg-type]
+            state = State.from_dict(_encode_complex(state.as_dict()))
         if state is not None:
             self.last_states[entity_id] = StoredState(
                 state, extra_data, dt_util.utcnow()
             )
 
-        del self.entities[entity_id]
+        self.entities.pop(entity_id)
+
+
+def _encode(value: Any) -> Any:
+    """Little helper to JSON encode a value."""
+    try:
+        return JSONEncoder.default(
+            None,  # type: ignore[arg-type]
+            value,
+        )
+    except TypeError:
+        return value
+
+
+def _encode_complex(value: Any) -> Any:
+    """Recursively encode all values with the JSONEncoder."""
+    if isinstance(value, dict):
+        return {_encode(key): _encode_complex(value) for key, value in value.items()}
+    if isinstance(value, list):
+        return [_encode_complex(val) for val in value]
+
+    new_value = _encode(value)
+
+    if isinstance(new_value, type(value)):
+        return new_value
+
+    return _encode_complex(new_value)
 
 
 class RestoreEntity(Entity):

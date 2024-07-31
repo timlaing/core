@@ -1,6 +1,7 @@
 """UptimeRobot sensor platform."""
-
 from __future__ import annotations
+
+from typing import TypedDict
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -16,12 +17,20 @@ from .const import DOMAIN
 from .coordinator import UptimeRobotDataUpdateCoordinator
 from .entity import UptimeRobotEntity
 
+
+class StatusValue(TypedDict):
+    """Sensor details."""
+
+    value: str
+    icon: str
+
+
 SENSORS_INFO = {
-    0: "pause",
-    1: "not_checked_yet",
-    2: "up",
-    8: "seems_down",
-    9: "down",
+    0: StatusValue(value="pause", icon="mdi:television-pause"),
+    1: StatusValue(value="not_checked_yet", icon="mdi:television"),
+    2: StatusValue(value="up", icon="mdi:television-shimmer"),
+    8: StatusValue(value="seems_down", icon="mdi:television-off"),
+    9: StatusValue(value="down", icon="mdi:television-off"),
 }
 
 
@@ -54,4 +63,9 @@ class UptimeRobotSensor(UptimeRobotEntity, SensorEntity):
     @property
     def native_value(self) -> str:
         """Return the status of the monitor."""
-        return SENSORS_INFO[self.monitor.status]
+        return SENSORS_INFO[self.monitor.status]["value"]
+
+    @property
+    def icon(self) -> str:
+        """Return the status of the monitor."""
+        return SENSORS_INFO[self.monitor.status]["icon"]

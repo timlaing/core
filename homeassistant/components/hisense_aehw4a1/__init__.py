@@ -1,5 +1,4 @@
 """The Hisense AEH-W4A1 integration."""
-
 import ipaddress
 import logging
 

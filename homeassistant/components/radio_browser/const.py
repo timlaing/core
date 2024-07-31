@@ -1,5 +1,4 @@
 """Constants for the Radio Browser integration."""
-
 import logging
 from typing import Final
 

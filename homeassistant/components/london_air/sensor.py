@@ -1,5 +1,4 @@
 """Sensor for checking the status of London air."""
-
 from __future__ import annotations
 
 from datetime import timedelta
@@ -9,10 +8,7 @@ import logging
 import requests
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
-    SensorEntity,
-)
+from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -29,7 +25,6 @@ AUTHORITIES = [
     "Barking and Dagenham",
     "Bexley",
     "Brent",
-    "Bromley",
     "Camden",
     "City of London",
     "Croydon",
@@ -58,7 +53,7 @@ AUTHORITIES = [
 
 URL = "http://api.erg.kcl.ac.uk/AirQuality/Hourly/MonitoringIndex/GroupName=London/Json"
 
-PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Optional(CONF_LOCATIONS, default=AUTHORITIES): vol.All(
             cv.ensure_list, [vol.In(AUTHORITIES)]
@@ -76,8 +71,11 @@ def setup_platform(
     """Set up the London Air sensor."""
     data = APIData()
     data.update()
+    sensors = []
+    for name in config[CONF_LOCATIONS]:
+        sensors.append(AirSensor(name, data))
 
-    add_entities((AirSensor(name, data) for name in config[CONF_LOCATIONS]), True)
+    add_entities(sensors, True)
 
 
 class APIData:
@@ -142,16 +140,14 @@ class AirSensor(SensorEntity):
 
     def update(self) -> None:
         """Update the sensor."""
-        sites_status: list = []
+        sites_status = []
         self._api_data.update()
         if self._api_data.data:
             self._site_data = self._api_data.data[self._name]
             self._updated = self._site_data[0]["updated"]
-            sites_status.extend(
-                site["pollutants_status"]
-                for site in self._site_data
-                if site["pollutants_status"] != "no_species_data"
-            )
+            for site in self._site_data:
+                if site["pollutants_status"] != "no_species_data":
+                    sites_status.append(site["pollutants_status"])
 
         if sites_status:
             self._state = max(set(sites_status), key=sites_status.count)
@@ -170,9 +166,9 @@ def parse_species(species_data):
             species_dict["code"] = species["@SpeciesCode"]
             species_dict["quality"] = species["@AirQualityBand"]
             species_dict["index"] = species["@AirQualityIndex"]
-            species_dict["summary"] = (
-                f"{species_dict['code']} is {species_dict['quality']}"
-            )
+            species_dict[
+                "summary"
+            ] = f"{species_dict['code']} is {species_dict['quality']}"
             parsed_species_data.append(species_dict)
             quality_list.append(species_dict["quality"])
     return parsed_species_data, quality_list

@@ -1,5 +1,4 @@
 """Data update coordinator for the Sonarr integration."""
-
 from __future__ import annotations
 
 from datetime import timedelta

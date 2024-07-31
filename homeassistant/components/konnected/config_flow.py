@@ -1,5 +1,4 @@
 """Config flow for konnected.io integration."""
-
 from __future__ import annotations
 
 import asyncio
@@ -12,16 +11,11 @@ from urllib.parse import urlparse
 
 import voluptuous as vol
 
+from homeassistant import config_entries
 from homeassistant.components import ssdp
 from homeassistant.components.binary_sensor import (
     DEVICE_CLASSES_SCHEMA,
     BinarySensorDeviceClass,
-)
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlow,
 )
 from homeassistant.const import (
     CONF_ACCESS_TOKEN,
@@ -39,6 +33,7 @@ from homeassistant.const import (
     CONF_ZONE,
 )
 from homeassistant.core import callback
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import config_validation as cv
 
 from .const import (
@@ -171,7 +166,7 @@ CONFIG_ENTRY_SCHEMA = vol.Schema(
 )
 
 
-class KonnectedFlowHandler(ConfigFlow, domain=DOMAIN):
+class KonnectedFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Konnected Panels."""
 
     VERSION = 1
@@ -249,9 +244,7 @@ class KonnectedFlowHandler(ConfigFlow, domain=DOMAIN):
             )
         return await self.async_step_user()
 
-    async def async_step_ssdp(
-        self, discovery_info: ssdp.SsdpServiceInfo
-    ) -> ConfigFlowResult:
+    async def async_step_ssdp(self, discovery_info: ssdp.SsdpServiceInfo) -> FlowResult:
         """Handle a discovered konnected panel.
 
         This flow is triggered by the SSDP component. It will check if the
@@ -383,16 +376,16 @@ class KonnectedFlowHandler(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: ConfigEntry,
+        config_entry: config_entries.ConfigEntry,
     ) -> OptionsFlowHandler:
         """Return the Options Flow."""
         return OptionsFlowHandler(config_entry)
 
 
-class OptionsFlowHandler(OptionsFlow):
+class OptionsFlowHandler(config_entries.OptionsFlow):
     """Handle a option flow for a Konnected Panel."""
 
-    def __init__(self, config_entry: ConfigEntry) -> None:
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         self.entry = config_entry
         self.model = self.entry.data[CONF_MODEL]
@@ -570,10 +563,9 @@ class OptionsFlowHandler(OptionsFlow):
         if user_input is not None:
             zone = {"zone": self.active_cfg}
             zone.update(user_input)
-            self.new_opt[CONF_BINARY_SENSORS] = [
-                *self.new_opt.get(CONF_BINARY_SENSORS, []),
-                zone,
-            ]
+            self.new_opt[CONF_BINARY_SENSORS] = self.new_opt.get(
+                CONF_BINARY_SENSORS, []
+            ) + [zone]
             self.io_cfg.pop(self.active_cfg)
             self.active_cfg = None
 
@@ -646,7 +638,7 @@ class OptionsFlowHandler(OptionsFlow):
         if user_input is not None:
             zone = {"zone": self.active_cfg}
             zone.update(user_input)
-            self.new_opt[CONF_SENSORS] = [*self.new_opt.get(CONF_SENSORS, []), zone]
+            self.new_opt[CONF_SENSORS] = self.new_opt.get(CONF_SENSORS, []) + [zone]
             self.io_cfg.pop(self.active_cfg)
             self.active_cfg = None
 
@@ -715,7 +707,7 @@ class OptionsFlowHandler(OptionsFlow):
             zone = {"zone": self.active_cfg}
             zone.update(user_input)
             del zone[CONF_MORE_STATES]
-            self.new_opt[CONF_SWITCHES] = [*self.new_opt.get(CONF_SWITCHES, []), zone]
+            self.new_opt[CONF_SWITCHES] = self.new_opt.get(CONF_SWITCHES, []) + [zone]
 
             # iterate through multiple switch states
             if self.current_states:

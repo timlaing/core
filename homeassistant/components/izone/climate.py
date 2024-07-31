@@ -1,10 +1,9 @@
 """Support for the iZone HVAC."""
-
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 import logging
-from typing import Any, Concatenate
+from typing import Any
 
 from pizone import Controller, Zone
 import voluptuous as vol
@@ -35,7 +34,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.temperature import display_temp as show_temp
-from homeassistant.helpers.typing import ConfigType, VolDictType
+from homeassistant.helpers.typing import ConfigType
 
 from .const import (
     DATA_CONFIG,
@@ -47,8 +46,6 @@ from .const import (
     DISPATCH_ZONE_UPDATE,
     IZONE,
 )
-
-type _FuncType[_T, **_P, _R] = Callable[Concatenate[_T, _P], _R]
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -65,7 +62,7 @@ ATTR_AIRFLOW = "airflow"
 IZONE_SERVICE_AIRFLOW_MIN = "airflow_min"
 IZONE_SERVICE_AIRFLOW_MAX = "airflow_max"
 
-IZONE_SERVICE_AIRFLOW_SCHEMA: VolDictType = {
+IZONE_SERVICE_AIRFLOW_SCHEMA = {
     vol.Required(ATTR_AIRFLOW): vol.All(
         vol.Coerce(int), vol.Range(min=0, max=100), msg="invalid airflow"
     ),
@@ -115,15 +112,13 @@ async def async_setup_entry(
     )
 
 
-def _return_on_connection_error[_DeviceT: ControllerDevice | ZoneDevice, **_P, _R, _T](
-    ret: _T = None,  # type: ignore[assignment]
-) -> Callable[[_FuncType[_DeviceT, _P, _R]], _FuncType[_DeviceT, _P, _R | _T]]:
-    def wrap(func: _FuncType[_DeviceT, _P, _R]) -> _FuncType[_DeviceT, _P, _R | _T]:
-        def wrapped_f(self: _DeviceT, *args: _P.args, **kwargs: _P.kwargs) -> _R | _T:
-            if not self.available:
+def _return_on_connection_error(ret=None):
+    def wrap(func):
+        def wrapped_f(*args, **kwargs):
+            if not args[0].available:
                 return ret
             try:
-                return func(self, *args, **kwargs)
+                return func(*args, **kwargs)
             except ConnectionError:
                 return ret
 
@@ -141,17 +136,12 @@ class ControllerDevice(ClimateEntity):
     _attr_has_entity_name = True
     _attr_name = None
     _attr_target_temperature_step = 0.5
-    _enable_turn_on_off_backwards_compatibility = False
 
     def __init__(self, controller: Controller) -> None:
         """Initialise ControllerDevice."""
         self._controller = controller
 
-        self._attr_supported_features = (
-            ClimateEntityFeature.FAN_MODE
-            | ClimateEntityFeature.TURN_OFF
-            | ClimateEntityFeature.TURN_ON
-        )
+        self._attr_supported_features = ClimateEntityFeature.FAN_MODE
 
         # If mode RAS, or mode master with CtrlZone 13 then can set master temperature,
         # otherwise the unit determines which zone to use as target. See interface manual p. 8
@@ -508,7 +498,7 @@ class ZoneDevice(ClimateEntity):
         return self._controller.available
 
     @property
-    @_return_on_connection_error(ClimateEntityFeature(0))
+    @_return_on_connection_error(0)
     def supported_features(self) -> ClimateEntityFeature:
         """Return the list of supported features."""
         if self._zone.mode == Zone.Mode.AUTO:

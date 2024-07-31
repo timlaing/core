@@ -1,10 +1,9 @@
 """Component to interface with switches that can be controlled remotely."""
-
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import timedelta
 from enum import StrEnum
-from functools import cached_property, partial
 import logging
 
 import voluptuous as vol
@@ -17,12 +16,9 @@ from homeassistant.const import (
     STATE_ON,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.deprecation import (
-    DeprecatedConstantEnum,
-    all_with_deprecated_constants,
-    check_if_deprecated_constant,
-    dir_with_deprecated_constants,
+from homeassistant.helpers.config_validation import (  # noqa: F401
+    PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA_BASE,
 )
 from homeassistant.helpers.entity import ToggleEntity, ToggleEntityDescription
 from homeassistant.helpers.entity_component import EntityComponent
@@ -31,14 +27,13 @@ from homeassistant.loader import bind_hass
 
 from .const import DOMAIN
 
-_LOGGER = logging.getLogger(__name__)
-
-ENTITY_ID_FORMAT = DOMAIN + ".{}"
-PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA
-PLATFORM_SCHEMA_BASE = cv.PLATFORM_SCHEMA_BASE
 SCAN_INTERVAL = timedelta(seconds=30)
 
+ENTITY_ID_FORMAT = DOMAIN + ".{}"
+
 MIN_TIME_BETWEEN_SCANS = timedelta(seconds=10)
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class SwitchDeviceClass(StrEnum):
@@ -53,12 +48,8 @@ DEVICE_CLASSES_SCHEMA = vol.All(vol.Lower, vol.Coerce(SwitchDeviceClass))
 # DEVICE_CLASS* below are deprecated as of 2021.12
 # use the SwitchDeviceClass enum instead.
 DEVICE_CLASSES = [cls.value for cls in SwitchDeviceClass]
-_DEPRECATED_DEVICE_CLASS_OUTLET = DeprecatedConstantEnum(
-    SwitchDeviceClass.OUTLET, "2025.1"
-)
-_DEPRECATED_DEVICE_CLASS_SWITCH = DeprecatedConstantEnum(
-    SwitchDeviceClass.SWITCH, "2025.1"
-)
+DEVICE_CLASS_OUTLET = SwitchDeviceClass.OUTLET.value
+DEVICE_CLASS_SWITCH = SwitchDeviceClass.SWITCH.value
 
 # mypy: disallow-any-generics
 
@@ -98,24 +89,20 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return await component.async_unload_entry(entry)
 
 
-class SwitchEntityDescription(ToggleEntityDescription, frozen_or_thawed=True):
+@dataclass
+class SwitchEntityDescription(ToggleEntityDescription):
     """A class that describes switch entities."""
 
     device_class: SwitchDeviceClass | None = None
 
 
-CACHED_PROPERTIES_WITH_ATTR_ = {
-    "device_class",
-}
-
-
-class SwitchEntity(ToggleEntity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
+class SwitchEntity(ToggleEntity):
     """Base class for switch entities."""
 
     entity_description: SwitchEntityDescription
     _attr_device_class: SwitchDeviceClass | None
 
-    @cached_property
+    @property
     def device_class(self) -> SwitchDeviceClass | None:
         """Return the class of this entity."""
         if hasattr(self, "_attr_device_class"):
@@ -123,11 +110,3 @@ class SwitchEntity(ToggleEntity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_)
         if hasattr(self, "entity_description"):
             return self.entity_description.device_class
         return None
-
-
-# These can be removed if no deprecated constant are in this module anymore
-__getattr__ = partial(check_if_deprecated_constant, module_globals=globals())
-__dir__ = partial(
-    dir_with_deprecated_constants, module_globals_keys=[*globals().keys()]
-)
-__all__ = all_with_deprecated_constants(globals())

@@ -1,6 +1,4 @@
 """Support for Alexa skill service end point."""
-
-from collections.abc import Callable, Coroutine
 import enum
 import logging
 from typing import Any
@@ -17,9 +15,7 @@ from .const import DOMAIN, SYN_RESOLUTION_MATCH
 
 _LOGGER = logging.getLogger(__name__)
 
-HANDLERS: Registry[
-    str, Callable[[HomeAssistant, dict[str, Any]], Coroutine[Any, Any, dict[str, Any]]]
-] = Registry()
+HANDLERS = Registry()  # type: ignore[var-annotated]
 
 INTENTS_API_ENDPOINT = "/api/alexa"
 
@@ -53,6 +49,7 @@ async def async_setup_intents(hass: HomeAssistant) -> None:
     Right now this module does not expose any, but the intent component breaks
     without it.
     """
+    pass  # pylint: disable=unnecessary-pass
 
 
 class UnknownRequest(HomeAssistantError):
@@ -67,7 +64,7 @@ class AlexaIntentsView(http.HomeAssistantView):
 
     async def post(self, request: http.HomeAssistantRequest) -> Response | bytes:
         """Handle Alexa."""
-        hass = request.app[http.KEY_HASS]
+        hass: HomeAssistant = request.app["hass"]
         message: dict[str, Any] = await request.json()
 
         _LOGGER.debug("Received Alexa request: %s", message)
@@ -97,8 +94,8 @@ class AlexaIntentsView(http.HomeAssistantView):
                 )
             )
 
-        except intent.IntentError:
-            _LOGGER.exception("Error handling intent")
+        except intent.IntentError as err:
+            _LOGGER.exception(str(err))
             return self.json(
                 intent_error_response(hass, message, "Error handling intent.")
             )
@@ -132,7 +129,8 @@ async def async_handle_message(
     if not (handler := HANDLERS.get(req_type)):
         raise UnknownRequest(f"Received unknown request {req_type}")
 
-    return await handler(hass, message)
+    response: dict[str, Any] = await handler(hass, message)
+    return response
 
 
 @HANDLERS.register("SessionEndedRequest")

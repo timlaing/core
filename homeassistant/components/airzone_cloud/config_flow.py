@@ -1,5 +1,4 @@
 """Config flow for Airzone Cloud."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -10,8 +9,9 @@ from aioairzone_cloud.const import AZD_ID, AZD_NAME, AZD_WEBSERVERS
 from aioairzone_cloud.exceptions import AirzoneCloudError, LoginError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant import config_entries
 from homeassistant.const import CONF_ID, CONF_PASSWORD, CONF_USERNAME
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import aiohttp_client
 from homeassistant.helpers.selector import (
     SelectOptionDict,
@@ -23,14 +23,14 @@ from homeassistant.helpers.selector import (
 from .const import DOMAIN
 
 
-class AirZoneCloudConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle config flow for an Airzone Cloud device."""
 
     airzone: AirzoneCloudApi
 
     async def async_step_inst_pick(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the installation selection."""
         errors = {}
         options: dict[str, str] = {}
@@ -81,7 +81,7 @@ class AirZoneCloudConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         errors = {}
 
@@ -94,7 +94,6 @@ class AirZoneCloudConfigFlow(ConfigFlow, domain=DOMAIN):
                 ConnectionOptions(
                     user_input[CONF_USERNAME],
                     user_input[CONF_PASSWORD],
-                    False,
                 ),
             )
 

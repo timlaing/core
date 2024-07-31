@@ -1,6 +1,4 @@
 """The tests for the demo text component."""
-
-from collections.abc import Generator
 from unittest.mock import patch
 
 import pytest
@@ -26,7 +24,7 @@ ENTITY_TEXT = "text.text"
 
 
 @pytest.fixture
-def text_only() -> Generator[None]:
+async def text_only() -> None:
     """Enable only the text platform."""
     with patch(
         "homeassistant.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
@@ -36,7 +34,7 @@ def text_only() -> Generator[None]:
 
 
 @pytest.fixture(autouse=True)
-async def setup_demo_text(hass: HomeAssistant, text_only: None) -> None:
+async def setup_demo_text(hass, text_only):
     """Initialize setup demo text."""
     assert await async_setup_component(hass, DOMAIN, {"text": {"platform": "demo"}})
     await hass.async_block_till_done()

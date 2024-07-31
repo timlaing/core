@@ -1,17 +1,12 @@
 """Tests for mobile_app component."""
-
 from http import HTTPStatus
 
-from aiohttp.test_utils import TestClient
 import pytest
 
 from homeassistant.components.mobile_app.const import DOMAIN
-from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 
 from .const import REGISTER, REGISTER_CLEARTEXT
-
-from tests.typing import ClientSessionGenerator
 
 
 @pytest.fixture
@@ -57,9 +52,7 @@ async def push_registration(hass, webhook_client):
 
 
 @pytest.fixture
-async def webhook_client(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
-) -> TestClient:
+async def webhook_client(hass, hass_client):
     """Provide an authenticated client for mobile_app to use."""
     await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
     await hass.async_block_till_done()
@@ -67,7 +60,7 @@ async def webhook_client(
 
 
 @pytest.fixture(autouse=True)
-async def setup_ws(hass: HomeAssistant) -> None:
+async def setup_ws(hass):
     """Configure the websocket_api component."""
     assert await async_setup_component(hass, "repairs", {})
     assert await async_setup_component(hass, "websocket_api", {})

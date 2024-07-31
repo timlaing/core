@@ -1,13 +1,12 @@
 """Config flow for Wolf SmartSet Service integration."""
-
 import logging
 
 from httpcore import ConnectError
 import voluptuous as vol
-from wolf_comm.token_auth import InvalidAuth
-from wolf_comm.wolf_client import WolfClient
+from wolf_smartset.token_auth import InvalidAuth
+from wolf_smartset.wolf_client import WolfClient
 
-from homeassistant.config_entries import ConfigFlow
+from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 
 from .const import DEVICE_GATEWAY, DEVICE_ID, DEVICE_NAME, DOMAIN
@@ -19,7 +18,7 @@ USER_SCHEMA = vol.Schema(
 )
 
 
-class WolfLinkConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Wolf SmartSet Service."""
 
     VERSION = 1
@@ -43,7 +42,7 @@ class WolfLinkConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
                 errors["base"] = "invalid_auth"
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:

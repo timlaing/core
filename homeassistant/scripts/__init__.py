@@ -1,5 +1,4 @@
 """Home Assistant command line scripts."""
-
 from __future__ import annotations
 
 import argparse

@@ -1,5 +1,4 @@
 """Signal Messenger for notify component."""
-
 from __future__ import annotations
 
 import logging
@@ -11,7 +10,7 @@ import voluptuous as vol
 
 from homeassistant.components.notify import (
     ATTR_DATA,
-    PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     BaseNotificationService,
 )
 from homeassistant.core import HomeAssistant
@@ -27,37 +26,23 @@ CONF_MAX_ALLOWED_DOWNLOAD_SIZE_BYTES = 52428800
 ATTR_FILENAMES = "attachments"
 ATTR_URLS = "urls"
 ATTR_VERIFY_SSL = "verify_ssl"
-ATTR_TEXTMODE = "text_mode"
 
-TEXTMODE_OPTIONS = ["normal", "styled"]
-
-DATA_FILENAMES_SCHEMA = vol.Schema(
-    {
-        vol.Required(ATTR_FILENAMES): [cv.string],
-        vol.Optional(ATTR_TEXTMODE, default="normal"): vol.In(TEXTMODE_OPTIONS),
-    }
-)
+DATA_FILENAMES_SCHEMA = vol.Schema({vol.Required(ATTR_FILENAMES): [cv.string]})
 
 DATA_URLS_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_URLS): [cv.url],
         vol.Optional(ATTR_VERIFY_SSL, default=True): cv.boolean,
-        vol.Optional(ATTR_TEXTMODE, default="normal"): vol.In(TEXTMODE_OPTIONS),
     }
 )
 
 DATA_SCHEMA = vol.Any(
     None,
-    vol.Schema(
-        {
-            vol.Optional(ATTR_TEXTMODE, default="normal"): vol.In(TEXTMODE_OPTIONS),
-        }
-    ),
     DATA_FILENAMES_SCHEMA,
     DATA_URLS_SCHEMA,
 )
 
-PLATFORM_SCHEMA = NOTIFY_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_SENDER_NR): cv.string,
         vol.Required(CONF_SIGNAL_CLI_REST_API): cv.string,
@@ -108,23 +93,20 @@ class SignalNotificationService(BaseNotificationService):
             data = DATA_SCHEMA(data)
         except vol.Invalid as ex:
             _LOGGER.error("Invalid message data: %s", ex)
-            raise
+            raise ex
 
         filenames = self.get_filenames(data)
         attachments_as_bytes = self.get_attachments_as_bytes(
             data, CONF_MAX_ALLOWED_DOWNLOAD_SIZE_BYTES, self._hass
         )
+
         try:
             self._signal_cli_rest_api.send_message(
-                message,
-                self._recp_nrs,
-                filenames,
-                attachments_as_bytes,
-                text_mode="normal" if data is None else data.get(ATTR_TEXTMODE),
+                message, self._recp_nrs, filenames, attachments_as_bytes
             )
         except SignalCliRestApiError as ex:
             _LOGGER.error("%s", ex)
-            raise
+            raise ex
 
     @staticmethod
     def get_filenames(data: Any) -> list[str] | None:
@@ -133,6 +115,7 @@ class SignalNotificationService(BaseNotificationService):
             data = DATA_FILENAMES_SCHEMA(data)
         except vol.Invalid:
             return None
+
         return data[ATTR_FILENAMES]
 
     @staticmethod
@@ -146,6 +129,7 @@ class SignalNotificationService(BaseNotificationService):
             data = DATA_URLS_SCHEMA(data)
         except vol.Invalid:
             return None
+
         urls = data[ATTR_URLS]
 
         attachments_as_bytes: list[bytearray] = []
@@ -180,8 +164,8 @@ class SignalNotificationService(BaseNotificationService):
                     size += len(chunk)
                     if size > attachment_size_limit:
                         raise ValueError(
-                            f"Attachment too large (Stream reports {size}). "
-                            f"Max size: {CONF_MAX_ALLOWED_DOWNLOAD_SIZE_BYTES} bytes"
+                            "Attachment too large (Stream reports {}). Max size: {}"
+                            " bytes".format(size, CONF_MAX_ALLOWED_DOWNLOAD_SIZE_BYTES)
                         )
 
                     chunks.extend(chunk)
@@ -189,7 +173,7 @@ class SignalNotificationService(BaseNotificationService):
                 attachments_as_bytes.append(chunks)
             except Exception as ex:
                 _LOGGER.error("%s", ex)
-                raise
+                raise ex
 
         if not attachments_as_bytes:
             return None

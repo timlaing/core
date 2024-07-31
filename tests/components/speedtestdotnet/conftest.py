@@ -1,5 +1,4 @@
 """Conftest for speedtestdotnet."""
-
 from unittest.mock import patch
 
 import pytest

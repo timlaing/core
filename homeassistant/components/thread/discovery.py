@@ -1,5 +1,4 @@
 """The Thread integration."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -17,16 +16,11 @@ from homeassistant.core import HomeAssistant
 _LOGGER = logging.getLogger(__name__)
 
 KNOWN_BRANDS: dict[str | None, str] = {
-    "Amazon": "amazon",
     "Apple Inc.": "apple",
-    "Aqara": "aqara_gateway",
     "eero": "eero",
     "Google Inc.": "google",
     "HomeAssistant": "homeassistant",
     "Home Assistant": "homeassistant",
-    "Nanoleaf": "nanoleaf",
-    "OpenThread": "openthread",
-    "Samsung": "samsung",
 }
 THREAD_TYPE = "_meshcop._udp.local."
 CLASS_IN = 1
@@ -66,7 +60,11 @@ def async_discovery_data_from_service(
         except UnicodeDecodeError:
             return None
 
-    service_properties = service.properties
+    # Service properties are always bytes if they are set from the network.
+    # For legacy backwards compatibility zeroconf allows properties to be set
+    # as strings but we never do that so we can safely cast here.
+    service_properties = cast(dict[bytes, bytes | None], service.properties)
+
     border_agent_id = service_properties.get(b"id")
     model_name = try_decode(service_properties.get(b"mn"))
     network_name = try_decode(service_properties.get(b"nn"))
@@ -123,7 +121,10 @@ def async_read_zeroconf_cache(aiozc: AsyncZeroconf) -> list[ThreadRouterDiscover
             # data is not fully in the cache, so ignore for now
             continue
 
-        service_properties = info.properties
+        # Service properties are always bytes if they are set from the network.
+        # For legacy backwards compatibility zeroconf allows properties to be set
+        # as strings but we never do that so we can safely cast here.
+        service_properties = cast(dict[bytes, bytes | None], info.properties)
 
         if not (xa := service_properties.get(b"xa")):
             _LOGGER.debug("Ignoring record without xa %s", info)
@@ -188,7 +189,10 @@ class ThreadRouterDiscovery:
                 return
 
             _LOGGER.debug("_add_update_service %s %s", name, service)
-            service_properties = service.properties
+            # Service properties are always bytes if they are set from the network.
+            # For legacy backwards compatibility zeroconf allows properties to be set
+            # as strings but we never do that so we can safely cast here.
+            service_properties = cast(dict[bytes, bytes | None], service.properties)
 
             # We need xa and xp, bail out if either is missing
             if not (xa := service_properties.get(b"xa")):

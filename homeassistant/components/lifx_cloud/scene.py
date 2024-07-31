@@ -1,5 +1,4 @@
 """Support for LIFX Cloud scenes."""
-
 from __future__ import annotations
 
 import asyncio
@@ -42,7 +41,7 @@ async def async_setup_platform(
     token = config.get(CONF_TOKEN)
     timeout = config.get(CONF_TIMEOUT)
 
-    headers: dict[str, str] = {AUTHORIZATION: f"Bearer {token}"}
+    headers = {AUTHORIZATION: f"Bearer {token}"}
 
     url = "https://api.lifx.com/v1/scenes"
 
@@ -51,7 +50,7 @@ async def async_setup_platform(
         async with asyncio.timeout(timeout):
             scenes_resp = await httpsession.get(url, headers=headers)
 
-    except (TimeoutError, aiohttp.ClientError):
+    except (asyncio.TimeoutError, aiohttp.ClientError):
         _LOGGER.exception("Error on %s", url)
         return
 
@@ -93,5 +92,5 @@ class LifxCloudScene(Scene):
             async with asyncio.timeout(self._timeout):
                 await httpsession.put(url, headers=self._headers)
 
-        except (TimeoutError, aiohttp.ClientError):
+        except (asyncio.TimeoutError, aiohttp.ClientError):
             _LOGGER.exception("Error on %s", url)

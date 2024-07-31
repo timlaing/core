@@ -1,5 +1,4 @@
 """RESTful platform for notify component."""
-
 from __future__ import annotations
 
 from http import HTTPStatus
@@ -14,7 +13,7 @@ from homeassistant.components.notify import (
     ATTR_TARGET,
     ATTR_TITLE,
     ATTR_TITLE_DEFAULT,
-    PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     BaseNotificationService,
 )
 from homeassistant.const import (
@@ -45,7 +44,7 @@ DEFAULT_MESSAGE_PARAM_NAME = "message"
 DEFAULT_METHOD = "GET"
 DEFAULT_VERIFY_SSL = True
 
-PLATFORM_SCHEMA = NOTIFY_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_RESOURCE): cv.url,
         vol.Optional(

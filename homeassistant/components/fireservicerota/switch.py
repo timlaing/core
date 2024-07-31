@@ -1,5 +1,4 @@
 """Switch platform for FireServiceRota integration."""
-
 import logging
 from typing import Any
 
@@ -71,7 +70,7 @@ class ResponseSwitch(SwitchEntity):
             return attr
 
         data = self._state_attributes
-        return {
+        attr = {
             key: data[key]
             for key in (
                 "user_name",
@@ -86,6 +85,8 @@ class ResponseSwitch(SwitchEntity):
             )
             if key in data
         }
+
+        return attr
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Send Acknowledge response status."""

@@ -1,5 +1,4 @@
 """Tradfri utility function tests."""
-
 import pytest
 
 from homeassistant.components.tradfri.fan import _from_fan_percentage, _from_fan_speed

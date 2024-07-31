@@ -1,5 +1,4 @@
 """Support for IKEA Tradfri switches."""
-
 from __future__ import annotations
 
 from collections.abc import Callable

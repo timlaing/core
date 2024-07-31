@@ -1,5 +1,4 @@
 """Support for LCN sensors."""
-
 from __future__ import annotations
 
 from itertools import chain
@@ -56,12 +55,13 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up LCN switch entities from a config entry."""
+    entities = []
 
-    async_add_entities(
-        create_lcn_sensor_entity(hass, entity_config, config_entry)
-        for entity_config in config_entry.data[CONF_ENTITIES]
-        if entity_config[CONF_DOMAIN] == DOMAIN_SENSOR
-    )
+    for entity_config in config_entry.data[CONF_ENTITIES]:
+        if entity_config[CONF_DOMAIN] == DOMAIN_SENSOR:
+            entities.append(create_lcn_sensor_entity(hass, entity_config, config_entry))
+
+    async_add_entities(entities)
 
 
 class LcnVariableSensor(LcnEntity, SensorEntity):

@@ -1,16 +1,14 @@
 """Support for Yale Smart Alarm button."""
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import YaleConfigEntry
-from .const import DOMAIN, YALE_ALL_ERRORS
+from .const import COORDINATOR, DOMAIN
 from .coordinator import YaleDataUpdateCoordinator
 from .entity import YaleAlarmEntity
 
@@ -18,18 +16,21 @@ BUTTON_TYPES = (
     ButtonEntityDescription(
         key="panic",
         translation_key="panic",
+        icon="mdi:alarm-light",
     ),
 )
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: YaleConfigEntry,
+    entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the button from a config entry."""
 
-    coordinator = entry.runtime_data
+    coordinator: YaleDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id][
+        COORDINATOR
+    ]
 
     async_add_entities(
         [YalePanicButton(coordinator, description) for description in BUTTON_TYPES]
@@ -56,16 +57,6 @@ class YalePanicButton(YaleAlarmEntity, ButtonEntity):
         if TYPE_CHECKING:
             assert self.coordinator.yale, "Connection to API is missing"
 
-        try:
-            await self.hass.async_add_executor_job(
-                self.coordinator.yale.trigger_panic_button
-            )
-        except YALE_ALL_ERRORS as error:
-            raise HomeAssistantError(
-                translation_domain=DOMAIN,
-                translation_key="could_not_trigger_panic",
-                translation_placeholders={
-                    "entity_id": self.entity_id,
-                    "error": str(error),
-                },
-            ) from error
+        await self.hass.async_add_executor_job(
+            self.coordinator.yale.trigger_panic_button
+        )

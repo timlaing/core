@@ -1,5 +1,4 @@
 """Config flow to configure the Bravia TV integration."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -10,9 +9,11 @@ from aiohttp import CookieJar
 from pybravia import BraviaAuthError, BraviaClient, BraviaError, BraviaNotSupported
 import voluptuous as vol
 
+from homeassistant import config_entries
 from homeassistant.components import ssdp
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_CLIENT_ID, CONF_HOST, CONF_MAC, CONF_NAME, CONF_PIN
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_HOST, CONF_MAC, CONF_NAME, CONF_PIN
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import instance_id
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.util.network import is_host_valid
@@ -21,6 +22,7 @@ from .const import (
     ATTR_CID,
     ATTR_MAC,
     ATTR_MODEL,
+    CONF_CLIENT_ID,
     CONF_NICKNAME,
     CONF_USE_PSK,
     DOMAIN,
@@ -28,7 +30,7 @@ from .const import (
 )
 
 
-class BraviaTVConfigFlow(ConfigFlow, domain=DOMAIN):
+class BraviaTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Bravia TV integration."""
 
     VERSION = 1
@@ -68,7 +70,7 @@ class BraviaTVConfigFlow(ConfigFlow, domain=DOMAIN):
             await self.client.connect(pin=pin, clientid=client_id, nickname=nickname)
         await self.client.set_wol_mode(True)
 
-    async def async_create_device(self) -> ConfigFlowResult:
+    async def async_create_device(self) -> FlowResult:
         """Create Bravia TV device from config."""
         assert self.client
         await self.async_connect_device()
@@ -84,7 +86,7 @@ class BraviaTVConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_create_entry(title=title, data=self.device_config)
 
-    async def async_reauth_device(self) -> ConfigFlowResult:
+    async def async_reauth_device(self) -> FlowResult:
         """Reauthorize Bravia TV device from config."""
         assert self.entry
         assert self.client
@@ -96,7 +98,7 @@ class BraviaTVConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         errors: dict[str, str] = {}
 
@@ -116,7 +118,7 @@ class BraviaTVConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_authorize(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle authorize step."""
         self.create_client()
 
@@ -137,7 +139,7 @@ class BraviaTVConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_pin(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle PIN authorize step."""
         errors: dict[str, str] = {}
         client_id, nickname = await self.gen_instance_ids()
@@ -176,7 +178,7 @@ class BraviaTVConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_psk(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle PSK authorize step."""
         errors: dict[str, str] = {}
 
@@ -203,9 +205,7 @@ class BraviaTVConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_ssdp(
-        self, discovery_info: ssdp.SsdpServiceInfo
-    ) -> ConfigFlowResult:
+    async def async_step_ssdp(self, discovery_info: ssdp.SsdpServiceInfo) -> FlowResult:
         """Handle a discovered device."""
         parsed_url = urlparse(discovery_info.ssdp_location)
         host = parsed_url.hostname
@@ -235,16 +235,14 @@ class BraviaTVConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Allow the user to confirm adding the device."""
         if user_input is not None:
             return await self.async_step_authorize()
 
         return self.async_show_form(step_id="confirm")
 
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Handle configuration by re-auth."""
         self.entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
         self.device_config = {**entry_data}

@@ -1,5 +1,4 @@
 """Config flow for Aussie Broadband integration."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -10,14 +9,15 @@ from aussiebb.asyncio import AussieBB, AuthenticationException
 from aussiebb.const import FETCH_TYPES
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_SERVICES, DOMAIN
 
 
-class AussieBroadbandConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Aussie Broadband."""
 
     VERSION = 1
@@ -47,7 +47,7 @@ class AussieBroadbandConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         errors: dict[str, str] | None = None
         if user_input is not None:
@@ -77,9 +77,7 @@ class AussieBroadbandConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Handle reauth on credential failure."""
         self._reauth_username = entry_data[CONF_USERNAME]
 
@@ -87,7 +85,7 @@ class AussieBroadbandConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, str] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle users reauth credentials."""
 
         errors: dict[str, str] | None = None

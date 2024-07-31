@@ -1,5 +1,4 @@
 """Support for ISY fans."""
-
 from __future__ import annotations
 
 import math
@@ -14,10 +13,10 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util.percentage import (
+    int_states_in_range,
     percentage_to_ranged_value,
     ranged_value_to_percentage,
 )
-from homeassistant.util.scaling import int_states_in_range
 
 from .const import _LOGGER, DOMAIN
 from .entity import ISYNodeEntity, ISYProgramEntity
@@ -32,15 +31,13 @@ async def async_setup_entry(
     """Set up the ISY fan platform."""
     isy_data: IsyData = hass.data[DOMAIN][entry.entry_id]
     devices: dict[str, DeviceInfo] = isy_data.devices
-    entities: list[ISYFanEntity | ISYFanProgramEntity] = [
-        ISYFanEntity(node, devices.get(node.primary_node))
-        for node in isy_data.nodes[Platform.FAN]
-    ]
+    entities: list[ISYFanEntity | ISYFanProgramEntity] = []
 
-    entities.extend(
-        ISYFanProgramEntity(name, status, actions)
-        for name, status, actions in isy_data.programs[Platform.FAN]
-    )
+    for node in isy_data.nodes[Platform.FAN]:
+        entities.append(ISYFanEntity(node, devices.get(node.primary_node)))
+
+    for name, status, actions in isy_data.programs[Platform.FAN]:
+        entities.append(ISYFanProgramEntity(name, status, actions))
 
     async_add_entities(entities)
 
@@ -48,12 +45,7 @@ async def async_setup_entry(
 class ISYFanEntity(ISYNodeEntity, FanEntity):
     """Representation of an ISY fan device."""
 
-    _attr_supported_features = (
-        FanEntityFeature.SET_SPEED
-        | FanEntityFeature.TURN_OFF
-        | FanEntityFeature.TURN_ON
-    )
-    _enable_turn_on_off_backwards_compatibility = False
+    _attr_supported_features = FanEntityFeature.SET_SPEED
 
     @property
     def percentage(self) -> int | None:

@@ -1,5 +1,4 @@
 """Constants for Ampio Air Quality platform."""
-
 from datetime import timedelta
 from typing import Final
 

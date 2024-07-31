@@ -1,5 +1,4 @@
 """Define tests for the GeoNet NZ Volcano general setup."""
-
 from unittest.mock import AsyncMock, patch
 
 from homeassistant.components.geonetnz_volcano import DOMAIN, FEED

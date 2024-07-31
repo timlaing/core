@@ -1,5 +1,4 @@
 """Support for monitoring an SABnzbd NZB client."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -14,20 +13,26 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfDataRate, UnitOfInformation
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import DOMAIN, SabnzbdUpdateCoordinator
-from .const import DEFAULT_NAME
+from . import DOMAIN, SIGNAL_SABNZBD_UPDATED
+from .const import DEFAULT_NAME, KEY_API_DATA
 
 
-@dataclass(frozen=True, kw_only=True)
-class SabnzbdSensorEntityDescription(SensorEntityDescription):
-    """Describes Sabnzbd sensor entity."""
+@dataclass
+class SabnzbdRequiredKeysMixin:
+    """Mixin for required keys."""
 
     key: str
 
+
+@dataclass
+class SabnzbdSensorEntityDescription(SensorEntityDescription, SabnzbdRequiredKeysMixin):
+    """Describes Sabnzbd sensor entity."""
+
+
+SPEED_KEY = "kbpersec"
 
 SENSOR_TYPES: tuple[SabnzbdSensorEntityDescription, ...] = (
     SabnzbdSensorEntityDescription(
@@ -35,12 +40,10 @@ SENSOR_TYPES: tuple[SabnzbdSensorEntityDescription, ...] = (
         translation_key="status",
     ),
     SabnzbdSensorEntityDescription(
-        key="kbpersec",
+        key=SPEED_KEY,
         translation_key="speed",
         device_class=SensorDeviceClass.DATA_RATE,
-        native_unit_of_measurement=UnitOfDataRate.KILOBYTES_PER_SECOND,
-        suggested_unit_of_measurement=UnitOfDataRate.MEGABYTES_PER_SECOND,
-        suggested_display_precision=1,
+        native_unit_of_measurement=UnitOfDataRate.MEGABYTES_PER_SECOND,
         state_class=SensorStateClass.MEASUREMENT,
     ),
     SabnzbdSensorEntityDescription(
@@ -75,7 +78,6 @@ SENSOR_TYPES: tuple[SabnzbdSensorEntityDescription, ...] = (
         key="noofslots_total",
         translation_key="queue_count",
         state_class=SensorStateClass.TOTAL,
-        suggested_display_precision=2,
     ),
     SabnzbdSensorEntityDescription(
         key="day_size",
@@ -84,7 +86,6 @@ SENSOR_TYPES: tuple[SabnzbdSensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.DATA_SIZE,
         entity_registry_enabled_default=False,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        suggested_display_precision=2,
     ),
     SabnzbdSensorEntityDescription(
         key="week_size",
@@ -93,7 +94,6 @@ SENSOR_TYPES: tuple[SabnzbdSensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.DATA_SIZE,
         entity_registry_enabled_default=False,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        suggested_display_precision=2,
     ),
     SabnzbdSensorEntityDescription(
         key="month_size",
@@ -102,7 +102,6 @@ SENSOR_TYPES: tuple[SabnzbdSensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.DATA_SIZE,
         entity_registry_enabled_default=False,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        suggested_display_precision=2,
     ),
     SabnzbdSensorEntityDescription(
         key="total_size",
@@ -110,7 +109,6 @@ SENSOR_TYPES: tuple[SabnzbdSensorEntityDescription, ...] = (
         native_unit_of_measurement=UnitOfInformation.GIGABYTES,
         device_class=SensorDeviceClass.DATA_SIZE,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        suggested_display_precision=2,
     ),
 )
 
@@ -137,14 +135,15 @@ async def async_setup_entry(
     """Set up a Sabnzbd sensor entry."""
 
     entry_id = config_entry.entry_id
-    coordinator: SabnzbdUpdateCoordinator = hass.data[DOMAIN][entry_id]
+
+    sab_api_data = hass.data[DOMAIN][entry_id][KEY_API_DATA]
 
     async_add_entities(
-        [SabnzbdSensor(coordinator, sensor, entry_id) for sensor in SENSOR_TYPES]
+        [SabnzbdSensor(sab_api_data, sensor, entry_id) for sensor in SENSOR_TYPES]
     )
 
 
-class SabnzbdSensor(CoordinatorEntity[SabnzbdUpdateCoordinator], SensorEntity):
+class SabnzbdSensor(SensorEntity):
     """Representation of an SABnzbd sensor."""
 
     entity_description: SabnzbdSensorEntityDescription
@@ -153,22 +152,40 @@ class SabnzbdSensor(CoordinatorEntity[SabnzbdUpdateCoordinator], SensorEntity):
 
     def __init__(
         self,
-        coordinator: SabnzbdUpdateCoordinator,
+        sabnzbd_api_data,
         description: SabnzbdSensorEntityDescription,
         entry_id,
     ) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator)
 
         self._attr_unique_id = f"{entry_id}_{description.key}"
         self.entity_description = description
+        self._sabnzbd_api = sabnzbd_api_data
         self._attr_device_info = DeviceInfo(
             entry_type=DeviceEntryType.SERVICE,
             identifiers={(DOMAIN, entry_id)},
             name=DEFAULT_NAME,
         )
 
-    @property
-    def native_value(self) -> StateType:
-        """Return latest sensor data."""
-        return self.coordinator.data.get(self.entity_description.key)
+    async def async_added_to_hass(self) -> None:
+        """Call when entity about to be added to hass."""
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass, SIGNAL_SABNZBD_UPDATED, self.update_state
+            )
+        )
+
+    def update_state(self, args):
+        """Get the latest data and updates the states."""
+        self._attr_native_value = self._sabnzbd_api.get_queue_field(
+            self.entity_description.key
+        )
+
+        if self._attr_native_value is not None:
+            if self.entity_description.key == SPEED_KEY:
+                self._attr_native_value = round(
+                    float(self._attr_native_value) / 1024, 1
+                )
+            elif "size" in self.entity_description.key:
+                self._attr_native_value = round(float(self._attr_native_value), 2)
+        self.schedule_update_ha_state()

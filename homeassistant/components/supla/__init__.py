@@ -1,5 +1,4 @@
 """Support for Supla devices."""
-
 from __future__ import annotations
 
 import asyncio
@@ -101,12 +100,13 @@ async def discover_devices(hass, hass_config):
 
         async def _fetch_channels():
             async with asyncio.timeout(SCAN_INTERVAL.total_seconds()):
-                return {
+                channels = {
                     channel["id"]: channel
                     for channel in await server.get_channels(  # noqa: B023
                         include=["iodevice", "state", "connected"]
                     )
                 }
+                return channels
 
         coordinator = DataUpdateCoordinator(
             hass,

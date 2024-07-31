@@ -1,5 +1,4 @@
 """Test pool."""
-
 import threading
 
 import pytest
@@ -12,32 +11,20 @@ from homeassistant.components.recorder.pool import RecorderPool
 
 async def test_recorder_pool_called_from_event_loop() -> None:
     """Test we raise an exception when calling from the event loop."""
-    recorder_and_worker_thread_ids: set[int] = set()
-    engine = create_engine(
-        "sqlite://",
-        poolclass=RecorderPool,
-        recorder_and_worker_thread_ids=recorder_and_worker_thread_ids,
-    )
+    engine = create_engine("sqlite://", poolclass=RecorderPool)
     with pytest.raises(RuntimeError):
         sessionmaker(bind=engine)().connection()
 
 
 def test_recorder_pool(caplog: pytest.LogCaptureFixture) -> None:
     """Test RecorderPool gives the same connection in the creating thread."""
-    recorder_and_worker_thread_ids: set[int] = set()
-    engine = create_engine(
-        "sqlite://",
-        poolclass=RecorderPool,
-        recorder_and_worker_thread_ids=recorder_and_worker_thread_ids,
-    )
+
+    engine = create_engine("sqlite://", poolclass=RecorderPool)
     get_session = sessionmaker(bind=engine)
     shutdown = False
     connections = []
-    add_thread = False
 
     def _get_connection_twice():
-        if add_thread:
-            recorder_and_worker_thread_ids.add(threading.get_ident())
         session = get_session()
         connections.append(session.connection().connection.driver_connection)
         session.close()
@@ -56,7 +43,6 @@ def test_recorder_pool(caplog: pytest.LogCaptureFixture) -> None:
     assert "accesses the database without the database executor" in caplog.text
     assert connections[0] != connections[1]
 
-    add_thread = True
     caplog.clear()
     new_thread = threading.Thread(target=_get_connection_twice, name=DB_WORKER_PREFIX)
     new_thread.start()

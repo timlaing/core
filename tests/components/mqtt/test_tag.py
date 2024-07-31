@@ -1,5 +1,4 @@
 """The tests for MQTT tag scanner."""
-
 from collections.abc import Generator
 import copy
 import json
@@ -9,6 +8,7 @@ import pytest
 
 from homeassistant.components.device_automation import DeviceAutomationType
 from homeassistant.components.mqtt.const import DOMAIN as MQTT_DOMAIN
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.setup import async_setup_component
@@ -20,7 +20,7 @@ from tests.common import (
     async_fire_mqtt_message,
     async_get_device_automations,
 )
-from tests.typing import MqttMockHAClientGenerator, WebSocketGenerator
+from tests.typing import MqttMockHAClient, MqttMockHAClientGenerator, WebSocketGenerator
 
 DEFAULT_CONFIG_DEVICE = {
     "device": {"identifiers": ["0AFFD2"]},
@@ -46,8 +46,15 @@ DEFAULT_TAG_SCAN_JSON = (
 )
 
 
+@pytest.fixture(autouse=True)
+def binary_sensor_only() -> Generator[None, None, None]:
+    """Only setup the binary_sensor platform to speed up test."""
+    with patch("homeassistant.components.mqtt.PLATFORMS", [Platform.BINARY_SENSOR]):
+        yield
+
+
 @pytest.fixture
-def tag_mock() -> Generator[AsyncMock]:
+def tag_mock() -> Generator[AsyncMock, None, None]:
     """Fixture to mock tag."""
     with patch("homeassistant.components.tag.async_scan_tag") as mock_tag:
         yield mock_tag
@@ -102,7 +109,9 @@ async def test_if_fires_on_mqtt_message_with_device(
 
 
 async def test_if_fires_on_mqtt_message_without_device(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator, tag_mock: AsyncMock
+    hass: HomeAssistant,
+    mqtt_mock_entry: MqttMockHAClientGenerator,
+    tag_mock: AsyncMock,
 ) -> None:
     """Test tag scanning, without device."""
     await mqtt_mock_entry()
@@ -138,7 +147,9 @@ async def test_if_fires_on_mqtt_message_with_template(
 
 
 async def test_strip_tag_id(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator, tag_mock: AsyncMock
+    hass: HomeAssistant,
+    mqtt_mock_entry: MqttMockHAClientGenerator,
+    tag_mock: AsyncMock,
 ) -> None:
     """Test strip whitespace from tag_id."""
     await mqtt_mock_entry()
@@ -204,7 +215,9 @@ async def test_if_fires_on_mqtt_message_after_update_with_device(
 
 
 async def test_if_fires_on_mqtt_message_after_update_without_device(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator, tag_mock: AsyncMock
+    hass: HomeAssistant,
+    mqtt_mock_entry: MqttMockHAClientGenerator,
+    tag_mock: AsyncMock,
 ) -> None:
     """Test tag scanning after update."""
     await mqtt_mock_entry()
@@ -353,7 +366,9 @@ async def test_not_fires_on_mqtt_message_after_remove_by_mqtt_with_device(
 
 
 async def test_not_fires_on_mqtt_message_after_remove_by_mqtt_without_device(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator, tag_mock: AsyncMock
+    hass: HomeAssistant,
+    mqtt_mock_entry: MqttMockHAClientGenerator,
+    tag_mock: AsyncMock,
 ) -> None:
     """Test tag scanning not firing after removal."""
     await mqtt_mock_entry()
@@ -411,9 +426,15 @@ async def test_not_fires_on_mqtt_message_after_remove_from_registry(
 
     # Remove MQTT from the device
     mqtt_config_entry = hass.config_entries.async_entries(MQTT_DOMAIN)[0]
-    response = await ws_client.remove_device(
-        device_entry.id, mqtt_config_entry.entry_id
+    await ws_client.send_json(
+        {
+            "id": 6,
+            "type": "config/device_registry/remove_config_entry",
+            "config_entry_id": mqtt_config_entry.entry_id,
+            "device_id": device_entry.id,
+        }
     )
+    response = await ws_client.receive_json()
     assert response["success"]
     tag_mock.reset_mock()
 
@@ -423,12 +444,11 @@ async def test_not_fires_on_mqtt_message_after_remove_from_registry(
 
 
 async def test_entity_device_info_with_connection(
-    hass: HomeAssistant,
-    device_registry: dr.DeviceRegistry,
-    mqtt_mock_entry: MqttMockHAClientGenerator,
+    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT device registry integration."""
     await mqtt_mock_entry()
+    registry = dr.async_get(hass)
 
     data = json.dumps(
         {
@@ -439,7 +459,6 @@ async def test_entity_device_info_with_connection(
                 "name": "Beer",
                 "model": "Glass",
                 "hw_version": "rev1",
-                "serial_number": "1234deadbeef",
                 "sw_version": "0.1-beta",
             },
         }
@@ -447,7 +466,7 @@ async def test_entity_device_info_with_connection(
     async_fire_mqtt_message(hass, "homeassistant/tag/bla/config", data)
     await hass.async_block_till_done()
 
-    device = device_registry.async_get_device(
+    device = registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, "02:5b:26:a8:dc:12")}
     )
     assert device is not None
@@ -456,17 +475,15 @@ async def test_entity_device_info_with_connection(
     assert device.name == "Beer"
     assert device.model == "Glass"
     assert device.hw_version == "rev1"
-    assert device.serial_number == "1234deadbeef"
     assert device.sw_version == "0.1-beta"
 
 
 async def test_entity_device_info_with_identifier(
-    hass: HomeAssistant,
-    device_registry: dr.DeviceRegistry,
-    mqtt_mock_entry: MqttMockHAClientGenerator,
+    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT device registry integration."""
     await mqtt_mock_entry()
+    registry = dr.async_get(hass)
 
     data = json.dumps(
         {
@@ -477,7 +494,6 @@ async def test_entity_device_info_with_identifier(
                 "name": "Beer",
                 "model": "Glass",
                 "hw_version": "rev1",
-                "serial_number": "1234deadbeef",
                 "sw_version": "0.1-beta",
             },
         }
@@ -485,24 +501,22 @@ async def test_entity_device_info_with_identifier(
     async_fire_mqtt_message(hass, "homeassistant/tag/bla/config", data)
     await hass.async_block_till_done()
 
-    device = device_registry.async_get_device(identifiers={("mqtt", "helloworld")})
+    device = registry.async_get_device(identifiers={("mqtt", "helloworld")})
     assert device is not None
     assert device.identifiers == {("mqtt", "helloworld")}
     assert device.manufacturer == "Whatever"
     assert device.name == "Beer"
     assert device.model == "Glass"
     assert device.hw_version == "rev1"
-    assert device.serial_number == "1234deadbeef"
     assert device.sw_version == "0.1-beta"
 
 
 async def test_entity_device_info_update(
-    hass: HomeAssistant,
-    device_registry: dr.DeviceRegistry,
-    mqtt_mock_entry: MqttMockHAClientGenerator,
+    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test device registry update."""
     await mqtt_mock_entry()
+    registry = dr.async_get(hass)
 
     config = {
         "topic": "test-topic",
@@ -512,7 +526,6 @@ async def test_entity_device_info_update(
             "manufacturer": "Whatever",
             "name": "Beer",
             "model": "Glass",
-            "serial_number": "1234deadbeef",
             "sw_version": "0.1-beta",
         },
     }
@@ -521,7 +534,7 @@ async def test_entity_device_info_update(
     async_fire_mqtt_message(hass, "homeassistant/tag/bla/config", data)
     await hass.async_block_till_done()
 
-    device = device_registry.async_get_device(identifiers={("mqtt", "helloworld")})
+    device = registry.async_get_device(identifiers={("mqtt", "helloworld")})
     assert device is not None
     assert device.name == "Beer"
 
@@ -530,7 +543,7 @@ async def test_entity_device_info_update(
     async_fire_mqtt_message(hass, "homeassistant/tag/bla/config", data)
     await hass.async_block_till_done()
 
-    device = device_registry.async_get_device(identifiers={("mqtt", "helloworld")})
+    device = registry.async_get_device(identifiers={("mqtt", "helloworld")})
     assert device is not None
     assert device.name == "Milk"
 
@@ -598,9 +611,15 @@ async def test_cleanup_tag(
 
     # Remove MQTT from the device
     mqtt_config_entry = hass.config_entries.async_entries(MQTT_DOMAIN)[0]
-    response = await ws_client.remove_device(
-        device_entry1.id, mqtt_config_entry.entry_id
+    await ws_client.send_json(
+        {
+            "id": 6,
+            "type": "config/device_registry/remove_config_entry",
+            "config_entry_id": mqtt_config_entry.entry_id,
+            "device_id": device_entry1.id,
+        }
     )
+    response = await ws_client.receive_json()
     assert response["success"]
     await hass.async_block_till_done()
     await hass.async_block_till_done()
@@ -615,7 +634,7 @@ async def test_cleanup_tag(
 
     # Verify retained discovery topic has been cleared
     mqtt_mock.async_publish.assert_called_once_with(
-        "homeassistant/tag/bla1/config", None, 0, True
+        "homeassistant/tag/bla1/config", "", 0, True
     )
 
 
@@ -896,9 +915,11 @@ async def test_update_with_bad_config_not_breaks_discovery(
     tag_mock.assert_called_once_with(ANY, "12345", ANY)
 
 
-@pytest.mark.usefixtures("mqtt_mock")
 async def test_unload_entry(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry, tag_mock: AsyncMock
+    hass: HomeAssistant,
+    device_registry: dr.DeviceRegistry,
+    mqtt_mock: MqttMockHAClient,
+    tag_mock: AsyncMock,
 ) -> None:
     """Test unloading the MQTT entry."""
 
@@ -922,22 +943,3 @@ async def test_unload_entry(
     async_fire_mqtt_message(hass, "foobar/tag_scanned", DEFAULT_TAG_SCAN)
     await hass.async_block_till_done()
     tag_mock.assert_not_called()
-
-
-@pytest.mark.usefixtures("mqtt_mock", "tag_mock")
-async def test_value_template_fails(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
-) -> None:
-    """Test the rendering of MQTT value template fails."""
-    config = copy.deepcopy(DEFAULT_CONFIG_DEVICE)
-    config["value_template"] = "{{ value_json.some_var * 1 }}"
-    async_fire_mqtt_message(hass, "homeassistant/tag/bla1/config", json.dumps(config))
-    await hass.async_block_till_done()
-
-    async_fire_mqtt_message(hass, "foobar/tag_scanned", '{"some_var": null }')
-    await hass.async_block_till_done()
-
-    assert (
-        "TypeError: unsupported operand type(s) for *: 'NoneType' and 'int' rendering template"
-        in caplog.text
-    )

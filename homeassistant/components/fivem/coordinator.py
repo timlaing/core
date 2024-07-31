@@ -1,5 +1,4 @@
 """The FiveM update coordinator."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -61,7 +60,9 @@ class FiveMDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         except FiveMServerOfflineError as err:
             raise UpdateFailed from err
 
-        players_list: list[str] = [player.name for player in server.players]
+        players_list: list[str] = []
+        for player in server.players:
+            players_list.append(player.name)
         players_list.sort()
 
         resources_list = server.resources

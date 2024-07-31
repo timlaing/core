@@ -1,5 +1,4 @@
 """Config flow for Gogogate2."""
-
 from __future__ import annotations
 
 import dataclasses
@@ -11,14 +10,14 @@ from ismartgate.const import GogoGate2ApiErrorCode, ISmartGateApiErrorCode
 import voluptuous as vol
 
 from homeassistant.components import dhcp, zeroconf
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import ConfigFlow
 from homeassistant.const import (
     CONF_DEVICE,
     CONF_IP_ADDRESS,
     CONF_PASSWORD,
     CONF_USERNAME,
 )
-from homeassistant.data_entry_flow import AbortFlow
+from homeassistant.data_entry_flow import AbortFlow, FlowResult
 
 from .common import get_api
 from .const import DEVICE_TYPE_GOGOGATE2, DEVICE_TYPE_ISMARTGATE, DOMAIN
@@ -41,21 +40,19 @@ class Gogogate2FlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_homekit(
         self, discovery_info: zeroconf.ZeroconfServiceInfo
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle homekit discovery."""
         await self.async_set_unique_id(
             discovery_info.properties[zeroconf.ATTR_PROPERTIES_ID]
         )
         return await self._async_discovery_handler(discovery_info.host)
 
-    async def async_step_dhcp(
-        self, discovery_info: dhcp.DhcpServiceInfo
-    ) -> ConfigFlowResult:
+    async def async_step_dhcp(self, discovery_info: dhcp.DhcpServiceInfo) -> FlowResult:
         """Handle dhcp discovery."""
         await self.async_set_unique_id(discovery_info.macaddress)
         return await self._async_discovery_handler(discovery_info.ip)
 
-    async def _async_discovery_handler(self, ip_address: str) -> ConfigFlowResult:
+    async def _async_discovery_handler(self, ip_address: str) -> FlowResult:
         """Start the user flow from any discovery."""
         self.context[CONF_IP_ADDRESS] = ip_address
         self._abort_if_unique_id_configured({CONF_IP_ADDRESS: ip_address})
@@ -72,7 +69,7 @@ class Gogogate2FlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle user initiated flow."""
         user_input = user_input or {}
         errors = {}
@@ -111,7 +108,7 @@ class Gogogate2FlowHandler(ConfigFlow, domain=DOMAIN):
                 else:
                     errors["base"] = "cannot_connect"
 
-            except Exception:  # noqa: BLE001
+            except Exception:  # pylint: disable=broad-except
                 errors["base"] = "cannot_connect"
 
         if self._ip_address and self._device_type:

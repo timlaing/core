@@ -1,9 +1,8 @@
 """Support for interface with an Samsung TV."""
-
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Sequence
+from collections.abc import Coroutine, Sequence
 from typing import Any
 
 from async_upnp_client.aiohttp import AiohttpNotifyServer, AiohttpSessionRequester
@@ -20,6 +19,7 @@ from async_upnp_client.exceptions import (
 from async_upnp_client.profiles.dlna import DmrDevice
 from async_upnp_client.utils import async_get_local_ip
 import voluptuous as vol
+from wakeonlan import send_magic_packet
 
 from homeassistant.components.media_player import (
     MediaPlayerDeviceClass,
@@ -28,32 +28,31 @@ from homeassistant.components.media_player import (
     MediaPlayerState,
     MediaType,
 )
+from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntry
+from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.util.async_ import create_eager_task
+from homeassistant.helpers.trigger import PluggableAction
 
-from . import SamsungTVConfigEntry
-from .bridge import SamsungTVWSBridge
-from .const import CONF_SSDP_RENDERING_CONTROL_LOCATION, LOGGER
-from .coordinator import SamsungTVDataUpdateCoordinator
+from .bridge import SamsungTVBridge, SamsungTVWSBridge
+from .const import CONF_SSDP_RENDERING_CONTROL_LOCATION, DOMAIN, LOGGER
 from .entity import SamsungTVEntity
+from .triggers.turn_on import async_get_turn_on_trigger
 
 SOURCES = {"TV": "KEY_TV", "HDMI": "KEY_HDMI"}
 
 SUPPORT_SAMSUNGTV = (
-    MediaPlayerEntityFeature.NEXT_TRACK
-    | MediaPlayerEntityFeature.PAUSE
-    | MediaPlayerEntityFeature.PLAY
-    | MediaPlayerEntityFeature.PLAY_MEDIA
+    MediaPlayerEntityFeature.PAUSE
+    | MediaPlayerEntityFeature.VOLUME_STEP
+    | MediaPlayerEntityFeature.VOLUME_MUTE
     | MediaPlayerEntityFeature.PREVIOUS_TRACK
     | MediaPlayerEntityFeature.SELECT_SOURCE
-    | MediaPlayerEntityFeature.STOP
+    | MediaPlayerEntityFeature.NEXT_TRACK
     | MediaPlayerEntityFeature.TURN_OFF
-    | MediaPlayerEntityFeature.VOLUME_MUTE
-    | MediaPlayerEntityFeature.VOLUME_SET
-    | MediaPlayerEntityFeature.VOLUME_STEP
+    | MediaPlayerEntityFeature.PLAY
+    | MediaPlayerEntityFeature.PLAY_MEDIA
 )
 
 
@@ -62,13 +61,11 @@ APP_LIST_DELAY = 3
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: SamsungTVConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up the Samsung TV from a config entry."""
-    coordinator = entry.runtime_data
-    async_add_entities([SamsungTVDevice(coordinator)])
+    bridge = hass.data[DOMAIN][entry.entry_id]
+    async_add_entities([SamsungTVDevice(bridge, entry)], True)
 
 
 class SamsungTVDevice(SamsungTVEntity, MediaPlayerEntity):
@@ -78,12 +75,19 @@ class SamsungTVDevice(SamsungTVEntity, MediaPlayerEntity):
     _attr_name = None
     _attr_device_class = MediaPlayerDeviceClass.TV
 
-    def __init__(self, coordinator: SamsungTVDataUpdateCoordinator) -> None:
+    def __init__(
+        self,
+        bridge: SamsungTVBridge,
+        config_entry: ConfigEntry,
+    ) -> None:
         """Initialize the Samsung device."""
-        super().__init__(coordinator=coordinator)
-        self._ssdp_rendering_control_location: str | None = (
-            coordinator.config_entry.data.get(CONF_SSDP_RENDERING_CONTROL_LOCATION)
+        super().__init__(bridge=bridge, config_entry=config_entry)
+        self._config_entry = config_entry
+        self._host: str | None = config_entry.data[CONF_HOST]
+        self._ssdp_rendering_control_location: str | None = config_entry.data.get(
+            CONF_SSDP_RENDERING_CONTROL_LOCATION
         )
+        self._turn_on = PluggableAction(self.async_write_ha_state)
         # Assume that the TV is in Play mode
         self._playing: bool = True
 
@@ -100,6 +104,8 @@ class SamsungTVDevice(SamsungTVEntity, MediaPlayerEntity):
         if self._ssdp_rendering_control_location:
             self._attr_supported_features |= MediaPlayerEntityFeature.VOLUME_SET
 
+        self._auth_failed = False
+        self._bridge.register_reauth_callback(self.access_denied)
         self._bridge.register_app_list_callback(self._app_list_callback)
 
         self._dmr_device: DmrDevice | None = None
@@ -110,7 +116,7 @@ class SamsungTVDevice(SamsungTVEntity, MediaPlayerEntity):
         """Flag media player features that are supported."""
         # `turn_on` triggers are not yet registered during initialisation,
         # so this property needs to be dynamic
-        if self._turn_on_action:
+        if self._turn_on:
             return self._attr_supported_features | MediaPlayerEntityFeature.TURN_ON
         return self._attr_supported_features
 
@@ -125,51 +131,60 @@ class SamsungTVDevice(SamsungTVEntity, MediaPlayerEntity):
         self._update_sources()
         self._app_list_event.set()
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
-        await super().async_added_to_hass()
-        await self._async_extra_update()
-        self.coordinator.async_extra_update = self._async_extra_update
-        if self.coordinator.is_on:
-            self._attr_state = MediaPlayerState.ON
-            self._update_from_upnp()
-        else:
-            self._attr_state = MediaPlayerState.OFF
+    def access_denied(self) -> None:
+        """Access denied callback."""
+        LOGGER.debug("Access denied in getting remote object")
+        self._auth_failed = True
+        self.hass.create_task(
+            self.hass.config_entries.flow.async_init(
+                DOMAIN,
+                context={
+                    "source": SOURCE_REAUTH,
+                    "entry_id": self._config_entry.entry_id,
+                },
+                data=self._config_entry.data,
+            )
+        )
 
     async def async_will_remove_from_hass(self) -> None:
         """Handle removal."""
-        self.coordinator.async_extra_update = None
         await self._async_shutdown_dmr()
 
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Handle data update."""
-        if self.coordinator.is_on:
-            self._attr_state = MediaPlayerState.ON
-            self._update_from_upnp()
-        else:
-            self._attr_state = MediaPlayerState.OFF
-        self.async_write_ha_state()
-
-    async def _async_extra_update(self) -> None:
+    async def async_update(self) -> None:
         """Update state of device."""
-        if not self.coordinator.is_on:
+        if self._auth_failed or self.hass.is_stopping:
+            return
+        old_state = self._attr_state
+        if self._bridge.power_off_in_progress:
+            self._attr_state = MediaPlayerState.OFF
+        else:
+            self._attr_state = (
+                MediaPlayerState.ON
+                if await self._bridge.async_is_on()
+                else MediaPlayerState.OFF
+            )
+        if self._attr_state != old_state:
+            LOGGER.debug("TV %s state updated to %s", self._host, self.state)
+
+        if self._attr_state != MediaPlayerState.ON:
             if self._dmr_device and self._dmr_device.is_subscribed:
                 await self._dmr_device.async_unsubscribe_services()
             return
 
-        startup_tasks: list[asyncio.Task[Any]] = []
+        startup_tasks: list[Coroutine[Any, Any, Any]] = []
 
         if not self._app_list_event.is_set():
-            startup_tasks.append(create_eager_task(self._async_startup_app_list()))
+            startup_tasks.append(self._async_startup_app_list())
 
         if self._dmr_device and not self._dmr_device.is_subscribed:
-            startup_tasks.append(create_eager_task(self._async_resubscribe_dmr()))
+            startup_tasks.append(self._async_resubscribe_dmr())
         if not self._dmr_device and self._ssdp_rendering_control_location:
-            startup_tasks.append(create_eager_task(self._async_startup_dmr()))
+            startup_tasks.append(self._async_startup_dmr())
 
         if startup_tasks:
             await asyncio.gather(*startup_tasks)
+
+        self._update_from_upnp()
 
     @callback
     def _update_from_upnp(self) -> bool:
@@ -204,7 +219,7 @@ class SamsungTVDevice(SamsungTVEntity, MediaPlayerEntity):
         try:
             async with asyncio.timeout(APP_LIST_DELAY):
                 await self._app_list_event.wait()
-        except TimeoutError as err:
+        except asyncio.TimeoutError as err:
             # No need to try again
             self._app_list_event.set()
             LOGGER.debug("Failed to load app list from %s: %r", self._host, err)
@@ -297,9 +312,32 @@ class SamsungTVDevice(SamsungTVEntity, MediaPlayerEntity):
             return
         await self._bridge.async_send_keys(keys)
 
+    @property
+    def available(self) -> bool:
+        """Return the availability of the device."""
+        if self._auth_failed:
+            return False
+        return (
+            self.state == MediaPlayerState.ON
+            or bool(self._turn_on)
+            or self._mac is not None
+            or self._bridge.power_off_in_progress
+        )
+
+    async def async_added_to_hass(self) -> None:
+        """Connect and subscribe to dispatcher signals and state updates."""
+        await super().async_added_to_hass()
+
+        if (entry := self.registry_entry) and entry.device_id:
+            self.async_on_remove(
+                self._turn_on.async_register(
+                    self.hass, async_get_turn_on_trigger(entry.device_id)
+                )
+            )
+
     async def async_turn_off(self) -> None:
         """Turn off media player."""
-        await super()._async_turn_off()
+        await self._bridge.async_power_off()
 
     async def async_set_volume_level(self, volume: float) -> None:
         """Set volume level on the media player."""
@@ -371,9 +409,19 @@ class SamsungTVDevice(SamsungTVEntity, MediaPlayerEntity):
             keys=[f"KEY_{digit}" for digit in media_id] + ["KEY_ENTER"]
         )
 
+    def _wake_on_lan(self) -> None:
+        """Wake the device via wake on lan."""
+        send_magic_packet(self._mac, ip_address=self._host)
+        # If the ip address changed since we last saw the device
+        # broadcast a packet as well
+        send_magic_packet(self._mac)
+
     async def async_turn_on(self) -> None:
         """Turn the media player on."""
-        await super()._async_turn_on()
+        if self._turn_on:
+            await self._turn_on.async_run(self.hass, self._context)
+        elif self._mac:
+            await self.hass.async_add_executor_job(self._wake_on_lan)
 
     async def async_select_source(self, source: str) -> None:
         """Select input source."""

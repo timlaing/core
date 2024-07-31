@@ -1,5 +1,4 @@
 """Support for ISY switches."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -32,9 +31,9 @@ from .entity import ISYAuxControlEntity, ISYNodeEntity, ISYProgramEntity
 from .models import IsyData
 
 
-@dataclass(frozen=True)
+@dataclass
 class ISYSwitchEntityDescription(SwitchEntityDescription):
-    """Describes ISY switch."""
+    """Describes IST switch."""
 
     # ISYEnableSwitchEntity does not support UNDEFINED or None,
     # restrict the type to str.

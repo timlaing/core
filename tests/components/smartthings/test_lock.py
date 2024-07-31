@@ -3,7 +3,6 @@
 The only mocking required is of the underlying SmartThings API object so
 real HTTP calls are not initiated during testing.
 """
-
 from pysmartthings import Attribute, Capability
 from pysmartthings.device import Status
 
@@ -19,10 +18,7 @@ from .conftest import setup_platform
 
 
 async def test_entity_and_device_attributes(
-    hass: HomeAssistant,
-    device_registry: dr.DeviceRegistry,
-    entity_registry: er.EntityRegistry,
-    device_factory,
+    hass: HomeAssistant, device_factory
 ) -> None:
     """Test the attributes of the entity are correct."""
     # Arrange
@@ -37,6 +33,8 @@ async def test_entity_and_device_attributes(
             Attribute.mnfv: "v7.89",
         },
     )
+    entity_registry = er.async_get(hass)
+    device_registry = dr.async_get(hass)
     # Act
     await setup_platform(hass, LOCK_DOMAIN, devices=[device])
     # Assert
@@ -122,7 +120,7 @@ async def test_unload_config_entry(hass: HomeAssistant, device_factory) -> None:
     # Arrange
     device = device_factory("Lock_1", [Capability.lock], {Attribute.lock: "locked"})
     config_entry = await setup_platform(hass, LOCK_DOMAIN, devices=[device])
-    config_entry.mock_state(hass, ConfigEntryState.LOADED)
+    config_entry.state = ConfigEntryState.LOADED
     # Act
     await hass.config_entries.async_forward_entry_unload(config_entry, "lock")
     # Assert

@@ -1,12 +1,11 @@
 """The tests for the Template automation."""
-
 from datetime import timedelta
 from unittest import mock
+from unittest.mock import patch
 
-from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components import automation
+import homeassistant.components.automation as automation
 from homeassistant.components.template import trigger as template_trigger
 from homeassistant.const import (
     ATTR_ENTITY_ID,
@@ -14,7 +13,7 @@ from homeassistant.const import (
     SERVICE_TURN_OFF,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import Context, HomeAssistant, ServiceCall, callback
+from homeassistant.core import Context, HomeAssistant, callback
 from homeassistant.setup import async_setup_component
 import homeassistant.util.dt as dt_util
 
@@ -22,7 +21,7 @@ from tests.common import async_fire_time_changed, mock_component
 
 
 @pytest.fixture(autouse=True)
-def setup_comp(hass: HomeAssistant, calls: list[ServiceCall]) -> None:
+def setup_comp(hass, calls):
     """Initialize components."""
     mock_component(hass, "group")
     hass.states.async_set("test.entity", "hello")
@@ -48,9 +47,7 @@ def setup_comp(hass: HomeAssistant, calls: list[ServiceCall]) -> None:
         },
     ],
 )
-async def test_if_fires_on_change_bool(
-    hass: HomeAssistant, start_ha, calls: list[ServiceCall]
-) -> None:
+async def test_if_fires_on_change_bool(hass: HomeAssistant, start_ha, calls) -> None:
     """Test for firing on boolean change."""
     assert len(calls) == 0
 
@@ -271,9 +268,7 @@ async def test_if_fires_on_change_bool(
         ),
     ],
 )
-async def test_general(
-    hass: HomeAssistant, call_setup, start_ha, calls: list[ServiceCall]
-) -> None:
+async def test_general(hass: HomeAssistant, call_setup, start_ha, calls) -> None:
     """Test for firing on change."""
     assert len(calls) == 0
 
@@ -309,7 +304,7 @@ async def test_general(
     ],
 )
 async def test_if_not_fires_because_fail(
-    hass: HomeAssistant, call_setup, start_ha, calls: list[ServiceCall]
+    hass: HomeAssistant, call_setup, start_ha, calls
 ) -> None:
     """Test for not firing after TemplateError."""
     assert len(calls) == 0
@@ -333,12 +328,15 @@ async def test_if_not_fires_because_fail(
                 "action": {
                     "service": "test.automation",
                     "data_template": {
-                        "some": (
-                            "{{ trigger.platform }}"
-                            " - {{ trigger.entity_id }}"
-                            " - {{ trigger.from_state.state }}"
-                            " - {{ trigger.to_state.state }}"
-                            " - {{ trigger.for }}"
+                        "some": "{{ trigger.%s }}"
+                        % "}} - {{ trigger.".join(
+                            (
+                                "platform",
+                                "entity_id",
+                                "from_state.state",
+                                "to_state.state",
+                                "for",
+                            )
                         )
                     },
                 },
@@ -347,7 +345,7 @@ async def test_if_not_fires_because_fail(
     ],
 )
 async def test_if_fires_on_change_with_template_advanced(
-    hass: HomeAssistant, start_ha, calls: list[ServiceCall]
+    hass: HomeAssistant, start_ha, calls
 ) -> None:
     """Test for firing on change with template advanced."""
     context = Context()
@@ -378,9 +376,7 @@ async def test_if_fires_on_change_with_template_advanced(
         },
     ],
 )
-async def test_if_action(
-    hass: HomeAssistant, start_ha, calls: list[ServiceCall]
-) -> None:
+async def test_if_action(hass: HomeAssistant, start_ha, calls) -> None:
     """Test for firing if action."""
     # Condition is not true yet
     hass.bus.async_fire("test_event")
@@ -411,7 +407,7 @@ async def test_if_action(
     ],
 )
 async def test_if_fires_on_change_with_bad_template(
-    hass: HomeAssistant, start_ha, calls: list[ServiceCall]
+    hass: HomeAssistant, start_ha, calls
 ) -> None:
     """Test for firing on change with bad template."""
     assert hass.states.get("automation.automation_0").state == STATE_UNAVAILABLE
@@ -433,12 +429,15 @@ async def test_if_fires_on_change_with_bad_template(
                     {
                         "service": "test.automation",
                         "data_template": {
-                            "some": (
-                                "{{ trigger.platform }}"
-                                " - {{ trigger.entity_id }}"
-                                " - {{ trigger.from_state.state }}"
-                                " - {{ trigger.to_state.state }}"
-                                " - {{ trigger.for }}"
+                            "some": "{{ trigger.%s }}"
+                            % "}} - {{ trigger.".join(
+                                (
+                                    "platform",
+                                    "entity_id",
+                                    "from_state.state",
+                                    "to_state.state",
+                                    "for",
+                                )
                             )
                         },
                     },
@@ -447,9 +446,7 @@ async def test_if_fires_on_change_with_bad_template(
         },
     ],
 )
-async def test_wait_template_with_trigger(
-    hass: HomeAssistant, start_ha, calls: list[ServiceCall]
-) -> None:
+async def test_wait_template_with_trigger(hass: HomeAssistant, start_ha, calls) -> None:
     """Test using wait template with 'trigger.entity_id'."""
     await hass.async_block_till_done()
 
@@ -465,9 +462,7 @@ async def test_wait_template_with_trigger(
     assert calls[0].data["some"] == "template - test.entity - hello - world - None"
 
 
-async def test_if_fires_on_change_with_for(
-    hass: HomeAssistant, calls: list[ServiceCall]
-) -> None:
+async def test_if_fires_on_change_with_for(hass: HomeAssistant, calls) -> None:
     """Test for firing on change with for."""
     assert await async_setup_component(
         hass,
@@ -506,12 +501,15 @@ async def test_if_fires_on_change_with_for(
                 "action": {
                     "service": "test.automation",
                     "data_template": {
-                        "some": (
-                            "{{ trigger.platform }}"
-                            " - {{ trigger.entity_id }}"
-                            " - {{ trigger.from_state.state }}"
-                            " - {{ trigger.to_state.state }}"
-                            " - {{ trigger.for }}"
+                        "some": "{{ trigger.%s }}"
+                        % "}} - {{ trigger.".join(
+                            (
+                                "platform",
+                                "entity_id",
+                                "from_state.state",
+                                "to_state.state",
+                                "for",
+                            )
                         )
                     },
                 },
@@ -520,7 +518,7 @@ async def test_if_fires_on_change_with_for(
     ],
 )
 async def test_if_fires_on_change_with_for_advanced(
-    hass: HomeAssistant, start_ha, calls: list[ServiceCall]
+    hass: HomeAssistant, start_ha, calls
 ) -> None:
     """Test for firing on change with for advanced."""
     context = Context()
@@ -550,12 +548,15 @@ async def test_if_fires_on_change_with_for_advanced(
                 "action": {
                     "service": "test.automation",
                     "data_template": {
-                        "some": (
-                            "{{ trigger.platform }}"
-                            " - {{ trigger.entity_id }}"
-                            " - {{ trigger.from_state.state }}"
-                            " - {{ trigger.to_state.state }}"
-                            " - {{ trigger.for }}"
+                        "some": "{{ trigger.%s }}"
+                        % "}} - {{ trigger.".join(
+                            (
+                                "platform",
+                                "entity_id",
+                                "from_state.state",
+                                "to_state.state",
+                                "for",
+                            )
                         )
                     },
                 },
@@ -564,7 +565,7 @@ async def test_if_fires_on_change_with_for_advanced(
     ],
 )
 async def test_if_fires_on_change_with_for_0_advanced(
-    hass: HomeAssistant, start_ha, calls: list[ServiceCall]
+    hass: HomeAssistant, start_ha, calls
 ) -> None:
     """Test for firing on change with for: 0 advanced."""
     context = Context()
@@ -591,12 +592,15 @@ async def test_if_fires_on_change_with_for_0_advanced(
                 "action": {
                     "service": "test.automation",
                     "data_template": {
-                        "some": (
-                            "{{ trigger.platform }}"
-                            " - {{ trigger.entity_id }}"
-                            " - {{ trigger.from_state.state }}"
-                            " - {{ trigger.to_state.state }}"
-                            " - {{ trigger.for }}"
+                        "some": "{{ trigger.%s }}"
+                        % "}} - {{ trigger.".join(
+                            (
+                                "platform",
+                                "entity_id",
+                                "from_state.state",
+                                "to_state.state",
+                                "for",
+                            )
                         )
                     },
                 },
@@ -605,7 +609,7 @@ async def test_if_fires_on_change_with_for_0_advanced(
     ],
 )
 async def test_if_fires_on_change_with_for_2(
-    hass: HomeAssistant, start_ha, calls: list[ServiceCall]
+    hass: HomeAssistant, start_ha, calls
 ) -> None:
     """Test for firing on change with for."""
     context = Context()
@@ -636,7 +640,7 @@ async def test_if_fires_on_change_with_for_2(
     ],
 )
 async def test_if_not_fires_on_change_with_for(
-    hass: HomeAssistant, start_ha, calls: list[ServiceCall]
+    hass: HomeAssistant, start_ha, calls
 ) -> None:
     """Test for firing on change with for."""
     hass.states.async_set("test.entity", "world")
@@ -670,7 +674,7 @@ async def test_if_not_fires_on_change_with_for(
     ],
 )
 async def test_if_not_fires_when_turned_off_with_for(
-    hass: HomeAssistant, start_ha, calls: list[ServiceCall]
+    hass: HomeAssistant, start_ha, calls
 ) -> None:
     """Test for firing on change with for."""
     hass.states.async_set("test.entity", "world")
@@ -708,7 +712,7 @@ async def test_if_not_fires_when_turned_off_with_for(
     ],
 )
 async def test_if_fires_on_change_with_for_template_1(
-    hass: HomeAssistant, start_ha, calls: list[ServiceCall]
+    hass: HomeAssistant, start_ha, calls
 ) -> None:
     """Test for firing on change with for template."""
     hass.states.async_set("test.entity", "world")
@@ -736,7 +740,7 @@ async def test_if_fires_on_change_with_for_template_1(
     ],
 )
 async def test_if_fires_on_change_with_for_template_2(
-    hass: HomeAssistant, start_ha, calls: list[ServiceCall]
+    hass: HomeAssistant, start_ha, calls
 ) -> None:
     """Test for firing on change with for template."""
     hass.states.async_set("test.entity", "world")
@@ -764,7 +768,7 @@ async def test_if_fires_on_change_with_for_template_2(
     ],
 )
 async def test_if_fires_on_change_with_for_template_3(
-    hass: HomeAssistant, start_ha, calls: list[ServiceCall]
+    hass: HomeAssistant, start_ha, calls
 ) -> None:
     """Test for firing on change with for template."""
     hass.states.async_set("test.entity", "world")
@@ -791,9 +795,7 @@ async def test_if_fires_on_change_with_for_template_3(
         },
     ],
 )
-async def test_invalid_for_template_1(
-    hass: HomeAssistant, start_ha, calls: list[ServiceCall]
-) -> None:
+async def test_invalid_for_template_1(hass: HomeAssistant, start_ha, calls) -> None:
     """Test for invalid for template."""
     with mock.patch.object(template_trigger, "_LOGGER") as mock_logger:
         hass.states.async_set("test.entity", "world")
@@ -801,56 +803,56 @@ async def test_invalid_for_template_1(
         assert mock_logger.error.called
 
 
-async def test_if_fires_on_time_change(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory, calls: list[ServiceCall]
-) -> None:
+async def test_if_fires_on_time_change(hass: HomeAssistant, calls) -> None:
     """Test for firing on time changes."""
     start_time = dt_util.utcnow() + timedelta(hours=24)
     time_that_will_not_match_right_away = start_time.replace(minute=1, second=0)
-    freezer.move_to(time_that_will_not_match_right_away)
-    assert await async_setup_component(
-        hass,
-        automation.DOMAIN,
-        {
-            automation.DOMAIN: {
-                "trigger": {
-                    "platform": "template",
-                    "value_template": "{{ utcnow().minute % 2 == 0 }}",
-                },
-                "action": {"service": "test.automation"},
-            }
-        },
-    )
-    await hass.async_block_till_done()
-    assert len(calls) == 0
+    with patch(
+        "homeassistant.util.dt.utcnow", return_value=time_that_will_not_match_right_away
+    ):
+        assert await async_setup_component(
+            hass,
+            automation.DOMAIN,
+            {
+                automation.DOMAIN: {
+                    "trigger": {
+                        "platform": "template",
+                        "value_template": "{{ utcnow().minute % 2 == 0 }}",
+                    },
+                    "action": {"service": "test.automation"},
+                }
+            },
+        )
+        await hass.async_block_till_done()
+        assert len(calls) == 0
 
     # Trigger once (match template)
     first_time = start_time.replace(minute=2, second=0)
-    freezer.move_to(first_time)
-    async_fire_time_changed(hass, first_time)
-    await hass.async_block_till_done()
+    with patch("homeassistant.util.dt.utcnow", return_value=first_time):
+        async_fire_time_changed(hass, first_time)
+        await hass.async_block_till_done()
     assert len(calls) == 1
 
     # Trigger again (match template)
     second_time = start_time.replace(minute=4, second=0)
-    freezer.move_to(second_time)
-    async_fire_time_changed(hass, second_time)
-    await hass.async_block_till_done()
+    with patch("homeassistant.util.dt.utcnow", return_value=second_time):
+        async_fire_time_changed(hass, second_time)
+        await hass.async_block_till_done()
     await hass.async_block_till_done()
     assert len(calls) == 1
 
     # Trigger again (do not match template)
     third_time = start_time.replace(minute=5, second=0)
-    freezer.move_to(third_time)
-    async_fire_time_changed(hass, third_time)
-    await hass.async_block_till_done()
+    with patch("homeassistant.util.dt.utcnow", return_value=third_time):
+        async_fire_time_changed(hass, third_time)
+        await hass.async_block_till_done()
     await hass.async_block_till_done()
     assert len(calls) == 1
 
     # Trigger again (match template)
     forth_time = start_time.replace(minute=8, second=0)
-    freezer.move_to(forth_time)
-    async_fire_time_changed(hass, forth_time)
-    await hass.async_block_till_done()
+    with patch("homeassistant.util.dt.utcnow", return_value=forth_time):
+        async_fire_time_changed(hass, forth_time)
+        await hass.async_block_till_done()
     await hass.async_block_till_done()
     assert len(calls) == 2

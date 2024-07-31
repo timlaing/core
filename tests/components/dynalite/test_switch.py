@@ -1,5 +1,4 @@
 """Test Dynalite switch."""
-
 from unittest.mock import Mock
 
 from dynalite_devices_lib.switch import DynalitePresetSwitchDevice

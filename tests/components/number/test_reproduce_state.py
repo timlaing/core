@@ -1,5 +1,4 @@
 """Test reproduce state for Number entities."""
-
 import pytest
 
 from homeassistant.components.number.const import (

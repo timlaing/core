@@ -1,5 +1,4 @@
 """nuki integration helpers."""
-
 from homeassistant import exceptions
 
 

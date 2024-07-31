@@ -1,5 +1,4 @@
 """Support for ISY number entities."""
-
 from __future__ import annotations
 
 from dataclasses import replace

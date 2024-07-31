@@ -1,5 +1,4 @@
 """PyTest fixtures and test helpers."""
-
 from collections.abc import Awaitable, Callable, Coroutine
 import time
 from typing import Any
@@ -17,7 +16,7 @@ from homeassistant.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
-type ComponentSetup = Callable[[], Awaitable[None]]
+ComponentSetup = Callable[[], Awaitable[None]]
 
 CLIENT_ID = "1234"
 CLIENT_SECRET = "5678"

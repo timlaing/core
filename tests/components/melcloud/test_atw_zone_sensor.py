@@ -1,5 +1,4 @@
 """Test the MELCloud ATW zone sensor."""
-
 from unittest.mock import patch
 
 import pytest

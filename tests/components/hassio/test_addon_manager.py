@@ -1,5 +1,4 @@
 """Test the addon manager."""
-
 from __future__ import annotations
 
 import asyncio
@@ -56,7 +55,7 @@ def mock_addon_installed(
 
 
 @pytest.fixture(name="get_addon_discovery_info")
-def get_addon_discovery_info_fixture() -> Generator[AsyncMock]:
+def get_addon_discovery_info_fixture() -> Generator[AsyncMock, None, None]:
     """Mock get add-on discovery info."""
     with patch(
         "homeassistant.components.hassio.addon_manager.async_get_addon_discovery_info"
@@ -65,7 +64,7 @@ def get_addon_discovery_info_fixture() -> Generator[AsyncMock]:
 
 
 @pytest.fixture(name="addon_store_info")
-def addon_store_info_fixture() -> Generator[AsyncMock]:
+def addon_store_info_fixture() -> Generator[AsyncMock, None, None]:
     """Mock Supervisor add-on store info."""
     with patch(
         "homeassistant.components.hassio.addon_manager.async_get_addon_store_info"
@@ -80,7 +79,7 @@ def addon_store_info_fixture() -> Generator[AsyncMock]:
 
 
 @pytest.fixture(name="addon_info")
-def addon_info_fixture() -> Generator[AsyncMock]:
+def addon_info_fixture() -> Generator[AsyncMock, None, None]:
     """Mock Supervisor add-on info."""
     with patch(
         "homeassistant.components.hassio.addon_manager.async_get_addon_info",
@@ -97,7 +96,7 @@ def addon_info_fixture() -> Generator[AsyncMock]:
 
 
 @pytest.fixture(name="set_addon_options")
-def set_addon_options_fixture() -> Generator[AsyncMock]:
+def set_addon_options_fixture() -> Generator[AsyncMock, None, None]:
     """Mock set add-on options."""
     with patch(
         "homeassistant.components.hassio.addon_manager.async_set_addon_options"
@@ -106,7 +105,7 @@ def set_addon_options_fixture() -> Generator[AsyncMock]:
 
 
 @pytest.fixture(name="install_addon")
-def install_addon_fixture() -> Generator[AsyncMock]:
+def install_addon_fixture() -> Generator[AsyncMock, None, None]:
     """Mock install add-on."""
     with patch(
         "homeassistant.components.hassio.addon_manager.async_install_addon"
@@ -115,7 +114,7 @@ def install_addon_fixture() -> Generator[AsyncMock]:
 
 
 @pytest.fixture(name="uninstall_addon")
-def uninstall_addon_fixture() -> Generator[AsyncMock]:
+def uninstall_addon_fixture() -> Generator[AsyncMock, None, None]:
     """Mock uninstall add-on."""
     with patch(
         "homeassistant.components.hassio.addon_manager.async_uninstall_addon"
@@ -124,7 +123,7 @@ def uninstall_addon_fixture() -> Generator[AsyncMock]:
 
 
 @pytest.fixture(name="start_addon")
-def start_addon_fixture() -> Generator[AsyncMock]:
+def start_addon_fixture() -> Generator[AsyncMock, None, None]:
     """Mock start add-on."""
     with patch(
         "homeassistant.components.hassio.addon_manager.async_start_addon"
@@ -133,7 +132,7 @@ def start_addon_fixture() -> Generator[AsyncMock]:
 
 
 @pytest.fixture(name="restart_addon")
-def restart_addon_fixture() -> Generator[AsyncMock]:
+def restart_addon_fixture() -> Generator[AsyncMock, None, None]:
     """Mock restart add-on."""
     with patch(
         "homeassistant.components.hassio.addon_manager.async_restart_addon"
@@ -142,7 +141,7 @@ def restart_addon_fixture() -> Generator[AsyncMock]:
 
 
 @pytest.fixture(name="stop_addon")
-def stop_addon_fixture() -> Generator[AsyncMock]:
+def stop_addon_fixture() -> Generator[AsyncMock, None, None]:
     """Mock stop add-on."""
     with patch(
         "homeassistant.components.hassio.addon_manager.async_stop_addon"
@@ -151,7 +150,7 @@ def stop_addon_fixture() -> Generator[AsyncMock]:
 
 
 @pytest.fixture(name="create_backup")
-def create_backup_fixture() -> Generator[AsyncMock]:
+def create_backup_fixture() -> Generator[AsyncMock, None, None]:
     """Mock create backup."""
     with patch(
         "homeassistant.components.hassio.addon_manager.async_create_backup"
@@ -160,7 +159,7 @@ def create_backup_fixture() -> Generator[AsyncMock]:
 
 
 @pytest.fixture(name="update_addon")
-def mock_update_addon() -> Generator[AsyncMock]:
+def mock_update_addon() -> Generator[AsyncMock, None, None]:
     """Mock update add-on."""
     with patch(
         "homeassistant.components.hassio.addon_manager.async_update_addon"
@@ -198,12 +197,12 @@ async def test_not_available_raises_exception(
     with pytest.raises(AddonError) as err:
         await addon_manager.async_install_addon()
 
-    assert str(err.value) == "Test add-on is not available"
+    assert str(err.value) == "Test add-on is not available anymore"
 
     with pytest.raises(AddonError) as err:
         await addon_manager.async_update_addon()
 
-    assert str(err.value) == "Test add-on is not available"
+    assert str(err.value) == "Test add-on is not available anymore"
 
 
 async def test_get_addon_discovery_info(

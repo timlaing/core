@@ -1,5 +1,6 @@
 """Constants for google_travel_time tests."""
 
+
 from homeassistant.components.google_travel_time.const import (
     CONF_DESTINATION,
     CONF_ORIGIN,
@@ -10,10 +11,4 @@ MOCK_CONFIG = {
     CONF_API_KEY: "api_key",
     CONF_ORIGIN: "location1",
     CONF_DESTINATION: "location2",
-}
-
-RECONFIGURE_CONFIG = {
-    CONF_API_KEY: "api_key2",
-    CONF_ORIGIN: "location3",
-    CONF_DESTINATION: "location4",
 }

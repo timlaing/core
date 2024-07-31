@@ -1,5 +1,4 @@
 """Test inputs."""
-
 import pytest
 
 from homeassistant.util.yaml import (

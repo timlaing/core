@@ -1,5 +1,4 @@
 """Test the Home Assistant Hardware silabs multiprotocol addon manager."""
-
 from __future__ import annotations
 
 from collections.abc import Generator
@@ -11,7 +10,7 @@ import pytest
 from homeassistant.components.hassio import AddonError, AddonInfo, AddonState, HassIO
 from homeassistant.components.hassio.handler import HassioAPIError
 from homeassistant.components.homeassistant_hardware import silabs_multiprotocol_addon
-from homeassistant.components.zha import DOMAIN as ZHA_DOMAIN
+from homeassistant.components.zha.core.const import DOMAIN as ZHA_DOMAIN
 from homeassistant.config_entries import ConfigEntry, ConfigFlow
 from homeassistant.const import EVENT_COMPONENT_LOADED
 from homeassistant.core import HomeAssistant, callback
@@ -95,8 +94,8 @@ class FakeOptionsFlow(silabs_multiprotocol_addon.OptionsFlowHandler):
 
 @pytest.fixture(autouse=True)
 def config_flow_handler(
-    hass: HomeAssistant, current_request_with_host: None
-) -> Generator[None]:
+    hass: HomeAssistant, current_request_with_host: Any
+) -> Generator[FakeConfigFlow, None, None]:
     """Fixture for a test config flow."""
     mock_platform(hass, f"{TEST_DOMAIN}.config_flow")
     with mock_config_flow(TEST_DOMAIN, FakeConfigFlow):
@@ -104,7 +103,7 @@ def config_flow_handler(
 
 
 @pytest.fixture
-def options_flow_poll_addon_state() -> Generator[None]:
+def options_flow_poll_addon_state() -> Generator[None, None, None]:
     """Fixture for patching options flow addon state polling."""
     with patch(
         "homeassistant.components.homeassistant_hardware.silabs_multiprotocol_addon.WaitingAddonManager.async_wait_until_addon_state"
@@ -113,7 +112,7 @@ def options_flow_poll_addon_state() -> Generator[None]:
 
 
 @pytest.fixture(autouse=True)
-def hassio_integration(hass: HomeAssistant) -> Generator[None]:
+def hassio_integration(hass: HomeAssistant) -> Generator[None, None, None]:
     """Fixture to mock the `hassio` integration."""
     mock_component(hass, "hassio")
     hass.data["hassio"] = Mock(spec_set=HassIO)
@@ -148,7 +147,7 @@ class MockMultiprotocolPlatform(MockPlatform):
 @pytest.fixture
 def mock_multiprotocol_platform(
     hass: HomeAssistant,
-) -> Generator[FakeConfigFlow]:
+) -> Generator[FakeConfigFlow, None, None]:
     """Fixture for a test silabs multiprotocol platform."""
     hass.config.components.add(TEST_DOMAIN)
     platform = MockMultiprotocolPlatform()
@@ -164,17 +163,20 @@ def get_suggested(schema, key):
                 return None
             return k.description["suggested_value"]
     # Wanted key absent from schema
-    raise KeyError("Wanted key absent from schema")
+    raise Exception
 
 
 @patch(
     "homeassistant.components.homeassistant_hardware.silabs_multiprotocol_addon.ADDON_STATE_POLL_INTERVAL",
     0,
 )
-@pytest.mark.usefixtures(
-    "addon_store_info", "addon_info", "install_addon", "uninstall_addon"
-)
-async def test_uninstall_addon_waiting(hass: HomeAssistant) -> None:
+async def test_uninstall_addon_waiting(
+    hass: HomeAssistant,
+    addon_store_info,
+    addon_info,
+    install_addon,
+    uninstall_addon,
+):
     """Test the synchronous addon uninstall helper."""
 
     multipan_manager = await silabs_multiprotocol_addon.get_multiprotocol_addon_manager(
@@ -227,7 +229,7 @@ async def test_option_flow_install_multi_pan_addon(
     config_entry.add_to_hass(hass)
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "addon_not_installed"
 
     result = await hass.config_entries.options.async_configure(
@@ -236,15 +238,17 @@ async def test_option_flow_install_multi_pan_addon(
             "enable_multi_pan": True,
         },
     )
-    assert result["type"] is FlowResultType.SHOW_PROGRESS
+    assert result["type"] == FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "install_addon"
     assert result["progress_action"] == "install_addon"
 
-    await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_configure(result["flow_id"])
+    assert result["type"] == FlowResultType.SHOW_PROGRESS_DONE
+    assert result["step_id"] == "configure_addon"
     install_addon.assert_called_once_with(hass, "core_silabs_multiprotocol")
 
     result = await hass.config_entries.options.async_configure(result["flow_id"])
-    assert result["type"] is FlowResultType.SHOW_PROGRESS
+    assert result["type"] == FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_addon"
     set_addon_options.assert_called_once_with(
         hass,
@@ -259,11 +263,13 @@ async def test_option_flow_install_multi_pan_addon(
         },
     )
 
-    await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_configure(result["flow_id"])
+    assert result["type"] == FlowResultType.SHOW_PROGRESS_DONE
+    assert result["step_id"] == "finish_addon_setup"
     start_addon.assert_called_once_with(hass, "core_silabs_multiprotocol")
 
     result = await hass.config_entries.options.async_configure(result["flow_id"])
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
 
 
 async def test_option_flow_install_multi_pan_addon_zha(
@@ -287,14 +293,7 @@ async def test_option_flow_install_multi_pan_addon_zha(
     config_entry.add_to_hass(hass)
 
     zha_config_entry = MockConfigEntry(
-        data={
-            "device": {
-                "path": "/dev/ttyTEST123",
-                "baudrate": 115200,
-                "flow_control": None,
-            },
-            "radio_type": "ezsp",
-        },
+        data={"device": {"path": "/dev/ttyTEST123"}, "radio_type": "ezsp"},
         domain=ZHA_DOMAIN,
         options={},
         title="Test",
@@ -302,7 +301,7 @@ async def test_option_flow_install_multi_pan_addon_zha(
     zha_config_entry.add_to_hass(hass)
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "addon_not_installed"
 
     result = await hass.config_entries.options.async_configure(
@@ -311,11 +310,13 @@ async def test_option_flow_install_multi_pan_addon_zha(
             "enable_multi_pan": True,
         },
     )
-    assert result["type"] is FlowResultType.SHOW_PROGRESS
+    assert result["type"] == FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "install_addon"
     assert result["progress_action"] == "install_addon"
 
-    await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_configure(result["flow_id"])
+    assert result["type"] == FlowResultType.SHOW_PROGRESS_DONE
+    assert result["step_id"] == "configure_addon"
     install_addon.assert_called_once_with(hass, "core_silabs_multiprotocol")
 
     multipan_manager = await silabs_multiprotocol_addon.get_multiprotocol_addon_manager(
@@ -327,7 +328,7 @@ async def test_option_flow_install_multi_pan_addon_zha(
         return_value=11,
     ):
         result = await hass.config_entries.options.async_configure(result["flow_id"])
-    assert result["type"] is FlowResultType.SHOW_PROGRESS
+    assert result["type"] == FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_addon"
     set_addon_options.assert_called_once_with(
         hass,
@@ -347,18 +348,20 @@ async def test_option_flow_install_multi_pan_addon_zha(
     assert zha_config_entry.data == {
         "device": {
             "path": "socket://core-silabs-multiprotocol:9999",
-            "baudrate": 115200,
-            "flow_control": None,
+            "baudrate": 57600,  # ZHA default
+            "flow_control": "software",  # ZHA default
         },
         "radio_type": "ezsp",
     }
     assert zha_config_entry.title == "Test Multiprotocol"
 
-    await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_configure(result["flow_id"])
+    assert result["type"] == FlowResultType.SHOW_PROGRESS_DONE
+    assert result["step_id"] == "finish_addon_setup"
     start_addon.assert_called_once_with(hass, "core_silabs_multiprotocol")
 
     result = await hass.config_entries.options.async_configure(result["flow_id"])
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
 
 
 async def test_option_flow_install_multi_pan_addon_zha_other_radio(
@@ -397,7 +400,7 @@ async def test_option_flow_install_multi_pan_addon_zha_other_radio(
     zha_config_entry.add_to_hass(hass)
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "addon_not_installed"
 
     result = await hass.config_entries.options.async_configure(
@@ -406,16 +409,18 @@ async def test_option_flow_install_multi_pan_addon_zha_other_radio(
             "enable_multi_pan": True,
         },
     )
-    assert result["type"] is FlowResultType.SHOW_PROGRESS
+    assert result["type"] == FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "install_addon"
     assert result["progress_action"] == "install_addon"
 
-    await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_configure(result["flow_id"])
+    assert result["type"] == FlowResultType.SHOW_PROGRESS_DONE
+    assert result["step_id"] == "configure_addon"
     install_addon.assert_called_once_with(hass, "core_silabs_multiprotocol")
 
     addon_info.return_value["hostname"] = "core-silabs-multiprotocol"
     result = await hass.config_entries.options.async_configure(result["flow_id"])
-    assert result["type"] is FlowResultType.SHOW_PROGRESS
+    assert result["type"] == FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_addon"
     set_addon_options.assert_called_once_with(
         hass,
@@ -430,11 +435,13 @@ async def test_option_flow_install_multi_pan_addon_zha_other_radio(
         },
     )
 
-    await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_configure(result["flow_id"])
+    assert result["type"] == FlowResultType.SHOW_PROGRESS_DONE
+    assert result["step_id"] == "finish_addon_setup"
     start_addon.assert_called_once_with(hass, "core_silabs_multiprotocol")
 
     result = await hass.config_entries.options.async_configure(result["flow_id"])
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
 
     # Check the ZHA entry data is not changed
     assert zha_config_entry.data == {
@@ -466,7 +473,7 @@ async def test_option_flow_non_hassio(
     ):
         result = await hass.config_entries.options.async_init(config_entry.entry_id)
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == FlowResultType.ABORT
     assert result["reason"] == "not_hassio"
 
 
@@ -487,11 +494,11 @@ async def test_option_flow_addon_installed_other_device(
     config_entry.add_to_hass(hass)
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "addon_installed_other_device"
 
     result = await hass.config_entries.options.async_configure(result["flow_id"], {})
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
 
 
 @pytest.mark.parametrize(
@@ -525,30 +532,30 @@ async def test_option_flow_addon_installed_same_device_reconfigure_unexpected_us
     config_entry.add_to_hass(hass)
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    assert result["type"] is FlowResultType.MENU
+    assert result["type"] == FlowResultType.MENU
     assert result["step_id"] == "addon_menu"
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         {"next_step_id": "reconfigure_addon"},
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "notify_unknown_multipan_user"
 
     result = await hass.config_entries.options.async_configure(result["flow_id"], {})
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "change_channel"
     assert get_suggested(result["data_schema"].schema, "channel") == suggested_channel
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], {"channel": "14"}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "notify_channel_change"
     assert result["description_placeholders"] == {"delay_minutes": "5"}
 
     result = await hass.config_entries.options.async_configure(result["flow_id"], {})
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
 
     assert mock_multiprotocol_platform.change_channel_calls == [(14, 300)]
     assert multipan_manager._channel == 14
@@ -584,7 +591,7 @@ async def test_option_flow_addon_installed_same_device_reconfigure_expected_user
     config_entry.add_to_hass(hass)
 
     mock_multiprotocol_platforms = {}
-    for domain in ("otbr", "zha"):
+    for domain in ["otbr", "zha"]:
         mock_multiprotocol_platform = MockMultiprotocolPlatform()
         mock_multiprotocol_platforms[domain] = mock_multiprotocol_platform
         mock_multiprotocol_platform.channel = configured_channel
@@ -598,28 +605,28 @@ async def test_option_flow_addon_installed_same_device_reconfigure_expected_user
     await hass.async_block_till_done()
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    assert result["type"] is FlowResultType.MENU
+    assert result["type"] == FlowResultType.MENU
     assert result["step_id"] == "addon_menu"
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         {"next_step_id": "reconfigure_addon"},
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "change_channel"
     assert get_suggested(result["data_schema"].schema, "channel") == suggested_channel
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], {"channel": "14"}
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "notify_channel_change"
     assert result["description_placeholders"] == {"delay_minutes": "5"}
 
     result = await hass.config_entries.options.async_configure(result["flow_id"], {})
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
 
-    for domain in ("otbr", "zha"):
+    for domain in ["otbr", "zha"]:
         assert mock_multiprotocol_platforms[domain].change_channel_calls == [(14, 300)]
     assert multipan_manager._channel == 14
 
@@ -661,14 +668,14 @@ async def test_option_flow_addon_installed_same_device_uninstall(
     zha_config_entry.add_to_hass(hass)
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    assert result["type"] is FlowResultType.MENU
+    assert result["type"] == FlowResultType.MENU
     assert result["step_id"] == "addon_menu"
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         {"next_step_id": "uninstall_addon"},
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "uninstall_addon"
 
     # Make sure the flasher addon is installed
@@ -682,31 +689,37 @@ async def test_option_flow_addon_installed_same_device_uninstall(
         result["flow_id"], {silabs_multiprotocol_addon.CONF_DISABLE_MULTI_PAN: True}
     )
 
-    assert result["type"] is FlowResultType.SHOW_PROGRESS
+    assert result["type"] == FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "install_flasher_addon"
     assert result["progress_action"] == "install_addon"
 
-    await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_configure(result["flow_id"])
+    assert result["type"] == FlowResultType.SHOW_PROGRESS_DONE
+    assert result["step_id"] == "configure_flasher_addon"
 
     result = await hass.config_entries.options.async_configure(result["flow_id"])
-    assert result["type"] is FlowResultType.SHOW_PROGRESS
+    assert result["type"] == FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "uninstall_multiprotocol_addon"
     assert result["progress_action"] == "uninstall_multiprotocol_addon"
 
-    await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_configure(result["flow_id"])
     uninstall_addon.assert_called_once_with(hass, "core_silabs_multiprotocol")
+    assert result["type"] == FlowResultType.SHOW_PROGRESS_DONE
+    assert result["step_id"] == "start_flasher_addon"
 
     result = await hass.config_entries.options.async_configure(result["flow_id"])
-    assert result["type"] is FlowResultType.SHOW_PROGRESS
+    assert result["type"] == FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_flasher_addon"
     assert result["progress_action"] == "start_flasher_addon"
     assert result["description_placeholders"] == {"addon_name": "Silicon Labs Flasher"}
 
-    await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_configure(result["flow_id"])
     install_addon.assert_called_once_with(hass, "core_silabs_flasher")
+    assert result["type"] == FlowResultType.SHOW_PROGRESS_DONE
+    assert result["step_id"] == "flashing_complete"
 
     result = await hass.config_entries.options.async_configure(result["flow_id"])
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
 
     # Check the ZHA config entry data is updated
     assert zha_config_entry.data == {
@@ -745,21 +758,21 @@ async def test_option_flow_addon_installed_same_device_do_not_uninstall_multi_pa
     config_entry.add_to_hass(hass)
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    assert result["type"] is FlowResultType.MENU
+    assert result["type"] == FlowResultType.MENU
     assert result["step_id"] == "addon_menu"
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         {"next_step_id": "uninstall_addon"},
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "uninstall_addon"
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], {silabs_multiprotocol_addon.CONF_DISABLE_MULTI_PAN: False}
     )
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
 
 
 async def test_option_flow_flasher_already_running_failure(
@@ -788,14 +801,14 @@ async def test_option_flow_flasher_already_running_failure(
     config_entry.add_to_hass(hass)
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    assert result["type"] is FlowResultType.MENU
+    assert result["type"] == FlowResultType.MENU
     assert result["step_id"] == "addon_menu"
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         {"next_step_id": "uninstall_addon"},
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "uninstall_addon"
 
     # The flasher addon is already installed and running, this is bad
@@ -805,7 +818,7 @@ async def test_option_flow_flasher_already_running_failure(
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], {silabs_multiprotocol_addon.CONF_DISABLE_MULTI_PAN: True}
     )
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == FlowResultType.ABORT
     assert result["reason"] == "addon_already_running"
 
 
@@ -835,14 +848,14 @@ async def test_option_flow_addon_installed_same_device_flasher_already_installed
     config_entry.add_to_hass(hass)
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    assert result["type"] is FlowResultType.MENU
+    assert result["type"] == FlowResultType.MENU
     assert result["step_id"] == "addon_menu"
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         {"next_step_id": "uninstall_addon"},
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "uninstall_addon"
 
     addon_store_info.return_value = {
@@ -854,15 +867,17 @@ async def test_option_flow_addon_installed_same_device_flasher_already_installed
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], {silabs_multiprotocol_addon.CONF_DISABLE_MULTI_PAN: True}
     )
-    assert result["type"] is FlowResultType.SHOW_PROGRESS
+    assert result["type"] == FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "uninstall_multiprotocol_addon"
     assert result["progress_action"] == "uninstall_multiprotocol_addon"
 
-    await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_configure(result["flow_id"])
     uninstall_addon.assert_called_once_with(hass, "core_silabs_multiprotocol")
+    assert result["type"] == FlowResultType.SHOW_PROGRESS_DONE
+    assert result["step_id"] == "start_flasher_addon"
 
     result = await hass.config_entries.options.async_configure(result["flow_id"])
-    assert result["type"] is FlowResultType.SHOW_PROGRESS
+    assert result["type"] == FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_flasher_addon"
     assert result["progress_action"] == "start_flasher_addon"
     assert result["description_placeholders"] == {"addon_name": "Silicon Labs Flasher"}
@@ -872,11 +887,13 @@ async def test_option_flow_addon_installed_same_device_flasher_already_installed
         "available": True,
         "state": "not_running",
     }
-    await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_configure(result["flow_id"])
     install_addon.assert_not_called()
+    assert result["type"] == FlowResultType.SHOW_PROGRESS_DONE
+    assert result["step_id"] == "flashing_complete"
 
     result = await hass.config_entries.options.async_configure(result["flow_id"])
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
 
 
 async def test_option_flow_flasher_install_failure(
@@ -916,14 +933,14 @@ async def test_option_flow_flasher_install_failure(
     zha_config_entry.add_to_hass(hass)
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    assert result["type"] is FlowResultType.MENU
+    assert result["type"] == FlowResultType.MENU
     assert result["step_id"] == "addon_menu"
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         {"next_step_id": "uninstall_addon"},
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "uninstall_addon"
 
     addon_store_info.return_value = {
@@ -936,15 +953,17 @@ async def test_option_flow_flasher_install_failure(
         result["flow_id"], {silabs_multiprotocol_addon.CONF_DISABLE_MULTI_PAN: True}
     )
 
-    assert result["type"] is FlowResultType.SHOW_PROGRESS
+    assert result["type"] == FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "install_flasher_addon"
     assert result["progress_action"] == "install_addon"
 
-    await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_configure(result["flow_id"])
+    assert result["type"] == FlowResultType.SHOW_PROGRESS_DONE
+    assert result["step_id"] == "install_failed"
     install_addon.assert_called_once_with(hass, "core_silabs_flasher")
 
     result = await hass.config_entries.options.async_configure(result["flow_id"])
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == FlowResultType.ABORT
     assert result["reason"] == "addon_install_failed"
 
 
@@ -974,38 +993,43 @@ async def test_option_flow_flasher_addon_flash_failure(
     config_entry.add_to_hass(hass)
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    assert result["type"] is FlowResultType.MENU
+    assert result["type"] == FlowResultType.MENU
     assert result["step_id"] == "addon_menu"
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         {"next_step_id": "uninstall_addon"},
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "uninstall_addon"
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], {silabs_multiprotocol_addon.CONF_DISABLE_MULTI_PAN: True}
     )
-    assert result["type"] is FlowResultType.SHOW_PROGRESS
+    assert result["type"] == FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "uninstall_multiprotocol_addon"
     assert result["progress_action"] == "uninstall_multiprotocol_addon"
 
     start_addon.side_effect = HassioAPIError("Boom")
 
-    await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_configure(result["flow_id"])
     uninstall_addon.assert_called_once_with(hass, "core_silabs_multiprotocol")
+    assert result["type"] == FlowResultType.SHOW_PROGRESS_DONE
+    assert result["step_id"] == "start_flasher_addon"
 
     result = await hass.config_entries.options.async_configure(result["flow_id"])
-    assert result["type"] is FlowResultType.SHOW_PROGRESS
+    assert result["type"] == FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_flasher_addon"
     assert result["progress_action"] == "start_flasher_addon"
     assert result["description_placeholders"] == {"addon_name": "Silicon Labs Flasher"}
 
-    await hass.async_block_till_done()
+    addon_store_info.return_value["installed"] = True
+    result = await hass.config_entries.options.async_configure(result["flow_id"])
+    assert result["type"] == FlowResultType.SHOW_PROGRESS_DONE
+    assert result["step_id"] == "flasher_failed"
 
     result = await hass.config_entries.options.async_configure(result["flow_id"])
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == FlowResultType.ABORT
     assert result["reason"] == "addon_start_failed"
     assert result["description_placeholders"]["addon_name"] == "Silicon Labs Flasher"
 
@@ -1052,21 +1076,21 @@ async def test_option_flow_uninstall_migration_initiate_failure(
     zha_config_entry.add_to_hass(hass)
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    assert result["type"] is FlowResultType.MENU
+    assert result["type"] == FlowResultType.MENU
     assert result["step_id"] == "addon_menu"
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         {"next_step_id": "uninstall_addon"},
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "uninstall_addon"
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], {silabs_multiprotocol_addon.CONF_DISABLE_MULTI_PAN: True}
     )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == FlowResultType.ABORT
     assert result["reason"] == "zha_migration_failed"
     mock_initiate_migration.assert_called_once()
 
@@ -1113,33 +1137,37 @@ async def test_option_flow_uninstall_migration_finish_failure(
     zha_config_entry.add_to_hass(hass)
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    assert result["type"] is FlowResultType.MENU
+    assert result["type"] == FlowResultType.MENU
     assert result["step_id"] == "addon_menu"
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         {"next_step_id": "uninstall_addon"},
     )
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "uninstall_addon"
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], {silabs_multiprotocol_addon.CONF_DISABLE_MULTI_PAN: True}
     )
 
-    await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_configure(result["flow_id"])
     uninstall_addon.assert_called_once_with(hass, "core_silabs_multiprotocol")
+    assert result["type"] == FlowResultType.SHOW_PROGRESS_DONE
+    assert result["step_id"] == "start_flasher_addon"
 
     result = await hass.config_entries.options.async_configure(result["flow_id"])
-    assert result["type"] is FlowResultType.SHOW_PROGRESS
+    assert result["type"] == FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_flasher_addon"
     assert result["progress_action"] == "start_flasher_addon"
     assert result["description_placeholders"] == {"addon_name": "Silicon Labs Flasher"}
 
-    await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_configure(result["flow_id"])
+    assert result["type"] == FlowResultType.SHOW_PROGRESS_DONE
+    assert result["step_id"] == "flashing_complete"
 
     result = await hass.config_entries.options.async_configure(result["flow_id"])
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == FlowResultType.ABORT
     assert result["reason"] == "zha_migration_failed"
 
 
@@ -1160,7 +1188,7 @@ async def test_option_flow_do_not_install_multi_pan_addon(
     config_entry.add_to_hass(hass)
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "addon_not_installed"
 
     result = await hass.config_entries.options.async_configure(
@@ -1169,7 +1197,7 @@ async def test_option_flow_do_not_install_multi_pan_addon(
             "enable_multi_pan": False,
         },
     )
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
 
 
 async def test_option_flow_install_multi_pan_addon_install_fails(
@@ -1194,7 +1222,7 @@ async def test_option_flow_install_multi_pan_addon_install_fails(
     config_entry.add_to_hass(hass)
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "addon_not_installed"
 
     result = await hass.config_entries.options.async_configure(
@@ -1203,15 +1231,17 @@ async def test_option_flow_install_multi_pan_addon_install_fails(
             "enable_multi_pan": True,
         },
     )
-    assert result["type"] is FlowResultType.SHOW_PROGRESS
+    assert result["type"] == FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "install_addon"
     assert result["progress_action"] == "install_addon"
 
-    await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_configure(result["flow_id"])
+    assert result["type"] == FlowResultType.SHOW_PROGRESS_DONE
+    assert result["step_id"] == "install_failed"
     install_addon.assert_called_once_with(hass, "core_silabs_multiprotocol")
 
     result = await hass.config_entries.options.async_configure(result["flow_id"])
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == FlowResultType.ABORT
     assert result["reason"] == "addon_install_failed"
 
 
@@ -1237,7 +1267,7 @@ async def test_option_flow_install_multi_pan_addon_start_fails(
     config_entry.add_to_hass(hass)
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "addon_not_installed"
 
     result = await hass.config_entries.options.async_configure(
@@ -1246,15 +1276,17 @@ async def test_option_flow_install_multi_pan_addon_start_fails(
             "enable_multi_pan": True,
         },
     )
-    assert result["type"] is FlowResultType.SHOW_PROGRESS
+    assert result["type"] == FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "install_addon"
     assert result["progress_action"] == "install_addon"
 
-    await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_configure(result["flow_id"])
+    assert result["type"] == FlowResultType.SHOW_PROGRESS_DONE
+    assert result["step_id"] == "configure_addon"
     install_addon.assert_called_once_with(hass, "core_silabs_multiprotocol")
 
     result = await hass.config_entries.options.async_configure(result["flow_id"])
-    assert result["type"] is FlowResultType.SHOW_PROGRESS
+    assert result["type"] == FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_addon"
     set_addon_options.assert_called_once_with(
         hass,
@@ -1269,11 +1301,13 @@ async def test_option_flow_install_multi_pan_addon_start_fails(
         },
     )
 
-    await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_configure(result["flow_id"])
+    assert result["type"] == FlowResultType.SHOW_PROGRESS_DONE
+    assert result["step_id"] == "start_failed"
     start_addon.assert_called_once_with(hass, "core_silabs_multiprotocol")
 
     result = await hass.config_entries.options.async_configure(result["flow_id"])
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == FlowResultType.ABORT
     assert result["reason"] == "addon_start_failed"
 
 
@@ -1299,7 +1333,7 @@ async def test_option_flow_install_multi_pan_addon_set_options_fails(
     config_entry.add_to_hass(hass)
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "addon_not_installed"
 
     result = await hass.config_entries.options.async_configure(
@@ -1308,15 +1342,17 @@ async def test_option_flow_install_multi_pan_addon_set_options_fails(
             "enable_multi_pan": True,
         },
     )
-    assert result["type"] is FlowResultType.SHOW_PROGRESS
+    assert result["type"] == FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "install_addon"
     assert result["progress_action"] == "install_addon"
 
-    await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_configure(result["flow_id"])
+    assert result["type"] == FlowResultType.SHOW_PROGRESS_DONE
+    assert result["step_id"] == "configure_addon"
     install_addon.assert_called_once_with(hass, "core_silabs_multiprotocol")
 
     result = await hass.config_entries.options.async_configure(result["flow_id"])
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == FlowResultType.ABORT
     assert result["reason"] == "addon_set_config_failed"
 
 
@@ -1339,7 +1375,7 @@ async def test_option_flow_addon_info_fails(
     config_entry.add_to_hass(hass)
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == FlowResultType.ABORT
     assert result["reason"] == "addon_info_failed"
 
 
@@ -1376,7 +1412,7 @@ async def test_option_flow_install_multi_pan_addon_zha_migration_fails_step_1(
     zha_config_entry.add_to_hass(hass)
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "addon_not_installed"
 
     result = await hass.config_entries.options.async_configure(
@@ -1385,15 +1421,17 @@ async def test_option_flow_install_multi_pan_addon_zha_migration_fails_step_1(
             "enable_multi_pan": True,
         },
     )
-    assert result["type"] is FlowResultType.SHOW_PROGRESS
+    assert result["type"] == FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "install_addon"
     assert result["progress_action"] == "install_addon"
 
-    await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_configure(result["flow_id"])
+    assert result["type"] == FlowResultType.SHOW_PROGRESS_DONE
+    assert result["step_id"] == "configure_addon"
     install_addon.assert_called_once_with(hass, "core_silabs_multiprotocol")
 
     result = await hass.config_entries.options.async_configure(result["flow_id"])
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == FlowResultType.ABORT
     assert result["reason"] == "zha_migration_failed"
     set_addon_options.assert_not_called()
 
@@ -1432,7 +1470,7 @@ async def test_option_flow_install_multi_pan_addon_zha_migration_fails_step_2(
     zha_config_entry.add_to_hass(hass)
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "addon_not_installed"
 
     result = await hass.config_entries.options.async_configure(
@@ -1441,15 +1479,17 @@ async def test_option_flow_install_multi_pan_addon_zha_migration_fails_step_2(
             "enable_multi_pan": True,
         },
     )
-    assert result["type"] is FlowResultType.SHOW_PROGRESS
+    assert result["type"] == FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "install_addon"
     assert result["progress_action"] == "install_addon"
 
-    await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_configure(result["flow_id"])
+    assert result["type"] == FlowResultType.SHOW_PROGRESS_DONE
+    assert result["step_id"] == "configure_addon"
     install_addon.assert_called_once_with(hass, "core_silabs_multiprotocol")
 
     result = await hass.config_entries.options.async_configure(result["flow_id"])
-    assert result["type"] is FlowResultType.SHOW_PROGRESS
+    assert result["type"] == FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_addon"
     set_addon_options.assert_called_once_with(
         hass,
@@ -1464,11 +1504,13 @@ async def test_option_flow_install_multi_pan_addon_zha_migration_fails_step_2(
         },
     )
 
-    await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_configure(result["flow_id"])
+    assert result["type"] == FlowResultType.SHOW_PROGRESS_DONE
+    assert result["step_id"] == "finish_addon_setup"
     start_addon.assert_called_once_with(hass, "core_silabs_multiprotocol")
 
     result = await hass.config_entries.options.async_configure(result["flow_id"])
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == FlowResultType.ABORT
     assert result["reason"] == "zha_migration_failed"
 
 
@@ -1607,16 +1649,13 @@ async def test_active_plaforms(
 async def test_check_multi_pan_addon_no_hassio(hass: HomeAssistant) -> None:
     """Test `check_multi_pan_addon` without hassio."""
 
-    with (
-        patch(
-            "homeassistant.components.homeassistant_hardware.silabs_multiprotocol_addon.is_hassio",
-            return_value=False,
-        ),
-        patch(
-            "homeassistant.components.homeassistant_hardware.silabs_multiprotocol_addon.get_multiprotocol_addon_manager",
-            autospec=True,
-        ) as mock_get_addon_manager,
-    ):
+    with patch(
+        "homeassistant.components.homeassistant_hardware.silabs_multiprotocol_addon.is_hassio",
+        return_value=False,
+    ), patch(
+        "homeassistant.components.homeassistant_hardware.silabs_multiprotocol_addon.get_multiprotocol_addon_manager",
+        autospec=True,
+    ) as mock_get_addon_manager:
         await silabs_multiprotocol_addon.check_multi_pan_addon(hass)
         mock_get_addon_manager.assert_not_called()
 
@@ -1719,12 +1758,9 @@ async def test_multi_pan_addon_using_device_not_running(
         "state": "not_running",
     }
 
-    assert (
-        await silabs_multiprotocol_addon.multi_pan_addon_using_device(
-            hass, "/dev/ttyAMA1"
-        )
-        is False
-    )
+    await silabs_multiprotocol_addon.multi_pan_addon_using_device(
+        hass, "/dev/ttyAMA1"
+    ) is False
 
 
 @pytest.mark.parametrize(
@@ -1753,9 +1789,6 @@ async def test_multi_pan_addon_using_device(
         "state": "running",
     }
 
-    assert (
-        await silabs_multiprotocol_addon.multi_pan_addon_using_device(
-            hass, "/dev/ttyAMA1"
-        )
-        is expected_result
-    )
+    await silabs_multiprotocol_addon.multi_pan_addon_using_device(
+        hass, "/dev/ttyAMA1"
+    ) is expected_result

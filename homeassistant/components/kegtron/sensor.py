@@ -1,5 +1,4 @@
 """Support for Kegtron sensors."""
-
 from __future__ import annotations
 
 from kegtron_ble import (
@@ -126,9 +125,7 @@ async def async_setup_entry(
 
 
 class KegtronBluetoothSensorEntity(
-    PassiveBluetoothProcessorEntity[
-        PassiveBluetoothDataProcessor[float | int | None, SensorUpdate]
-    ],
+    PassiveBluetoothProcessorEntity[PassiveBluetoothDataProcessor[float | int | None]],
     SensorEntity,
 ):
     """Representation of a Kegtron sensor."""

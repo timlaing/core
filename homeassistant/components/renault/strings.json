@@ -73,10 +73,9 @@
       "charge_mode": {
         "name": "Charge mode",
         "state": {
-          "always": "Always",
-          "always_charging": "Always charging",
-          "schedule_mode": "Schedule mode",
-          "scheduled": "Scheduled"
+          "always": "Instant",
+          "always_charging": "[%key:component::renault::entity::select::charge_mode::state::always%]",
+          "schedule_mode": "Planner"
         }
       }
     },

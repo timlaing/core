@@ -1,5 +1,4 @@
 """Heartbeats for Broadlink devices."""
-
 import datetime as dt
 import logging
 

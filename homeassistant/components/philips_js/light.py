@@ -1,5 +1,4 @@
 """Component to integrate ambilight for TVs exposing the Joint Space API."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -16,13 +15,14 @@ from homeassistant.components.light import (
     LightEntity,
     LightEntityFeature,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util.color import color_hsv_to_RGB, color_RGB_to_hsv
 
-from . import PhilipsTVConfigEntry
-from .coordinator import PhilipsTVDataUpdateCoordinator
+from . import PhilipsTVDataUpdateCoordinator
+from .const import DOMAIN
 from .entity import PhilipsJsEntity
 
 EFFECT_PARTITION = ": "
@@ -34,11 +34,11 @@ EFFECT_EXPERT_STYLES = {"FOLLOW_AUDIO", "FOLLOW_COLOR", "Lounge light"}
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: PhilipsTVConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the configuration entry."""
-    coordinator = config_entry.runtime_data
+    coordinator = hass.data[DOMAIN][config_entry.entry_id]
     async_add_entities([PhilipsTVLightEntity(coordinator)])
 
 
@@ -153,6 +153,7 @@ class PhilipsTVLightEntity(PhilipsJsEntity, LightEntity):
         self._attr_supported_color_modes = {ColorMode.HS, ColorMode.ONOFF}
         self._attr_supported_features = LightEntityFeature.EFFECT
         self._attr_unique_id = coordinator.unique_id
+        self._attr_icon = "mdi:television-ambient-light"
 
         self._update_from_coordinator()
 
@@ -379,12 +380,3 @@ class PhilipsTVLightEntity(PhilipsJsEntity, LightEntity):
 
         self._update_from_coordinator()
         self.async_write_ha_state()
-
-    @property
-    def available(self) -> bool:
-        """Return true if entity is available."""
-        if not super().available:
-            return False
-        if not self._tv.on:
-            return False
-        return True

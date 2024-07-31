@@ -1,5 +1,4 @@
 """Support for Oncue sensors."""
-
 from __future__ import annotations
 
 from aiooncue import OncueDevice, OncueSensor
@@ -10,6 +9,7 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     PERCENTAGE,
     EntityCategory,
@@ -25,8 +25,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
+from .const import DOMAIN
 from .entity import OncueEntity
-from .types import OncueConfigEntry
 
 SENSOR_TYPES: tuple[SensorEntityDescription, ...] = (
     SensorEntityDescription(
@@ -179,18 +179,23 @@ UNIT_MAPPINGS = {
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: OncueConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up sensors."""
-    coordinator = config_entry.runtime_data
+    coordinator: DataUpdateCoordinator[dict[str, OncueDevice]] = hass.data[DOMAIN][
+        config_entry.entry_id
+    ]
+    entities: list[OncueSensorEntity] = []
     devices = coordinator.data
-    async_add_entities(
-        OncueSensorEntity(coordinator, device_id, device, sensor, SENSOR_MAP[key])
-        for device_id, device in devices.items()
-        for key, sensor in device.sensors.items()
-        if key in SENSOR_MAP
-    )
+    for device_id, device in devices.items():
+        entities.extend(
+            OncueSensorEntity(coordinator, device_id, device, sensor, SENSOR_MAP[key])
+            for key, sensor in device.sensors.items()
+            if key in SENSOR_MAP
+        )
+
+    async_add_entities(entities)
 
 
 class OncueSensorEntity(OncueEntity, SensorEntity):

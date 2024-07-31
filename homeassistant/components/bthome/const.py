@@ -1,5 +1,4 @@
 """Constants for the BTHome Bluetooth integration."""
-
 from __future__ import annotations
 
 from typing import Final, TypedDict

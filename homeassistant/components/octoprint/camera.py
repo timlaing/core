@@ -1,5 +1,4 @@
 """Support for OctoPrint binary camera."""
-
 from __future__ import annotations
 
 from pyoctoprintapi import OctoprintClient, WebcamSettings
@@ -8,8 +7,8 @@ from homeassistant.components.mjpeg.camera import MjpegCamera
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_VERIFY_SSL
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import OctoprintDataUpdateCoordinator
 from .const import DOMAIN
@@ -39,7 +38,7 @@ async def async_setup_entry(
         [
             OctoprintCamera(
                 camera_info,
-                coordinator,
+                coordinator.device_info,
                 device_id,
                 verify_ssl,
             )
@@ -47,23 +46,19 @@ async def async_setup_entry(
     )
 
 
-class OctoprintCamera(CoordinatorEntity[OctoprintDataUpdateCoordinator], MjpegCamera):
+class OctoprintCamera(MjpegCamera):
     """Representation of an OctoPrint Camera Stream."""
 
     def __init__(
         self,
         camera_settings: WebcamSettings,
-        coordinator: OctoprintDataUpdateCoordinator,
+        device_info: DeviceInfo,
         device_id: str,
         verify_ssl: bool,
     ) -> None:
         """Initialize as a subclass of MjpegCamera."""
         super().__init__(
-            coordinator=coordinator,
-        )
-        MjpegCamera.__init__(
-            self,
-            device_info=coordinator.device_info,
+            device_info=device_info,
             mjpeg_url=camera_settings.stream_url,
             name="OctoPrint Camera",
             still_image_url=camera_settings.external_snapshot_url,

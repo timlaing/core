@@ -1,5 +1,4 @@
 """Test ESPHome alarm_control_panels."""
-
 from unittest.mock import call
 
 from aioesphomeapi import (

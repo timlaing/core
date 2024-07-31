@@ -1,5 +1,4 @@
 """Common helpers for gree test cases."""
-
 import asyncio
 import logging
 from unittest.mock import AsyncMock, Mock
@@ -69,7 +68,7 @@ def build_device_info_mock(
 
 def build_device_mock(name="fake-device-1", ipAddress="1.1.1.1", mac="aabbcc112233"):
     """Build mock device object."""
-    return Mock(
+    mock = Mock(
         device_info=build_device_info_mock(name, ipAddress, mac),
         name=name,
         bind=AsyncMock(),
@@ -89,6 +88,7 @@ def build_device_mock(name="fake-device-1", ipAddress="1.1.1.1", mac="aabbcc1122
         power_save=False,
         steady_heat=False,
     )
+    return mock
 
 
 async def async_setup_gree(hass: HomeAssistant) -> MockConfigEntry:

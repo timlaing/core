@@ -1,9 +1,7 @@
 """Support for Minut Point."""
-
 import asyncio
 import logging
 
-from aiohttp import web
 from httpx import ConnectTimeout
 from pypoint import PointSession
 import voluptuous as vol
@@ -105,7 +103,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except ConnectTimeout as err:
         _LOGGER.debug("Connection Timeout")
         raise ConfigEntryNotReady from err
-    except Exception:  # noqa: BLE001
+    except Exception:  # pylint: disable=broad-except
         _LOGGER.error("Authentication Error")
         return False
 
@@ -159,15 +157,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 
-async def handle_webhook(
-    hass: HomeAssistant, webhook_id: str, request: web.Request
-) -> None:
+async def handle_webhook(hass, webhook_id, request):
     """Handle webhook callback."""
     try:
         data = await request.json()
         _LOGGER.debug("Webhook %s: %s", webhook_id, data)
     except ValueError:
-        return
+        return None
 
     if isinstance(data, dict):
         data["webhook_id"] = webhook_id
@@ -208,8 +204,8 @@ class MinutPointClient:
             config_entries_key = f"{platform}.{DOMAIN}"
             async with self._hass.data[DATA_CONFIG_ENTRY_LOCK]:
                 if config_entries_key not in self._hass.data[CONFIG_ENTRY_IS_SETUP]:
-                    await self._hass.config_entries.async_forward_entry_setups(
-                        self._config_entry, [platform]
+                    await self._hass.config_entries.async_forward_entry_setup(
+                        self._config_entry, platform
                     )
                     self._hass.data[CONFIG_ENTRY_IS_SETUP].add(config_entries_key)
 

@@ -1,5 +1,4 @@
 """The lookin integration light platform."""
-
 from __future__ import annotations
 
 import logging

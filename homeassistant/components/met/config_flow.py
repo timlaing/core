@@ -1,18 +1,11 @@
 """Config flow to configure Met component."""
-
 from __future__ import annotations
 
 from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlow,
-    OptionsFlowWithConfigEntry,
-)
+from homeassistant import config_entries
 from homeassistant.const import (
     CONF_ELEVATION,
     CONF_LATITUDE,
@@ -21,6 +14,7 @@ from homeassistant.const import (
     UnitOfLength,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.data_entry_flow import FlowResult
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.selector import (
     NumberSelector,
@@ -52,7 +46,7 @@ def configured_instances(hass: HomeAssistant) -> set[str]:
 
 
 def _get_data_schema(
-    hass: HomeAssistant, config_entry: ConfigEntry | None = None
+    hass: HomeAssistant, config_entry: config_entries.ConfigEntry | None = None
 ) -> vol.Schema:
     """Get a schema with default values."""
     # If tracking home or no config entry is passed in, default value come from Home location
@@ -96,16 +90,20 @@ def _get_data_schema(
     )
 
 
-class MetConfigFlowHandler(ConfigFlow, domain=DOMAIN):
+class MetConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for Met component."""
 
     VERSION = 1
 
+    def __init__(self) -> None:
+        """Init MetConfigFlowHandler."""
+        self._errors: dict[str, Any] = {}
+
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow initialized by the user."""
-        errors = {}
+        self._errors = {}
 
         if user_input is not None:
             if (
@@ -115,17 +113,17 @@ class MetConfigFlowHandler(ConfigFlow, domain=DOMAIN):
                 return self.async_create_entry(
                     title=user_input[CONF_NAME], data=user_input
                 )
-            errors[CONF_NAME] = "already_configured"
+            self._errors[CONF_NAME] = "already_configured"
 
         return self.async_show_form(
             step_id="user",
             data_schema=_get_data_schema(self.hass),
-            errors=errors,
+            errors=self._errors,
         )
 
     async def async_step_onboarding(
         self, data: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow initialized by onboarding."""
         # Don't create entry if latitude or longitude isn't set.
         # Also, filters out our onboarding default location.
@@ -142,18 +140,23 @@ class MetConfigFlowHandler(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: ConfigEntry,
-    ) -> OptionsFlow:
+        config_entry: config_entries.ConfigEntry,
+    ) -> config_entries.OptionsFlow:
         """Get the options flow for Met."""
         return MetOptionsFlowHandler(config_entry)
 
 
-class MetOptionsFlowHandler(OptionsFlowWithConfigEntry):
+class MetOptionsFlowHandler(config_entries.OptionsFlow):
     """Options flow for Met component."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        """Initialize the Met OptionsFlow."""
+        self._config_entry = config_entry
+        self._errors: dict[str, Any] = {}
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Configure options for Met."""
 
         if user_input is not None:
@@ -168,4 +171,5 @@ class MetOptionsFlowHandler(OptionsFlowWithConfigEntry):
         return self.async_show_form(
             step_id="init",
             data_schema=_get_data_schema(self.hass, config_entry=self._config_entry),
+            errors=self._errors,
         )

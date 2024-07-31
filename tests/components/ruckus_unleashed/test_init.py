@@ -1,5 +1,4 @@
 """Test the Ruckus Unleashed config flow."""
-
 from unittest.mock import AsyncMock
 
 from aioruckus.const import ERROR_CONNECT_TIMEOUT, ERROR_LOGIN_INCORRECT
@@ -53,14 +52,13 @@ async def test_setup_entry_connection_error(hass: HomeAssistant) -> None:
     assert entry.state is ConfigEntryState.SETUP_RETRY
 
 
-async def test_router_device_setup(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
-) -> None:
+async def test_router_device_setup(hass: HomeAssistant) -> None:
     """Test a router device is created."""
     await init_integration(hass)
 
     device_info = DEFAULT_AP_INFO[0]
 
+    device_registry = dr.async_get(hass)
     device = device_registry.async_get_device(
         identifiers={(CONNECTION_NETWORK_MAC, device_info[API_AP_MAC])},
         connections={(CONNECTION_NETWORK_MAC, device_info[API_AP_MAC])},

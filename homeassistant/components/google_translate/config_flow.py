@@ -1,13 +1,13 @@
 """Config flow for Google Translate text-to-speech integration."""
-
 from __future__ import annotations
 
 from typing import Any
 
 import voluptuous as vol
 
+from homeassistant import config_entries
 from homeassistant.components.tts import CONF_LANG
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.data_entry_flow import FlowResult
 
 from .const import (
     CONF_TLD,
@@ -26,14 +26,14 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 )
 
 
-class GoogleTranslateConfigFlow(ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Google Translate text-to-speech."""
 
     VERSION = 1
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         if user_input is not None:
             self._async_abort_entries_match(
@@ -50,7 +50,7 @@ class GoogleTranslateConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_onboarding(
         self, data: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow initialized by onboarding."""
         return self.async_create_entry(
             title="Google Translate text-to-speech",

@@ -1,6 +1,6 @@
 """The BleBox devices integration."""
-
 import logging
+from typing import Generic, TypeVar
 
 from blebox_uniapi.box import Box
 from blebox_uniapi.error import Error
@@ -36,6 +36,8 @@ PLATFORMS = [
 ]
 
 PARALLEL_UPDATES = 0
+
+_FeatureT = TypeVar("_FeatureT", bound=Feature)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -77,7 +79,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 
-class BleBoxEntity[_FeatureT: Feature](Entity):
+class BleBoxEntity(Entity, Generic[_FeatureT]):
     """Implements a common class for entities representing a BleBox feature."""
 
     def __init__(self, feature: _FeatureT) -> None:

@@ -1,17 +1,11 @@
 """Config flow to configure the LCN integration."""
-
 from __future__ import annotations
 
 import logging
 
 import pypck
 
-from homeassistant.config_entries import (
-    SOURCE_IMPORT,
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-)
+from homeassistant import config_entries
 from homeassistant.const import (
     CONF_HOST,
     CONF_IP_ADDRESS,
@@ -20,6 +14,7 @@ from homeassistant.const import (
     CONF_USERNAME,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.typing import ConfigType
 
 from .const import CONF_DIM_MODE, CONF_SK_NUM_TRIES, DOMAIN
@@ -28,7 +23,9 @@ from .helpers import purge_device_registry, purge_entity_registry
 _LOGGER = logging.getLogger(__name__)
 
 
-def get_config_entry(hass: HomeAssistant, data: ConfigType) -> ConfigEntry | None:
+def get_config_entry(
+    hass: HomeAssistant, data: ConfigType
+) -> config_entries.ConfigEntry | None:
     """Check config entries for already configured entries based on the ip address/port."""
     return next(
         (
@@ -68,12 +65,12 @@ async def validate_connection(host_name: str, data: ConfigType) -> ConfigType:
     return data
 
 
-class LcnFlowHandler(ConfigFlow, domain=DOMAIN):
+class LcnFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a LCN config flow."""
 
     VERSION = 1
 
-    async def async_step_import(self, data: ConfigType) -> ConfigFlowResult:
+    async def async_step_import(self, data: ConfigType) -> FlowResult:
         """Import existing configuration from LCN."""
         host_name = data[CONF_HOST]
         # validate the imported connection parameters
@@ -97,7 +94,7 @@ class LcnFlowHandler(ConfigFlow, domain=DOMAIN):
 
         # check if we already have a host with the same address configured
         if entry := get_config_entry(self.hass, data):
-            entry.source = SOURCE_IMPORT
+            entry.source = config_entries.SOURCE_IMPORT
             # Cleanup entity and device registry, if we imported from configuration.yaml to
             # remove orphans when entities were removed from configuration
             purge_entity_registry(self.hass, entry.entry_id, data)

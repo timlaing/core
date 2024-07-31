@@ -1,5 +1,4 @@
 """Support for Steamist sensors."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -31,23 +30,30 @@ UNIT_MAPPINGS = {
 }
 
 
-@dataclass(frozen=True, kw_only=True)
-class SteamistSensorEntityDescription(SensorEntityDescription):
-    """Describes a Steamist sensor entity."""
+@dataclass
+class SteamistSensorEntityDescriptionMixin:
+    """Mixin for required keys."""
 
     value_fn: Callable[[SteamistStatus], int | None]
+
+
+@dataclass
+class SteamistSensorEntityDescription(
+    SensorEntityDescription, SteamistSensorEntityDescriptionMixin
+):
+    """Describes a Steamist sensor entity."""
 
 
 SENSORS: tuple[SteamistSensorEntityDescription, ...] = (
     SteamistSensorEntityDescription(
         key=_KEY_MINUTES_REMAIN,
-        translation_key="steam_minutes_remain",
+        name="Steam Minutes Remain",
         native_unit_of_measurement=UnitOfTime.MINUTES,
         value_fn=lambda status: status.minutes_remain,
     ),
     SteamistSensorEntityDescription(
         key=_KEY_TEMP,
-        translation_key="steam_temperature",
+        name="Steam Temperature",
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda status: status.temp,
@@ -73,7 +79,7 @@ async def async_setup_entry(
 
 
 class SteamistSensorEntity(SteamistEntity, SensorEntity):
-    """Representation of a Steamist steam switch."""
+    """Representation of an Steamist steam switch."""
 
     entity_description: SteamistSensorEntityDescription
 

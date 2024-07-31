@@ -1,5 +1,4 @@
 """Support for KNX/IP text."""
-
 from __future__ import annotations
 
 from xknx import XKNX

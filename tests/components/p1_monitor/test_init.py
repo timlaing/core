@@ -1,5 +1,4 @@
 """Tests for the P1 Monitor integration."""
-
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from p1monitor import P1MonitorConnectionError
@@ -29,7 +28,7 @@ async def test_load_unload_config_entry(
 
 
 @patch(
-    "homeassistant.components.p1_monitor.coordinator.P1Monitor._request",
+    "homeassistant.components.p1_monitor.P1Monitor._request",
     side_effect=P1MonitorConnectionError,
 )
 async def test_config_entry_not_ready(

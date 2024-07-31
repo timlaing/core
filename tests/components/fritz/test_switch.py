@@ -1,5 +1,4 @@
 """Tests for Fritz!Tools switch platform."""
-
 from __future__ import annotations
 
 import pytest
@@ -8,6 +7,7 @@ from homeassistant.components.fritz.const import DOMAIN
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.setup import async_setup_component
 
 from .const import MOCK_FB_SERVICES, MOCK_USER_DATA
 
@@ -15,8 +15,6 @@ from tests.common import MockConfigEntry
 
 MOCK_WLANCONFIGS_SAME_SSID: dict[str, dict] = {
     "WLANConfiguration1": {
-        "GetSSID": {"NewSSID": "WiFi"},
-        "GetSecurityKeys": {"NewKeyPassphrase": "mysecret"},
         "GetInfo": {
             "NewEnable": True,
             "NewStatus": "Up",
@@ -36,11 +34,9 @@ MOCK_WLANCONFIGS_SAME_SSID: dict[str, dict] = {
             "NewMinCharsPSK": 64,
             "NewMaxCharsPSK": 64,
             "NewAllowedCharsPSK": "0123456789ABCDEFabcdef",
-        },
+        }
     },
     "WLANConfiguration2": {
-        "GetSSID": {"NewSSID": "WiFi"},
-        "GetSecurityKeys": {"NewKeyPassphrase": "mysecret"},
         "GetInfo": {
             "NewEnable": True,
             "NewStatus": "Up",
@@ -60,13 +56,11 @@ MOCK_WLANCONFIGS_SAME_SSID: dict[str, dict] = {
             "NewMinCharsPSK": 64,
             "NewMaxCharsPSK": 64,
             "NewAllowedCharsPSK": "0123456789ABCDEFabcdef",
-        },
+        }
     },
 }
 MOCK_WLANCONFIGS_DIFF_SSID: dict[str, dict] = {
     "WLANConfiguration1": {
-        "GetSSID": {"NewSSID": "WiFi"},
-        "GetSecurityKeys": {"NewKeyPassphrase": "mysecret"},
         "GetInfo": {
             "NewEnable": True,
             "NewStatus": "Up",
@@ -86,11 +80,9 @@ MOCK_WLANCONFIGS_DIFF_SSID: dict[str, dict] = {
             "NewMinCharsPSK": 64,
             "NewMaxCharsPSK": 64,
             "NewAllowedCharsPSK": "0123456789ABCDEFabcdef",
-        },
+        }
     },
     "WLANConfiguration2": {
-        "GetSSID": {"NewSSID": "WiFi2"},
-        "GetSecurityKeys": {"NewKeyPassphrase": "mysecret"},
         "GetInfo": {
             "NewEnable": True,
             "NewStatus": "Up",
@@ -110,13 +102,11 @@ MOCK_WLANCONFIGS_DIFF_SSID: dict[str, dict] = {
             "NewMinCharsPSK": 64,
             "NewMaxCharsPSK": 64,
             "NewAllowedCharsPSK": "0123456789ABCDEFabcdef",
-        },
+        }
     },
 }
 MOCK_WLANCONFIGS_DIFF2_SSID: dict[str, dict] = {
     "WLANConfiguration1": {
-        "GetSSID": {"NewSSID": "WiFi"},
-        "GetSecurityKeys": {"NewKeyPassphrase": "mysecret"},
         "GetInfo": {
             "NewEnable": True,
             "NewStatus": "Up",
@@ -136,11 +126,9 @@ MOCK_WLANCONFIGS_DIFF2_SSID: dict[str, dict] = {
             "NewMinCharsPSK": 64,
             "NewMaxCharsPSK": 64,
             "NewAllowedCharsPSK": "0123456789ABCDEFabcdef",
-        },
+        }
     },
     "WLANConfiguration2": {
-        "GetSSID": {"NewSSID": "WiFi+"},
-        "GetSecurityKeys": {"NewKeyPassphrase": "mysecret"},
         "GetInfo": {
             "NewEnable": True,
             "NewStatus": "Up",
@@ -160,7 +148,7 @@ MOCK_WLANCONFIGS_DIFF2_SSID: dict[str, dict] = {
             "NewMinCharsPSK": 64,
             "NewMaxCharsPSK": 64,
             "NewAllowedCharsPSK": "0123456789ABCDEFabcdef",
-        },
+        }
     },
 }
 
@@ -184,15 +172,15 @@ async def test_switch_setup(
     expected_wifi_names: list[str],
     fc_class_mock,
     fh_class_mock,
-) -> None:
+):
     """Test setup of Fritz!Tools switches."""
 
     entry = MockConfigEntry(domain=DOMAIN, data=MOCK_USER_DATA)
     entry.add_to_hass(hass)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    assert entry.state is ConfigEntryState.LOADED
+    assert await async_setup_component(hass, DOMAIN, {})
+    await hass.async_block_till_done()
+    assert entry.state == ConfigEntryState.LOADED
 
     switches = hass.states.async_all(Platform.SWITCH)
     assert len(switches) == 3

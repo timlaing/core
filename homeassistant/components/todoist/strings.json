@@ -5,16 +5,14 @@
         "data": {
           "token": "[%key:common::config_flow::data::api_token%]"
         },
-        "description": "Please enter your API token from your [Todoist Settings page]({settings_url})"
+        "description": "Please entry your API token from your [Todoist Settings page]({settings_url})"
       }
     },
     "error": {
-      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
-      "invalid_api_key": "[%key:common::config_flow::error::invalid_api_key%]",
-      "unknown": "[%key:common::config_flow::error::unknown%]"
+      "invalid_api_key": "[%key:common::config_flow::error::invalid_api_key%]"
     },
     "abort": {
-      "single_instance_allowed": "[%key:common::config_flow::abort::single_instance_allowed%]"
+      "already_configured": "[%key:common::config_flow::abort::already_configured_account%]"
     },
     "create_entry": {
       "default": "[%key:common::config_flow::create_entry::authenticated%]"
@@ -28,10 +26,6 @@
         "content": {
           "name": "Content",
           "description": "The name of the task."
-        },
-        "description": {
-          "name": "Description",
-          "description": "A description for the task."
         },
         "project": {
           "name": "Project",
@@ -54,7 +48,7 @@
           "description": "The day this task is due, in natural language."
         },
         "due_date_lang": {
-          "name": "Due date language",
+          "name": "Due data language",
           "description": "The language of due_date_string."
         },
         "due_date": {

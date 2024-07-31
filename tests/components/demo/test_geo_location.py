@@ -1,5 +1,4 @@
 """The tests for the demo platform."""
-
 from freezegun import freeze_time
 
 from homeassistant.components import geo_location
@@ -50,7 +49,7 @@ async def test_setup_platform(hass: HomeAssistant, disable_platforms) -> None:
 
         # Update (replaces 1 device).
         async_fire_time_changed(hass, utcnow + DEFAULT_UPDATE_INTERVAL)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await hass.async_block_till_done()
         # Get all states again, ensure that the number of states is still
         # the same, but the lists are different.
         all_states_updated = [

@@ -1,5 +1,6 @@
 """WeatherKit sensors."""
 
+
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -27,6 +28,7 @@ SENSORS = (
     SensorEntityDescription(
         key="pressureTrend",
         device_class=SensorDeviceClass.ENUM,
+        icon="mdi:gauge",
         options=["rising", "falling", "steady"],
         translation_key="pressure_trend",
     ),

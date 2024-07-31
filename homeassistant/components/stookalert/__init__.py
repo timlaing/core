@@ -1,5 +1,4 @@
 """The Stookalert integration."""
-
 from __future__ import annotations
 
 import stookalert

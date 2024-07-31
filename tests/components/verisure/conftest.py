@@ -1,5 +1,4 @@
 """Fixtures for Verisure integration tests."""
-
 from __future__ import annotations
 
 from collections.abc import Generator
@@ -29,7 +28,7 @@ def mock_config_entry() -> MockConfigEntry:
 
 
 @pytest.fixture
-def mock_setup_entry() -> Generator[AsyncMock]:
+def mock_setup_entry() -> Generator[AsyncMock, None, None]:
     """Mock setting up a config entry."""
     with patch(
         "homeassistant.components.verisure.async_setup_entry", return_value=True
@@ -38,7 +37,7 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 
 
 @pytest.fixture
-def mock_verisure_config_flow() -> Generator[MagicMock]:
+def mock_verisure_config_flow() -> Generator[None, MagicMock, None]:
     """Return a mocked Tailscale client."""
     with patch(
         "homeassistant.components.verisure.config_flow.Verisure", autospec=True

@@ -1,5 +1,4 @@
 """The tests for the WebOS TV notify platform."""
-
 from unittest.mock import Mock, call
 
 from aiowebostv import WebOsTvPairError
@@ -72,9 +71,7 @@ async def test_notify(hass: HomeAssistant, client) -> None:
     )
 
 
-async def test_notify_not_connected(
-    hass: HomeAssistant, client, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_notify_not_connected(hass: HomeAssistant, client, monkeypatch) -> None:
     """Test sending a message when client is not connected."""
     await setup_webostv(hass)
     assert hass.services.has_service(NOTIFY_DOMAIN, TV_NAME)
@@ -97,10 +94,7 @@ async def test_notify_not_connected(
 
 
 async def test_icon_not_found(
-    hass: HomeAssistant,
-    caplog: pytest.LogCaptureFixture,
-    client,
-    monkeypatch: pytest.MonkeyPatch,
+    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, client, monkeypatch
 ) -> None:
     """Test notify icon not found error."""
     await setup_webostv(hass)
@@ -135,7 +129,7 @@ async def test_connection_errors(
     hass: HomeAssistant,
     caplog: pytest.LogCaptureFixture,
     client,
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch,
     side_effect,
     error,
 ) -> None:

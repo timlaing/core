@@ -1,5 +1,4 @@
 """Tests for the SleepIQ integration."""
-
 from asyncsleepiq import (
     SleepIQAPIException,
     SleepIQLoginException,

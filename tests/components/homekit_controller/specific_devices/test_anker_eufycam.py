@@ -1,5 +1,4 @@
 """Test against characteristics captured from a eufycam."""
-
 from homeassistant.core import HomeAssistant
 
 from ..common import (

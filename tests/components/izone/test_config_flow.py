@@ -1,14 +1,11 @@
 """Tests for iZone."""
-
 from unittest.mock import Mock, patch
 
 import pytest
 
-from homeassistant import config_entries
+from homeassistant import config_entries, data_entry_flow
 from homeassistant.components.izone.const import DISPATCH_CONTROLLER_DISCOVERED, IZONE
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 
 @pytest.fixture
@@ -21,6 +18,8 @@ def mock_disco():
 
 
 def _mock_start_discovery(hass, mock_disco):
+    from homeassistant.helpers.dispatcher import async_dispatcher_send
+
     def do_disovered(*args):
         async_dispatcher_send(hass, DISPATCH_CONTROLLER_DISCOVERED, True)
         return mock_disco
@@ -31,25 +30,22 @@ def _mock_start_discovery(hass, mock_disco):
 async def test_not_found(hass: HomeAssistant, mock_disco) -> None:
     """Test not finding iZone controller."""
 
-    with (
-        patch(
-            "homeassistant.components.izone.config_flow.async_start_discovery_service"
-        ) as start_disco,
-        patch(
-            "homeassistant.components.izone.config_flow.async_stop_discovery_service",
-            return_value=None,
-        ) as stop_disco,
-    ):
+    with patch(
+        "homeassistant.components.izone.config_flow.async_start_discovery_service"
+    ) as start_disco, patch(
+        "homeassistant.components.izone.config_flow.async_stop_discovery_service",
+        return_value=None,
+    ) as stop_disco:
         start_disco.side_effect = _mock_start_discovery(hass, mock_disco)
         result = await hass.config_entries.flow.async_init(
             IZONE, context={"source": config_entries.SOURCE_USER}
         )
 
         # Confirmation form
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == data_entry_flow.FlowResultType.FORM
 
         result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-        assert result["type"] is FlowResultType.ABORT
+        assert result["type"] == data_entry_flow.FlowResultType.ABORT
 
         await hass.async_block_till_done()
 
@@ -60,18 +56,14 @@ async def test_found(hass: HomeAssistant, mock_disco) -> None:
     """Test not finding iZone controller."""
     mock_disco.pi_disco.controllers["blah"] = object()
 
-    with (
-        patch(
-            "homeassistant.components.izone.climate.async_setup_entry",
-            return_value=True,
-        ) as mock_setup,
-        patch(
-            "homeassistant.components.izone.config_flow.async_start_discovery_service"
-        ) as start_disco,
-        patch(
-            "homeassistant.components.izone.async_start_discovery_service",
-            return_value=None,
-        ),
+    with patch(
+        "homeassistant.components.izone.climate.async_setup_entry",
+        return_value=True,
+    ) as mock_setup, patch(
+        "homeassistant.components.izone.config_flow.async_start_discovery_service"
+    ) as start_disco, patch(
+        "homeassistant.components.izone.async_start_discovery_service",
+        return_value=None,
     ):
         start_disco.side_effect = _mock_start_discovery(hass, mock_disco)
         result = await hass.config_entries.flow.async_init(
@@ -79,10 +71,10 @@ async def test_found(hass: HomeAssistant, mock_disco) -> None:
         )
 
         # Confirmation form
-        assert result["type"] is FlowResultType.FORM
+        assert result["type"] == data_entry_flow.FlowResultType.FORM
 
         result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-        assert result["type"] is FlowResultType.CREATE_ENTRY
+        assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
 
         await hass.async_block_till_done()
 

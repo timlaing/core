@@ -1,5 +1,4 @@
 """Tests for button platform."""
-
 from homeassistant.components import flux_led
 from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN
 from homeassistant.components.flux_led.const import DOMAIN

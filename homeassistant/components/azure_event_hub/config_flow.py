@@ -1,5 +1,4 @@
 """Config flow for azure_event_hub integration."""
-
 from __future__ import annotations
 
 from copy import deepcopy
@@ -9,8 +8,9 @@ from typing import Any
 from azure.eventhub.exceptions import EventHubError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
+from homeassistant import config_entries
 from homeassistant.core import callback
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.schema_config_entry_flow import (
     SchemaFlowFormStep,
     SchemaOptionsFlowHandler,
@@ -73,13 +73,13 @@ async def validate_data(data: dict[str, Any]) -> dict[str, str] | None:
         await client.test_connection()
     except EventHubError:
         return {"base": "cannot_connect"}
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         _LOGGER.exception("Unknown error")
         return {"base": "unknown"}
     return None
 
 
-class AEHConfigFlow(ConfigFlow, domain=DOMAIN):
+class AEHConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for azure event hub."""
 
     VERSION: int = 1
@@ -93,14 +93,14 @@ class AEHConfigFlow(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: ConfigEntry,
+        config_entry: config_entries.ConfigEntry,
     ) -> SchemaOptionsFlowHandler:
         """Get the options flow for this handler."""
         return SchemaOptionsFlowHandler(config_entry, OPTIONS_FLOW)
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial user step."""
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
@@ -116,7 +116,7 @@ class AEHConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_conn_string(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the connection string steps."""
         errors = await self.async_update_and_validate_data(user_input)
         if user_input is None or errors is not None:
@@ -136,7 +136,7 @@ class AEHConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_sas(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the sas steps."""
         errors = await self.async_update_and_validate_data(user_input)
         if user_input is None or errors is not None:
@@ -154,9 +154,7 @@ class AEHConfigFlow(ConfigFlow, domain=DOMAIN):
             options=self._options,
         )
 
-    async def async_step_import(
-        self, import_config: dict[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_import(self, import_config: dict[str, Any]) -> FlowResult:
         """Import config from configuration.yaml."""
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")

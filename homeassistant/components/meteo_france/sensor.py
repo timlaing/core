@@ -1,9 +1,8 @@
 """Support for Meteo-France raining forecast sensor."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, TypeVar
 
 from meteofrance_api.helpers import (
     get_warning_text_status_from_indice_color,
@@ -49,12 +48,21 @@ from .const import (
     MODEL,
 )
 
+_DataT = TypeVar("_DataT", bound=Rain | Forecast | CurrentPhenomenons)
 
-@dataclass(frozen=True, kw_only=True)
-class MeteoFranceSensorEntityDescription(SensorEntityDescription):
-    """Describes Meteo-France sensor entity."""
+
+@dataclass
+class MeteoFranceRequiredKeysMixin:
+    """Mixin for required keys."""
 
     data_path: str
+
+
+@dataclass
+class MeteoFranceSensorEntityDescription(
+    SensorEntityDescription, MeteoFranceRequiredKeysMixin
+):
+    """Describes Meteo-France sensor entity."""
 
 
 SENSOR_TYPES: tuple[MeteoFranceSensorEntityDescription, ...] = (
@@ -224,9 +232,7 @@ async def async_setup_entry(
     async_add_entities(entities, False)
 
 
-class MeteoFranceSensor[_DataT: Rain | Forecast | CurrentPhenomenons](
-    CoordinatorEntity[DataUpdateCoordinator[_DataT]], SensorEntity
-):
+class MeteoFranceSensor(CoordinatorEntity[DataUpdateCoordinator[_DataT]], SensorEntity):
     """Representation of a Meteo-France sensor."""
 
     entity_description: MeteoFranceSensorEntityDescription
@@ -297,7 +303,7 @@ class MeteoFranceRainSensor(MeteoFranceSensor[Rain]):
         return dt_util.utc_from_timestamp(next_rain["dt"]) if next_rain else None
 
     @property
-    def extra_state_attributes(self) -> dict[str, Any]:
+    def extra_state_attributes(self):
         """Return the state attributes."""
         reference_dt = self.coordinator.data.forecast[0]["dt"]
         return {
@@ -324,7 +330,7 @@ class MeteoFranceAlertSensor(MeteoFranceSensor[CurrentPhenomenons]):
         self._attr_unique_id = self._attr_name
 
     @property
-    def native_value(self) -> str | None:
+    def native_value(self):
         """Return the state."""
         return get_warning_text_status_from_indice_color(
             self.coordinator.data.get_domain_max_color()

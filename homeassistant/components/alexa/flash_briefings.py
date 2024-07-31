@@ -1,5 +1,4 @@
 """Support for Alexa skill service end point."""
-
 import hmac
 from http import HTTPStatus
 import logging

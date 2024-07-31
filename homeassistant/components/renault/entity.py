@@ -1,5 +1,4 @@
 """Base classes for Renault entities."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -13,14 +12,14 @@ from .coordinator import RenaultDataUpdateCoordinator, T
 from .renault_vehicle import RenaultVehicleProxy
 
 
-@dataclass(frozen=True)
+@dataclass
 class RenaultDataRequiredKeysMixin:
     """Mixin for required keys."""
 
     coordinator: str
 
 
-@dataclass(frozen=True)
+@dataclass
 class RenaultDataEntityDescription(EntityDescription, RenaultDataRequiredKeysMixin):
     """Class describing Renault data entities."""
 

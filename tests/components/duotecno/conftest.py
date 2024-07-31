@@ -1,5 +1,4 @@
 """Common fixtures for the duotecno tests."""
-
 from collections.abc import Generator
 from unittest.mock import AsyncMock, patch
 
@@ -7,7 +6,7 @@ import pytest
 
 
 @pytest.fixture
-def mock_setup_entry() -> Generator[AsyncMock]:
+def mock_setup_entry() -> Generator[AsyncMock, None, None]:
     """Override async_setup_entry."""
     with patch(
         "homeassistant.components.duotecno.async_setup_entry", return_value=True

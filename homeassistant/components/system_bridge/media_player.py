@@ -1,11 +1,13 @@
 """Support for System Bridge media players."""
-
 from __future__ import annotations
 
 import datetime as dt
 from typing import Final
 
-from systembridgemodels.media_control import MediaAction, MediaControl
+from systembridgeconnector.models.media_control import (
+    Action as MediaAction,
+    MediaControl,
+)
 
 from homeassistant.components.media_player import (
     MediaPlayerDeviceClass,
@@ -20,10 +22,9 @@ from homeassistant.const import CONF_PORT
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from . import SystemBridgeEntity
 from .const import DOMAIN
-from .coordinator import SystemBridgeDataUpdateCoordinator
-from .data import SystemBridgeData
-from .entity import SystemBridgeEntity
+from .coordinator import SystemBridgeCoordinatorData, SystemBridgeDataUpdateCoordinator
 
 STATUS_CHANGING: Final[str] = "CHANGING"
 STATUS_STOPPED: Final[str] = "STOPPED"
@@ -53,13 +54,13 @@ MEDIA_SET_REPEAT_MAP: Final[dict[RepeatMode, int]] = {
     RepeatMode.ALL: 2,
 }
 
-MEDIA_PLAYER_DESCRIPTION: Final[MediaPlayerEntityDescription] = (
-    MediaPlayerEntityDescription(
-        key="media",
-        translation_key="media",
-        icon="mdi:volume-high",
-        device_class=MediaPlayerDeviceClass.RECEIVER,
-    )
+MEDIA_PLAYER_DESCRIPTION: Final[
+    MediaPlayerEntityDescription
+] = MediaPlayerEntityDescription(
+    key="media",
+    translation_key="media",
+    icon="mdi:volume-high",
+    device_class=MediaPlayerDeviceClass.RECEIVER,
 )
 
 
@@ -120,15 +121,17 @@ class SystemBridgeMediaPlayer(SystemBridgeEntity, MediaPlayerEntity):
             features |= MediaPlayerEntityFeature.PREVIOUS_TRACK
         if data.media.is_next_enabled:
             features |= MediaPlayerEntityFeature.NEXT_TRACK
-        if data.media.is_pause_enabled or data.media.is_play_enabled:
-            features |= MediaPlayerEntityFeature.PAUSE | MediaPlayerEntityFeature.PLAY
+        if data.media.is_pause_enabled:
+            features |= MediaPlayerEntityFeature.PAUSE
+        if data.media.is_play_enabled:
+            features |= MediaPlayerEntityFeature.PLAY
         if data.media.is_stop_enabled:
             features |= MediaPlayerEntityFeature.STOP
 
         return features
 
     @property
-    def _systembridge_data(self) -> SystemBridgeData:
+    def _systembridge_data(self) -> SystemBridgeCoordinatorData:
         """Return data for the entity."""
         return self.coordinator.data
 
@@ -204,7 +207,7 @@ class SystemBridgeMediaPlayer(SystemBridgeEntity, MediaPlayerEntity):
         """Send play command."""
         await self.coordinator.websocket_client.media_control(
             MediaControl(
-                action=MediaAction.PLAY.value,
+                action=MediaAction.play,
             )
         )
 
@@ -212,7 +215,7 @@ class SystemBridgeMediaPlayer(SystemBridgeEntity, MediaPlayerEntity):
         """Send pause command."""
         await self.coordinator.websocket_client.media_control(
             MediaControl(
-                action=MediaAction.PAUSE.value,
+                action=MediaAction.pause,
             )
         )
 
@@ -220,7 +223,7 @@ class SystemBridgeMediaPlayer(SystemBridgeEntity, MediaPlayerEntity):
         """Send stop command."""
         await self.coordinator.websocket_client.media_control(
             MediaControl(
-                action=MediaAction.STOP.value,
+                action=MediaAction.stop,
             )
         )
 
@@ -228,7 +231,7 @@ class SystemBridgeMediaPlayer(SystemBridgeEntity, MediaPlayerEntity):
         """Send previous track command."""
         await self.coordinator.websocket_client.media_control(
             MediaControl(
-                action=MediaAction.PREVIOUS.value,
+                action=MediaAction.previous,
             )
         )
 
@@ -236,7 +239,7 @@ class SystemBridgeMediaPlayer(SystemBridgeEntity, MediaPlayerEntity):
         """Send next track command."""
         await self.coordinator.websocket_client.media_control(
             MediaControl(
-                action=MediaAction.NEXT.value,
+                action=MediaAction.next,
             )
         )
 
@@ -247,7 +250,7 @@ class SystemBridgeMediaPlayer(SystemBridgeEntity, MediaPlayerEntity):
         """Enable/disable shuffle mode."""
         await self.coordinator.websocket_client.media_control(
             MediaControl(
-                action=MediaAction.SHUFFLE.value,
+                action=MediaAction.shuffle,
                 value=shuffle,
             )
         )
@@ -259,7 +262,7 @@ class SystemBridgeMediaPlayer(SystemBridgeEntity, MediaPlayerEntity):
         """Set repeat mode."""
         await self.coordinator.websocket_client.media_control(
             MediaControl(
-                action=MediaAction.REPEAT.value,
+                action=MediaAction.repeat,
                 value=MEDIA_SET_REPEAT_MAP.get(repeat),
             )
         )

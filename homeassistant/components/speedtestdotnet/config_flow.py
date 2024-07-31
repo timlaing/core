@@ -1,15 +1,14 @@
 """Config flow for Speedtest.net."""
-
 from __future__ import annotations
 
 from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from homeassistant import config_entries
 from homeassistant.core import callback
+from homeassistant.data_entry_flow import FlowResult
 
-from . import SpeedTestConfigEntry
 from .const import (
     CONF_SERVER_ID,
     CONF_SERVER_NAME,
@@ -19,7 +18,7 @@ from .const import (
 )
 
 
-class SpeedTestFlowHandler(ConfigFlow, domain=DOMAIN):
+class SpeedTestFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle Speedtest.net config flow."""
 
     VERSION = 1
@@ -27,14 +26,14 @@ class SpeedTestFlowHandler(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: SpeedTestConfigEntry,
+        config_entry: config_entries.ConfigEntry,
     ) -> SpeedTestOptionsFlowHandler:
         """Get the options flow for this handler."""
         return SpeedTestOptionsFlowHandler(config_entry)
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow initialized by the user."""
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
@@ -45,17 +44,17 @@ class SpeedTestFlowHandler(ConfigFlow, domain=DOMAIN):
         return self.async_create_entry(title=DEFAULT_NAME, data=user_input)
 
 
-class SpeedTestOptionsFlowHandler(OptionsFlow):
+class SpeedTestOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle SpeedTest options."""
 
-    def __init__(self, config_entry: SpeedTestConfigEntry) -> None:
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         self.config_entry = config_entry
         self._servers: dict = {}
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Manage the options."""
         errors: dict[str, str] = {}
 
@@ -69,7 +68,7 @@ class SpeedTestOptionsFlowHandler(OptionsFlow):
 
             return self.async_create_entry(title="", data=user_input)
 
-        self._servers = self.config_entry.runtime_data.servers
+        self._servers = self.hass.data[DOMAIN].servers
 
         options = {
             vol.Optional(

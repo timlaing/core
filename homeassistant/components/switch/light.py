@@ -1,16 +1,11 @@
 """Light support for switch entities."""
-
 from __future__ import annotations
 
 from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.light import (
-    PLATFORM_SCHEMA as LIGHT_PLATFORM_SCHEMA,
-    ColorMode,
-    LightEntity,
-)
+from homeassistant.components.light import PLATFORM_SCHEMA, ColorMode, LightEntity
 from homeassistant.const import (
     ATTR_ENTITY_ID,
     CONF_ENTITY_ID,
@@ -20,18 +15,21 @@ from homeassistant.const import (
     STATE_ON,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from homeassistant.helpers.event import (
+    EventStateChangedData,
+    async_track_state_change_event,
+)
+from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType, EventType
 
 from .const import DOMAIN as SWITCH_DOMAIN
 
 DEFAULT_NAME = "Light Switch"
 
-PLATFORM_SCHEMA = LIGHT_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
         vol.Required(CONF_ENTITY_ID): cv.entity_domain(SWITCH_DOMAIN),
@@ -99,7 +97,7 @@ class LightSwitch(LightEntity):
 
         @callback
         def async_state_changed_listener(
-            event: Event[EventStateChangedData] | None = None,
+            event: EventType[EventStateChangedData] | None = None,
         ) -> None:
             """Handle child updates."""
             if (

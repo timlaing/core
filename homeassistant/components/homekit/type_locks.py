@@ -1,5 +1,4 @@
 """Class to hold all lock accessories."""
-
 import logging
 from typing import Any
 

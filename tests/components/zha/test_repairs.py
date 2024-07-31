@@ -1,5 +1,4 @@
 """Test ZHA repairs."""
-
 from collections.abc import Callable
 from http import HTTPStatus
 import logging
@@ -12,11 +11,11 @@ from zigpy.application import ControllerApplication
 import zigpy.backups
 from zigpy.exceptions import NetworkSettingsInconsistent
 
-from homeassistant.components.homeassistant_sky_connect.const import (  # pylint: disable=hass-component-root-import
+from homeassistant.components.homeassistant_sky_connect import (
     DOMAIN as SKYCONNECT_DOMAIN,
 )
 from homeassistant.components.repairs import DOMAIN as REPAIRS_DOMAIN
-from homeassistant.components.zha.const import DOMAIN
+from homeassistant.components.zha.core.const import DOMAIN
 from homeassistant.components.zha.repairs.network_settings_inconsistent import (
     ISSUE_INCONSISTENT_NETWORK_SETTINGS,
 )
@@ -38,7 +37,6 @@ from tests.common import MockConfigEntry
 from tests.typing import ClientSessionGenerator
 
 SKYCONNECT_DEVICE = "/dev/serial/by-id/usb-Nabu_Casa_SkyConnect_v1.0_9e2adbd75b8beb119fe564a0f320645d-if00-port0"
-CONNECT_ZBT1_DEVICE = "/dev/serial/by-id/usb-Nabu_Casa_Home_Assistant_Connect_ZBT-1_9e2adbd75b8beb119fe564a0f320645d-if00-port0"
 
 
 def set_flasher_app_type(app_type: ApplicationType) -> Callable[[Flasher], None]:
@@ -59,34 +57,14 @@ def test_detect_radio_hardware(hass: HomeAssistant) -> None:
             "pid": "EA60",
             "serial_number": "3c0ed67c628beb11b1cd64a0f320645d",
             "manufacturer": "Nabu Casa",
-            "product": "SkyConnect v1.0",
-            "firmware": "ezsp",
+            "description": "SkyConnect v1.0",
         },
-        version=2,
         domain=SKYCONNECT_DOMAIN,
         options={},
         title="Home Assistant SkyConnect",
     )
     skyconnect_config_entry.add_to_hass(hass)
 
-    connect_zbt1_config_entry = MockConfigEntry(
-        data={
-            "device": CONNECT_ZBT1_DEVICE,
-            "vid": "10C4",
-            "pid": "EA60",
-            "serial_number": "3c0ed67c628beb11b1cd64a0f320645d",
-            "manufacturer": "Nabu Casa",
-            "product": "Home Assistant Connect ZBT-1",
-            "firmware": "ezsp",
-        },
-        version=2,
-        domain=SKYCONNECT_DOMAIN,
-        options={},
-        title="Home Assistant Connect ZBT-1",
-    )
-    connect_zbt1_config_entry.add_to_hass(hass)
-
-    assert _detect_radio_hardware(hass, CONNECT_ZBT1_DEVICE) == HardwareType.SKYCONNECT
     assert _detect_radio_hardware(hass, SKYCONNECT_DEVICE) == HardwareType.SKYCONNECT
     assert (
         _detect_radio_hardware(hass, SKYCONNECT_DEVICE + "_foo") == HardwareType.OTHER
@@ -107,15 +85,12 @@ def test_detect_radio_hardware(hass: HomeAssistant) -> None:
 def test_detect_radio_hardware_failure(hass: HomeAssistant) -> None:
     """Test radio hardware detection failure."""
 
-    with (
-        patch(
-            "homeassistant.components.homeassistant_yellow.hardware.async_info",
-            side_effect=HomeAssistantError(),
-        ),
-        patch(
-            "homeassistant.components.homeassistant_sky_connect.hardware.async_info",
-            side_effect=HomeAssistantError(),
-        ),
+    with patch(
+        "homeassistant.components.homeassistant_yellow.hardware.async_info",
+        side_effect=HomeAssistantError(),
+    ), patch(
+        "homeassistant.components.homeassistant_sky_connect.hardware.async_info",
+        side_effect=HomeAssistantError(),
     ):
         assert _detect_radio_hardware(hass, SKYCONNECT_DEVICE) == HardwareType.OTHER
 
@@ -134,34 +109,31 @@ async def test_multipan_firmware_repair(
     expected_learn_more_url: str,
     config_entry: MockConfigEntry,
     mock_zigpy_connect: ControllerApplication,
-    issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test creating a repair when multi-PAN firmware is installed and probed."""
 
     config_entry.add_to_hass(hass)
 
     # ZHA fails to set up
-    with (
-        patch(
-            "homeassistant.components.zha.repairs.wrong_silabs_firmware.Flasher.probe_app_type",
-            side_effect=set_flasher_app_type(ApplicationType.CPC),
-            autospec=True,
-        ),
-        patch(
-            "homeassistant.components.zha.Gateway.async_from_config",
-            side_effect=RuntimeError(),
-        ),
-        patch(
-            "homeassistant.components.zha.repairs.wrong_silabs_firmware._detect_radio_hardware",
-            return_value=detected_hardware,
-        ),
+    with patch(
+        "homeassistant.components.zha.repairs.wrong_silabs_firmware.Flasher.probe_app_type",
+        side_effect=set_flasher_app_type(ApplicationType.CPC),
+        autospec=True,
+    ), patch(
+        "homeassistant.components.zha.core.gateway.ZHAGateway.async_initialize",
+        side_effect=RuntimeError(),
+    ), patch(
+        "homeassistant.components.zha.repairs.wrong_silabs_firmware._detect_radio_hardware",
+        return_value=detected_hardware,
     ):
         await hass.config_entries.async_setup(config_entry.entry_id)
         await hass.async_block_till_done()
 
-        assert config_entry.state is ConfigEntryState.SETUP_ERROR
+        assert config_entry.state == ConfigEntryState.SETUP_ERROR
 
     await hass.config_entries.async_unload(config_entry.entry_id)
+
+    issue_registry = ir.async_get(hass)
 
     issue = issue_registry.async_get_issue(
         domain=DOMAIN,
@@ -185,32 +157,30 @@ async def test_multipan_firmware_repair(
 
 
 async def test_multipan_firmware_no_repair_on_probe_failure(
-    hass: HomeAssistant, config_entry: MockConfigEntry, issue_registry: ir.IssueRegistry
+    hass: HomeAssistant, config_entry: MockConfigEntry
 ) -> None:
     """Test that a repair is not created when multi-PAN firmware cannot be probed."""
 
     config_entry.add_to_hass(hass)
 
     # ZHA fails to set up
-    with (
-        patch(
-            "homeassistant.components.zha.repairs.wrong_silabs_firmware.Flasher.probe_app_type",
-            side_effect=set_flasher_app_type(None),
-            autospec=True,
-        ),
-        patch(
-            "homeassistant.components.zha.Gateway.async_from_config",
-            side_effect=RuntimeError(),
-        ),
+    with patch(
+        "homeassistant.components.zha.repairs.wrong_silabs_firmware.Flasher.probe_app_type",
+        side_effect=set_flasher_app_type(None),
+        autospec=True,
+    ), patch(
+        "homeassistant.components.zha.core.gateway.ZHAGateway.async_initialize",
+        side_effect=RuntimeError(),
     ):
         await hass.config_entries.async_setup(config_entry.entry_id)
         await hass.async_block_till_done()
 
-        assert config_entry.state is ConfigEntryState.SETUP_RETRY
+        assert config_entry.state == ConfigEntryState.SETUP_ERROR
 
     await hass.config_entries.async_unload(config_entry.entry_id)
 
     # No repair is created
+    issue_registry = ir.async_get(hass)
     issue = issue_registry.async_get_issue(
         domain=DOMAIN,
         issue_id=ISSUE_WRONG_SILABS_FIRMWARE_INSTALLED,
@@ -222,33 +192,30 @@ async def test_multipan_firmware_retry_on_probe_ezsp(
     hass: HomeAssistant,
     config_entry: MockConfigEntry,
     mock_zigpy_connect: ControllerApplication,
-    issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test that ZHA is reloaded when EZSP firmware is probed."""
 
     config_entry.add_to_hass(hass)
 
     # ZHA fails to set up
-    with (
-        patch(
-            "homeassistant.components.zha.repairs.wrong_silabs_firmware.Flasher.probe_app_type",
-            side_effect=set_flasher_app_type(ApplicationType.EZSP),
-            autospec=True,
-        ),
-        patch(
-            "homeassistant.components.zha.Gateway.async_from_config",
-            side_effect=RuntimeError(),
-        ),
+    with patch(
+        "homeassistant.components.zha.repairs.wrong_silabs_firmware.Flasher.probe_app_type",
+        side_effect=set_flasher_app_type(ApplicationType.EZSP),
+        autospec=True,
+    ), patch(
+        "homeassistant.components.zha.core.gateway.ZHAGateway.async_initialize",
+        side_effect=RuntimeError(),
     ):
         await hass.config_entries.async_setup(config_entry.entry_id)
         await hass.async_block_till_done()
 
         # The config entry state is `SETUP_RETRY`, not `SETUP_ERROR`!
-        assert config_entry.state is ConfigEntryState.SETUP_RETRY
+        assert config_entry.state == ConfigEntryState.SETUP_RETRY
 
     await hass.config_entries.async_unload(config_entry.entry_id)
 
     # No repair is created
+    issue_registry = ir.async_get(hass)
     issue = issue_registry.async_get_issue(
         domain=DOMAIN,
         issue_id=ISSUE_WRONG_SILABS_FIRMWARE_INSTALLED,
@@ -267,27 +234,14 @@ async def test_no_warn_on_socket(hass: HomeAssistant) -> None:
     mock_probe.assert_not_called()
 
 
-async def test_probe_failure_exception_handling(
-    caplog: pytest.LogCaptureFixture,
-) -> None:
+async def test_probe_failure_exception_handling(caplog) -> None:
     """Test that probe failures are handled gracefully."""
-    logger = logging.getLogger(
-        "homeassistant.components.zha.repairs.wrong_silabs_firmware"
-    )
-    orig_level = logger.level
-
-    with (
-        caplog.at_level(logging.DEBUG),
-        patch(
-            "homeassistant.components.zha.repairs.wrong_silabs_firmware.Flasher.probe_app_type",
-            side_effect=RuntimeError(),
-        ) as mock_probe_app_type,
-    ):
-        logger.setLevel(logging.DEBUG)
+    with patch(
+        "homeassistant.components.zha.repairs.wrong_silabs_firmware.Flasher.probe_app_type",
+        side_effect=RuntimeError(),
+    ), caplog.at_level(logging.DEBUG):
         await probe_silabs_firmware_type("/dev/ttyZigbee")
-        logger.setLevel(orig_level)
 
-    mock_probe_app_type.assert_awaited()
     assert "Failed to probe application type" in caplog.text
 
 
@@ -297,7 +251,6 @@ async def test_inconsistent_settings_keep_new(
     config_entry: MockConfigEntry,
     mock_zigpy_connect: ControllerApplication,
     network_backup: zigpy.backups.NetworkBackup,
-    issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test inconsistent ZHA network settings: keep new settings."""
 
@@ -311,7 +264,7 @@ async def test_inconsistent_settings_keep_new(
     old_state = network_backup
 
     with patch(
-        "homeassistant.components.zha.Gateway.async_from_config",
+        "homeassistant.components.zha.core.gateway.ZHAGateway.async_initialize",
         side_effect=NetworkSettingsInconsistent(
             message="Network settings are inconsistent",
             new_state=new_state,
@@ -321,9 +274,11 @@ async def test_inconsistent_settings_keep_new(
         await hass.config_entries.async_setup(config_entry.entry_id)
         await hass.async_block_till_done()
 
-        assert config_entry.state is ConfigEntryState.SETUP_ERROR
+        assert config_entry.state == ConfigEntryState.SETUP_ERROR
 
     await hass.config_entries.async_unload(config_entry.entry_id)
+
+    issue_registry = ir.async_get(hass)
 
     issue = issue_registry.async_get_issue(
         domain=DOMAIN,
@@ -357,8 +312,6 @@ async def test_inconsistent_settings_keep_new(
     data = await resp.json()
     assert data["type"] == "create_entry"
 
-    await hass.config_entries.async_unload(config_entry.entry_id)
-
     assert (
         issue_registry.async_get_issue(
             domain=DOMAIN,
@@ -376,7 +329,6 @@ async def test_inconsistent_settings_restore_old(
     config_entry: MockConfigEntry,
     mock_zigpy_connect: ControllerApplication,
     network_backup: zigpy.backups.NetworkBackup,
-    issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test inconsistent ZHA network settings: restore last backup."""
 
@@ -390,7 +342,7 @@ async def test_inconsistent_settings_restore_old(
     old_state = network_backup
 
     with patch(
-        "homeassistant.components.zha.Gateway.async_from_config",
+        "homeassistant.components.zha.core.gateway.ZHAGateway.async_initialize",
         side_effect=NetworkSettingsInconsistent(
             message="Network settings are inconsistent",
             new_state=new_state,
@@ -400,9 +352,11 @@ async def test_inconsistent_settings_restore_old(
         await hass.config_entries.async_setup(config_entry.entry_id)
         await hass.async_block_till_done()
 
-        assert config_entry.state is ConfigEntryState.SETUP_ERROR
+        assert config_entry.state == ConfigEntryState.SETUP_ERROR
 
     await hass.config_entries.async_unload(config_entry.entry_id)
+
+    issue_registry = ir.async_get(hass)
 
     issue = issue_registry.async_get_issue(
         domain=DOMAIN,
@@ -433,8 +387,6 @@ async def test_inconsistent_settings_restore_old(
     assert resp.status == HTTPStatus.OK
     data = await resp.json()
     assert data["type"] == "create_entry"
-
-    await hass.config_entries.async_unload(config_entry.entry_id)
 
     assert (
         issue_registry.async_get_issue(

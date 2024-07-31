@@ -1,5 +1,4 @@
-"""Config flow to configure Motionblinds using their WLAN API."""
-
+"""Config flow to configure Motion Blinds using their WLAN API."""
 from __future__ import annotations
 
 from typing import Any
@@ -7,15 +6,11 @@ from typing import Any
 from motionblinds import MotionDiscovery, MotionGateway
 import voluptuous as vol
 
+from homeassistant import config_entries
 from homeassistant.components import dhcp
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlow,
-)
 from homeassistant.const import CONF_API_KEY, CONF_HOST
 from homeassistant.core import callback
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.device_registry import format_mac
 
 from .const import (
@@ -35,16 +30,16 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-class OptionsFlowHandler(OptionsFlow):
+class OptionsFlowHandler(config_entries.OptionsFlow):
     """Options for the component."""
 
-    def __init__(self, config_entry: ConfigEntry) -> None:
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Init object."""
         self.config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Manage the options."""
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -66,28 +61,26 @@ class OptionsFlowHandler(OptionsFlow):
         )
 
 
-class MotionBlindsFlowHandler(ConfigFlow, domain=DOMAIN):
-    """Handle a Motionblinds config flow."""
+class MotionBlindsFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
+    """Handle a Motion Blinds config flow."""
 
     VERSION = 1
 
     def __init__(self) -> None:
-        """Initialize the Motionblinds flow."""
+        """Initialize the Motion Blinds flow."""
         self._host: str | None = None
         self._ips: list[str] = []
-        self._config_settings: vol.Schema | None = None
+        self._config_settings = None
 
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: ConfigEntry,
+        config_entry: config_entries.ConfigEntry,
     ) -> OptionsFlowHandler:
         """Get the options flow."""
         return OptionsFlowHandler(config_entry)
 
-    async def async_step_dhcp(
-        self, discovery_info: dhcp.DhcpServiceInfo
-    ) -> ConfigFlowResult:
+    async def async_step_dhcp(self, discovery_info: dhcp.DhcpServiceInfo) -> FlowResult:
         """Handle discovery via dhcp."""
         mac_address = format_mac(discovery_info.macaddress).replace(":", "")
         await self.async_set_unique_id(mac_address)
@@ -97,7 +90,7 @@ class MotionBlindsFlowHandler(ConfigFlow, domain=DOMAIN):
         try:
             # key not needed for GetDeviceList request
             await self.hass.async_add_executor_job(gateway.GetDeviceList)
-        except Exception:  # noqa: BLE001
+        except Exception:  # pylint: disable=broad-except
             return self.async_abort(reason="not_motionblinds")
 
         if not gateway.available:
@@ -114,7 +107,7 @@ class MotionBlindsFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle a flow initialized by the user."""
         errors = {}
         if user_input is not None:
@@ -143,7 +136,7 @@ class MotionBlindsFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_select(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle multiple motion gateways found."""
         if user_input is not None:
             self._host = user_input["select_ip"]
@@ -155,7 +148,7 @@ class MotionBlindsFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_connect(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Connect to the Motion Gateway."""
         errors: dict[str, str] = {}
         if user_input is not None:

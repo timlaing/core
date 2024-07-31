@@ -1,5 +1,4 @@
 """Test the Nightscout config flow."""
-
 from unittest.mock import patch
 
 from aiohttp import ClientError

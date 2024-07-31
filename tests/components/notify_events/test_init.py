@@ -1,5 +1,4 @@
 """The tests for notify_events."""
-
 from homeassistant.components.notify_events.const import DOMAIN
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component

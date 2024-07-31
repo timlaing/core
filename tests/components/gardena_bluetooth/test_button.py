@@ -1,5 +1,6 @@
 """Test Gardena Bluetooth sensor."""
 
+
 from collections.abc import Awaitable, Callable
 from unittest.mock import Mock, call
 

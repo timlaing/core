@@ -1,5 +1,4 @@
 """Test reproduce state for select entities."""
-
 import pytest
 
 from homeassistant.components.select.const import (

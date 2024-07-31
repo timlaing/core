@@ -1,5 +1,4 @@
 """BleBox light entities tests."""
-
 import logging
 from unittest.mock import AsyncMock, PropertyMock
 
@@ -51,9 +50,7 @@ def dimmer_fixture():
     return (feature, "light.dimmerbox_brightness")
 
 
-async def test_dimmer_init(
-    dimmer, hass: HomeAssistant, device_registry: dr.DeviceRegistry
-) -> None:
+async def test_dimmer_init(dimmer, hass: HomeAssistant) -> None:
     """Test cover default state."""
 
     _, entity_id = dimmer
@@ -69,6 +66,7 @@ async def test_dimmer_init(
     assert state.attributes[ATTR_BRIGHTNESS] == 65
     assert state.state == STATE_ON
 
+    device_registry = dr.async_get(hass)
     device = device_registry.async_get(entry.device_id)
 
     assert device.name == "My dimmer"
@@ -225,9 +223,7 @@ def wlightboxs_fixture():
     return (feature, "light.wlightboxs_color")
 
 
-async def test_wlightbox_s_init(
-    wlightbox_s, hass: HomeAssistant, device_registry: dr.DeviceRegistry
-) -> None:
+async def test_wlightbox_s_init(wlightbox_s, hass: HomeAssistant) -> None:
     """Test cover default state."""
 
     _, entity_id = wlightbox_s
@@ -243,6 +239,7 @@ async def test_wlightbox_s_init(
     assert state.attributes[ATTR_BRIGHTNESS] is None
     assert state.state == STATE_UNKNOWN
 
+    device_registry = dr.async_get(hass)
     device = device_registry.async_get(entry.device_id)
 
     assert device.name == "My wLightBoxS"
@@ -329,9 +326,7 @@ def wlightbox_fixture():
     return (feature, "light.wlightbox_color")
 
 
-async def test_wlightbox_init(
-    wlightbox, hass: HomeAssistant, device_registry: dr.DeviceRegistry
-) -> None:
+async def test_wlightbox_init(wlightbox, hass: HomeAssistant) -> None:
     """Test cover default state."""
 
     _, entity_id = wlightbox
@@ -348,6 +343,7 @@ async def test_wlightbox_init(
     assert state.attributes[ATTR_RGBW_COLOR] is None
     assert state.state == STATE_UNKNOWN
 
+    device_registry = dr.async_get(hass)
     device = device_registry.async_get(entry.device_id)
 
     assert device.name == "My wLightBox"

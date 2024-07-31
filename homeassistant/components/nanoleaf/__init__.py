@@ -1,12 +1,19 @@
 """The Nanoleaf integration."""
-
 from __future__ import annotations
 
 import asyncio
-from contextlib import suppress
+from dataclasses import dataclass
+from datetime import timedelta
 import logging
 
-from aionanoleaf import EffectsEvent, Nanoleaf, StateEvent, TouchEvent
+from aionanoleaf import (
+    EffectsEvent,
+    InvalidToken,
+    Nanoleaf,
+    StateEvent,
+    TouchEvent,
+    Unavailable,
+)
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -17,28 +24,49 @@ from homeassistant.const import (
     Platform,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, NANOLEAF_EVENT, TOUCH_GESTURE_TRIGGER_MAP, TOUCH_MODELS
-from .coordinator import NanoleafCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS = [Platform.BUTTON, Platform.EVENT, Platform.LIGHT]
+PLATFORMS = [Platform.BUTTON, Platform.LIGHT]
 
 
-type NanoleafConfigEntry = ConfigEntry[NanoleafCoordinator]
+@dataclass
+class NanoleafEntryData:
+    """Class for sharing data within the Nanoleaf integration."""
+
+    device: Nanoleaf
+    coordinator: DataUpdateCoordinator[None]
+    event_listener: asyncio.Task
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: NanoleafConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Nanoleaf from a config entry."""
     nanoleaf = Nanoleaf(
         async_get_clientsession(hass), entry.data[CONF_HOST], entry.data[CONF_TOKEN]
     )
 
-    coordinator = NanoleafCoordinator(hass, nanoleaf)
+    async def async_get_state() -> None:
+        """Get the state of the device."""
+        try:
+            await nanoleaf.get_info()
+        except Unavailable as err:
+            raise UpdateFailed from err
+        except InvalidToken as err:
+            raise ConfigEntryAuthFailed from err
+
+    coordinator = DataUpdateCoordinator(
+        hass,
+        _LOGGER,
+        name=entry.title,
+        update_interval=timedelta(minutes=1),
+        update_method=async_get_state,
+    )
 
     await coordinator.async_config_entry_first_refresh()
 
@@ -66,9 +94,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: NanoleafConfigEntry) -> 
                 NANOLEAF_EVENT,
                 {CONF_DEVICE_ID: device_entry.id, CONF_TYPE: gesture_type},
             )
-            async_dispatcher_send(
-                hass, f"nanoleaf_gesture_{nanoleaf.serial_no}", gesture_type
-            )
 
     event_listener = asyncio.create_task(
         nanoleaf.listen_events(
@@ -78,20 +103,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: NanoleafConfigEntry) -> 
         )
     )
 
-    async def _cancel_listener() -> None:
-        event_listener.cancel()
-        with suppress(asyncio.CancelledError):
-            await event_listener
-
-    entry.async_on_unload(_cancel_listener)
-
-    entry.runtime_data = coordinator
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = NanoleafEntryData(
+        nanoleaf, coordinator, event_listener
+    )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: NanoleafConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    entry_data: NanoleafEntryData = hass.data[DOMAIN].pop(entry.entry_id)
+    entry_data.event_listener.cancel()
+    return True

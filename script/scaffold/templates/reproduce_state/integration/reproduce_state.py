@@ -1,5 +1,4 @@
 """Reproduce an NEW_NAME state."""
-
 from __future__ import annotations
 
 import asyncio

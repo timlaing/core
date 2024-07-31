@@ -1,5 +1,4 @@
 """Test Shopping List intents."""
-
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import intent
 

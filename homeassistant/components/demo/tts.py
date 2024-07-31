@@ -1,5 +1,4 @@
 """Support for the demo for text-to-speech service."""
-
 from __future__ import annotations
 
 import os
@@ -9,7 +8,7 @@ import voluptuous as vol
 
 from homeassistant.components.tts import (
     CONF_LANG,
-    PLATFORM_SCHEMA as TTS_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     Provider,
     TtsAudioType,
 )
@@ -20,7 +19,7 @@ SUPPORT_LANGUAGES = ["en", "de"]
 
 DEFAULT_LANG = "en"
 
-PLATFORM_SCHEMA = TTS_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {vol.Optional(CONF_LANG, default=DEFAULT_LANG): vol.In(SUPPORT_LANGUAGES)}
 )
 

@@ -23,13 +23,5 @@
         }
       }
     }
-  },
-  "selector": {
-    "season_type": {
-      "options": {
-        "astronomical": "Astronomical",
-        "meteorological": "Meteorological"
-      }
-    }
   }
 }

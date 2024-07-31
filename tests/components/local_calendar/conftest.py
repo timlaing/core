@@ -4,7 +4,7 @@ from collections.abc import Awaitable, Callable, Generator
 from http import HTTPStatus
 from pathlib import Path
 from typing import Any
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 import urllib
 
 from aiohttp import ClientWebSocketResponse
@@ -19,32 +19,25 @@ from tests.common import MockConfigEntry
 from tests.typing import ClientSessionGenerator, WebSocketGenerator
 
 CALENDAR_NAME = "Light Schedule"
-FRIENDLY_NAME = "Light Schedule"
-STORAGE_KEY = "light_schedule"
+FRIENDLY_NAME = "Light schedule"
 TEST_ENTITY = "calendar.light_schedule"
 
 
 class FakeStore(LocalCalendarStore):
     """Mock storage implementation."""
 
-    def __init__(
-        self, hass: HomeAssistant, path: Path, ics_content: str, read_side_effect: Any
-    ) -> None:
+    def __init__(self, hass: HomeAssistant, path: Path, ics_content: str) -> None:
         """Initialize FakeStore."""
         super().__init__(hass, path)
-        mock_path = self._mock_path = Mock()
-        mock_path.exists = self._mock_exists
-        mock_path.read_text = Mock()
-        mock_path.read_text.return_value = ics_content
-        mock_path.read_text.side_effect = read_side_effect
-        mock_path.write_text = self._mock_write_text
-        super().__init__(hass, mock_path)
+        self._content = ics_content
 
-    def _mock_exists(self) -> bool:
-        return self._mock_path.read_text.return_value is not None
+    def _load(self) -> str:
+        """Read from calendar storage."""
+        return self._content
 
-    def _mock_write_text(self, content: str) -> None:
-        self._mock_path.read_text.return_value = content
+    def _store(self, ics_content: str) -> None:
+        """Persist the calendar storage."""
+        self._content = ics_content
 
 
 @pytest.fixture(name="ics_content", autouse=True)
@@ -53,21 +46,15 @@ def mock_ics_content() -> str:
     return ""
 
 
-@pytest.fixture(name="store_read_side_effect")
-def mock_store_read_side_effect() -> Any | None:
-    """Fixture to raise errors from the FakeStore."""
-    return None
-
-
 @pytest.fixture(name="store", autouse=True)
-def mock_store(ics_content: str, store_read_side_effect: Any | None) -> Generator[None]:
+def mock_store(ics_content: str) -> Generator[None, None, None]:
     """Test cleanup, remove any media storage persisted during the test."""
 
     stores: dict[Path, FakeStore] = {}
 
     def new_store(hass: HomeAssistant, path: Path) -> FakeStore:
         if path not in stores:
-            stores[path] = FakeStore(hass, path, ics_content, store_read_side_effect)
+            stores[path] = FakeStore(hass, path, ics_content)
         return stores[path]
 
     with patch(
@@ -85,11 +72,11 @@ def mock_time_zone() -> str:
 
 
 @pytest.fixture(autouse=True)
-async def set_time_zone(hass: HomeAssistant, time_zone: str):
+def set_time_zone(hass: HomeAssistant, time_zone: str):
     """Set the time zone for the tests."""
     # Set our timezone to CST/Regina so we can check calculations
     # This keeps UTC-6 all year round
-    await hass.config.async_set_time_zone(time_zone)
+    hass.config.set_time_zone(time_zone)
 
 
 @pytest.fixture(name="config_entry")
@@ -106,7 +93,7 @@ async def setup_integration(hass: HomeAssistant, config_entry: MockConfigEntry) 
     await hass.async_block_till_done()
 
 
-type GetEventsFn = Callable[[str, str], Awaitable[list[dict[str, Any]]]]
+GetEventsFn = Callable[[str, str], Awaitable[list[dict[str, Any]]]]
 
 
 @pytest.fixture(name="get_events")
@@ -128,7 +115,7 @@ def event_fields(data: dict[str, str]) -> dict[str, str]:
     """Filter event API response to minimum fields."""
     return {
         k: data[k]
-        for k in ("summary", "start", "end", "recurrence_id", "location")
+        for k in ["summary", "start", "end", "recurrence_id", "location"]
         if data.get(k)
     }
 
@@ -167,7 +154,7 @@ class Client:
         return resp.get("result")
 
 
-type ClientFixture = Callable[[], Awaitable[Client]]
+ClientFixture = Callable[[], Awaitable[Client]]
 
 
 @pytest.fixture

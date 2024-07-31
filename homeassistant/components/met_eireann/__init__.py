@@ -1,9 +1,7 @@
 """The met_eireann component."""
-
 from datetime import timedelta
 import logging
-from types import MappingProxyType
-from typing import Any, Self
+from typing import Self
 
 import meteireann
 
@@ -34,7 +32,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         altitude=config_entry.data[CONF_ELEVATION],
     )
 
-    weather_data = MetEireannWeatherData(config_entry.data, raw_weather_data)
+    weather_data = MetEireannWeatherData(hass, config_entry.data, raw_weather_data)
 
     async def _async_update_data() -> MetEireannWeatherData:
         """Fetch data from Met Éireann."""
@@ -72,21 +70,20 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
 class MetEireannWeatherData:
     """Keep data for Met Éireann weather entities."""
 
-    def __init__(
-        self, config: MappingProxyType[str, Any], weather_data: meteireann.WeatherData
-    ) -> None:
+    def __init__(self, hass, config, weather_data):
         """Initialise the weather entity data."""
+        self.hass = hass
         self._config = config
         self._weather_data = weather_data
-        self.current_weather_data: dict[str, Any] = {}
-        self.daily_forecast: list[dict[str, Any]] = []
-        self.hourly_forecast: list[dict[str, Any]] = []
+        self.current_weather_data = {}
+        self.daily_forecast = None
+        self.hourly_forecast = None
 
     async def fetch_data(self) -> Self:
         """Fetch data from API - (current weather and forecast)."""
         await self._weather_data.fetching_data()
         self.current_weather_data = self._weather_data.get_current_weather()
-        time_zone = dt_util.get_default_time_zone()
+        time_zone = dt_util.DEFAULT_TIME_ZONE
         self.daily_forecast = self._weather_data.get_forecast(time_zone, False)
         self.hourly_forecast = self._weather_data.get_forecast(time_zone, True)
         return self

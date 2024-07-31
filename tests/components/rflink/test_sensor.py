@@ -4,9 +4,6 @@ Test setup of rflink sensor component/platform. Verify manual and
 automatic sensor creation.
 
 """
-
-import pytest
-
 from homeassistant.components.rflink import (
     CONF_RECONNECT_INTERVAL,
     DATA_ENTITY_LOOKUP,
@@ -41,9 +38,7 @@ CONFIG = {
 }
 
 
-async def test_default_setup(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_default_setup(hass: HomeAssistant, monkeypatch) -> None:
     """Test all basic functionality of the rflink sensor component."""
     # setup mocking rflink module
     event_callback, create, _, _ = await mock_rflink(hass, CONFIG, DOMAIN, monkeypatch)
@@ -104,9 +99,7 @@ async def test_default_setup(
     assert bat_sensor.attributes[ATTR_ICON] == "mdi:battery"
 
 
-async def test_disable_automatic_add(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_disable_automatic_add(hass: HomeAssistant, monkeypatch) -> None:
     """If disabled new devices should not be automatically added."""
     config = {
         "rflink": {"port": "/dev/ttyABC0"},
@@ -131,9 +124,7 @@ async def test_disable_automatic_add(
     assert not hass.states.get("sensor.test2")
 
 
-async def test_entity_availability(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_entity_availability(hass: HomeAssistant, monkeypatch) -> None:
     """If Rflink device is disconnected, entities should become unavailable."""
     # Make sure Rflink mock does not 'recover' to quickly from the
     # disconnect or else the unavailability cannot be measured
@@ -168,7 +159,7 @@ async def test_entity_availability(
     assert hass.states.get("sensor.test").state == STATE_UNKNOWN
 
 
-async def test_aliases(hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_aliases(hass: HomeAssistant, monkeypatch) -> None:
     """Validate the response to sensor's alias (with aliases)."""
     config = {
         "rflink": {"port": "/dev/ttyABC0"},
@@ -210,9 +201,7 @@ async def test_aliases(hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch) -> 
     assert updated_sensor.attributes[ATTR_UNIT_OF_MEASUREMENT] == PERCENTAGE
 
 
-async def test_race_condition(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_race_condition(hass: HomeAssistant, monkeypatch) -> None:
     """Test race condition for unknown components."""
     config = {"rflink": {"port": "/dev/ttyABC0"}, DOMAIN: {"platform": "rflink"}}
     tmp_entity = TMP_ENTITY.format("test3")
@@ -251,9 +240,7 @@ async def test_race_condition(
     assert new_sensor.state == "ko"
 
 
-async def test_sensor_attributes(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_sensor_attributes(hass: HomeAssistant, monkeypatch) -> None:
     """Validate the sensor attributes."""
 
     config = {

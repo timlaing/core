@@ -1,5 +1,4 @@
 """Provide common mysensors fixtures."""
-
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator, Callable, Generator
@@ -17,12 +16,12 @@ from homeassistant.components.mqtt import DOMAIN as MQTT_DOMAIN
 from homeassistant.components.mysensors.config_flow import DEFAULT_BAUD_RATE
 from homeassistant.components.mysensors.const import (
     CONF_BAUD_RATE,
+    CONF_DEVICE,
     CONF_GATEWAY_TYPE,
     CONF_GATEWAY_TYPE_SERIAL,
     CONF_VERSION,
     DOMAIN,
 )
-from homeassistant.const import CONF_DEVICE
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 
@@ -36,7 +35,7 @@ def mock_mqtt_fixture(hass: HomeAssistant) -> None:
 
 
 @pytest.fixture(name="is_serial_port")
-def is_serial_port_fixture() -> Generator[MagicMock]:
+def is_serial_port_fixture() -> Generator[MagicMock, None, None]:
     """Patch the serial port check."""
     with patch("homeassistant.components.mysensors.gateway.cv.isdevice") as is_device:
         is_device.side_effect = lambda device: device
@@ -53,19 +52,15 @@ def gateway_nodes_fixture() -> dict[int, Sensor]:
 async def serial_transport_fixture(
     gateway_nodes: dict[int, Sensor],
     is_serial_port: MagicMock,
-) -> AsyncGenerator[dict[int, Sensor]]:
+) -> AsyncGenerator[dict[int, Sensor], None]:
     """Mock a serial transport."""
-    with (
-        patch(
-            "mysensors.gateway_serial.AsyncTransport", autospec=True
-        ) as transport_class,
-        patch("mysensors.task.OTAFirmware", autospec=True),
-        patch("mysensors.task.load_fw", autospec=True),
-        patch(
-            "mysensors.task.Persistence",
-            autospec=True,
-        ) as persistence_class,
-    ):
+    with patch(
+        "mysensors.gateway_serial.AsyncTransport", autospec=True
+    ) as transport_class, patch("mysensors.task.OTAFirmware", autospec=True), patch(
+        "mysensors.task.load_fw", autospec=True
+    ), patch(
+        "mysensors.task.Persistence", autospec=True
+    ) as persistence_class:
         persistence = persistence_class.return_value
 
         mock_gateway_features(persistence, transport_class, gateway_nodes)
@@ -116,7 +111,7 @@ def transport_write(transport: MagicMock) -> MagicMock:
 @pytest.fixture(name="serial_entry")
 async def serial_entry_fixture(hass: HomeAssistant) -> MockConfigEntry:
     """Create a config entry for a serial gateway."""
-    return MockConfigEntry(
+    entry = MockConfigEntry(
         domain=DOMAIN,
         data={
             CONF_GATEWAY_TYPE: CONF_GATEWAY_TYPE_SERIAL,
@@ -125,6 +120,7 @@ async def serial_entry_fixture(hass: HomeAssistant) -> MockConfigEntry:
             CONF_BAUD_RATE: DEFAULT_BAUD_RATE,
         },
     )
+    return entry
 
 
 @pytest.fixture(name="config_entry")
@@ -136,7 +132,7 @@ def config_entry_fixture(serial_entry: MockConfigEntry) -> MockConfigEntry:
 @pytest.fixture(name="integration")
 async def integration_fixture(
     hass: HomeAssistant, transport: MagicMock, config_entry: MockConfigEntry
-) -> AsyncGenerator[MockConfigEntry]:
+) -> AsyncGenerator[MockConfigEntry, None]:
     """Set up the mysensors integration with a config entry."""
     config: dict[str, Any] = {}
     config_entry.add_to_hass(hass)
@@ -206,7 +202,7 @@ def update_gateway_nodes(
     return nodes
 
 
-@pytest.fixture(name="cover_node_binary_state", scope="package")
+@pytest.fixture(name="cover_node_binary_state", scope="session")
 def cover_node_binary_state_fixture() -> dict:
     """Load the cover node state."""
     return load_nodes_state("cover_node_binary_state.json")
@@ -218,10 +214,11 @@ def cover_node_binary(
 ) -> Sensor:
     """Load the cover child node."""
     nodes = update_gateway_nodes(gateway_nodes, deepcopy(cover_node_binary_state))
-    return nodes[1]
+    node = nodes[1]
+    return node
 
 
-@pytest.fixture(name="cover_node_percentage_state", scope="package")
+@pytest.fixture(name="cover_node_percentage_state", scope="session")
 def cover_node_percentage_state_fixture() -> dict:
     """Load the cover node state."""
     return load_nodes_state("cover_node_percentage_state.json")
@@ -233,10 +230,11 @@ def cover_node_percentage(
 ) -> Sensor:
     """Load the cover child node."""
     nodes = update_gateway_nodes(gateway_nodes, deepcopy(cover_node_percentage_state))
-    return nodes[1]
+    node = nodes[1]
+    return node
 
 
-@pytest.fixture(name="door_sensor_state", scope="package")
+@pytest.fixture(name="door_sensor_state", scope="session")
 def door_sensor_state_fixture() -> dict:
     """Load the door sensor state."""
     return load_nodes_state("door_sensor_state.json")
@@ -246,10 +244,11 @@ def door_sensor_state_fixture() -> dict:
 def door_sensor(gateway_nodes: dict[int, Sensor], door_sensor_state: dict) -> Sensor:
     """Load the door sensor."""
     nodes = update_gateway_nodes(gateway_nodes, deepcopy(door_sensor_state))
-    return nodes[1]
+    node = nodes[1]
+    return node
 
 
-@pytest.fixture(name="gps_sensor_state", scope="package")
+@pytest.fixture(name="gps_sensor_state", scope="session")
 def gps_sensor_state_fixture() -> dict:
     """Load the gps sensor state."""
     return load_nodes_state("gps_sensor_state.json")
@@ -259,10 +258,11 @@ def gps_sensor_state_fixture() -> dict:
 def gps_sensor(gateway_nodes: dict[int, Sensor], gps_sensor_state: dict) -> Sensor:
     """Load the gps sensor."""
     nodes = update_gateway_nodes(gateway_nodes, deepcopy(gps_sensor_state))
-    return nodes[1]
+    node = nodes[1]
+    return node
 
 
-@pytest.fixture(name="dimmer_node_state", scope="package")
+@pytest.fixture(name="dimmer_node_state", scope="session")
 def dimmer_node_state_fixture() -> dict:
     """Load the dimmer node state."""
     return load_nodes_state("dimmer_node_state.json")
@@ -272,10 +272,11 @@ def dimmer_node_state_fixture() -> dict:
 def dimmer_node(gateway_nodes: dict[int, Sensor], dimmer_node_state: dict) -> Sensor:
     """Load the dimmer child node."""
     nodes = update_gateway_nodes(gateway_nodes, deepcopy(dimmer_node_state))
-    return nodes[1]
+    node = nodes[1]
+    return node
 
 
-@pytest.fixture(name="hvac_node_auto_state", scope="package")
+@pytest.fixture(name="hvac_node_auto_state", scope="session")
 def hvac_node_auto_state_fixture() -> dict:
     """Load the hvac node auto state."""
     return load_nodes_state("hvac_node_auto_state.json")
@@ -287,10 +288,11 @@ def hvac_node_auto(
 ) -> Sensor:
     """Load the hvac auto child node."""
     nodes = update_gateway_nodes(gateway_nodes, deepcopy(hvac_node_auto_state))
-    return nodes[1]
+    node = nodes[1]
+    return node
 
 
-@pytest.fixture(name="hvac_node_cool_state", scope="package")
+@pytest.fixture(name="hvac_node_cool_state", scope="session")
 def hvac_node_cool_state_fixture() -> dict:
     """Load the hvac node cool state."""
     return load_nodes_state("hvac_node_cool_state.json")
@@ -302,10 +304,11 @@ def hvac_node_cool(
 ) -> Sensor:
     """Load the hvac cool child node."""
     nodes = update_gateway_nodes(gateway_nodes, deepcopy(hvac_node_cool_state))
-    return nodes[1]
+    node = nodes[1]
+    return node
 
 
-@pytest.fixture(name="hvac_node_heat_state", scope="package")
+@pytest.fixture(name="hvac_node_heat_state", scope="session")
 def hvac_node_heat_state_fixture() -> dict:
     """Load the hvac node heat state."""
     return load_nodes_state("hvac_node_heat_state.json")
@@ -317,10 +320,11 @@ def hvac_node_heat(
 ) -> Sensor:
     """Load the hvac heat child node."""
     nodes = update_gateway_nodes(gateway_nodes, deepcopy(hvac_node_heat_state))
-    return nodes[1]
+    node = nodes[1]
+    return node
 
 
-@pytest.fixture(name="power_sensor_state", scope="package")
+@pytest.fixture(name="power_sensor_state", scope="session")
 def power_sensor_state_fixture() -> dict:
     """Load the power sensor state."""
     return load_nodes_state("power_sensor_state.json")
@@ -330,10 +334,11 @@ def power_sensor_state_fixture() -> dict:
 def power_sensor(gateway_nodes: dict[int, Sensor], power_sensor_state: dict) -> Sensor:
     """Load the power sensor."""
     nodes = update_gateway_nodes(gateway_nodes, power_sensor_state)
-    return nodes[1]
+    node = nodes[1]
+    return node
 
 
-@pytest.fixture(name="rgb_node_state", scope="package")
+@pytest.fixture(name="rgb_node_state", scope="session")
 def rgb_node_state_fixture() -> dict:
     """Load the rgb node state."""
     return load_nodes_state("rgb_node_state.json")
@@ -343,10 +348,11 @@ def rgb_node_state_fixture() -> dict:
 def rgb_node(gateway_nodes: dict[int, Sensor], rgb_node_state: dict) -> Sensor:
     """Load the rgb child node."""
     nodes = update_gateway_nodes(gateway_nodes, deepcopy(rgb_node_state))
-    return nodes[1]
+    node = nodes[1]
+    return node
 
 
-@pytest.fixture(name="rgbw_node_state", scope="package")
+@pytest.fixture(name="rgbw_node_state", scope="session")
 def rgbw_node_state_fixture() -> dict:
     """Load the rgbw node state."""
     return load_nodes_state("rgbw_node_state.json")
@@ -356,10 +362,11 @@ def rgbw_node_state_fixture() -> dict:
 def rgbw_node(gateway_nodes: dict[int, Sensor], rgbw_node_state: dict) -> Sensor:
     """Load the rgbw child node."""
     nodes = update_gateway_nodes(gateway_nodes, deepcopy(rgbw_node_state))
-    return nodes[1]
+    node = nodes[1]
+    return node
 
 
-@pytest.fixture(name="energy_sensor_state", scope="package")
+@pytest.fixture(name="energy_sensor_state", scope="session")
 def energy_sensor_state_fixture() -> dict:
     """Load the energy sensor state."""
     return load_nodes_state("energy_sensor_state.json")
@@ -371,10 +378,11 @@ def energy_sensor(
 ) -> Sensor:
     """Load the energy sensor."""
     nodes = update_gateway_nodes(gateway_nodes, energy_sensor_state)
-    return nodes[1]
+    node = nodes[1]
+    return node
 
 
-@pytest.fixture(name="sound_sensor_state", scope="package")
+@pytest.fixture(name="sound_sensor_state", scope="session")
 def sound_sensor_state_fixture() -> dict:
     """Load the sound sensor state."""
     return load_nodes_state("sound_sensor_state.json")
@@ -384,10 +392,11 @@ def sound_sensor_state_fixture() -> dict:
 def sound_sensor(gateway_nodes: dict[int, Sensor], sound_sensor_state: dict) -> Sensor:
     """Load the sound sensor."""
     nodes = update_gateway_nodes(gateway_nodes, sound_sensor_state)
-    return nodes[1]
+    node = nodes[1]
+    return node
 
 
-@pytest.fixture(name="distance_sensor_state", scope="package")
+@pytest.fixture(name="distance_sensor_state", scope="session")
 def distance_sensor_state_fixture() -> dict:
     """Load the distance sensor state."""
     return load_nodes_state("distance_sensor_state.json")
@@ -399,10 +408,11 @@ def distance_sensor(
 ) -> Sensor:
     """Load the distance sensor."""
     nodes = update_gateway_nodes(gateway_nodes, distance_sensor_state)
-    return nodes[1]
+    node = nodes[1]
+    return node
 
 
-@pytest.fixture(name="ir_transceiver_state", scope="package")
+@pytest.fixture(name="ir_transceiver_state", scope="session")
 def ir_transceiver_state_fixture() -> dict:
     """Load the ir transceiver state."""
     return load_nodes_state("ir_transceiver_state.json")
@@ -414,10 +424,11 @@ def ir_transceiver(
 ) -> Sensor:
     """Load the ir transceiver child node."""
     nodes = update_gateway_nodes(gateway_nodes, deepcopy(ir_transceiver_state))
-    return nodes[1]
+    node = nodes[1]
+    return node
 
 
-@pytest.fixture(name="relay_node_state", scope="package")
+@pytest.fixture(name="relay_node_state", scope="session")
 def relay_node_state_fixture() -> dict:
     """Load the relay node state."""
     return load_nodes_state("relay_node_state.json")
@@ -427,10 +438,11 @@ def relay_node_state_fixture() -> dict:
 def relay_node(gateway_nodes: dict[int, Sensor], relay_node_state: dict) -> Sensor:
     """Load the relay child node."""
     nodes = update_gateway_nodes(gateway_nodes, deepcopy(relay_node_state))
-    return nodes[1]
+    node = nodes[1]
+    return node
 
 
-@pytest.fixture(name="temperature_sensor_state", scope="package")
+@pytest.fixture(name="temperature_sensor_state", scope="session")
 def temperature_sensor_state_fixture() -> dict:
     """Load the temperature sensor state."""
     return load_nodes_state("temperature_sensor_state.json")
@@ -442,10 +454,11 @@ def temperature_sensor(
 ) -> Sensor:
     """Load the temperature sensor."""
     nodes = update_gateway_nodes(gateway_nodes, temperature_sensor_state)
-    return nodes[1]
+    node = nodes[1]
+    return node
 
 
-@pytest.fixture(name="text_node_state", scope="package")
+@pytest.fixture(name="text_node_state", scope="session")
 def text_node_state_fixture() -> dict:
     """Load the text node state."""
     return load_nodes_state("text_node_state.json")
@@ -455,10 +468,11 @@ def text_node_state_fixture() -> dict:
 def text_node(gateway_nodes: dict[int, Sensor], text_node_state: dict) -> Sensor:
     """Load the text child node."""
     nodes = update_gateway_nodes(gateway_nodes, text_node_state)
-    return nodes[1]
+    node = nodes[1]
+    return node
 
 
-@pytest.fixture(name="battery_sensor_state", scope="package")
+@pytest.fixture(name="battery_sensor_state", scope="session")
 def battery_sensor_state_fixture() -> dict:
     """Load the battery sensor state."""
     return load_nodes_state("battery_sensor_state.json")
@@ -470,4 +484,5 @@ def battery_sensor(
 ) -> Sensor:
     """Load the battery sensor."""
     nodes = update_gateway_nodes(gateway_nodes, deepcopy(battery_sensor_state))
-    return nodes[1]
+    node = nodes[1]
+    return node

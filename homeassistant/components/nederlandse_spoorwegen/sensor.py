@@ -1,5 +1,4 @@
 """Support for Nederlandse Spoorwegen public transport."""
-
 from __future__ import annotations
 
 from datetime import datetime, timedelta
@@ -10,10 +9,7 @@ from ns_api import RequestParametersError
 import requests
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
-    SensorEntity,
-)
+from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 from homeassistant.const import CONF_API_KEY, CONF_NAME
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import PlatformNotReady
@@ -45,7 +41,7 @@ ROUTE_SCHEMA = vol.Schema(
 
 ROUTES_SCHEMA = vol.All(cv.ensure_list, [ROUTE_SCHEMA])
 
-PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {vol.Required(CONF_API_KEY): cv.string, vol.Optional(CONF_ROUTES): ROUTES_SCHEMA}
 )
 
@@ -67,7 +63,7 @@ def setup_platform(
         requests.exceptions.HTTPError,
     ) as error:
         _LOGGER.error("Could not connect to the internet: %s", error)
-        raise PlatformNotReady from error
+        raise PlatformNotReady() from error
     except RequestParametersError as error:
         _LOGGER.error("Could not fetch stations, please check configuration: %s", error)
         return
@@ -134,11 +130,12 @@ class NSDepartureSensor(SensorEntity):
     def extra_state_attributes(self):
         """Return the state attributes."""
         if not self._trips:
-            return None
+            return
 
         if self._trips[0].trip_parts:
             route = [self._trips[0].departure]
-            route.extend(k.destination for k in self._trips[0].trip_parts)
+            for k in self._trips[0].trip_parts:
+                route.append(k.destination)
 
         # Static attributes
         attributes = {

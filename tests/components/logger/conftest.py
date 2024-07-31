@@ -1,5 +1,4 @@
 """Test fixtures for the Logger component."""
-
 import logging
 
 import pytest

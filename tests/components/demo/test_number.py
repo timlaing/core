@@ -1,6 +1,4 @@
 """The tests for the demo number component."""
-
-from collections.abc import Generator
 from unittest.mock import patch
 
 import pytest
@@ -17,7 +15,6 @@ from homeassistant.components.number import (
 )
 from homeassistant.const import ATTR_ENTITY_ID, ATTR_MODE, Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
 from homeassistant.setup import async_setup_component
 
 ENTITY_VOLUME = "number.volume"
@@ -27,7 +24,7 @@ ENTITY_SMALL_RANGE = "number.small_range"
 
 
 @pytest.fixture
-def number_only() -> Generator[None]:
+async def number_only() -> None:
     """Enable only the number platform."""
     with patch(
         "homeassistant.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
@@ -37,7 +34,7 @@ def number_only() -> Generator[None]:
 
 
 @pytest.fixture(autouse=True)
-async def setup_demo_number(hass: HomeAssistant, number_only: None) -> None:
+async def setup_demo_number(hass, number_only):
     """Initialize setup demo Number entity."""
     assert await async_setup_component(hass, DOMAIN, {"number": {"platform": "demo"}})
     await hass.async_block_till_done()
@@ -99,7 +96,7 @@ async def test_set_value_bad_range(hass: HomeAssistant) -> None:
     state = hass.states.get(ENTITY_VOLUME)
     assert state.state == "42.0"
 
-    with pytest.raises(ServiceValidationError):
+    with pytest.raises(ValueError):
         await hass.services.async_call(
             DOMAIN,
             SERVICE_SET_VALUE,

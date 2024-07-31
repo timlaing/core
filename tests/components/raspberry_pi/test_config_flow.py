@@ -1,5 +1,4 @@
 """Test the Raspberry Pi config flow."""
-
 from unittest.mock import patch
 
 from homeassistant.components.raspberry_pi.const import DOMAIN
@@ -21,7 +20,7 @@ async def test_config_flow(hass: HomeAssistant) -> None:
             DOMAIN, context={"source": "system"}
         )
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["title"] == "Raspberry Pi"
     assert result["data"] == {}
     assert result["options"] == {}
@@ -54,6 +53,6 @@ async def test_config_flow_single_entry(hass: HomeAssistant) -> None:
             DOMAIN, context={"source": "system"}
         )
 
-    assert result["type"] is FlowResultType.ABORT
+    assert result["type"] == FlowResultType.ABORT
     assert result["reason"] == "single_instance_allowed"
     mock_setup_entry.assert_not_called()

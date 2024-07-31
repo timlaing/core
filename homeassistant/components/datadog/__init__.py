@@ -1,5 +1,4 @@
 """Support for sending data to Datadog."""
-
 import logging
 
 from datadog import initialize, statsd

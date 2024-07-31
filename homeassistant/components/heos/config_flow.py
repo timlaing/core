@@ -1,14 +1,14 @@
 """Config flow to configure Heos."""
-
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 from pyheos import Heos, HeosError
 import voluptuous as vol
 
+from homeassistant import config_entries
 from homeassistant.components import ssdp
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_HOST
+from homeassistant.data_entry_flow import FlowResult
 
 from .const import DATA_DISCOVERED_HOSTS, DOMAIN
 
@@ -18,14 +18,12 @@ def format_title(host: str) -> str:
     return f"Controller ({host})"
 
 
-class HeosFlowHandler(ConfigFlow, domain=DOMAIN):
+class HeosFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Define a flow for HEOS."""
 
     VERSION = 1
 
-    async def async_step_ssdp(
-        self, discovery_info: ssdp.SsdpServiceInfo
-    ) -> ConfigFlowResult:
+    async def async_step_ssdp(self, discovery_info: ssdp.SsdpServiceInfo) -> FlowResult:
         """Handle a discovered Heos device."""
         # Store discovered host
         if TYPE_CHECKING:

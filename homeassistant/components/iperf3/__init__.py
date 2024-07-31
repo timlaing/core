@@ -1,5 +1,4 @@
 """Support for Iperf3 network measurement tool."""
-
 from __future__ import annotations
 
 from datetime import timedelta

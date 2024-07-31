@@ -1,5 +1,4 @@
 """Vera tests."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -20,8 +19,8 @@ async def run_sensor_test(
     category: int,
     class_property: str,
     assert_states: tuple[tuple[Any, Any]],
-    assert_unit_of_measurement: str | None = None,
-    setup_callback: Callable[[pv.VeraController], None] | None = None,
+    assert_unit_of_measurement: str = None,
+    setup_callback: Callable[[pv.VeraController], None] = None,
 ) -> None:
     """Test generic sensor."""
     vera_device: pv.VeraSensor = MagicMock(spec=pv.VeraSensor)

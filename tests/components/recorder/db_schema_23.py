@@ -5,7 +5,6 @@ used by Home Assistant Core 2021.11.0, which adds the name column
 to statistics_meta.
 It is used to test the schema migration logic.
 """
-
 from __future__ import annotations
 
 from datetime import datetime, timedelta
@@ -83,7 +82,7 @@ DOUBLE_TYPE = (
 )
 
 
-class Events(Base):  # type: ignore[valid-type,misc]
+class Events(Base):  # type: ignore
     """Event history data."""
 
     __table_args__ = (
@@ -147,7 +146,7 @@ class Events(Base):  # type: ignore[valid-type,misc]
             return None
 
 
-class States(Base):  # type: ignore[valid-type,misc]
+class States(Base):  # type: ignore
     """State change history."""
 
     __table_args__ = (
@@ -282,13 +281,13 @@ class StatisticsBase:
     @classmethod
     def from_stats(cls, metadata_id: int, stats: StatisticData):
         """Create object from a statistics."""
-        return cls(  # type: ignore[call-arg,misc]
+        return cls(  # type: ignore
             metadata_id=metadata_id,
             **stats,
         )
 
 
-class Statistics(Base, StatisticsBase):  # type: ignore[valid-type,misc]
+class Statistics(Base, StatisticsBase):  # type: ignore
     """Long term statistics."""
 
     duration = timedelta(hours=1)
@@ -300,7 +299,7 @@ class Statistics(Base, StatisticsBase):  # type: ignore[valid-type,misc]
     __tablename__ = TABLE_STATISTICS
 
 
-class StatisticsShortTerm(Base, StatisticsBase):  # type: ignore[valid-type,misc]
+class StatisticsShortTerm(Base, StatisticsBase):  # type: ignore
     """Short term statistics."""
 
     duration = timedelta(minutes=5)
@@ -323,7 +322,7 @@ class StatisticMetaData(TypedDict):
     unit_of_measurement: str | None
 
 
-class StatisticsMeta(Base):  # type: ignore[valid-type,misc]
+class StatisticsMeta(Base):  # type: ignore
     """Statistics meta data."""
 
     __table_args__ = (
@@ -344,7 +343,7 @@ class StatisticsMeta(Base):  # type: ignore[valid-type,misc]
         return StatisticsMeta(**meta)
 
 
-class RecorderRuns(Base):  # type: ignore[valid-type,misc]
+class RecorderRuns(Base):  # type: ignore
     """Representation of recorder run."""
 
     __table_args__ = (Index("ix_recorder_runs_start_end", "start", "end"),)
@@ -394,7 +393,7 @@ class RecorderRuns(Base):  # type: ignore[valid-type,misc]
         return self
 
 
-class SchemaChanges(Base):  # type: ignore[valid-type,misc]
+class SchemaChanges(Base):  # type: ignore
     """Representation of schema version changes."""
 
     __tablename__ = TABLE_SCHEMA_CHANGES
@@ -412,7 +411,7 @@ class SchemaChanges(Base):  # type: ignore[valid-type,misc]
         )
 
 
-class StatisticsRuns(Base):  # type: ignore[valid-type,misc]
+class StatisticsRuns(Base):  # type: ignore
     """Representation of statistics run."""
 
     __tablename__ = TABLE_STATISTICS_RUNS
@@ -429,11 +428,13 @@ class StatisticsRuns(Base):  # type: ignore[valid-type,misc]
 
 
 @overload
-def process_timestamp(ts: None) -> None: ...
+def process_timestamp(ts: None) -> None:
+    ...
 
 
 @overload
-def process_timestamp(ts: datetime) -> datetime: ...
+def process_timestamp(ts: datetime) -> datetime:
+    ...
 
 
 def process_timestamp(ts: datetime | None) -> datetime | None:
@@ -447,11 +448,13 @@ def process_timestamp(ts: datetime | None) -> datetime | None:
 
 
 @overload
-def process_timestamp_to_utc_isoformat(ts: None) -> None: ...
+def process_timestamp_to_utc_isoformat(ts: None) -> None:
+    ...
 
 
 @overload
-def process_timestamp_to_utc_isoformat(ts: datetime) -> str: ...
+def process_timestamp_to_utc_isoformat(ts: datetime) -> str:
+    ...
 
 
 def process_timestamp_to_utc_isoformat(ts: datetime | None) -> str | None:
@@ -488,7 +491,7 @@ class LazyState(State):
         self._last_updated = None
         self._context = None
 
-    @property
+    @property  # type: ignore
     def attributes(self):
         """State attributes."""
         if not self._attributes:
@@ -505,7 +508,7 @@ class LazyState(State):
         """Set attributes."""
         self._attributes = value
 
-    @property
+    @property  # type: ignore
     def context(self):
         """State context."""
         if not self._context:
@@ -517,7 +520,7 @@ class LazyState(State):
         """Set context."""
         self._context = value
 
-    @property
+    @property  # type: ignore
     def last_changed(self):
         """Last changed datetime."""
         if not self._last_changed:
@@ -529,7 +532,7 @@ class LazyState(State):
         """Set last changed datetime."""
         self._last_changed = value
 
-    @property
+    @property  # type: ignore
     def last_updated(self):
         """Last updated datetime."""
         if not self._last_updated:

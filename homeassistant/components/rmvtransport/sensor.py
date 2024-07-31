@@ -1,5 +1,4 @@
 """Support for departure information for Rhein-Main public transport."""
-
 from __future__ import annotations
 
 import asyncio
@@ -13,10 +12,7 @@ from RMVtransport.rmvtransport import (
 )
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
-    SensorEntity,
-)
+from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 from homeassistant.const import CONF_NAME, CONF_TIMEOUT, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import PlatformNotReady
@@ -58,7 +54,7 @@ ATTRIBUTION = "Data provided by opendata.rmv.de"
 
 SCAN_INTERVAL = timedelta(seconds=60)
 
-PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_NEXT_DEPARTURE): [
             {
@@ -271,11 +267,10 @@ class RMVDepartureData:
                 if not dest_found:
                     continue
 
-            elif (
-                self._lines
-                and journey["number"] not in self._lines
-                or journey["minutes"] < self._time_offset
-            ):
+            elif self._lines and journey["number"] not in self._lines:
+                continue
+
+            elif journey["minutes"] < self._time_offset:
                 continue
 
             for attr in ("direction", "departure_time", "product", "minutes"):

@@ -1,9 +1,10 @@
 """Test the Advantage Air Switch Platform."""
+from json import loads
 
-from unittest.mock import AsyncMock
-
-from syrupy import SnapshotAssertion
-
+from homeassistant.components.advantage_air.const import (
+    ADVANTAGE_AIR_STATE_OFF,
+    ADVANTAGE_AIR_STATE_ON,
+)
 from homeassistant.components.switch import (
     DOMAIN as SWITCH_DOMAIN,
     SERVICE_TURN_OFF,
@@ -13,27 +14,43 @@ from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
-from . import add_mock_config
+from . import (
+    TEST_SET_RESPONSE,
+    TEST_SET_THING_URL,
+    TEST_SET_URL,
+    TEST_SYSTEM_DATA,
+    TEST_SYSTEM_URL,
+    add_mock_config,
+)
+
+from tests.test_util.aiohttp import AiohttpClientMocker
 
 
 async def test_cover_async_setup_entry(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-    mock_get: AsyncMock,
-    mock_update: AsyncMock,
-    snapshot: SnapshotAssertion,
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test switch platform."""
 
+    aioclient_mock.get(
+        TEST_SYSTEM_URL,
+        text=TEST_SYSTEM_DATA,
+    )
+    aioclient_mock.get(
+        TEST_SET_URL,
+        text=TEST_SET_RESPONSE,
+    )
+
     await add_mock_config(hass)
 
-    # Test Fresh Air Switch Entity
+    registry = er.async_get(hass)
+
+    # Test Switch Entity
     entity_id = "switch.myzone_fresh_air"
     state = hass.states.get(entity_id)
     assert state
     assert state.state == STATE_OFF
 
-    entry = entity_registry.async_get(entity_id)
+    entry = registry.async_get(entity_id)
     assert entry
     assert entry.unique_id == "uniqueid-ac1-freshair"
 
@@ -43,8 +60,12 @@ async def test_cover_async_setup_entry(
         {ATTR_ENTITY_ID: [entity_id]},
         blocking=True,
     )
-    mock_update.assert_called_once()
-    mock_update.reset_mock()
+    assert aioclient_mock.mock_calls[-2][0] == "GET"
+    assert aioclient_mock.mock_calls[-2][1].path == "/setAircon"
+    data = loads(aioclient_mock.mock_calls[-2][1].query["json"])
+    assert data["ac1"]["info"]["freshAirStatus"] == ADVANTAGE_AIR_STATE_ON
+    assert aioclient_mock.mock_calls[-1][0] == "GET"
+    assert aioclient_mock.mock_calls[-1][1].path == "/getSystemData"
 
     await hass.services.async_call(
         SWITCH_DOMAIN,
@@ -52,46 +73,31 @@ async def test_cover_async_setup_entry(
         {ATTR_ENTITY_ID: [entity_id]},
         blocking=True,
     )
-    mock_update.assert_called_once()
-    mock_update.reset_mock()
-
-    # Test MyFan Switch Entity
-    entity_id = "switch.myzone_myfan"
-    assert hass.states.get(entity_id) == snapshot(name=entity_id)
-
-    entry = entity_registry.async_get(entity_id)
-    assert entry
-    assert entry.unique_id == "uniqueid-ac1-myfan"
-
-    await hass.services.async_call(
-        SWITCH_DOMAIN,
-        SERVICE_TURN_ON,
-        {ATTR_ENTITY_ID: [entity_id]},
-        blocking=True,
-    )
-    mock_update.assert_called_once()
-    assert mock_update.call_args[0][0] == snapshot(name=f"{entity_id}-turnon")
-    mock_update.reset_mock()
-
-    await hass.services.async_call(
-        SWITCH_DOMAIN,
-        SERVICE_TURN_OFF,
-        {ATTR_ENTITY_ID: [entity_id]},
-        blocking=True,
-    )
-    mock_update.assert_called_once()
-    assert mock_update.call_args[0][0] == snapshot(name=f"{entity_id}-turnoff")
+    assert aioclient_mock.mock_calls[-2][0] == "GET"
+    assert aioclient_mock.mock_calls[-2][1].path == "/setAircon"
+    data = loads(aioclient_mock.mock_calls[-2][1].query["json"])
+    assert data["ac1"]["info"]["freshAirStatus"] == ADVANTAGE_AIR_STATE_OFF
+    assert aioclient_mock.mock_calls[-1][0] == "GET"
+    assert aioclient_mock.mock_calls[-1][1].path == "/getSystemData"
 
 
 async def test_things_switch(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-    mock_get: AsyncMock,
-    mock_update: AsyncMock,
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test things switches."""
 
+    aioclient_mock.get(
+        TEST_SYSTEM_URL,
+        text=TEST_SYSTEM_DATA,
+    )
+    aioclient_mock.get(
+        TEST_SET_THING_URL,
+        text=TEST_SET_RESPONSE,
+    )
+
     await add_mock_config(hass)
+
+    registry = er.async_get(hass)
 
     # Test Switch Entity
     entity_id = "switch.relay"
@@ -100,9 +106,9 @@ async def test_things_switch(
     assert state
     assert state.state == STATE_ON
 
-    entry = entity_registry.async_get(entity_id)
+    entry = registry.async_get(entity_id)
     assert entry
-    assert entry.unique_id == f"uniqueid-{thing_id}"
+    assert entry.unique_id == "uniqueid-205"
 
     await hass.services.async_call(
         SWITCH_DOMAIN,
@@ -110,8 +116,13 @@ async def test_things_switch(
         {ATTR_ENTITY_ID: [entity_id]},
         blocking=True,
     )
-    mock_update.assert_called_once()
-    mock_update.reset_mock()
+    assert aioclient_mock.mock_calls[-2][0] == "GET"
+    assert aioclient_mock.mock_calls[-2][1].path == "/setThings"
+    data = loads(aioclient_mock.mock_calls[-2][1].query["json"]).get(thing_id)
+    assert data["id"] == thing_id
+    assert data["value"] == 0
+    assert aioclient_mock.mock_calls[-1][0] == "GET"
+    assert aioclient_mock.mock_calls[-1][1].path == "/getSystemData"
 
     await hass.services.async_call(
         SWITCH_DOMAIN,
@@ -119,4 +130,10 @@ async def test_things_switch(
         {ATTR_ENTITY_ID: [entity_id]},
         blocking=True,
     )
-    mock_update.assert_called_once()
+    assert aioclient_mock.mock_calls[-2][0] == "GET"
+    assert aioclient_mock.mock_calls[-2][1].path == "/setThings"
+    data = loads(aioclient_mock.mock_calls[-2][1].query["json"]).get(thing_id)
+    assert data["id"] == thing_id
+    assert data["value"] == 100
+    assert aioclient_mock.mock_calls[-1][0] == "GET"
+    assert aioclient_mock.mock_calls[-1][1].path == "/getSystemData"

@@ -1,5 +1,4 @@
 """Sensor for the zamg integration."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -38,11 +37,16 @@ from .const import (
 from .coordinator import ZamgDataUpdateCoordinator
 
 
-@dataclass(frozen=True, kw_only=True)
-class ZamgSensorEntityDescription(SensorEntityDescription):
-    """Describes Zamg sensor entity."""
+@dataclass
+class ZamgRequiredKeysMixin:
+    """Mixin for required keys."""
 
     para_name: str
+
+
+@dataclass
+class ZamgSensorEntityDescription(SensorEntityDescription, ZamgRequiredKeysMixin):
+    """Describes Zamg sensor entity."""
 
 
 SENSOR_TYPES: tuple[ZamgSensorEntityDescription, ...] = (
@@ -198,7 +202,7 @@ class ZamgSensor(CoordinatorEntity, SensorEntity):
             identifiers={(DOMAIN, station_id)},
             manufacturer=ATTRIBUTION,
             configuration_url=MANUFACTURER_URL,
-            name=name,
+            name=coordinator.name,
         )
         coordinator.api_fields = API_FIELDS
 

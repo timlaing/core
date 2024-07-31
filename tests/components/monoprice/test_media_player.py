@@ -1,5 +1,4 @@
 """The tests for Monoprice Media player platform."""
-
 from collections import defaultdict
 from unittest.mock import patch
 
@@ -183,7 +182,7 @@ async def test_service_calls_with_entity_id(hass: HomeAssistant) -> None:
     # Restoring other media player to its previous state
     # The zone should not be restored
     await _call_monoprice_service(hass, SERVICE_RESTORE, {"entity_id": ZONE_2_ID})
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await hass.async_block_till_done()
 
     # Checking that values were not (!) restored
     state = hass.states.get(ZONE_1_ID)
@@ -193,7 +192,7 @@ async def test_service_calls_with_entity_id(hass: HomeAssistant) -> None:
 
     # Restoring media player to its previous state
     await _call_monoprice_service(hass, SERVICE_RESTORE, {"entity_id": ZONE_1_ID})
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await hass.async_block_till_done()
 
     state = hass.states.get(ZONE_1_ID)
 
@@ -226,7 +225,7 @@ async def test_service_calls_with_all_entities(hass: HomeAssistant) -> None:
 
     # Restoring media player to its previous state
     await _call_monoprice_service(hass, SERVICE_RESTORE, {"entity_id": "all"})
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await hass.async_block_till_done()
 
     state = hass.states.get(ZONE_1_ID)
 
@@ -259,7 +258,7 @@ async def test_service_calls_without_relevant_entities(hass: HomeAssistant) -> N
 
     # Restoring media player to its previous state
     await _call_monoprice_service(hass, SERVICE_RESTORE, {"entity_id": "light.demo"})
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await hass.async_block_till_done()
 
     state = hass.states.get(ZONE_1_ID)
 
@@ -273,7 +272,7 @@ async def test_restore_without_snapshort(hass: HomeAssistant) -> None:
 
     with patch.object(MockMonoprice, "restore_zone") as method_call:
         await _call_monoprice_service(hass, SERVICE_RESTORE, {"entity_id": ZONE_1_ID})
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await hass.async_block_till_done()
 
         assert not method_call.called
 
@@ -295,7 +294,7 @@ async def test_update(hass: HomeAssistant) -> None:
     monoprice.set_volume(11, 38)
 
     await async_update_entity(hass, ZONE_1_ID)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await hass.async_block_till_done()
 
     state = hass.states.get(ZONE_1_ID)
 
@@ -321,7 +320,7 @@ async def test_failed_update(hass: HomeAssistant) -> None:
 
     with patch.object(MockMonoprice, "zone_status", side_effect=SerialException):
         await async_update_entity(hass, ZONE_1_ID)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await hass.async_block_till_done()
 
     state = hass.states.get(ZONE_1_ID)
 
@@ -347,7 +346,7 @@ async def test_empty_update(hass: HomeAssistant) -> None:
 
     with patch.object(MockMonoprice, "zone_status", return_value=None):
         await async_update_entity(hass, ZONE_1_ID)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await hass.async_block_till_done()
 
     state = hass.states.get(ZONE_1_ID)
 
@@ -361,13 +360,13 @@ async def test_supported_features(hass: HomeAssistant) -> None:
 
     state = hass.states.get(ZONE_1_ID)
     assert (
-        state.attributes["supported_features"]
-        == MediaPlayerEntityFeature.VOLUME_MUTE
+        MediaPlayerEntityFeature.VOLUME_MUTE
         | MediaPlayerEntityFeature.VOLUME_SET
         | MediaPlayerEntityFeature.VOLUME_STEP
         | MediaPlayerEntityFeature.TURN_ON
         | MediaPlayerEntityFeature.TURN_OFF
         | MediaPlayerEntityFeature.SELECT_SOURCE
+        == state.attributes["supported_features"]
     )
 
 
@@ -418,7 +417,7 @@ async def test_unknown_source(hass: HomeAssistant) -> None:
     monoprice.set_source(11, 5)
 
     await async_update_entity(hass, ZONE_1_ID)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await hass.async_block_till_done()
 
     state = hass.states.get(ZONE_1_ID)
 
@@ -490,45 +489,45 @@ async def test_volume_up_down(hass: HomeAssistant) -> None:
     assert monoprice.zones[11].volume == 37
 
 
-async def test_first_run_with_available_zones(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
-) -> None:
+async def test_first_run_with_available_zones(hass: HomeAssistant) -> None:
     """Test first run with all zones available."""
     monoprice = MockMonoprice()
     await _setup_monoprice(hass, monoprice)
 
-    entry = entity_registry.async_get(ZONE_7_ID)
+    registry = er.async_get(hass)
+
+    entry = registry.async_get(ZONE_7_ID)
     assert not entry.disabled
 
 
-async def test_first_run_with_failing_zones(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
-) -> None:
+async def test_first_run_with_failing_zones(hass: HomeAssistant) -> None:
     """Test first run with failed zones."""
     monoprice = MockMonoprice()
 
     with patch.object(MockMonoprice, "zone_status", side_effect=SerialException):
         await _setup_monoprice(hass, monoprice)
 
-    entry = entity_registry.async_get(ZONE_1_ID)
+    registry = er.async_get(hass)
+
+    entry = registry.async_get(ZONE_1_ID)
     assert not entry.disabled
 
-    entry = entity_registry.async_get(ZONE_7_ID)
+    entry = registry.async_get(ZONE_7_ID)
     assert entry.disabled
     assert entry.disabled_by is er.RegistryEntryDisabler.INTEGRATION
 
 
-async def test_not_first_run_with_failing_zone(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
-) -> None:
+async def test_not_first_run_with_failing_zone(hass: HomeAssistant) -> None:
     """Test first run with failed zones."""
     monoprice = MockMonoprice()
 
     with patch.object(MockMonoprice, "zone_status", side_effect=SerialException):
         await _setup_monoprice_not_first_run(hass, monoprice)
 
-    entry = entity_registry.async_get(ZONE_1_ID)
+    registry = er.async_get(hass)
+
+    entry = registry.async_get(ZONE_1_ID)
     assert not entry.disabled
 
-    entry = entity_registry.async_get(ZONE_7_ID)
+    entry = registry.async_get(ZONE_7_ID)
     assert not entry.disabled

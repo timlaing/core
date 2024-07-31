@@ -1,5 +1,4 @@
 """Models for the AVM FRITZ!SmartHome integration."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -19,7 +18,7 @@ class ClimateExtraAttributes(TypedDict, total=False):
     window_open: bool
 
 
-@dataclass(frozen=True)
+@dataclass
 class FritzEntityDescriptionMixinBase:
     """Bases description mixin for Fritz!Smarthome entities."""
 

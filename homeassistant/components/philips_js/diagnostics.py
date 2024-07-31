@@ -1,13 +1,14 @@
 """Diagnostics support for Philips JS."""
-
 from __future__ import annotations
 
 from typing import Any
 
 from homeassistant.components.diagnostics import async_redact_data
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from . import PhilipsTVConfigEntry
+from . import PhilipsTVDataUpdateCoordinator
+from .const import DOMAIN
 
 TO_REDACT = {
     "serialnumber_encrypted",
@@ -22,10 +23,10 @@ TO_REDACT = {
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: PhilipsTVConfigEntry
+    hass: HomeAssistant, entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    coordinator = entry.runtime_data
+    coordinator: PhilipsTVDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
     api = coordinator.api
 
     return {

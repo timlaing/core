@@ -1,5 +1,4 @@
 """The ONVIF integration."""
-
 import asyncio
 from contextlib import suppress
 from http import HTTPStatus
@@ -87,7 +86,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         raise ConfigEntryNotReady(f"Setup was unexpectedly canceled: {err}") from err
 
     if not device.available:
-        raise ConfigEntryNotReady
+        raise ConfigEntryNotReady()
 
     hass.data[DOMAIN][entry.unique_id] = device
 

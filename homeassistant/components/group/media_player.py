@@ -1,5 +1,4 @@
 """Platform allowing several media players to be grouped into one media player."""
-
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
@@ -16,7 +15,7 @@ from homeassistant.components.media_player import (
     ATTR_MEDIA_VOLUME_LEVEL,
     ATTR_MEDIA_VOLUME_MUTED,
     DOMAIN,
-    PLATFORM_SCHEMA as MEDIA_PLAYER_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     SERVICE_CLEAR_PLAYLIST,
     SERVICE_PLAY_MEDIA,
     MediaPlayerEntity,
@@ -45,18 +44,14 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import (
-    CALLBACK_TYPE,
-    Event,
-    EventStateChangedData,
-    HomeAssistant,
-    State,
-    callback,
-)
+from homeassistant.core import CALLBACK_TYPE, HomeAssistant, State, callback
 from homeassistant.helpers import config_validation as cv, entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from homeassistant.helpers.event import (
+    EventStateChangedData,
+    async_track_state_change_event,
+)
+from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType, EventType
 
 KEY_ANNOUNCE = "announce"
 KEY_CLEAR_PLAYLIST = "clear_playlist"
@@ -71,7 +66,7 @@ KEY_VOLUME = "volume"
 
 DEFAULT_NAME = "Media Group"
 
-PLATFORM_SCHEMA = MEDIA_PLAYER_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_ENTITIES): cv.entities_domain(DOMAIN),
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
@@ -114,7 +109,7 @@ async def async_setup_entry(
 
 @callback
 def async_create_preview_media_player(
-    hass: HomeAssistant, name: str, validated_config: dict[str, Any]
+    name: str, validated_config: dict[str, Any]
 ) -> MediaPlayerGroup:
     """Create a preview sensor."""
     return MediaPlayerGroup(
@@ -152,7 +147,7 @@ class MediaPlayerGroup(MediaPlayerEntity):
         }
 
     @callback
-    def async_on_state_change(self, event: Event[EventStateChangedData]) -> None:
+    def async_on_state_change(self, event: EventType[EventStateChangedData]) -> None:
         """Update supported features and state when a new state is received."""
         self.async_set_context(event.context)
         self.async_update_supported_features(
@@ -237,12 +232,11 @@ class MediaPlayerGroup(MediaPlayerEntity):
 
         @callback
         def async_state_changed_listener(
-            event: Event[EventStateChangedData] | None,
+            event: EventType[EventStateChangedData] | None,
         ) -> None:
             """Handle child updates."""
             self.async_update_group_state()
-            calculated_state = self._async_calculate_state()
-            preview_callback(calculated_state.state, calculated_state.attributes)
+            preview_callback(*self._async_generate_attributes())
 
         async_state_changed_listener(None)
         return async_track_state_change_event(
@@ -365,8 +359,6 @@ class MediaPlayerGroup(MediaPlayerEntity):
             ATTR_MEDIA_CONTENT_ID: media_id,
             ATTR_MEDIA_CONTENT_TYPE: media_type,
         }
-        if kwargs:
-            data.update(kwargs)
         await self.hass.services.async_call(
             DOMAIN,
             SERVICE_PLAY_MEDIA,

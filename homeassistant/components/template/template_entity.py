@@ -1,10 +1,8 @@
 """TemplateEntity utility class."""
-
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 import contextlib
-from functools import cached_property
 import itertools
 import logging
 from typing import Any
@@ -22,8 +20,6 @@ from homeassistant.const import (
 from homeassistant.core import (
     CALLBACK_TYPE,
     Context,
-    Event,
-    EventStateChangedData,
     HomeAssistant,
     State,
     callback,
@@ -33,6 +29,7 @@ from homeassistant.exceptions import TemplateError
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.event import (
+    EventStateChangedData,
     TrackTemplate,
     TrackTemplateResult,
     TrackTemplateResultInfo,
@@ -49,7 +46,7 @@ from homeassistant.helpers.trigger_template_entity import (
     TEMPLATE_ENTITY_BASE_SCHEMA,
     make_template_entity_base_schema,
 )
-from homeassistant.helpers.typing import ConfigType
+from homeassistant.helpers.typing import ConfigType, EventType
 
 from .const import (
     CONF_ATTRIBUTE_TEMPLATES,
@@ -187,9 +184,9 @@ class _TemplateAttribute:
     @callback
     def handle_result(
         self,
-        event: Event[EventStateChangedData] | None,
+        event: EventType[EventStateChangedData] | None,
         template: Template,
-        last_result: str | TemplateError | None,
+        last_result: str | None | TemplateError,
         result: str | TemplateError,
     ) -> None:
         """Handle a template result event callback."""
@@ -267,18 +264,15 @@ class TemplateEntity(Entity):
         self._attr_extra_state_attributes = {}
         self._self_ref_update_count = 0
         self._attr_unique_id = unique_id
-        self._preview_callback: (
-            Callable[
-                [
-                    str | None,
-                    dict[str, Any] | None,
-                    dict[str, bool | set[str]] | None,
-                    str | None,
-                ],
-                None,
-            ]
-            | None
-        ) = None
+        self._preview_callback: Callable[
+            [
+                str | None,
+                dict[str, Any] | None,
+                dict[str, bool | set[str]] | None,
+                str | None,
+            ],
+            None,
+        ] | None = None
         if config is None:
             self._attribute_templates = attribute_templates
             self._availability_template = availability_template
@@ -300,7 +294,7 @@ class TemplateEntity(Entity):
                 super().__init__("unknown.unknown", STATE_UNKNOWN)
                 self.entity_id = None  # type: ignore[assignment]
 
-            @cached_property
+            @property
             def name(self) -> str:
                 """Name of this state."""
                 return "<None>"
@@ -399,7 +393,7 @@ class TemplateEntity(Entity):
     @callback
     def _handle_results(
         self,
-        event: Event[EventStateChangedData] | None,
+        event: EventType[EventStateChangedData] | None,
         updates: list[TrackTemplateResult],
     ) -> None:
         """Call back the results to the attributes."""
@@ -436,17 +430,14 @@ class TemplateEntity(Entity):
             return
 
         try:
-            calculated_state = self._async_calculate_state()
-            validate_state(calculated_state.state)
-        except Exception as err:  # noqa: BLE001
+            state, attrs = self._async_generate_attributes()
+            validate_state(state)
+        except Exception as err:  # pylint: disable=broad-exception-caught
             self._preview_callback(None, None, None, str(err))
         else:
             assert self._template_result_info
             self._preview_callback(
-                calculated_state.state,
-                calculated_state.attributes,
-                self._template_result_info.listeners,
-                None,
+                state, attrs, self._template_result_info.listeners, None
             )
 
     @callback
@@ -464,7 +455,8 @@ class TemplateEntity(Entity):
             template_var_tup = TrackTemplate(template, variables)
             is_availability_template = False
             for attribute in attributes:
-                if attribute._attribute == "_attr_available":  # noqa: SLF001
+                # pylint: disable-next=protected-access
+                if attribute._attribute == "_attr_available":
                     has_availability_template = True
                     is_availability_template = True
                 attribute.async_setup()
@@ -534,7 +526,7 @@ class TemplateEntity(Entity):
         self._async_setup_templates()
         try:
             self._async_template_startup(None, log_template_error)
-        except Exception as err:  # noqa: BLE001
+        except Exception as err:  # pylint: disable=broad-exception-caught
             preview_callback(None, None, None, str(err))
         return self._call_on_remove_callbacks
 

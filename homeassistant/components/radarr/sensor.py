@@ -1,9 +1,9 @@
 """Support for Radarr."""
-
 from __future__ import annotations
 
 from collections.abc import Callable
-import dataclasses
+from copy import deepcopy
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Generic
 
@@ -15,11 +15,13 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory, UnitOfInformation
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import RadarrConfigEntry, RadarrEntity
+from . import RadarrEntity
+from .const import DOMAIN
 from .coordinator import RadarrDataUpdateCoordinator, T
 
 
@@ -37,35 +39,30 @@ def get_modified_description(
     description: RadarrSensorEntityDescription[T], mount: RootFolder
 ) -> tuple[RadarrSensorEntityDescription[T], str]:
     """Return modified description and folder name."""
+    desc = deepcopy(description)
     name = mount.path.rsplit("/")[-1].rsplit("\\")[-1]
-    desc = dataclasses.replace(
-        description,
-        key=f"{description.key}_{name}",
-        name=f"{description.name} {name}".capitalize(),
-    )
+    desc.key = f"{description.key}_{name}"
+    desc.name = f"{description.name} {name}".capitalize()
     return desc, name
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclass
 class RadarrSensorEntityDescriptionMixIn(Generic[T]):
     """Mixin for required keys."""
 
     value_fn: Callable[[T, str], str | int | datetime]
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclass
 class RadarrSensorEntityDescription(
     SensorEntityDescription, RadarrSensorEntityDescriptionMixIn[T], Generic[T]
 ):
     """Class to describe a Radarr sensor."""
 
-    description_fn: (
-        Callable[
-            [RadarrSensorEntityDescription[T], RootFolder],
-            tuple[RadarrSensorEntityDescription[T], str] | None,
-        ]
-        | None
-    ) = None
+    description_fn: Callable[
+        [RadarrSensorEntityDescription[T], RootFolder],
+        tuple[RadarrSensorEntityDescription[T], str] | None,
+    ] | None = None
 
 
 SENSOR_TYPES: dict[str, RadarrSensorEntityDescription[Any]] = {
@@ -82,6 +79,7 @@ SENSOR_TYPES: dict[str, RadarrSensorEntityDescription[Any]] = {
         key="movies",
         translation_key="movies",
         native_unit_of_measurement="Movies",
+        icon="mdi:television",
         entity_registry_enabled_default=False,
         value_fn=lambda data, _: data,
     ),
@@ -89,6 +87,7 @@ SENSOR_TYPES: dict[str, RadarrSensorEntityDescription[Any]] = {
         key="queue",
         translation_key="queue",
         native_unit_of_measurement="Movies",
+        icon="mdi:download",
         entity_registry_enabled_default=False,
         state_class=SensorStateClass.TOTAL,
         value_fn=lambda data, _: data,
@@ -115,13 +114,16 @@ PARALLEL_UPDATES = 1
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: RadarrConfigEntry,
+    entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Radarr sensors based on a config entry."""
+    coordinators: dict[str, RadarrDataUpdateCoordinator[Any]] = hass.data[DOMAIN][
+        entry.entry_id
+    ]
     entities: list[RadarrSensor[Any]] = []
     for coordinator_type, description in SENSOR_TYPES.items():
-        coordinator = getattr(entry.runtime_data, coordinator_type)
+        coordinator = coordinators[coordinator_type]
         if coordinator_type != "disk_space":
             entities.append(RadarrSensor(coordinator, description))
         else:

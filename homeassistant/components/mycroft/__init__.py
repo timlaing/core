@@ -1,5 +1,4 @@
 """Support for Mycroft AI."""
-
 import voluptuous as vol
 
 from homeassistant.const import CONF_HOST, Platform

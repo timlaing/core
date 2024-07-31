@@ -1,5 +1,4 @@
 """Sensor support for Wireless Sensor Tags platform."""
-
 from __future__ import annotations
 
 import logging
@@ -7,25 +6,20 @@ import logging
 import voluptuous as vol
 
 from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import CONF_MONITORED_CONDITIONS, Platform
+from homeassistant.const import CONF_MONITORED_CONDITIONS
 from homeassistant.core import HomeAssistant, callback
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from . import (
-    DOMAIN as WIRELESSTAG_DOMAIN,
-    SIGNAL_TAG_UPDATE,
-    WirelessTagBaseSensor,
-    async_migrate_unique_id,
-)
+from . import DOMAIN as WIRELESSTAG_DOMAIN, SIGNAL_TAG_UPDATE, WirelessTagBaseSensor
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -65,7 +59,7 @@ SENSOR_TYPES: dict[str, SensorEntityDescription] = {
 
 SENSOR_KEYS: list[str] = list(SENSOR_TYPES)
 
-PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_MONITORED_CONDITIONS, default=[]): vol.All(
             cv.ensure_list, [vol.In(SENSOR_KEYS)]
@@ -74,10 +68,10 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 )
 
 
-async def async_setup_platform(
+def setup_platform(
     hass: HomeAssistant,
     config: ConfigType,
-    async_add_entities: AddEntitiesCallback,
+    add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the sensor platform."""
@@ -89,10 +83,9 @@ async def async_setup_platform(
             if key not in tag.allowed_sensor_types:
                 continue
             description = SENSOR_TYPES[key]
-            async_migrate_unique_id(hass, tag, Platform.SENSOR, description.key)
             sensors.append(WirelessTagSensor(platform, tag, description))
 
-    async_add_entities(sensors, True)
+    add_entities(sensors, True)
 
 
 class WirelessTagSensor(WirelessTagBaseSensor, SensorEntity):
@@ -107,7 +100,7 @@ class WirelessTagSensor(WirelessTagBaseSensor, SensorEntity):
         self._sensor_type = description.key
         self.entity_description = description
         self._name = self._tag.name
-        self._attr_unique_id = f"{self._uuid}_{self._sensor_type}"
+        self._attr_unique_id = f"{self.tag_id}_{self._sensor_type}"
 
         # I want to see entity_id as:
         # sensor.wirelesstag_bedroom_temperature

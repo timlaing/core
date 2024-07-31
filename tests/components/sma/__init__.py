@@ -1,5 +1,4 @@
 """Tests for the sma integration."""
-
 from unittest.mock import patch
 
 MOCK_DEVICE = {

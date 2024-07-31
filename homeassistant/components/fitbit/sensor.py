@@ -1,7 +1,7 @@
 """Support for the Fitbit API."""
-
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass
 import datetime
@@ -9,8 +9,6 @@ import logging
 import os
 from typing import Any, Final, cast
 
-from fitbit import Fitbit
-from oauthlib.oauth2.rfc6749.errors import OAuth2Error
 import voluptuous as vol
 
 from homeassistant.components.application_credentials import (
@@ -18,7 +16,7 @@ from homeassistant.components.application_credentials import (
     async_import_client_credential,
 )
 from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA as PARENT_PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
@@ -40,7 +38,6 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResultType
 import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.icon import icon_for_battery_level
 from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
@@ -136,18 +133,7 @@ def _water_unit(unit_system: FitbitUnitSystem) -> UnitOfVolume:
     return UnitOfVolume.MILLILITERS
 
 
-def _int_value_or_none(field: str) -> Callable[[dict[str, Any]], int | None]:
-    """Value function that will parse the specified field if present."""
-
-    def convert(result: dict[str, Any]) -> int | None:
-        if (value := result["value"].get(field)) is not None:
-            return int(value)
-        return None
-
-    return convert
-
-
-@dataclass(frozen=True)
+@dataclass
 class FitbitSensorEntityDescription(SensorEntityDescription):
     """Describes Fitbit sensor entity."""
 
@@ -219,7 +205,7 @@ FITBIT_RESOURCES_LIST: Final[tuple[FitbitSensorEntityDescription, ...]] = (
         name="Resting Heart Rate",
         native_unit_of_measurement="bpm",
         icon="mdi:heart-pulse",
-        value_fn=_int_value_or_none("restingHeartRate"),
+        value_fn=lambda result: int(result["value"]["restingHeartRate"]),
         scope=FitbitScope.HEART_RATE,
         state_class=SensorStateClass.MEASUREMENT,
     ),
@@ -517,20 +503,10 @@ SLEEP_START_TIME_12HR = FitbitSensorEntityDescription(
 
 FITBIT_RESOURCE_BATTERY = FitbitSensorEntityDescription(
     key="devices/battery",
-    translation_key="battery",
+    name="Battery",
     icon="mdi:battery",
     scope=FitbitScope.DEVICE,
     entity_category=EntityCategory.DIAGNOSTIC,
-    has_entity_name=True,
-)
-FITBIT_RESOURCE_BATTERY_LEVEL = FitbitSensorEntityDescription(
-    key="devices/battery_level",
-    translation_key="battery_level",
-    scope=FitbitScope.DEVICE,
-    entity_category=EntityCategory.DIAGNOSTIC,
-    has_entity_name=True,
-    device_class=SensorDeviceClass.BATTERY,
-    native_unit_of_measurement=PERCENTAGE,
 )
 
 FITBIT_RESOURCES_KEYS: Final[list[str]] = [
@@ -538,7 +514,7 @@ FITBIT_RESOURCES_KEYS: Final[list[str]] = [
     for desc in (*FITBIT_RESOURCES_LIST, FITBIT_RESOURCE_BATTERY, SLEEP_START_TIME)
 ]
 
-PLATFORM_SCHEMA: Final = SENSOR_PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA: Final = PARENT_PLATFORM_SCHEMA.extend(
     {
         vol.Optional(
             CONF_MONITORED_RESOURCES, default=FITBIT_DEFAULT_RESOURCES
@@ -592,54 +568,34 @@ async def async_setup_platform(
 
     if config_file is not None:
         _LOGGER.debug("Importing existing fitbit.conf application credentials")
-
-        # Refresh the token before importing to ensure it is working and not
-        # expired on first initialization.
-        authd_client = Fitbit(
-            config_file[CONF_CLIENT_ID],
-            config_file[CONF_CLIENT_SECRET],
-            access_token=config_file[ATTR_ACCESS_TOKEN],
-            refresh_token=config_file[ATTR_REFRESH_TOKEN],
-            expires_at=config_file[ATTR_LAST_SAVED_AT],
-            refresh_cb=lambda x: None,
+        await async_import_client_credential(
+            hass,
+            DOMAIN,
+            ClientCredential(
+                config_file[CONF_CLIENT_ID], config_file[CONF_CLIENT_SECRET]
+            ),
         )
-        try:
-            updated_token = await hass.async_add_executor_job(
-                authd_client.client.refresh_token
-            )
-        except OAuth2Error as err:
-            _LOGGER.debug("Unable to import fitbit OAuth2 credentials: %s", err)
-            translation_key = "deprecated_yaml_import_issue_cannot_connect"
-        else:
-            await async_import_client_credential(
-                hass,
-                DOMAIN,
-                ClientCredential(
-                    config_file[CONF_CLIENT_ID], config_file[CONF_CLIENT_SECRET]
-                ),
-            )
-            result = await hass.config_entries.flow.async_init(
-                DOMAIN,
-                context={"source": SOURCE_IMPORT},
-                data={
-                    "auth_implementation": DOMAIN,
-                    CONF_TOKEN: {
-                        ATTR_ACCESS_TOKEN: updated_token[ATTR_ACCESS_TOKEN],
-                        ATTR_REFRESH_TOKEN: updated_token[ATTR_REFRESH_TOKEN],
-                        "expires_at": updated_token["expires_at"],
-                        "scope": " ".join(updated_token.get("scope", [])),
-                    },
-                    CONF_CLOCK_FORMAT: config[CONF_CLOCK_FORMAT],
-                    CONF_UNIT_SYSTEM: config[CONF_UNIT_SYSTEM],
-                    CONF_MONITORED_RESOURCES: config[CONF_MONITORED_RESOURCES],
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": SOURCE_IMPORT},
+            data={
+                "auth_implementation": DOMAIN,
+                CONF_TOKEN: {
+                    ATTR_ACCESS_TOKEN: config_file[ATTR_ACCESS_TOKEN],
+                    ATTR_REFRESH_TOKEN: config_file[ATTR_REFRESH_TOKEN],
+                    "expires_at": config_file[ATTR_LAST_SAVED_AT],
                 },
-            )
-            translation_key = "deprecated_yaml_import"
-            if (
-                result.get("type") == FlowResultType.ABORT
-                and result.get("reason") == "cannot_connect"
-            ):
-                translation_key = "deprecated_yaml_import_issue_cannot_connect"
+                CONF_CLOCK_FORMAT: config[CONF_CLOCK_FORMAT],
+                CONF_UNIT_SYSTEM: config[CONF_UNIT_SYSTEM],
+                CONF_MONITORED_RESOURCES: config[CONF_MONITORED_RESOURCES],
+            },
+        )
+        translation_key = "deprecated_yaml_import"
+        if (
+            result.get("type") == FlowResultType.ABORT
+            and result.get("reason") == "cannot_connect"
+        ):
+            translation_key = "deprecated_yaml_import_issue_cannot_connect"
     else:
         translation_key = "deprecated_yaml_no_import"
 
@@ -664,10 +620,10 @@ async def async_setup_entry(
     data: FitbitData = hass.data[DOMAIN][entry.entry_id]
     api = data.api
 
-    # These are run serially to reuse the cached user profile, not gathered
-    # to avoid two racing requests.
-    user_profile = await api.async_get_user_profile()
-    unit_system = await api.async_get_unit_system()
+    # Note: This will only be one rpc since it will cache the user profile
+    (user_profile, unit_system) = await asyncio.gather(
+        api.async_get_user_profile(), api.async_get_unit_system()
+    )
 
     fitbit_config = config_from_entry_data(entry.data)
 
@@ -698,10 +654,10 @@ async def async_setup_entry(
         for description in resource_list
         if is_allowed_resource(description)
     ]
-    async_add_entities(entities)
+    async_add_entities(entities, True)
 
     if data.device_coordinator and is_allowed_resource(FITBIT_RESOURCE_BATTERY):
-        battery_entities: list[SensorEntity] = [
+        async_add_entities(
             FitbitBatterySensor(
                 data.device_coordinator,
                 user_profile.encoded_id,
@@ -710,17 +666,7 @@ async def async_setup_entry(
                 enable_default_override=is_explicit_enable(FITBIT_RESOURCE_BATTERY),
             )
             for device in data.device_coordinator.data.values()
-        ]
-        battery_entities.extend(
-            FitbitBatteryLevelSensor(
-                data.device_coordinator,
-                user_profile.encoded_id,
-                FITBIT_RESOURCE_BATTERY_LEVEL,
-                device=device,
-            )
-            for device in data.device_coordinator.data.values()
         )
-        async_add_entities(battery_entities)
 
 
 class FitbitSensor(SensorEntity):
@@ -766,17 +712,9 @@ class FitbitSensor(SensorEntity):
             self._attr_available = True
             self._attr_native_value = self.entity_description.value_fn(result)
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
 
-        # We do not ask for an update with async_add_entities()
-        # because it will update disabled entities.
-        self.async_schedule_update_ha_state(force_refresh=True)
-
-
-class FitbitBatterySensor(CoordinatorEntity[FitbitDeviceCoordinator], SensorEntity):
-    """Implementation of a Fitbit battery sensor."""
+class FitbitBatterySensor(CoordinatorEntity, SensorEntity):
+    """Implementation of a Fitbit sensor."""
 
     entity_description: FitbitSensorEntityDescription
     _attr_attribution = ATTRIBUTION
@@ -793,12 +731,10 @@ class FitbitBatterySensor(CoordinatorEntity[FitbitDeviceCoordinator], SensorEnti
         super().__init__(coordinator)
         self.entity_description = description
         self.device = device
-        self._attr_unique_id = f"{user_profile_id}_{description.key}_{device.id}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{user_profile_id}_{device.id}")},
-            name=device.device_version,
-            model=device.device_version,
-        )
+        self._attr_unique_id = f"{user_profile_id}_{description.key}"
+        if device is not None:
+            self._attr_name = f"{device.device_version} Battery"
+            self._attr_unique_id = f"{self._attr_unique_id}_{device.id}"
 
         if enable_default_override:
             self._attr_entity_registry_enabled_default = True
@@ -828,43 +764,4 @@ class FitbitBatterySensor(CoordinatorEntity[FitbitDeviceCoordinator], SensorEnti
         """Handle updated data from the coordinator."""
         self.device = self.coordinator.data[self.device.id]
         self._attr_native_value = self.device.battery
-        self.async_write_ha_state()
-
-
-class FitbitBatteryLevelSensor(
-    CoordinatorEntity[FitbitDeviceCoordinator], SensorEntity
-):
-    """Implementation of a Fitbit battery level sensor."""
-
-    entity_description: FitbitSensorEntityDescription
-    _attr_attribution = ATTRIBUTION
-
-    def __init__(
-        self,
-        coordinator: FitbitDeviceCoordinator,
-        user_profile_id: str,
-        description: FitbitSensorEntityDescription,
-        device: FitbitDevice,
-    ) -> None:
-        """Initialize the Fitbit sensor."""
-        super().__init__(coordinator)
-        self.entity_description = description
-        self.device = device
-        self._attr_unique_id = f"{user_profile_id}_{description.key}_{device.id}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{user_profile_id}_{device.id}")},
-            name=device.device_version,
-            model=device.device_version,
-        )
-
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass update state from existing coordinator data."""
-        await super().async_added_to_hass()
-        self._handle_coordinator_update()
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
-        self.device = self.coordinator.data[self.device.id]
-        self._attr_native_value = self.device.battery_level
         self.async_write_ha_state()

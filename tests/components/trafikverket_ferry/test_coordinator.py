@@ -1,5 +1,4 @@
 """The test for the Trafikverket Ferry coordinator."""
-
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
@@ -8,7 +7,7 @@ from unittest.mock import patch
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 from pytrafikverket.exceptions import InvalidAuthentication, NoFerryFound
-from pytrafikverket.models import FerryStopModel
+from pytrafikverket.trafikverket_ferry import FerryStop
 
 from homeassistant.components.trafikverket_ferry.const import DOMAIN
 from homeassistant.components.trafikverket_ferry.coordinator import next_departuredate
@@ -22,12 +21,12 @@ from . import ENTRY_CONFIG
 from tests.common import MockConfigEntry, async_fire_time_changed
 
 
-@pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_coordinator(
     hass: HomeAssistant,
+    entity_registry_enabled_by_default: None,
     freezer: FrozenDateTimeFactory,
     monkeypatch: pytest.MonkeyPatch,
-    get_ferries: list[FerryStopModel],
+    get_ferries: list[FerryStop],
 ) -> None:
     """Test the Trafikverket Ferry coordinator."""
     entry = MockConfigEntry(

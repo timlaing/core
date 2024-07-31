@@ -1,5 +1,4 @@
 """Constants for the Fitbit platform."""
-
 from __future__ import annotations
 
 from enum import StrEnum

@@ -1,5 +1,4 @@
 """Support for Tasmota covers."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -41,12 +40,12 @@ async def async_setup_entry(
             [TasmotaCover(tasmota_entity=tasmota_entity, discovery_hash=discovery_hash)]
         )
 
-    hass.data[DATA_REMOVE_DISCOVER_COMPONENT.format(COVER_DOMAIN)] = (
-        async_dispatcher_connect(
-            hass,
-            TASMOTA_DISCOVERY_ENTITY_NEW.format(COVER_DOMAIN),
-            async_discover,
-        )
+    hass.data[
+        DATA_REMOVE_DISCOVER_COMPONENT.format(COVER_DOMAIN)
+    ] = async_dispatcher_connect(
+        hass,
+        TASMOTA_DISCOVERY_ENTITY_NEW.format(COVER_DOMAIN),
+        async_discover,
     )
 
 

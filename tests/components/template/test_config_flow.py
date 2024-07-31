@@ -1,5 +1,4 @@
 """Test the Switch config flow."""
-
 from typing import Any
 from unittest.mock import patch
 
@@ -8,10 +7,8 @@ from pytest_unordered import unordered
 
 from homeassistant import config_entries
 from homeassistant.components.template import DOMAIN, async_setup_entry
-from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import device_registry as dr
 
 from tests.common import MockConfigEntry
 from tests.typing import WebSocketGenerator
@@ -28,12 +25,10 @@ from tests.typing import WebSocketGenerator
         "extra_options",
         "extra_attrs",
     ),
-    [
+    (
         (
             "binary_sensor",
-            {
-                "state": "{{ states('binary_sensor.one') == 'on' or states('binary_sensor.two') == 'on' }}"
-            },
+            "{{ states('binary_sensor.one') == 'on' or states('binary_sensor.two') == 'on' }}",
             "on",
             {"one": "on", "two": "off"},
             {},
@@ -43,9 +38,7 @@ from tests.typing import WebSocketGenerator
         ),
         (
             "sensor",
-            {
-                "state": "{{ float(states('sensor.one')) + float(states('sensor.two')) }}"
-            },
+            "{{ float(states('sensor.one')) + float(states('sensor.two')) }}",
             "50.0",
             {"one": "30.0", "two": "20.0"},
             {},
@@ -53,67 +46,8 @@ from tests.typing import WebSocketGenerator
             {},
             {},
         ),
-        (
-            "button",
-            {},
-            "unknown",
-            {"one": "30.0", "two": "20.0"},
-            {},
-            {
-                "device_class": "restart",
-                "press": [
-                    {
-                        "service": "input_boolean.toggle",
-                        "target": {"entity_id": "input_boolean.test"},
-                        "data": {},
-                    }
-                ],
-            },
-            {
-                "device_class": "restart",
-                "press": [
-                    {
-                        "service": "input_boolean.toggle",
-                        "target": {"entity_id": "input_boolean.test"},
-                        "data": {},
-                    }
-                ],
-            },
-            {},
-        ),
-        (
-            "image",
-            {"url": "{{ states('sensor.one') }}"},
-            "2024-07-09T00:00:00+00:00",
-            {"one": "http://www.test.com", "two": ""},
-            {},
-            {"verify_ssl": True},
-            {"verify_ssl": True},
-            {},
-        ),
-        (
-            "select",
-            {"state": "{{ states('select.one') }}"},
-            "on",
-            {"one": "on", "two": "off"},
-            {},
-            {"options": "{{ ['off', 'on', 'auto'] }}"},
-            {"options": "{{ ['off', 'on', 'auto'] }}"},
-            {},
-        ),
-        (
-            "switch",
-            {"value_template": "{{ states('switch.one') }}"},
-            "on",
-            {"one": "on", "two": "off"},
-            {},
-            {},
-            {},
-            {},
-        ),
-    ],
+    ),
 )
-@pytest.mark.freeze_time("2024-07-09 00:00:00+00:00")
 async def test_config_flow(
     hass: HomeAssistant,
     template_type,
@@ -137,14 +71,14 @@ async def test_config_flow(
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.MENU
+    assert result["type"] == FlowResultType.MENU
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": template_type},
     )
     await hass.async_block_till_done()
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == template_type
 
     with patch(
@@ -154,19 +88,19 @@ async def test_config_flow(
             result["flow_id"],
             {
                 "name": "My template",
-                **state_template,
+                "state": state_template,
                 **extra_input,
             },
         )
         await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["title"] == "My template"
     assert result["data"] == {}
     assert result["options"] == {
         "name": "My template",
+        "state": state_template,
         "template_type": template_type,
-        **state_template,
         **extra_options,
     }
     assert len(mock_setup_entry.mock_calls) == 1
@@ -175,8 +109,8 @@ async def test_config_flow(
     assert config_entry.data == {}
     assert config_entry.options == {
         "name": "My template",
+        "state": state_template,
         "template_type": template_type,
-        **state_template,
         **extra_options,
     }
 
@@ -186,127 +120,6 @@ async def test_config_flow(
         assert state.attributes[key] == extra_attrs[key]
 
 
-@pytest.mark.parametrize(
-    (
-        "template_type",
-        "state_template",
-        "extra_input",
-        "extra_options",
-    ),
-    [
-        (
-            "sensor",
-            {"state": "{{ 15 }}"},
-            {},
-            {},
-        ),
-        (
-            "binary_sensor",
-            {"state": "{{ false }}"},
-            {},
-            {},
-        ),
-        (
-            "switch",
-            {"value_template": "{{ false }}"},
-            {},
-            {},
-        ),
-        (
-            "button",
-            {},
-            {},
-            {},
-        ),
-        (
-            "image",
-            {
-                "url": "{{ states('sensor.one') }}",
-            },
-            {"verify_ssl": True},
-            {"verify_ssl": True},
-        ),
-        (
-            "select",
-            {"state": "{{ states('select.one') }}"},
-            {"options": "{{ ['off', 'on', 'auto'] }}"},
-            {"options": "{{ ['off', 'on', 'auto'] }}"},
-        ),
-    ],
-)
-async def test_config_flow_device(
-    hass: HomeAssistant,
-    template_type: str,
-    state_template: dict[str, Any],
-    extra_input: dict[str, Any],
-    extra_options: dict[str, Any],
-    device_registry: dr.DeviceRegistry,
-) -> None:
-    """Test remove the device registry configuration entry when the device changes."""
-
-    # Configure a device registry
-    entry_device = MockConfigEntry()
-    entry_device.add_to_hass(hass)
-    device = device_registry.async_get_or_create(
-        config_entry_id=entry_device.entry_id,
-        identifiers={("test", "identifier_test1")},
-        connections={("mac", "20:31:32:33:34:01")},
-    )
-    await hass.async_block_till_done()
-
-    device_id = device.id
-    assert device_id is not None
-
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
-    assert result["type"] is FlowResultType.MENU
-
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {"next_step_id": template_type},
-    )
-    await hass.async_block_till_done()
-    assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == template_type
-
-    with patch(
-        "homeassistant.components.template.async_setup_entry", wraps=async_setup_entry
-    ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"],
-            {
-                "name": "My template",
-                "device_id": device_id,
-                **state_template,
-                **extra_input,
-            },
-        )
-        await hass.async_block_till_done()
-
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"] == "My template"
-    assert result["data"] == {}
-    assert result["options"] == {
-        "name": "My template",
-        "template_type": template_type,
-        "device_id": device_id,
-        **state_template,
-        **extra_options,
-    }
-    assert len(mock_setup_entry.mock_calls) == 1
-
-    config_entry = hass.config_entries.async_entries(DOMAIN)[0]
-    assert config_entry.data == {}
-    assert config_entry.options == {
-        "name": "My template",
-        "template_type": template_type,
-        "device_id": device_id,
-        **state_template,
-        **extra_options,
-    }
-
-
 def get_suggested(schema, key):
     """Get suggested value for key in voluptuous schema."""
     for k in schema:
@@ -314,8 +127,8 @@ def get_suggested(schema, key):
             if k.description is None or "suggested_value" not in k.description:
                 return None
             return k.description["suggested_value"]
-    # If the desired key is missing from the schema, return None
-    return None
+    # Wanted key absent from schema
+    raise Exception
 
 
 @pytest.mark.parametrize(
@@ -327,104 +140,28 @@ def get_suggested(schema, key):
         "input_states",
         "extra_options",
         "options_options",
-        "key_template",
     ),
-    [
+    (
         (
             "binary_sensor",
-            {
-                "state": "{{ states('binary_sensor.one') == 'on' or states('binary_sensor.two') == 'on' }}"
-            },
-            {
-                "state": "{{ states('binary_sensor.one') == 'on' and states('binary_sensor.two') == 'on' }}"
-            },
+            "{{ states('binary_sensor.one') == 'on' or states('binary_sensor.two') == 'on' }}",
+            "{{ states('binary_sensor.one') == 'on' and states('binary_sensor.two') == 'on' }}",
             ["on", "off"],
             {"one": "on", "two": "off"},
             {},
             {},
-            "state",
         ),
         (
             "sensor",
-            {
-                "state": "{{ float(states('sensor.one')) + float(states('sensor.two')) }}"
-            },
-            {
-                "state": "{{ float(states('sensor.one')) - float(states('sensor.two')) }}"
-            },
+            "{{ float(states('sensor.one')) + float(states('sensor.two')) }}",
+            "{{ float(states('sensor.one')) - float(states('sensor.two')) }}",
             ["50.0", "10.0"],
             {"one": "30.0", "two": "20.0"},
             {},
             {},
-            "state",
         ),
-        (
-            "button",
-            {},
-            {},
-            ["unknown", "unknown"],
-            {"one": "30.0", "two": "20.0"},
-            {
-                "device_class": "restart",
-                "press": [
-                    {
-                        "service": "input_boolean.toggle",
-                        "target": {"entity_id": "input_boolean.test"},
-                        "data": {},
-                    }
-                ],
-            },
-            {
-                "press": [
-                    {
-                        "service": "input_boolean.toggle",
-                        "target": {"entity_id": "input_boolean.test"},
-                        "data": {},
-                    }
-                ],
-            },
-            "state",
-        ),
-        (
-            "image",
-            {
-                "url": "{{ states('sensor.one') }}",
-            },
-            {
-                "url": "{{ states('sensor.two') }}",
-            },
-            ["2024-07-09T00:00:00+00:00", "2024-07-09T00:00:00+00:00"],
-            {"one": "http://www.test.com", "two": "http://www.test2.com"},
-            {"verify_ssl": True},
-            {
-                "url": "{{ states('sensor.two') }}",
-                "verify_ssl": True,
-            },
-            "url",
-        ),
-        (
-            "select",
-            {"state": "{{ states('select.one') }}"},
-            {"state": "{{ states('select.two') }}"},
-            ["on", "off"],
-            {"one": "on", "two": "off"},
-            {"options": "{{ ['off', 'on', 'auto'] }}"},
-            {"options": "{{ ['off', 'on', 'auto'] }}"},
-            "state",
-        ),
-        (
-            "switch",
-            {"value_template": "{{ states('switch.one') }}"},
-            {"value_template": "{{ states('switch.two') }}"},
-            ["on", "off"],
-            {"one": "on", "two": "off"},
-            {},
-            {},
-            "value_template",
-        ),
-    ],
+    ),
 )
-@pytest.mark.freeze_time("2024-07-09 00:00:00+00:00")
 async def test_options(
     hass: HomeAssistant,
     template_type,
@@ -434,7 +171,6 @@ async def test_options(
     input_states,
     extra_options,
     options_options,
-    key_template,
 ) -> None:
     """Test reconfiguring."""
     input_entities = ["one", "two"]
@@ -449,8 +185,8 @@ async def test_options(
         domain=DOMAIN,
         options={
             "name": "My template",
+            "state": old_state_template,
             "template_type": template_type,
-            **old_state_template,
             **extra_options,
         },
         title="My template",
@@ -466,32 +202,27 @@ async def test_options(
     config_entry = hass.config_entries.async_entries(DOMAIN)[0]
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == template_type
-    assert get_suggested(
-        result["data_schema"].schema, key_template
-    ) == old_state_template.get(key_template)
+    assert get_suggested(result["data_schema"].schema, "state") == old_state_template
     assert "name" not in result["data_schema"].schema
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        user_input={
-            **new_state_template,
-            **options_options,
-        },
+        user_input={"state": new_state_template, **options_options},
     )
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"] == {
         "name": "My template",
+        "state": new_state_template,
         "template_type": template_type,
-        **new_state_template,
         **extra_options,
     }
     assert config_entry.data == {}
     assert config_entry.options == {
         "name": "My template",
+        "state": new_state_template,
         "template_type": template_type,
-        **new_state_template,
         **extra_options,
     }
     assert config_entry.title == "My template"
@@ -505,18 +236,18 @@ async def test_options(
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.MENU
+    assert result["type"] == FlowResultType.MENU
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": template_type},
     )
     await hass.async_block_till_done()
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == template_type
 
     assert get_suggested(result["data_schema"].schema, "name") is None
-    assert get_suggested(result["data_schema"].schema, key_template) is None
+    assert get_suggested(result["data_schema"].schema, "state") is None
 
 
 @pytest.mark.parametrize(
@@ -529,7 +260,7 @@ async def test_options(
         "extra_attributes",
         "listeners",
     ),
-    [
+    (
         (
             "binary_sensor",
             "{{ states.binary_sensor.one.state == 'on' or states.binary_sensor.two.state == 'on' }}",
@@ -544,11 +275,11 @@ async def test_options(
             "{{ float(states('sensor.one'), default='') + float(states('sensor.two'), default='') }}",
             {},
             {"one": "30.0", "two": "20.0"},
-            ["", STATE_UNAVAILABLE, "50.0"],
+            ["", "50.0"],
             [{}, {}],
             [["one", "two"], ["one", "two"]],
         ),
-    ],
+    ),
 )
 async def test_config_flow_preview(
     hass: HomeAssistant,
@@ -569,14 +300,14 @@ async def test_config_flow_preview(
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.MENU
+    assert result["type"] == FlowResultType.MENU
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": template_type},
     )
     await hass.async_block_till_done()
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == template_type
     assert result["errors"] is None
     assert result["preview"] == "template"
@@ -610,24 +341,20 @@ async def test_config_flow_preview(
         hass.states.async_set(
             f"{template_type}.{input_entity}", input_states[input_entity], {}
         )
-        await hass.async_block_till_done()
 
-    for template_state in template_states[1:]:
-        msg = await client.receive_json()
-        assert msg["event"] == {
-            "attributes": {"friendly_name": "My template"}
-            | extra_attributes[0]
-            | extra_attributes[1],
-            "listeners": {
-                "all": False,
-                "domains": [],
-                "entities": unordered(
-                    [f"{template_type}.{_id}" for _id in listeners[1]]
-                ),
-                "time": False,
-            },
-            "state": template_state,
-        }
+    msg = await client.receive_json()
+    assert msg["event"] == {
+        "attributes": {"friendly_name": "My template"}
+        | extra_attributes[0]
+        | extra_attributes[1],
+        "listeners": {
+            "all": False,
+            "domains": [],
+            "entities": unordered([f"{template_type}.{_id}" for _id in listeners[1]]),
+            "time": False,
+        },
+        "state": template_states[1],
+    }
     assert len(hass.states.async_all()) == 2
 
 
@@ -714,14 +441,14 @@ async def test_config_flow_preview_bad_input(
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.MENU
+    assert result["type"] == FlowResultType.MENU
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": template_type},
     )
     await hass.async_block_till_done()
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == template_type
     assert result["errors"] is None
     assert result["preview"] == "template"
@@ -784,14 +511,14 @@ async def test_config_flow_preview_template_startup_error(
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.MENU
+    assert result["type"] == FlowResultType.MENU
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": template_type},
     )
     await hass.async_block_till_done()
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == template_type
     assert result["errors"] is None
     assert result["preview"] == "template"
@@ -867,14 +594,14 @@ async def test_config_flow_preview_template_error(
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.MENU
+    assert result["type"] == FlowResultType.MENU
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": template_type},
     )
     await hass.async_block_till_done()
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == template_type
     assert result["errors"] is None
     assert result["preview"] == "template"
@@ -916,13 +643,13 @@ async def test_config_flow_preview_template_error(
         "state_template",
         "extra_user_input",
     ),
-    [
+    (
         (
             "sensor",
             "{{ states('sensor.one') }}",
             {"unit_of_measurement": "°C"},
         ),
-    ],
+    ),
 )
 async def test_config_flow_preview_bad_state(
     hass: HomeAssistant,
@@ -937,14 +664,14 @@ async def test_config_flow_preview_bad_state(
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.MENU
+    assert result["type"] == FlowResultType.MENU
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": template_type},
     )
     await hass.async_block_till_done()
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == template_type
     assert result["errors"] is None
     assert result["preview"] == "template"
@@ -1026,7 +753,7 @@ async def test_option_flow_preview(
     """Test the option flow preview."""
     client = await hass_ws_client(hass)
 
-    input_entities = ["one", "two"]
+    input_entities = input_entities = ["one", "two"]
 
     # Setup the config entry
     config_entry = MockConfigEntry(
@@ -1045,7 +772,7 @@ async def test_option_flow_preview(
     await hass.async_block_till_done()
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["errors"] is None
     assert result["preview"] == "template"
 
@@ -1102,7 +829,7 @@ async def test_option_flow_sensor_preview_config_entry_removed(
     await hass.async_block_till_done()
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["errors"] is None
     assert result["preview"] == "template"
 
@@ -1118,194 +845,4 @@ async def test_option_flow_sensor_preview_config_entry_removed(
     )
     msg = await client.receive_json()
     assert not msg["success"]
-    assert msg["error"] == {"code": "home_assistant_error", "message": "Unknown error"}
-
-
-@pytest.mark.parametrize(
-    (
-        "template_type",
-        "state_template",
-        "extra_input",
-        "extra_options",
-    ),
-    [
-        (
-            "sensor",
-            {"state": "{{ 15 }}"},
-            {},
-            {},
-        ),
-        (
-            "binary_sensor",
-            {"state": "{{ false }}"},
-            {},
-            {},
-        ),
-        (
-            "button",
-            {},
-            {},
-            {},
-        ),
-        (
-            "image",
-            {
-                "url": "{{ states('sensor.one') }}",
-                "verify_ssl": True,
-            },
-            {},
-            {},
-        ),
-        (
-            "select",
-            {"state": "{{ states('select.one') }}"},
-            {"options": "{{ ['off', 'on', 'auto'] }}"},
-            {"options": "{{ ['off', 'on', 'auto'] }}"},
-        ),
-        (
-            "switch",
-            {"value_template": "{{ false }}"},
-            {},
-            {},
-        ),
-    ],
-)
-async def test_options_flow_change_device(
-    hass: HomeAssistant,
-    template_type: str,
-    state_template: dict[str, Any],
-    extra_input: dict[str, Any],
-    extra_options: dict[str, Any],
-    device_registry: dr.DeviceRegistry,
-) -> None:
-    """Test remove the device registry configuration entry when the device changes."""
-
-    # Configure a device registry
-    entry_device1 = MockConfigEntry()
-    entry_device1.add_to_hass(hass)
-    device1 = device_registry.async_get_or_create(
-        config_entry_id=entry_device1.entry_id,
-        identifiers={("test", "identifier_test1")},
-        connections={("mac", "20:31:32:33:34:01")},
-    )
-    entry_device2 = MockConfigEntry()
-    entry_device2.add_to_hass(hass)
-    device2 = device_registry.async_get_or_create(
-        config_entry_id=entry_device1.entry_id,
-        identifiers={("test", "identifier_test2")},
-        connections={("mac", "20:31:32:33:34:02")},
-    )
-    await hass.async_block_till_done()
-
-    device_id1 = device1.id
-    assert device_id1 is not None
-
-    device_id2 = device2.id
-    assert device_id2 is not None
-
-    # Setup the config entry with device 1
-    template_config_entry = MockConfigEntry(
-        data={},
-        domain=DOMAIN,
-        options={
-            "template_type": template_type,
-            "name": "My template",
-            "device_id": device_id1,
-            **state_template,
-            **extra_options,
-        },
-        title="Template",
-    )
-    template_config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(template_config_entry.entry_id)
-    await hass.async_block_till_done()
-
-    # Change to link to device 2
-    result = await hass.config_entries.options.async_init(
-        template_config_entry.entry_id
-    )
-    assert result["type"] is FlowResultType.FORM
-
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"],
-        user_input={
-            "device_id": device_id2,
-            **state_template,
-            **extra_input,
-        },
-    )
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["data"] == {
-        "template_type": template_type,
-        "name": "My template",
-        "device_id": device_id2,
-        **state_template,
-        **extra_input,
-    }
-    assert template_config_entry.data == {}
-    assert template_config_entry.options == {
-        "template_type": template_type,
-        "name": "My template",
-        "device_id": device_id2,
-        **state_template,
-        **extra_options,
-    }
-
-    # Remove link with device
-    result = await hass.config_entries.options.async_init(
-        template_config_entry.entry_id
-    )
-    assert result["type"] is FlowResultType.FORM
-
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"],
-        user_input={
-            **state_template,
-            **extra_input,
-        },
-    )
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["data"] == {
-        "template_type": template_type,
-        "name": "My template",
-        **state_template,
-        **extra_input,
-    }
-    assert template_config_entry.data == {}
-    assert template_config_entry.options == {
-        "template_type": template_type,
-        "name": "My template",
-        **state_template,
-        **extra_options,
-    }
-
-    # Change to link to device 1
-    result = await hass.config_entries.options.async_init(
-        template_config_entry.entry_id
-    )
-    assert result["type"] is FlowResultType.FORM
-
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"],
-        user_input={
-            "device_id": device_id1,
-            **state_template,
-            **extra_input,
-        },
-    )
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["data"] == {
-        "template_type": template_type,
-        "name": "My template",
-        "device_id": device_id1,
-        **state_template,
-        **extra_input,
-    }
-    assert template_config_entry.data == {}
-    assert template_config_entry.options == {
-        "template_type": template_type,
-        "name": "My template",
-        "device_id": device_id1,
-        **state_template,
-        **extra_options,
-    }
+    assert msg["error"] == {"code": "unknown_error", "message": "Unknown error"}

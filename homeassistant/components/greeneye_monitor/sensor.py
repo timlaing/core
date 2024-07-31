@@ -1,5 +1,4 @@
 """Support for the sensors in a GreenEye Monitor."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -62,46 +61,48 @@ async def async_setup_platform(
             None,
         )
         if monitor_config:
+            entities: list[GEMSensor] = []
+
             channel_configs = monitor_config[CONF_CHANNELS]
-            entities: list[GEMSensor] = [
-                CurrentSensor(
-                    monitor,
-                    sensor[CONF_NUMBER],
-                    sensor[CONF_NAME],
-                    sensor[CONF_NET_METERING],
+            for sensor in channel_configs:
+                entities.append(
+                    CurrentSensor(
+                        monitor,
+                        sensor[CONF_NUMBER],
+                        sensor[CONF_NAME],
+                        sensor[CONF_NET_METERING],
+                    )
                 )
-                for sensor in channel_configs
-            ]
 
             pulse_counter_configs = monitor_config[CONF_PULSE_COUNTERS]
-            entities.extend(
-                PulseCounter(
-                    monitor,
-                    sensor[CONF_NUMBER],
-                    sensor[CONF_NAME],
-                    sensor[CONF_COUNTED_QUANTITY],
-                    sensor[CONF_TIME_UNIT],
-                    sensor[CONF_COUNTED_QUANTITY_PER_PULSE],
+            for sensor in pulse_counter_configs:
+                entities.append(
+                    PulseCounter(
+                        monitor,
+                        sensor[CONF_NUMBER],
+                        sensor[CONF_NAME],
+                        sensor[CONF_COUNTED_QUANTITY],
+                        sensor[CONF_TIME_UNIT],
+                        sensor[CONF_COUNTED_QUANTITY_PER_PULSE],
+                    )
                 )
-                for sensor in pulse_counter_configs
-            )
 
             temperature_sensor_configs = monitor_config[CONF_TEMPERATURE_SENSORS]
-            entities.extend(
-                TemperatureSensor(
-                    monitor,
-                    sensor[CONF_NUMBER],
-                    sensor[CONF_NAME],
-                    temperature_sensor_configs[CONF_TEMPERATURE_UNIT],
+            for sensor in temperature_sensor_configs[CONF_SENSORS]:
+                entities.append(
+                    TemperatureSensor(
+                        monitor,
+                        sensor[CONF_NUMBER],
+                        sensor[CONF_NAME],
+                        temperature_sensor_configs[CONF_TEMPERATURE_UNIT],
+                    )
                 )
-                for sensor in temperature_sensor_configs[CONF_SENSORS]
-            )
 
             voltage_sensor_configs = monitor_config[CONF_VOLTAGE_SENSORS]
-            entities.extend(
-                VoltageSensor(monitor, sensor[CONF_NUMBER], sensor[CONF_NAME])
-                for sensor in voltage_sensor_configs
-            )
+            for sensor in voltage_sensor_configs:
+                entities.append(
+                    VoltageSensor(monitor, sensor[CONF_NUMBER], sensor[CONF_NAME])
+                )
 
             async_add_entities(entities)
             monitor_configs.remove(monitor_config)
@@ -115,7 +116,7 @@ async def async_setup_platform(
         on_new_monitor(monitor)
 
 
-type UnderlyingSensorType = (
+UnderlyingSensorType = (
     greeneye.monitor.Channel
     | greeneye.monitor.PulseCounter
     | greeneye.monitor.TemperatureSensor
@@ -220,11 +221,12 @@ class PulseCounter(GEMSensor):
         if self._sensor.pulses_per_second is None:
             return None
 
-        return (
+        result = (
             self._sensor.pulses_per_second
             * self._counted_quantity_per_pulse
             * self._seconds_per_time_unit
         )
+        return result
 
     @property
     def _seconds_per_time_unit(self) -> int:

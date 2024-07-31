@@ -1,5 +1,4 @@
 """Support for Homekit device discovery."""
-
 from __future__ import annotations
 
 import asyncio
@@ -7,11 +6,6 @@ import contextlib
 import logging
 
 import aiohomekit
-from aiohomekit.const import (
-    BLE_TRANSPORT_SUPPORTED,
-    COAP_TRANSPORT_SUPPORTED,
-    IP_TRANSPORT_SUPPORTED,
-)
 from aiohomekit.exceptions import (
     AccessoryDisconnectedError,
     AccessoryNotFoundError,
@@ -24,21 +18,11 @@ from homeassistant.core import Event, HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv, device_registry as dr
 from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.async_ import create_eager_task
 
 from .config_flow import normalize_hkid
 from .connection import HKDevice
 from .const import DOMAIN, KNOWN_DEVICES
 from .utils import async_get_controller
-
-# Ensure all the controllers get imported in the executor
-# since they are loaded late.
-if BLE_TRANSPORT_SUPPORTED:
-    from aiohomekit.controller import ble  # noqa: F401
-if COAP_TRANSPORT_SUPPORTED:
-    from aiohomekit.controller import coap  # noqa: F401
-if IP_TRANSPORT_SUPPORTED:
-    from aiohomekit.controller import ip  # noqa: F401
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -59,13 +43,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     try:
         await conn.async_setup()
     except (
-        TimeoutError,
+        asyncio.TimeoutError,
         AccessoryNotFoundError,
         EncryptionError,
         AccessoryDisconnectedError,
     ) as ex:
         del hass.data[KNOWN_DEVICES][conn.unique_id]
-        with contextlib.suppress(TimeoutError):
+        with contextlib.suppress(asyncio.TimeoutError):
             await conn.pairing.close()
         raise ConfigEntryNotReady from ex
 
@@ -81,7 +65,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     async def _async_stop_homekit_controller(event: Event) -> None:
         await asyncio.gather(
             *(
-                create_eager_task(connection.async_unload())
+                connection.async_unload()
                 for connection in hass.data[KNOWN_DEVICES].values()
             )
         )

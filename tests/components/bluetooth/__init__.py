@@ -1,16 +1,15 @@
 """Tests for the Bluetooth integration."""
 
-from collections.abc import Iterable
+
 from contextlib import contextmanager
 import itertools
 import time
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from bleak import BleakClient
 from bleak.backends.scanner import AdvertisementData, BLEDevice
 from bluetooth_adapters import DEFAULT_ADDRESS
-from habluetooth import BaseHaScanner, BluetoothManager, get_manager
 
 from homeassistant.components.bluetooth import (
     DOMAIN,
@@ -18,7 +17,10 @@ from homeassistant.components.bluetooth import (
     BluetoothServiceInfo,
     BluetoothServiceInfoBleak,
     async_get_advertisement_callback,
+    models,
 )
+from homeassistant.components.bluetooth.base_scanner import BaseHaScanner
+from homeassistant.components.bluetooth.manager import BluetoothManager
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 
@@ -35,7 +37,6 @@ __all__ = (
     "generate_advertisement_data",
     "generate_ble_device",
     "MockBleakClient",
-    "patch_bluetooth_time",
 )
 
 ADVERTISEMENT_DATA_DEFAULTS = {
@@ -53,20 +54,6 @@ BLE_DEVICE_DEFAULTS = {
     "rssi": -127,
     "details": None,
 }
-
-
-@contextmanager
-def patch_bluetooth_time(mock_time: float) -> None:
-    """Patch the bluetooth time."""
-    with (
-        patch(
-            "homeassistant.components.bluetooth.MONOTONIC_TIME", return_value=mock_time
-        ),
-        patch("habluetooth.base_scanner.monotonic_time_coarse", return_value=mock_time),
-        patch("habluetooth.manager.monotonic_time_coarse", return_value=mock_time),
-        patch("habluetooth.scanner.monotonic_time_coarse", return_value=mock_time),
-    ):
-        yield
 
 
 def generate_advertisement_data(**kwargs: Any) -> AdvertisementData:
@@ -101,7 +88,7 @@ def generate_ble_device(
 
 def _get_manager() -> BluetoothManager:
     """Return the bluetooth manager."""
-    return get_manager()
+    return models.MANAGER
 
 
 def inject_advertisement(
@@ -155,7 +142,6 @@ def inject_advertisement_with_time_and_source_connectable(
             advertisement=adv,
             connectable=connectable,
             time=time,
-            tx_power=adv.tx_power,
         )
     )
 
@@ -297,20 +283,7 @@ class MockBleakClient(BleakClient):
         return True
 
 
-class FakeScannerMixin:
-    def get_discovered_device_advertisement_data(
-        self, address: str
-    ) -> tuple[BLEDevice, AdvertisementData] | None:
-        """Return the advertisement data for a discovered device."""
-        return self.discovered_devices_and_advertisement_data.get(address)
-
-    @property
-    def discovered_addresses(self) -> Iterable[str]:
-        """Return an iterable of discovered devices."""
-        return self.discovered_devices_and_advertisement_data
-
-
-class FakeScanner(FakeScannerMixin, BaseHaScanner):
+class FakeScanner(BaseHaScanner):
     """Fake scanner."""
 
     @property

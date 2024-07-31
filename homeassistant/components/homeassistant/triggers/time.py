@@ -1,5 +1,4 @@
 """Offer time listening automation rules."""
-
 from datetime import datetime
 from functools import partial
 
@@ -13,23 +12,16 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import (
-    CALLBACK_TYPE,
-    Event,
-    EventStateChangedData,
-    HassJob,
-    HomeAssistant,
-    State,
-    callback,
-)
+from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant, State, callback
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.event import (
+    EventStateChangedData,
     async_track_point_in_time,
     async_track_state_change_event,
     async_track_time_change,
 )
 from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from homeassistant.helpers.typing import ConfigType, EventType
 import homeassistant.util.dt as dt_util
 
 _TIME_TRIGGER_SCHEMA = vol.Any(
@@ -61,9 +53,7 @@ async def async_attach_trigger(
     job = HassJob(action, f"time trigger {trigger_info}")
 
     @callback
-    def time_automation_listener(
-        description: str, now: datetime, *, entity_id: str | None = None
-    ) -> None:
+    def time_automation_listener(description, now, *, entity_id=None):
         """Listen for time changes and calls action."""
         hass.async_run_hass_job(
             job,
@@ -79,7 +69,7 @@ async def async_attach_trigger(
         )
 
     @callback
-    def update_entity_trigger_event(event: Event[EventStateChangedData]) -> None:
+    def update_entity_trigger_event(event: EventType[EventStateChangedData]) -> None:
         """update_entity_trigger from the event."""
         return update_entity_trigger(event.data["entity_id"], event.data["new_state"])
 
@@ -119,7 +109,7 @@ async def async_attach_trigger(
                     hour,
                     minute,
                     second,
-                    tzinfo=dt_util.get_default_time_zone(),
+                    tzinfo=dt_util.DEFAULT_TIME_ZONE,
                 )
                 # Only set up listener if time is now or in the future.
                 if trigger_dt >= dt_util.now():
@@ -193,7 +183,7 @@ async def async_attach_trigger(
     )
 
     @callback
-    def remove_track_time_changes() -> None:
+    def remove_track_time_changes():
         """Remove tracked time changes."""
         for remove in entities.values():
             remove()

@@ -1,5 +1,4 @@
 """Support for Keba notifications."""
-
 from __future__ import annotations
 
 from homeassistant.components.notify import ATTR_DATA, BaseNotificationService

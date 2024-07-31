@@ -1,5 +1,4 @@
 """Tests for the WiLight integration."""
-
 from unittest.mock import patch
 
 import pytest
@@ -64,7 +63,6 @@ def mock_dummy_device_from_host_switch():
 
 async def test_loading_switch(
     hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
     dummy_device_from_host_switch,
 ) -> None:
     """Test the WiLight configuration entry loading."""
@@ -72,6 +70,8 @@ async def test_loading_switch(
     entry = await setup_integration(hass)
     assert entry
     assert entry.unique_id == WILIGHT_ID
+
+    entity_registry = er.async_get(hass)
 
     # First segment of the strip
     state = hass.states.get("switch.wl000000000099_1_watering")
@@ -260,4 +260,5 @@ async def test_switch_services(
             blocking=True,
         )
 
+        await hass.async_block_till_done()
     assert str(exc_info.value) == "Entity is not a WiLight valve switch"

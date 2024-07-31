@@ -1,5 +1,4 @@
 """Fan definition for Intellifire."""
-
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
@@ -27,7 +26,7 @@ from .coordinator import IntellifireDataUpdateCoordinator
 from .entity import IntellifireEntity
 
 
-@dataclass(frozen=True)
+@dataclass
 class IntellifireFanRequiredKeysMixin:
     """Required keys for fan entity."""
 
@@ -36,7 +35,7 @@ class IntellifireFanRequiredKeysMixin:
     speed_range: tuple[int, int]
 
 
-@dataclass(frozen=True)
+@dataclass
 class IntellifireFanEntityDescription(
     FanEntityDescription, IntellifireFanRequiredKeysMixin
 ):
@@ -75,12 +74,7 @@ class IntellifireFan(IntellifireEntity, FanEntity):
     """Fan entity for the fireplace."""
 
     entity_description: IntellifireFanEntityDescription
-    _attr_supported_features = (
-        FanEntityFeature.SET_SPEED
-        | FanEntityFeature.TURN_OFF
-        | FanEntityFeature.TURN_ON
-    )
-    _enable_turn_on_off_backwards_compatibility = False
+    _attr_supported_features = FanEntityFeature.SET_SPEED
 
     @property
     def is_on(self) -> bool:
