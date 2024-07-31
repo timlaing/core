@@ -1,4 +1,5 @@
 """Entity classes for the Airzone Cloud integration."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -10,10 +11,14 @@ from aioairzone_cloud.const import (
     AZD_AVAILABLE,
     AZD_FIRMWARE,
     AZD_GROUPS,
+    AZD_HOT_WATERS,
     AZD_INSTALLATIONS,
+    AZD_MODEL,
     AZD_NAME,
     AZD_SYSTEM_ID,
     AZD_SYSTEMS,
+    AZD_THERMOSTAT_FW,
+    AZD_THERMOSTAT_MODEL,
     AZD_WEBSERVER,
     AZD_WEBSERVERS,
     AZD_ZONES,
@@ -33,6 +38,8 @@ _LOGGER = logging.getLogger(__name__)
 
 class AirzoneEntity(CoordinatorEntity[AirzoneUpdateCoordinator], ABC):
     """Define an Airzone Cloud entity."""
+
+    _attr_has_entity_name = True
 
     @property
     def available(self) -> bool:
@@ -65,6 +72,7 @@ class AirzoneAidooEntity(AirzoneEntity):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, aidoo_id)},
             manufacturer=MANUFACTURER,
+            model=aidoo_data[AZD_MODEL],
             name=aidoo_data[AZD_NAME],
             via_device=(DOMAIN, aidoo_data[AZD_WEBSERVER]),
         )
@@ -78,14 +86,14 @@ class AirzoneAidooEntity(AirzoneEntity):
 
     async def _async_update_params(self, params: dict[str, Any]) -> None:
         """Send Aidoo parameters to Cloud API."""
-        _LOGGER.debug("aidoo=%s: update_params=%s", self.name, params)
+        _LOGGER.debug("aidoo=%s: update_params=%s", self.entity_id, params)
         try:
             await self.coordinator.airzone.api_set_aidoo_id_params(
                 self.aidoo_id, params
             )
         except AirzoneCloudError as error:
             raise HomeAssistantError(
-                f"Failed to set {self.name} params: {error}"
+                f"Failed to set {self.entity_id} params: {error}"
             ) from error
 
         self.coordinator.async_set_updated_data(self.coordinator.airzone.data())
@@ -107,6 +115,7 @@ class AirzoneGroupEntity(AirzoneEntity):
 
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, group_id)},
+            model="Group",
             manufacturer=MANUFACTURER,
             name=group_data[AZD_NAME],
         )
@@ -120,14 +129,56 @@ class AirzoneGroupEntity(AirzoneEntity):
 
     async def _async_update_params(self, params: dict[str, Any]) -> None:
         """Send Group parameters to Cloud API."""
-        _LOGGER.debug("group=%s: update_params=%s", self.name, params)
+        _LOGGER.debug("group=%s: update_params=%s", self.entity_id, params)
         try:
             await self.coordinator.airzone.api_set_group_id_params(
                 self.group_id, params
             )
         except AirzoneCloudError as error:
             raise HomeAssistantError(
-                f"Failed to set {self.name} params: {error}"
+                f"Failed to set {self.entity_id} params: {error}"
+            ) from error
+
+        self.coordinator.async_set_updated_data(self.coordinator.airzone.data())
+
+
+class AirzoneHotWaterEntity(AirzoneEntity):
+    """Define an Airzone Cloud Hot Water entity."""
+
+    def __init__(
+        self,
+        coordinator: AirzoneUpdateCoordinator,
+        dhw_id: str,
+        dhw_data: dict[str, Any],
+    ) -> None:
+        """Initialize."""
+        super().__init__(coordinator)
+
+        self.dhw_id = dhw_id
+
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, dhw_id)},
+            manufacturer=MANUFACTURER,
+            model="Hot Water",
+            name=dhw_data[AZD_NAME],
+            via_device=(DOMAIN, dhw_data[AZD_WEBSERVER]),
+        )
+
+    def get_airzone_value(self, key: str) -> Any:
+        """Return DHW value by key."""
+        value = None
+        if dhw := self.coordinator.data[AZD_HOT_WATERS].get(self.dhw_id):
+            value = dhw.get(key)
+        return value
+
+    async def _async_update_params(self, params: dict[str, Any]) -> None:
+        """Send DHW parameters to Cloud API."""
+        _LOGGER.debug("dhw=%s: update_params=%s", self.entity_id, params)
+        try:
+            await self.coordinator.airzone.api_set_dhw_id_params(self.dhw_id, params)
+        except AirzoneCloudError as error:
+            raise HomeAssistantError(
+                f"Failed to set {self.entity_id} params: {error}"
             ) from error
 
         self.coordinator.async_set_updated_data(self.coordinator.airzone.data())
@@ -150,6 +201,7 @@ class AirzoneInstallationEntity(AirzoneEntity):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, inst_id)},
             manufacturer=MANUFACTURER,
+            model="Installation",
             name=inst_data[AZD_NAME],
         )
 
@@ -162,14 +214,18 @@ class AirzoneInstallationEntity(AirzoneEntity):
 
     async def _async_update_params(self, params: dict[str, Any]) -> None:
         """Send Installation parameters to Cloud API."""
-        _LOGGER.debug("installation=%s: update_params=%s", self.name, params)
+        _LOGGER.debug(
+            "installation=%s: update_params=%s",
+            self.entity_id,
+            params,
+        )
         try:
             await self.coordinator.airzone.api_set_installation_id_params(
                 self.inst_id, params
             )
         except AirzoneCloudError as error:
             raise HomeAssistantError(
-                f"Failed to set {self.name} params: {error}"
+                f"Failed to set {self.entity_id} params: {error}"
             ) from error
 
         self.coordinator.async_set_updated_data(self.coordinator.airzone.data())
@@ -191,9 +247,11 @@ class AirzoneSystemEntity(AirzoneEntity):
 
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, system_id)},
+            model=system_data.get(AZD_MODEL),
             manufacturer=MANUFACTURER,
             name=system_data[AZD_NAME],
             via_device=(DOMAIN, system_data[AZD_WEBSERVER]),
+            sw_version=system_data.get(AZD_FIRMWARE),
         )
 
     def get_airzone_value(self, key: str) -> Any:
@@ -221,6 +279,7 @@ class AirzoneWebServerEntity(AirzoneEntity):
         self._attr_device_info = DeviceInfo(
             connections={(dr.CONNECTION_NETWORK_MAC, ws_id)},
             identifiers={(DOMAIN, ws_id)},
+            model="WebServer",
             manufacturer=MANUFACTURER,
             name=ws_data[AZD_NAME],
             sw_version=ws_data[AZD_FIRMWARE],
@@ -251,9 +310,11 @@ class AirzoneZoneEntity(AirzoneEntity):
 
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, zone_id)},
+            model=zone_data.get(AZD_THERMOSTAT_MODEL),
             manufacturer=MANUFACTURER,
             name=zone_data[AZD_NAME],
             via_device=(DOMAIN, self.system_id),
+            sw_version=zone_data.get(AZD_THERMOSTAT_FW),
         )
 
     def get_airzone_value(self, key: str) -> Any:
@@ -265,12 +326,12 @@ class AirzoneZoneEntity(AirzoneEntity):
 
     async def _async_update_params(self, params: dict[str, Any]) -> None:
         """Send Zone parameters to Cloud API."""
-        _LOGGER.debug("zone=%s: update_params=%s", self.name, params)
+        _LOGGER.debug("zone=%s: update_params=%s", self.entity_id, params)
         try:
             await self.coordinator.airzone.api_set_zone_id_params(self.zone_id, params)
         except AirzoneCloudError as error:
             raise HomeAssistantError(
-                f"Failed to set {self.name} params: {error}"
+                f"Failed to set {self.entity_id} params: {error}"
             ) from error
 
         self.coordinator.async_set_updated_data(self.coordinator.airzone.data())

@@ -1,4 +1,7 @@
 """Test homekit_controller stateless triggers."""
+
+from collections.abc import Callable
+
 from aiohomekit.model.characteristics import CharacteristicsTypes
 from aiohomekit.model.services import ServicesTypes
 
@@ -64,9 +67,13 @@ def create_doorbell(accessory):
     battery.add_char(CharacteristicsTypes.BATTERY_LEVEL)
 
 
-async def test_remote(hass: HomeAssistant, utcnow) -> None:
+async def test_remote(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    get_next_aid: Callable[[], int],
+) -> None:
     """Test that remote is supported."""
-    helper = await setup_test_component(hass, create_remote)
+    helper = await setup_test_component(hass, get_next_aid(), create_remote)
 
     entities = [
         ("event.testdevice_button_1", "Button 1"),
@@ -74,8 +81,6 @@ async def test_remote(hass: HomeAssistant, utcnow) -> None:
         ("event.testdevice_button_3", "Button 3"),
         ("event.testdevice_button_4", "Button 4"),
     ]
-
-    entity_registry = er.async_get(hass)
 
     for entity_id, service in entities:
         button = entity_registry.async_get(entity_id)
@@ -109,12 +114,15 @@ async def test_remote(hass: HomeAssistant, utcnow) -> None:
         assert state.attributes["event_type"] == "long_press"
 
 
-async def test_button(hass: HomeAssistant, utcnow) -> None:
+async def test_button(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    get_next_aid: Callable[[], int],
+) -> None:
     """Test that a button is correctly enumerated."""
-    helper = await setup_test_component(hass, create_button)
+    helper = await setup_test_component(hass, get_next_aid(), create_button)
     entity_id = "event.testdevice_button_1"
 
-    entity_registry = er.async_get(hass)
     button = entity_registry.async_get(entity_id)
 
     assert button.original_device_class == EventDeviceClass.BUTTON
@@ -146,12 +154,15 @@ async def test_button(hass: HomeAssistant, utcnow) -> None:
     assert state.attributes["event_type"] == "long_press"
 
 
-async def test_doorbell(hass: HomeAssistant, utcnow) -> None:
+async def test_doorbell(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    get_next_aid: Callable[[], int],
+) -> None:
     """Test that doorbell service is handled."""
-    helper = await setup_test_component(hass, create_doorbell)
+    helper = await setup_test_component(hass, get_next_aid(), create_doorbell)
     entity_id = "event.testdevice_doorbell"
 
-    entity_registry = er.async_get(hass)
     doorbell = entity_registry.async_get(entity_id)
 
     assert doorbell.original_device_class == EventDeviceClass.DOORBELL

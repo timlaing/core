@@ -32,6 +32,7 @@
     'context': <ANY>,
     'entity_id': 'light.frenck',
     'last_changed': <ANY>,
+    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'on',
   })
@@ -61,6 +62,8 @@
     'hidden_by': None,
     'icon': None,
     'id': <ANY>,
+    'labels': set({
+    }),
     'name': None,
     'options': dict({
     }),
@@ -97,10 +100,15 @@
       ),
     }),
     'is_new': False,
+    'labels': set({
+    }),
     'manufacturer': 'Elgato',
     'model': 'Elgato Key Light',
+    'model_id': None,
     'name': 'Frenck',
     'name_by_user': None,
+    'primary_config_entry': <ANY>,
+    'serial_number': 'CN11A1A00001',
     'suggested_area': None,
     'sw_version': '1.0.3 (192)',
     'via_device_id': None,
@@ -140,6 +148,7 @@
     'context': <ANY>,
     'entity_id': 'light.frenck',
     'last_changed': <ANY>,
+    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'on',
   })
@@ -170,6 +179,8 @@
     'hidden_by': None,
     'icon': None,
     'id': <ANY>,
+    'labels': set({
+    }),
     'name': None,
     'options': dict({
     }),
@@ -206,10 +217,15 @@
       ),
     }),
     'is_new': False,
+    'labels': set({
+    }),
     'manufacturer': 'Elgato',
-    'model': 'Elgato Key Light',
+    'model': 'Elgato Light Strip',
+    'model_id': None,
     'name': 'Frenck',
     'name_by_user': None,
+    'primary_config_entry': <ANY>,
+    'serial_number': 'CN11A1A00001',
     'suggested_area': None,
     'sw_version': '1.0.3 (192)',
     'via_device_id': None,
@@ -249,6 +265,7 @@
     'context': <ANY>,
     'entity_id': 'light.frenck',
     'last_changed': <ANY>,
+    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'on',
   })
@@ -279,6 +296,8 @@
     'hidden_by': None,
     'icon': None,
     'id': <ANY>,
+    'labels': set({
+    }),
     'name': None,
     'options': dict({
     }),
@@ -315,10 +334,15 @@
       ),
     }),
     'is_new': False,
+    'labels': set({
+    }),
     'manufacturer': 'Elgato',
-    'model': 'Elgato Key Light',
+    'model': 'Elgato Light Strip',
+    'model_id': None,
     'name': 'Frenck',
     'name_by_user': None,
+    'primary_config_entry': <ANY>,
+    'serial_number': 'CN11A1A00001',
     'suggested_area': None,
     'sw_version': '1.0.3 (192)',
     'via_device_id': None,
