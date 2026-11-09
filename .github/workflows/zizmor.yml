@@ -10,9 +10,6 @@ name: Zizmor GitHub Actions security analysis
       - rc
       - master
   pull_request: ~
-  schedule:
-    # Weekly re-scan (Mondays 05:30 UTC) so the code scanning results stay fresh.
-    - cron: "30 5 * * 1"
   workflow_dispatch: ~
 
 permissions: {}

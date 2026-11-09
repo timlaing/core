@@ -3,8 +3,6 @@ name: Build wheels
 # yamllint disable-line rule:truthy
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 4 * * *"
   push:
     branches:
       - dev
